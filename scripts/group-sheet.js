@@ -1,6 +1,6 @@
 // scripts/group-sheet.js
 
-const MODULE_ID = "shadowdark-extras";
+const MODULE_ID = "mk-shadowdark";
 const SHEET_ID = `${MODULE_ID}.SDXGroupSheet`;
 
 const ABILITIES = [
@@ -486,7 +486,7 @@ async function rollActorAbility(actor, ability, options = {}) {
 
 export async function createGroupActor() {
   if (!game.user.isGM) {
-    ui.notifications.warn("Only the GM can create a Shadowdark Extras group.");
+    ui.notifications.warn("Only the GM can create a MK-Shadowdark group.");
     return null;
   }
 
@@ -1239,7 +1239,7 @@ function addActorDirectoryButton(app, html) {
   button.type = "button";
   button.classList.add("sdx-create-group-actor");
   button.innerHTML = `<i class="fas fa-users"></i> Group`;
-  button.title = "Create Shadowdark Extras Group";
+  button.title = "Create MK-Shadowdark Group";
 
   button.addEventListener("click", event => {
     event.preventDefault();
@@ -1272,7 +1272,7 @@ function rerenderOpenGroupSheets(updatedActor) {
 export function registerGroupSheet() {
   game.settings.register(MODULE_ID, "enableGroupActors", {
     name: "Enable Group Actors",
-    hint: "Adds a Shadowdark Extras group actor sheet for party members, group inventory, travel activity assignments, and group notes.",
+    hint: "Adds a MK-Shadowdark group actor sheet for party members, group inventory, travel activity assignments, and group notes.",
     scope: "world",
     config: true,
     type: Boolean,
@@ -1282,7 +1282,7 @@ export function registerGroupSheet() {
   Actors.registerSheet(MODULE_ID, SDXGroupSheet, {
     types: ["Player"],
     makeDefault: false,
-    label: "Shadowdark Extras: Group Sheet",
+    label: "MK-Shadowdark: Group Sheet",
   });
 
   Hooks.on("renderActorDirectory", addActorDirectoryButton);
@@ -1306,8 +1306,11 @@ export function registerGroupSheet() {
     }
   });
 
-  game.shadowdarkExtras ??= {};
-  game.shadowdarkExtras.createGroupActor = createGroupActor;
+  game.mkShadowdark ??= {};
+  game.mkShadowdark.createGroupActor = createGroupActor;
+
+  // Compatibility alias for worlds/macros that used the old global API name.
+  game.shadowdarkExtras ??= game.mkShadowdark;
 
   sdxGroupLog("Registered group sheet.");
 }

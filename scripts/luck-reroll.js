@@ -1,5 +1,5 @@
 /*
- * Shadowdark Extras - Luck Reroll
+ * MK-Shadowdark - Luck Reroll
  * Foundry VTT v12
  *
  * Settings are registered in scripts/settings.js.
@@ -8,7 +8,7 @@
 (() => {
   // scripts/luck-reroll.js
 
-  const MODULE_ID = "shadowdark-extras";
+  const MODULE_ID = "mk-shadowdark";
   const LUCK_BUTTON_LABEL = "Luck Reroll";
 
   Hooks.once("init", () => {
@@ -165,7 +165,7 @@
 
     const actor = game.actors?.get(actorId);
     if (!actor) {
-      ui.notifications?.error?.("Shadowdark Extras: Actor not found for Luck reroll.");
+      ui.notifications?.error?.("MK-Shadowdark: Actor not found for Luck reroll.");
       return;
     }
 
@@ -181,7 +181,7 @@
       await actor.update({ "system.luck.available": false });
     } catch (err) {
       console.error(`${MODULE_ID} | Failed to update actor Luck`, err);
-      ui.notifications?.error?.("Shadowdark Extras: Failed to spend Luck.");
+      ui.notifications?.error?.("MK-Shadowdark: Failed to spend Luck.");
       return;
     }
 
@@ -218,7 +218,7 @@
       await roll.evaluate({ async: true });
     } catch (err) {
       console.error(`${MODULE_ID} | Error evaluating Luck roll`, err);
-      ui.notifications?.error?.("Shadowdark Extras: Failed to roll Luck reroll.");
+      ui.notifications?.error?.("MK-Shadowdark: Failed to roll Luck reroll.");
       return;
     }
 

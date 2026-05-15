@@ -1,5 +1,5 @@
 /*
- * Shadowdark Extras - Death Timer
+ * MK-Shadowdark - Death Timer
  * Foundry VTT v12
  *
  * Settings are registered in scripts/settings.js.
@@ -7,7 +7,7 @@
 
 (() => {
   // scripts/death-timer.js
-  // Shadowdark Extras - Death Timer (NO HBS MODS)
+  // MK-Shadowdark - Death Timer (NO HBS MODS)
   // Skull-only button with tooltip.
   // HP <= 0 logic:
   // - First click at 0 HP: roll 1d4 + CON mod (min 1), add condition "Death Timer (X)"
@@ -18,7 +18,7 @@
   // - When timer reaches 0: remove "Death Timer" and add the system's built-in Dead status
   // - If the actor gains HP at any time: remove Death Timer and Dead automatically
 
-  const MODULE_ID = "shadowdark-extras";
+  const MODULE_ID = "mk-shadowdark";
   const SUBMODULE = "DeathTimer";
   const DT_VERSION = "1.5.3";
 
@@ -34,10 +34,10 @@
   function getDeathTimerIcon(turns) {
     const n = Number(turns) || 0;
 
-    if (n <= 1) return "modules/shadowdark-extras/assets/icons/blood-drop-red-1.png";
-    if (n === 2) return "modules/shadowdark-extras/assets/icons/blood-drop-red-2.png";
-    if (n === 3) return "modules/shadowdark-extras/assets/icons/blood-drop-red-3.png";
-    return "modules/shadowdark-extras/assets/icons/blood-drop-red-4.png";
+    if (n <= 1) return "modules/mk-shadowdark/assets/icons/blood-drop-red-1.png";
+    if (n === 2) return "modules/mk-shadowdark/assets/icons/blood-drop-red-2.png";
+    if (n === 3) return "modules/mk-shadowdark/assets/icons/blood-drop-red-3.png";
+    return "modules/mk-shadowdark/assets/icons/blood-drop-red-4.png";
   }
 
   function getConMod(actor) {

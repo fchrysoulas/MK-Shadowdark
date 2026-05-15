@@ -1,5 +1,5 @@
 /*
- * Shadowdark Extras - Core
+ * MK-Shadowdark - Core
  * Foundry VTT v12
  *
  * Shared module boot file.
@@ -9,7 +9,7 @@
 import { registerBaseActorFeature } from "./base-actor.js";
 
 (() => {
-  const MODULE_ID = "shadowdark-extras";
+  const MODULE_ID = "mk-shadowdark";
   const MODULE_VERSION = "1.0.0";
   const SUBMODULE = "Core";
 
@@ -39,7 +39,7 @@ import { registerBaseActorFeature } from "./base-actor.js";
       api.createBaseActor = async (name = "New Base") => {
         return Actor.create({
           name,
-          type: "Base",
+          type: `${MODULE_ID}.Base`,
           img: `modules/${MODULE_ID}/assets/base-management/base.svg`,
         });
       };

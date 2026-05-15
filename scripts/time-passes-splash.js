@@ -1,5 +1,5 @@
 /*
- * Shadowdark Extras - Time Passes Splash
+ * MK-Shadowdark - Time Passes Splash
  * Foundry VTT v12
  *
  * Settings are registered in scripts/settings.js.
@@ -7,7 +7,7 @@
 
 (() => {
   // scripts/time-passes-splash.js
-  // Shadowdark Extras — Time Passes Splash (Foundry VTT v12)
+  // MK-Shadowdark - Time Passes Splash (Foundry VTT v12)
   //
   // Flow:
   // 1) Splash #1: preText (+ optional progress bar) for N ms (everyone)
@@ -20,7 +20,7 @@
   //
   // Broadcast via ChatMessage flags (reliable across clients)
 
-  const MODULE_ID = "shadowdark-extras";
+  const MODULE_ID = "mk-shadowdark";
   const FLAG_KEY = "timePassesSplash";
   const HOOK_FLAG = "__sdxTimePassesSplashHookInstalled";
   const SEEN_FLAG = "__sdxTimePassesSplashSeenIds";

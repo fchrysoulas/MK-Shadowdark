@@ -1,13 +1,13 @@
 /*
- * Shadowdark Extras - Settings
+ * MK-Shadowdark - Settings
  * Foundry VTT v12
  *
- * Central registry for all Shadowdark Extras settings.
+ * Central registry for all MK-Shadowdark settings.
  * Feature files should read settings, not register them.
  */
 
 (() => {
-  const MODULE_ID = "shadowdark-extras";
+  const MODULE_ID = "mk-shadowdark";
   const MODULE_VERSION = "1.0.0";
   const SUBMODULE = "Settings";
 
@@ -348,7 +348,7 @@
 
     registerSetting("characterSheetTweaksEnabled", {
       name: "Character Sheet | Enable Tweaks",
-      hint: "Adds SD Extras controls and styling to Shadowdark player character sheets.",
+      hint: "Adds MK-Shadowdark controls and styling to Shadowdark player character sheets.",
       scope: "world",
       config: true,
       type: Boolean,
@@ -368,7 +368,7 @@
 
     registerSetting("characterSheetTweaksSummaryBarInHeader", {
       name: "Character Sheet | Summary Bar Over Header",
-      hint: "Places the SD Extras summary bar floating inside the Shadowdark header/banner area.",
+      hint: "Places the MK-Shadowdark summary bar floating inside the Shadowdark header/banner area.",
       scope: "client",
       config: true,
       type: Boolean,
@@ -408,7 +408,7 @@
 
     registerSetting("characterSheetTweaksFontScale", {
       name: "Character Sheet | Extra UI Font Scale",
-      hint: "Adjusts only the SD Extras summary bar font size.",
+      hint: "Adjusts only the MK-Shadowdark summary bar font size.",
       scope: "client",
       config: true,
       type: Number,
@@ -493,7 +493,7 @@
 
     registerSetting("characterSheetTweaksHeaderBackgroundImage", {
       name: "Character Sheet | Header Background Image",
-      hint: "Optional image path for the player sheet header background. Bare filenames are read from modules/shadowdark-extras/assets/.",
+      hint: "Optional image path for the player sheet header background. Bare filenames are read from modules/mk-shadowdark/assets/.",
       scope: "client",
       config: true,
       type: String,

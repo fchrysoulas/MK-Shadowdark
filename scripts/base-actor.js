@@ -1,5 +1,5 @@
 // scripts/base-actor.js
-// Shadowdark Extras - Base Actor Type
+// MK-Shadowdark - Base Actor Type
 // Foundry VTT v12 + Shadowdark RPG
 //
 // Graphic UI version using Game-icons.net SVG icons.
@@ -9,9 +9,9 @@
 // "documentTypes": { "Actor": { "Base": { "htmlFields": [...] } } }
 //
 // Foundry stores module-provided actor subtypes with a module prefix.
-// The real actor type is "shadowdark-extras.Base", not plain "Base".
+// The real actor type is "mk-shadowdark.Base", not plain "Base".
 
-const MODULE_ID = "shadowdark-extras";
+const MODULE_ID = "mk-shadowdark";
 const ACTOR_SUBTYPE = "Base";
 const ACTOR_TYPE = `${MODULE_ID}.${ACTOR_SUBTYPE}`;
 const LEGACY_ACTOR_TYPE = "Base";
@@ -520,7 +520,7 @@ class BaseActorSheet extends ActorSheet {
   static get defaultOptions() {
     return foundry.utils.mergeObject(super.defaultOptions, {
       id: SHEET_ID,
-      classes: ["shadowdark-extras", "sheet", "actor", "sdx-base-sheet"],
+      classes: ["mk-shadowdark", "sheet", "actor", "sdx-base-sheet"],
       width: 920,
       height: 820,
       resizable: true,

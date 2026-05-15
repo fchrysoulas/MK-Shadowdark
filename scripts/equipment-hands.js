@@ -1,5 +1,5 @@
 /*
- * Shadowdark Extras - Equipment Hands
+ * MK-Shadowdark - Equipment Hands
  * Foundry VTT v12/v13
  *
  * Validates hand-slot usage for equipped Shadowdark items.
@@ -15,7 +15,7 @@
  */
 
 (() => {
-  const MODULE_ID = "shadowdark-extras";
+  const MODULE_ID = "mk-shadowdark";
   const MODULE_VERSION = "1.0.1";
   const SUBMODULE = "EquipmentHands";
 

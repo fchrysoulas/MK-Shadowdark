@@ -1,12 +1,12 @@
 /*
- * Shadowdark Extras - Quickdraw Icons
+ * MK-Shadowdark - Quickdraw Icons
  * Foundry VTT v12
  *
  * Settings are registered in scripts/settings.js.
  */
 
 (() => {
-  const MODULE_ID = "shadowdark-extras";
+  const MODULE_ID = "mk-shadowdark";
   const FLAG_KEY = "quickdraw";
   const QD_ICON_CLASS = "fa-bolt";
 

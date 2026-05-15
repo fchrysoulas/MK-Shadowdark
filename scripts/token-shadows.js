@@ -1,5 +1,5 @@
 /*
- * Shadowdark Extras - Token Shadows
+ * MK-Shadowdark - Token Shadows
  * Foundry VTT v12
  *
  * Draws configurable blurred oval shadows under tokens.
@@ -7,7 +7,7 @@
  */
 
 (() => {
-  const MODULE_ID = "shadowdark-extras";
+  const MODULE_ID = "mk-shadowdark";
   const MODULE_VERSION = "1.0.0";
   const SUBMODULE = "TokenShadows";
 

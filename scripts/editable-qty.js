@@ -1,9 +1,9 @@
 /* ---------------------------------------- */
-/* Shadowdark Extras - Editable Qty         */
+/* MK-Shadowdark - Editable Qty         */
 /* ---------------------------------------- */
 
 (() => {
-  const MODULE_ID = "shadowdark-extras";
+  const MODULE_ID = "mk-shadowdark";
   const FEATURE = "EditableQty";
   const VERSION = "1.1.0";
 

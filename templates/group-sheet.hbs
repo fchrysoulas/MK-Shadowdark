@@ -1,481 +1,144 @@
-<form class="{{cssClass}} sdx-group-sheet" autocomplete="off">
-
+<form class="sdx-group-sheet {{cssClass}}" autocomplete="off">
   <header class="sdx-group-header">
-    <img
-      class="sdx-group-image"
-      src="{{actor.img}}"
-      data-edit="img"
-      title="{{actor.name}}"
-    />
-
+    <img class="sdx-group-image" src="{{actor.img}}" data-edit="img" title="{{actor.name}}" alt="{{actor.name}}">
     <div class="sdx-group-title-block">
-      <input
-        class="sdx-group-name"
-        name="name"
-        type="text"
-        value="{{actor.name}}"
-        placeholder="Group Name"
-      />
-
+      <input class="sdx-group-name" name="name" type="text" value="{{actor.name}}" placeholder="Group Name">
       <div class="sdx-group-stats">
-        <span title="Members">
-          <i class="fas fa-users"></i>
-          <strong>{{sdx.summary.count}}</strong>
-        </span>
-
-        <span title="Total HP">
-          <i class="fas fa-heart"></i>
-          <strong>{{sdx.summary.hp.value}} / {{sdx.summary.hp.max}}</strong>
-        </span>
-
-        <span title="Average AC">
-          <i class="fas fa-shield-alt"></i>
-          <strong>{{sdx.summary.ac}}</strong>
-        </span>
-
-        <span title="Average Level">
-          <i class="fas fa-star"></i>
-          <strong>{{sdx.summary.level}}</strong>
-        </span>
+        <span>Members <strong>{{sdx.summary.count}}</strong></span>
+        <span>HP <strong>{{sdx.summary.hp.value}}/{{sdx.summary.hp.max}}</strong></span>
+        <span>Avg AC <strong>{{sdx.summary.ac}}</strong></span>
+        <span>Avg LVL <strong>{{sdx.summary.level}}</strong></span>
       </div>
     </div>
   </header>
 
   <nav class="sdx-group-nav tabs" data-group="primary">
-    <a class="item" data-tab="members">
-      <i class="fas fa-users"></i>
-      Members
-    </a>
-
-    <a class="item" data-tab="inventory">
-      <i class="fas fa-box"></i>
-      Inventory
-    </a>
-
-    <a class="item" data-tab="travel">
-      <i class="fas fa-campground"></i>
-      Travel
-    </a>
-
-    <a class="item" data-tab="description">
-      <i class="fas fa-book-open"></i>
-      Description
-    </a>
+    <a class="item" data-tab="members"><i class="fas fa-users"></i> Members</a>
+    <a class="item" data-tab="travel"><i class="fas fa-route"></i> Travel</a>
+    <a class="item" data-tab="inventory"><i class="fas fa-box-open"></i> Inventory</a>
+    <a class="item" data-tab="notes"><i class="fas fa-scroll"></i> Notes</a>
   </nav>
 
   <section class="sdx-group-content">
-
-    <section class="tab sdx-group-tab sdx-group-tab-body" data-group="primary" data-tab="members">
-      <section class="sdx-group-dropzone">
-        Drag Shadowdark actors here, or select tokens on the canvas and use
-        <strong>Add Tokens</strong>.
-      </section>
-
-      <section class="sdx-group-members">
-
-        {{#if sdx.hasMembers}}
-
-          {{#each sdx.members as |member|}}
-
-            <article class="sdx-group-member" data-member-uuid="{{member.uuid}}">
-
-              {{#if ../sdx.canEditGroup}}
-                <button
-                  type="button"
-                  class="sdx-member-remove"
-                  data-action="remove-member"
-                  title="Remove from group"
-                >
-                  <i class="fas fa-times"></i>
-                </button>
-              {{/if}}
-
-              <img
-                class="sdx-member-image"
-                src="{{member.img}}"
-                title="{{member.name}}"
-                data-action="open-member"
-              />
-
-              <div class="sdx-member-main">
-
-                <div class="sdx-member-name-row">
-                  <button
-                    type="button"
-                    class="sdx-member-name"
-                    data-action="open-member"
-                  >
-                    {{member.name}}
-                  </button>
-
-                  <span class="sdx-member-class">
-                    {{member.className}}
-                  </span>
-                </div>
-
-                <div class="sdx-member-hp-row">
-                  <span class="sdx-small-label">HP</span>
-
-                  <span class="sdx-hp-text">
-                    {{member.hp.value}} / {{member.hp.max}}
-                  </span>
-
-                  <div class="sdx-hp-bar">
-                    <div
-                      class="sdx-hp-fill"
-                      style="width: {{member.hp.pct}}%;"
-                    ></div>
-                  </div>
-                </div>
-
-                <div class="sdx-member-abilities">
-                  {{#each member.abilities as |ability|}}
-                    <button
-                      type="button"
-                      class="sdx-ability-button"
-                      data-action="roll-ability"
-                      data-ability="{{ability.key}}"
-                      title="Roll {{ability.label}} check"
-                    >
-                      <span>{{ability.label}}</span>
-                      <strong>{{ability.mod}}</strong>
-                    </button>
-                  {{/each}}
-                </div>
-
-              </div>
-
-              <div class="sdx-member-side-stats">
-
-                <div class="sdx-side-stat">
-                  <span>AC</span>
-                  <strong>{{member.ac}}</strong>
-                </div>
-
-                <div class="sdx-side-stat">
-                  <span>LVL</span>
-                  <strong>{{member.level}}</strong>
-                </div>
-
-                <div class="sdx-side-stat {{#if member.slots.over}}sdx-danger{{/if}}">
-                  <span>SLOTS</span>
-                  <strong>{{member.slots.total}}/{{member.slots.max}}</strong>
-                </div>
-
-                {{#if member.isPlayer}}
-                  <div class="sdx-side-stat sdx-xp-stat">
-                    <span>XP</span>
-
-                    {{#if ../sdx.canEditGroup}}
-                      <button
-                        type="button"
-                        data-action="xp-decrement"
-                        title="Decrease XP"
-                      >
-                        <i class="fas fa-minus"></i>
-                      </button>
-                    {{/if}}
-
-                    <strong>{{member.xp.value}}/{{member.xp.next}}</strong>
-
-                    {{#if ../sdx.canEditGroup}}
-                      <button
-                        type="button"
-                        data-action="xp-increment"
-                        title="Increase XP"
-                      >
-                        <i class="fas fa-plus"></i>
-                      </button>
-                    {{/if}}
-                  </div>
-                {{/if}}
-
-              </div>
-
-            </article>
-
-          {{/each}}
-
-        {{else}}
-
-          <div class="sdx-empty-group">
-            No members yet. Drag actors here to build the group.
-          </div>
-
-        {{/if}}
-
-      </section>
-    </section>
-
-    <section class="tab sdx-group-tab sdx-group-tab-body" data-group="primary" data-tab="inventory">
-
-      <div class="sdx-inventory-layout">
-
-        <section class="sdx-shared-items-panel">
-
-          <header class="sdx-inventory-panel-header">
-            <button
-              type="button"
-              class="sdx-panel-add-button"
-              data-action="create-group-item"
-              data-treasure="false"
-              title="Add shared item"
-            >
-              <i class="fas fa-plus"></i>
-            </button>
-
-            <h2>Shared Items</h2>
-
-            <div class="sdx-inventory-slots {{#if sdx.inventory.slots.over}}sdx-danger{{/if}}">
-              <span>Slots:</span>
-              <strong>{{sdx.inventory.slots.total}} / {{sdx.inventory.slots.max}}</strong>
-              <i class="fas fa-cog"></i>
+    <div class="tab sdx-group-tab sdx-group-tab-body" data-group="primary" data-tab="members">
+      <div class="sdx-group-dropzone">Drop actors here, or use the sheet header button to add controlled tokens.</div>
+      {{#if sdx.hasMembers}}
+      <div class="sdx-group-members">
+        {{#each sdx.members}}
+        <article class="sdx-group-member" data-member-uuid="{{uuid}}">
+          <button type="button" class="sdx-member-remove" data-action="remove-member" title="Remove member"><i class="fas fa-times"></i></button>
+          <img class="sdx-member-image" src="{{img}}" alt="{{name}}" data-action="open-member">
+          <div class="sdx-member-main">
+            <div class="sdx-member-name-row">
+              <button type="button" class="sdx-member-name" data-action="open-member">{{name}}</button>
+              <span class="sdx-member-class">{{className}}</span>
             </div>
-          </header>
-
-          <div class="sdx-shared-items-table">
-
-            <div class="sdx-shared-items-table-header">
-              <span>Item</span>
-              <span>Qty</span>
-              <span>Slots</span>
-              <span></span>
+            <div class="sdx-member-hp-row">
+              <span class="sdx-small-label">HP</span>
+              <span class="sdx-hp-text">{{hp.value}}/{{hp.max}}</span>
+              <div class="sdx-hp-bar"><div class="sdx-hp-fill" style="width: {{hp.pct}}%;"></div></div>
             </div>
-
-            <div class="sdx-shared-items-table-body">
-
-              {{#if sdx.inventory.hasItems}}
-
-                {{#each sdx.inventory.items as |item|}}
-                  <article class="sdx-shared-item-row" data-item-id="{{item.id}}">
-                    <div class="sdx-shared-item-name-cell">
-                      <img src="{{item.img}}" title="{{item.name}}" data-action="open-item" />
-
-                      <button type="button" class="sdx-inventory-name" data-action="open-item">
-                        {{item.name}}
-                      </button>
-                    </div>
-
-                    <div class="sdx-shared-item-qty-cell">
-                      {{#if ../sdx.canEditGroup}}
-                        <button type="button" data-action="item-decrement" title="Decrease quantity">
-                          <i class="fas fa-minus"></i>
-                        </button>
-                      {{/if}}
-
-                      <strong>{{item.quantity}}</strong>
-
-                      {{#if ../sdx.canEditGroup}}
-                        <button type="button" data-action="item-increment" title="Increase quantity">
-                          <i class="fas fa-plus"></i>
-                        </button>
-                      {{/if}}
-                    </div>
-
-                    <div class="sdx-shared-item-slots-cell">
-                      {{item.slots}}
-                    </div>
-
-                    <div class="sdx-shared-item-actions-cell">
-                      {{#if ../sdx.canEditGroup}}
-                        <button type="button" data-action="delete-item" title="Delete item">
-                          <i class="fas fa-trash"></i>
-                        </button>
-                      {{/if}}
-                    </div>
-                  </article>
-                {{/each}}
-
-              {{else}}
-
-                <div class="sdx-shared-items-empty">
-                  No items in party inventory
-                </div>
-
-              {{/if}}
-
+            <div class="sdx-member-abilities">
+              {{#each abilities}}
+              <button type="button" class="sdx-ability-button" data-action="roll-ability" data-ability="{{key}}" title="Roll {{label}}">
+                <span>{{label}}</span><strong>{{mod}}</strong>
+              </button>
+              {{/each}}
             </div>
-
           </div>
-
-        </section>
-
-        <aside class="sdx-party-treasure-panel">
-
-          <h2>Party Treasure</h2>
-
-          <label class="sdx-coin-row">
-            <span>GP</span>
-            <input
-              type="number"
-              min="0"
-              step="1"
-              value="{{sdx.inventory.coins.gp}}"
-              data-action="change-group-coin"
-              data-coin="gp"
-              {{#unless sdx.canEditGroup}}disabled{{/unless}}
-            />
-          </label>
-
-          <label class="sdx-coin-row">
-            <span>SP</span>
-            <input
-              type="number"
-              min="0"
-              step="1"
-              value="{{sdx.inventory.coins.sp}}"
-              data-action="change-group-coin"
-              data-coin="sp"
-              {{#unless sdx.canEditGroup}}disabled{{/unless}}
-            />
-          </label>
-
-          <label class="sdx-coin-row">
-            <span>CP</span>
-            <input
-              type="number"
-              min="0"
-              step="1"
-              value="{{sdx.inventory.coins.cp}}"
-              data-action="change-group-coin"
-              data-coin="cp"
-              {{#unless sdx.canEditGroup}}disabled{{/unless}}
-            />
-          </label>
-
-          <div class="sdx-coin-slots">
-            <i class="fas fa-weight-hanging"></i>
-            <strong>{{sdx.inventory.coinSlots}}</strong>
-            <span>Slots</span>
+          <div class="sdx-member-side-stats">
+            <span class="sdx-side-stat">AC <strong>{{ac}}</strong></span>
+            <span class="sdx-side-stat">LVL <strong>{{level}}</strong></span>
+            <span class="sdx-side-stat sdx-xp-stat">XP <strong>{{xp.value}}/{{xp.next}}</strong> <button type="button" data-action="xp-decrement"><i class="fas fa-minus"></i></button><button type="button" data-action="xp-increment"><i class="fas fa-plus"></i></button></span>
+            <span class="sdx-side-stat {{#if slots.over}}sdx-danger{{/if}}">Slots <strong>{{slots.total}}/{{slots.max}}</strong></span>
           </div>
-
-          <button
-            type="button"
-            class="sdx-divide-coins-button"
-            data-action="divide-coins"
-            {{#unless sdx.canEditGroup}}disabled{{/unless}}
-          >
-            Divide to PCs
-          </button>
-
-        </aside>
-
+        </article>
+        {{/each}}
       </div>
+      {{else}}
+      <div class="sdx-empty-group">No members yet. Drop player actors or tokens onto this sheet.</div>
+      {{/if}}
+    </div>
 
-    </section>
-
-    <section class="tab sdx-group-tab sdx-group-tab-body" data-group="primary" data-tab="travel">
+    <div class="tab sdx-group-tab sdx-group-tab-body" data-group="primary" data-tab="travel">
       <div class="sdx-travel-toolbar">
-        <button type="button" data-action="cycle-weather" title="Cycle weather">
-          <i class="fas fa-cloud-sun-rain"></i>
-          Weather: {{sdx.travel.weatherLabel}}
-        </button>
-
-        <label class="sdx-speed-control">
-          <i class="fas fa-running"></i>
-          Speed:
+        <button type="button" data-action="cycle-weather"><i class="fas fa-cloud-sun-rain"></i> Weather: {{sdx.travel.weatherLabel}}</button>
+        <label class="sdx-speed-control">Speed
           <select data-action="change-speed">
-            {{#each sdx.travel.speedOptions as |speed|}}
-              <option value="{{speed.value}}" {{#if speed.selected}}selected{{/if}}>
-                {{speed.label}}
-              </option>
+            {{#each sdx.travel.speedOptions}}
+            <option value="{{value}}" {{#if selected}}selected{{/if}}>{{label}}</option>
             {{/each}}
           </select>
         </label>
-
-        <button type="button" data-action="reset-travel">
-          <i class="fas fa-undo"></i>
-          Reset All
-        </button>
+        <button type="button" data-action="reset-travel"><i class="fas fa-undo"></i> Reset Assignments</button>
       </div>
 
-      <section class="sdx-travel-grid">
-        {{#each sdx.travel.activities as |activity|}}
-          <article class="sdx-travel-card" data-travel-activity-key="{{activity.key}}">
-            <header class="sdx-travel-card-header">
-              <div class="sdx-travel-dc">
-                <span>DC</span>
-                <strong>{{activity.dc}}</strong>
+      <div class="sdx-travel-activities">
+        {{#each sdx.travel.activities}}
+        <article class="sdx-travel-card" data-travel-activity-key="{{key}}">
+          <header class="sdx-travel-card-header">
+            <h3>{{name}}</h3>
+            <span>DC {{dc}} - {{abilityLabel}}</span>
+          </header>
+          <div class="sdx-travel-assigned-list">
+            {{#if hasAssigned}}
+              {{#each assigned}}
+              <div class="sdx-travel-assigned" data-assigned-actor-uuid="{{uuid}}">
+                <img src="{{img}}" alt="{{name}}">
+                <button type="button" class="sdx-travel-assigned-name" data-action="open-member">{{name}}</button>
+                <button type="button" data-action="clear-travel-participant" title="Remove"><i class="fas fa-times"></i></button>
               </div>
-
-              <div class="sdx-travel-title">
-                <strong>{{activity.name}}</strong>
-                <span>{{activity.abilityLabel}}</span>
-              </div>
-
-              <button
-                type="button"
-                class="sdx-travel-roll"
-                data-action="roll-travel-activity"
-                title="Roll all participants"
-              >
-                <i class="fas fa-fire"></i>
-              </button>
-            </header>
-
-            <div class="sdx-travel-drop-area">
-              {{#if activity.hasAssigned}}
-
-                <div class="sdx-travel-assigned-list">
-                  {{#each activity.assigned as |assigned|}}
-                    <div class="sdx-travel-assigned" data-assigned-actor-uuid="{{assigned.uuid}}">
-                      <img src="{{assigned.img}}" title="{{assigned.name}}" data-action="open-member" />
-
-                      <button type="button" class="sdx-travel-assigned-name" data-action="open-member">
-                        {{assigned.name}}
-                      </button>
-
-                      <span>{{assigned.className}}</span>
-
-                      {{#if ../../sdx.canEditGroup}}
-                        <button
-                          type="button"
-                          class="sdx-travel-clear"
-                          data-action="clear-travel-participant"
-                          title="Remove participant"
-                        >
-                          <i class="fas fa-times"></i>
-                        </button>
-                      {{/if}}
-                    </div>
-                  {{/each}}
-                </div>
-
-                {{#if ../sdx.canEditGroup}}
-                  <button
-                    type="button"
-                    class="sdx-travel-clear-all"
-                    data-action="clear-travel-activity"
-                    title="Clear all participants"
-                  >
-                    Clear All
-                  </button>
-                {{/if}}
-
-              {{else}}
-                <div class="sdx-travel-empty">
-                  <i class="fas fa-user-plus"></i>
-                  <span>Drop Character Here</span>
-                </div>
-              {{/if}}
-            </div>
-          </article>
+              {{/each}}
+            {{else}}
+              <p class="sdx-muted">Drop one or more members here.</p>
+            {{/if}}
+          </div>
+          <footer class="sdx-travel-card-actions">
+            <button type="button" data-action="roll-travel-activity"><i class="fas fa-dice-d20"></i> Roll</button>
+            <button type="button" data-action="clear-travel-activity"><i class="fas fa-eraser"></i> Clear</button>
+          </footer>
+        </article>
         {{/each}}
-      </section>
-    </section>
+      </div>
+    </div>
 
-    <section class="tab sdx-group-tab sdx-group-tab-body" data-group="primary" data-tab="description">
-      <section class="sdx-group-notes">
-        {{editor
-          notesHTML
-          target="system.notes"
-          button=true
-          editable=editable
-          engine="prosemirror"
-          collaborate=false
-        }}
-      </section>
-    </section>
+    <div class="tab sdx-group-tab sdx-group-tab-body" data-group="primary" data-tab="inventory">
+      <div class="sdx-inventory-layout">
+        <section class="sdx-shared-items-panel">
+          <header class="sdx-inventory-panel-header">
+            <button type="button" class="sdx-panel-add-button" data-action="create-group-item" title="Add gear"><i class="fas fa-plus"></i></button>
+            <h2>Shared Items</h2>
+            <span class="sdx-inventory-slots {{#if sdx.inventory.slots.over}}sdx-danger{{/if}}"><i class="fas fa-weight-hanging"></i> <strong>{{sdx.inventory.slots.total}}/{{sdx.inventory.slots.max}}</strong></span>
+          </header>
+          <div class="sdx-shared-items-table">
+            <div class="sdx-shared-items-table-header"><span>Item</span><span>Qty</span><span>Slots</span><span></span></div>
+            <div class="sdx-shared-items-table-body">
+              {{#each sdx.inventory.items}}
+              <div class="sdx-shared-item-row" data-item-id="{{id}}">
+                <div class="sdx-shared-item-name-cell"><img src="{{img}}" alt="{{name}}"><button type="button" class="sdx-inventory-name" data-action="open-item">{{name}}</button></div>
+                <div class="sdx-shared-item-qty-cell"><button type="button" data-action="item-decrement"><i class="fas fa-minus"></i></button><strong>{{quantity}}</strong><button type="button" data-action="item-increment"><i class="fas fa-plus"></i></button></div>
+                <div class="sdx-shared-item-slots-cell">{{slots}}</div>
+                <div class="sdx-shared-item-actions-cell"><button type="button" data-action="delete-item"><i class="fas fa-trash"></i></button></div>
+              </div>
+              {{/each}}
+            </div>
+          </div>
+        </section>
 
+        <aside class="sdx-party-treasure-panel">
+          <h2>Party Treasure</h2>
+          <label>GP <input type="number" value="{{sdx.inventory.coins.gp}}" min="0" data-action="change-group-coin" data-coin="gp"></label>
+          <label>SP <input type="number" value="{{sdx.inventory.coins.sp}}" min="0" data-action="change-group-coin" data-coin="sp"></label>
+          <label>CP <input type="number" value="{{sdx.inventory.coins.cp}}" min="0" data-action="change-group-coin" data-coin="cp"></label>
+          <p>Coin slots: <strong>{{sdx.inventory.coinSlots}}</strong></p>
+          <button type="button" data-action="divide-coins"><i class="fas fa-coins"></i> Divide Coins</button>
+        </aside>
+      </div>
+    </div>
+
+    <div class="tab sdx-group-tab sdx-group-tab-body" data-group="primary" data-tab="notes">
+      <textarea name="system.notes" rows="18">{{actor.system.notes}}</textarea>
+      <div class="sdx-enriched-text">{{{notesHTML}}}</div>
+    </div>
   </section>
 </form>

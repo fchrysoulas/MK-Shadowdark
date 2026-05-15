@@ -1,5 +1,5 @@
 /*
- * Shadowdark Extras - Character Sheet Tweaks
+ * MK-Shadowdark - Character Sheet Tweaks
  * Foundry VTT v12
  * Shadowdark system 3.5.x aware
  *
@@ -7,7 +7,7 @@
  */
 
 (() => {
-  const MODULE_ID = "shadowdark-extras";
+  const MODULE_ID = "mk-shadowdark";
   const MODULE_VERSION = "1.0.0";
   const SUBMODULE = "Character Sheet Tweaks";
 
@@ -73,7 +73,7 @@
       const highlightRoot = form ?? root;
       refreshItemHighlights(app, highlightRoot);
       attachQuickdrawRefreshWatcher(app, highlightRoot);
-      // Quickdraw icons are injected by a separate SD Extras hook. Run a few
+      // Quickdraw icons are injected by a separate MK-Shadowdark hook. Run a few
       // delayed passes so the highlight sees the bolt/thunder icon after it appears.
       window.setTimeout(() => refreshItemHighlights(app, highlightRoot), 50);
       window.setTimeout(() => refreshItemHighlights(app, highlightRoot), 250);
@@ -524,7 +524,7 @@
       });
     } catch (err) {
       console.error(`${MODULE_ID} v${MODULE_VERSION} | ${SUBMODULE} | ability roll error`, err);
-      ui.notifications?.error(`SD Extras | Could not roll ${ability.toUpperCase()} check.`);
+      ui.notifications?.error(`MK-Shadowdark | Could not roll ${ability.toUpperCase()} check.`);
     }
   }
 
@@ -556,7 +556,7 @@
       await createLuckChatMessage(actor, nextAvailable, nextRemaining, pulpMode);
     } catch (err) {
       console.error(`${MODULE_ID} v${MODULE_VERSION} | ${SUBMODULE} | luck toggle error`, err);
-      ui.notifications?.error("SD Extras | Could not update Luck.");
+      ui.notifications?.error("MK-Shadowdark | Could not update Luck.");
     }
   }
 
@@ -782,12 +782,12 @@
       foundry.utils.getProperty(item, `flags.${MODULE_ID}.quickdraw.marked`),
       foundry.utils.getProperty(item, `flags.${MODULE_ID}.quickdrawEnabled`),
       foundry.utils.getProperty(item, `flags.${MODULE_ID}.isQuickdraw`),
-      foundry.utils.getProperty(item, "flags.shadowdark-extras.quickdraw"),
-      foundry.utils.getProperty(item, "flags.shadowdark-extras.quickdraw.value"),
-      foundry.utils.getProperty(item, "flags.shadowdark-extras.quickdraw.enabled"),
-      foundry.utils.getProperty(item, "flags.shadowdark-extras.quickdraw.active"),
-      foundry.utils.getProperty(item, "flags.shadowdark-extras.quickdraw.isActive"),
-      foundry.utils.getProperty(item, "flags.shadowdark-extras.quickdraw.marked")
+      foundry.utils.getProperty(item, "flags.mk-shadowdark.quickdraw"),
+      foundry.utils.getProperty(item, "flags.mk-shadowdark.quickdraw.value"),
+      foundry.utils.getProperty(item, "flags.mk-shadowdark.quickdraw.enabled"),
+      foundry.utils.getProperty(item, "flags.mk-shadowdark.quickdraw.active"),
+      foundry.utils.getProperty(item, "flags.mk-shadowdark.quickdraw.isActive"),
+      foundry.utils.getProperty(item, "flags.mk-shadowdark.quickdraw.marked")
     ];
 
     return values.some(isQuickdrawValue);

@@ -1,0 +1,70 @@
+{
+  "id": "shadowdark-extras",
+  "title": "Mikrokouneli's Extras",
+  "description": "Quality-of-life extras for the Shadowdark system (Luck rerolls, etc).",
+  "version": "1.0.0",
+  "compatibility": {
+    "minimum": 12,
+    "verified": 12,
+    "maximum": 12
+  },
+  "authors": [
+    {
+      "name": "Mikrokouneli",
+      "url": "",
+      "discord": ""
+    }
+  ],
+  "esmodules": [
+    "scripts/settings.js",
+    "scripts/shadowdark-extras.js",
+    "scripts/luck-reroll.js",
+    "scripts/auto-apply-damage.js",
+    "scripts/token-shadows.js",
+    "scripts/quickdraw-icons.js",
+    "scripts/editable-qty.js",
+    "scripts/equipment-hands.js",
+    "scripts/death-timer.js",
+    "scripts/time-passes-splash.js",
+    "scripts/character-sheet-tweaks.js",
+    "scripts/base-actor.js",
+    "scripts/group-sheet.js"
+  ],
+  "styles": [
+    "styles/shadowdark-extras.css",
+    "styles/auto-apply-damage.css",
+    "styles/quickdraw-icons.css",
+    "styles/character-sheet-tweaks.css",
+    "styles/group-sheet.css",
+    "styles/base-actor.css"
+  ],
+  "languages": [
+    {
+      "lang": "en",
+      "name": "English",
+      "path": "lang/en.json"
+    }
+  ],
+  "relationships": {
+    "systems": [
+      {
+        "id": "shadowdark",
+        "type": "system"
+      }
+    ]
+  },
+  "documentTypes": {
+    "Actor": {
+      "Base": {
+        "htmlFields": [
+          "base.description",
+          "facilities.note",
+          "projects.note",
+          "npcs.note",
+          "threats.note",
+          "notes"
+        ]
+      }
+    }
+  }
+}

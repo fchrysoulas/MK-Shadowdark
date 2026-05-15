@@ -1,0 +1,523 @@
+<form class="{{cssClass}} sdx-base-sheet-form" autocomplete="off">
+
+  <header class="sdx-base-hero">
+
+    <section class="sdx-base-portrait-card">
+      <div class="sdx-base-type-ribbon">
+        <img src="{{selectedBaseType.icon}}" alt="">
+        <span>{{selectedBaseType.label}}</span>
+      </div>
+
+      <img
+        class="sdx-base-image"
+        src="{{actor.img}}"
+        data-edit="img"
+        title="{{actor.name}}"
+        alt="{{actor.name}}"
+      >
+
+      {{#if editable}}
+        <button type="button" class="sdx-image-button sdx-icon-button" data-action="pick-image">
+          <img src="{{icons.base}}" alt="">
+          <span>Change Image</span>
+        </button>
+      {{/if}}
+    </section>
+
+    <section class="sdx-base-control-card">
+      <div class="sdx-title-row">
+        <img class="sdx-title-icon" src="{{icons.base}}" alt="">
+        <input
+          class="sdx-base-name"
+          name="name"
+          type="text"
+          value="{{actor.name}}"
+          placeholder="Base Name"
+          {{#unless editable}}disabled{{/unless}}
+        >
+      </div>
+
+      <div class="sdx-form-grid sdx-identity-grid">
+        <label class="sdx-field-card">
+          <span>Type</span>
+          <select name="system.base.type" {{#unless editable}}disabled{{/unless}}>
+            {{#each baseTypes as |type|}}
+              <option value="{{type.key}}" {{#if type.selected}}selected{{/if}}>
+                {{type.label}}
+              </option>
+            {{/each}}
+          </select>
+        </label>
+
+        <label class="sdx-field-card">
+          <span>Location</span>
+          <input
+            type="text"
+            name="system.base.location"
+            value="{{system.base.location}}"
+            placeholder="Unknown"
+            {{#unless editable}}disabled{{/unless}}
+          >
+        </label>
+      </div>
+
+      <div class="sdx-summary-grid">
+        {{#each summaryNumbers as |number|}}
+          <article class="sdx-summary-number sdx-summary-{{number.key}}">
+            <div class="sdx-summary-icon-frame">
+              <img src="{{number.icon}}" alt="">
+            </div>
+
+            <label>
+              <span>{{number.label}}</span>
+              <input
+                type="number"
+                name="{{number.name}}"
+                value="{{number.value}}"
+                min="{{number.min}}"
+                max="{{number.max}}"
+                {{#unless ../editable}}disabled{{/unless}}
+              >
+            </label>
+
+            {{#if ../editable}}
+              <div class="sdx-mini-stepper">
+                <button type="button" data-action="adjust-number" data-path="{{number.path}}" data-delta="-1">-</button>
+                <button type="button" data-action="adjust-number" data-path="{{number.path}}" data-delta="1">+</button>
+              </div>
+            {{/if}}
+          </article>
+        {{/each}}
+      </div>
+
+      <div class="sdx-sheet-actions">
+        <button type="button" class="sdx-icon-button" data-action="post-status">
+          <img src="{{icons.status}}" alt="">
+          <span>Post Status</span>
+        </button>
+
+        <button type="button" class="sdx-icon-button" data-action="roll-event">
+          <img src="{{icons.event}}" alt="">
+          <span>Roll Event</span>
+        </button>
+      </div>
+    </section>
+  </header>
+
+  <main class="sdx-base-body">
+
+    <section class="sdx-base-card sdx-description-card">
+      <header class="sdx-section-header">
+        <div>
+          <img src="{{icons.notes}}" alt="">
+          <h2>Description</h2>
+        </div>
+      </header>
+
+      <textarea
+        name="system.base.description"
+        rows="5"
+        {{#unless editable}}disabled{{/unless}}
+      >{{system.base.description}}</textarea>
+
+      {{#unless editable}}
+        <div class="sdx-enriched-text">
+          {{{descriptionHTML}}}
+        </div>
+      {{/unless}}
+    </section>
+
+    <section class="sdx-base-card">
+      <header class="sdx-section-header">
+        <div>
+          <img src="{{icons.supplies}}" alt="">
+          <h2>Resources</h2>
+        </div>
+      </header>
+
+      <div class="sdx-resource-grid">
+        {{#each resources as |resource|}}
+          <article class="sdx-resource-tile sdx-resource-{{resource.key}}">
+            <div class="sdx-resource-icon-frame">
+              <img src="{{resource.icon}}" alt="">
+            </div>
+
+            <label>
+              <span>{{resource.label}}</span>
+              <input
+                type="number"
+                min="0"
+                name="{{resource.name}}"
+                value="{{resource.value}}"
+                {{#unless ../editable}}disabled{{/unless}}
+              >
+            </label>
+
+            {{#if ../editable}}
+              <div class="sdx-mini-stepper">
+                <button type="button" data-action="adjust-number" data-path="{{resource.path}}" data-delta="-1">-</button>
+                <button type="button" data-action="adjust-number" data-path="{{resource.path}}" data-delta="1">+</button>
+              </div>
+            {{/if}}
+          </article>
+        {{/each}}
+      </div>
+    </section>
+
+    <section class="sdx-base-card">
+      <header class="sdx-section-header">
+        <div>
+          <img src="{{icons.facilities}}" alt="">
+          <h2>Facilities</h2>
+        </div>
+
+        {{#if editable}}
+          <button type="button" class="sdx-icon-button compact" data-action="add-row" data-collection="facilities">
+            <img src="{{icons.add}}" alt="">
+            <span>Add Facility</span>
+          </button>
+        {{/if}}
+      </header>
+
+      <div class="sdx-row-list">
+        {{#each facilities as |facility|}}
+          <article class="sdx-row-card">
+            <div class="sdx-row-header">
+              <img src="{{facility.icon}}" alt="">
+
+              <input
+                type="text"
+                name="system.facilities.{{facility.index}}.name"
+                value="{{facility.name}}"
+                {{#unless ../editable}}disabled{{/unless}}
+              >
+
+              {{#if ../editable}}
+                <button type="button" class="sdx-delete-button" data-action="delete-row" data-collection="facilities" data-id="{{facility.id}}">
+                  <img src="{{../icons.delete}}" alt="Delete">
+                </button>
+              {{/if}}
+            </div>
+
+            <input type="hidden" name="system.facilities.{{facility.index}}.id" value="{{facility.id}}">
+
+            <div class="sdx-form-grid">
+              <label>
+                <span>Rank</span>
+                <input
+                  type="number"
+                  min="1"
+                  max="3"
+                  name="system.facilities.{{facility.index}}.rank"
+                  value="{{facility.rank}}"
+                  {{#unless ../editable}}disabled{{/unless}}
+                >
+              </label>
+
+              <label>
+                <span>Condition</span>
+                <input
+                  type="text"
+                  name="system.facilities.{{facility.index}}.condition"
+                  value="{{facility.condition}}"
+                  {{#unless ../editable}}disabled{{/unless}}
+                >
+              </label>
+            </div>
+
+            <label>
+              <span>Benefit</span>
+              <input
+                type="text"
+                name="system.facilities.{{facility.index}}.benefit"
+                value="{{facility.benefit}}"
+                {{#unless ../editable}}disabled{{/unless}}
+              >
+            </label>
+
+            <label>
+              <span>Note</span>
+              <textarea
+                rows="2"
+                name="system.facilities.{{facility.index}}.note"
+                {{#unless ../editable}}disabled{{/unless}}
+              >{{facility.note}}</textarea>
+            </label>
+          </article>
+        {{/each}}
+      </div>
+    </section>
+
+    <section class="sdx-base-card">
+      <header class="sdx-section-header">
+        <div>
+          <img src="{{icons.projects}}" alt="">
+          <h2>Projects</h2>
+        </div>
+
+        {{#if editable}}
+          <button type="button" class="sdx-icon-button compact" data-action="add-row" data-collection="projects">
+            <img src="{{icons.add}}" alt="">
+            <span>Add Project</span>
+          </button>
+        {{/if}}
+      </header>
+
+      <div class="sdx-row-list">
+        {{#each projects as |project|}}
+          <article class="sdx-row-card {{#if project.complete}}is-complete{{/if}}">
+            <div class="sdx-row-header">
+              <img src="{{project.icon}}" alt="">
+
+              <input
+                type="text"
+                name="system.projects.{{project.index}}.name"
+                value="{{project.name}}"
+                {{#unless ../editable}}disabled{{/unless}}
+              >
+
+              {{#if ../editable}}
+                <button type="button" class="sdx-delete-button" data-action="delete-row" data-collection="projects" data-id="{{project.id}}">
+                  <img src="{{../icons.delete}}" alt="Delete">
+                </button>
+              {{/if}}
+            </div>
+
+            <input type="hidden" name="system.projects.{{project.index}}.id" value="{{project.id}}">
+
+            <div class="sdx-progress-line">
+              <progress value="{{project.progress}}" max="{{project.target}}"></progress>
+              <span>{{project.progress}} / {{project.target}}</span>
+            </div>
+
+            <div class="sdx-form-grid">
+              <label>
+                <span>Progress</span>
+                <input
+                  type="number"
+                  min="0"
+                  name="system.projects.{{project.index}}.progress"
+                  value="{{project.progress}}"
+                  {{#unless ../editable}}disabled{{/unless}}
+                >
+              </label>
+
+              <label>
+                <span>Target</span>
+                <input
+                  type="number"
+                  min="1"
+                  name="system.projects.{{project.index}}.target"
+                  value="{{project.target}}"
+                  {{#unless ../editable}}disabled{{/unless}}
+                >
+              </label>
+
+              <label>
+                <span>Cost</span>
+                <input
+                  type="text"
+                  name="system.projects.{{project.index}}.cost"
+                  value="{{project.cost}}"
+                  {{#unless ../editable}}disabled{{/unless}}
+                >
+              </label>
+
+              <label>
+                <span>Owner</span>
+                <input
+                  type="text"
+                  name="system.projects.{{project.index}}.owner"
+                  value="{{project.owner}}"
+                  {{#unless ../editable}}disabled{{/unless}}
+                >
+              </label>
+            </div>
+
+            <label>
+              <span>Note</span>
+              <textarea
+                rows="2"
+                name="system.projects.{{project.index}}.note"
+                {{#unless ../editable}}disabled{{/unless}}
+              >{{project.note}}</textarea>
+            </label>
+          </article>
+        {{/each}}
+      </div>
+    </section>
+
+    <section class="sdx-base-card">
+      <header class="sdx-section-header">
+        <div>
+          <img src="{{icons.npcs}}" alt="">
+          <h2>NPCs</h2>
+        </div>
+
+        {{#if editable}}
+          <button type="button" class="sdx-icon-button compact" data-action="add-row" data-collection="npcs">
+            <img src="{{icons.add}}" alt="">
+            <span>Add NPC</span>
+          </button>
+        {{/if}}
+      </header>
+
+      <div class="sdx-row-list">
+        {{#each npcs as |npc|}}
+          <article class="sdx-row-card">
+            <div class="sdx-row-header">
+              <img src="{{npc.icon}}" alt="">
+
+              <input
+                type="text"
+                name="system.npcs.{{npc.index}}.name"
+                value="{{npc.name}}"
+                {{#unless ../editable}}disabled{{/unless}}
+              >
+
+              {{#if ../editable}}
+                <button type="button" class="sdx-delete-button" data-action="delete-row" data-collection="npcs" data-id="{{npc.id}}">
+                  <img src="{{../icons.delete}}" alt="Delete">
+                </button>
+              {{/if}}
+            </div>
+
+            <input type="hidden" name="system.npcs.{{npc.index}}.id" value="{{npc.id}}">
+
+            <div class="sdx-form-grid">
+              <label>
+                <span>Role</span>
+                <input
+                  type="text"
+                  name="system.npcs.{{npc.index}}.role"
+                  value="{{npc.role}}"
+                  {{#unless ../editable}}disabled{{/unless}}
+                >
+              </label>
+
+              <label>
+                <span>Loyalty</span>
+                <input
+                  type="number"
+                  min="0"
+                  max="6"
+                  name="system.npcs.{{npc.index}}.loyalty"
+                  value="{{npc.loyalty}}"
+                  {{#unless ../editable}}disabled{{/unless}}
+                >
+              </label>
+            </div>
+
+            <label>
+              <span>Note</span>
+              <textarea
+                rows="2"
+                name="system.npcs.{{npc.index}}.note"
+                {{#unless ../editable}}disabled{{/unless}}
+              >{{npc.note}}</textarea>
+            </label>
+          </article>
+        {{/each}}
+      </div>
+    </section>
+
+    <section class="sdx-base-card sdx-threat-card">
+      <header class="sdx-section-header">
+        <div>
+          <img src="{{icons.threats}}" alt="">
+          <h2>Threats</h2>
+        </div>
+
+        {{#if editable}}
+          <button type="button" class="sdx-icon-button compact" data-action="add-row" data-collection="threats">
+            <img src="{{icons.add}}" alt="">
+            <span>Add Threat</span>
+          </button>
+        {{/if}}
+      </header>
+
+      <div class="sdx-row-list">
+        {{#each threats as |threat|}}
+          <article class="sdx-row-card threat">
+            <div class="sdx-row-header">
+              <img src="{{threat.icon}}" alt="">
+
+              <input
+                type="text"
+                name="system.threats.{{threat.index}}.name"
+                value="{{threat.name}}"
+                {{#unless ../editable}}disabled{{/unless}}
+              >
+
+              {{#if ../editable}}
+                <button type="button" class="sdx-delete-button" data-action="delete-row" data-collection="threats" data-id="{{threat.id}}">
+                  <img src="{{../icons.delete}}" alt="Delete">
+                </button>
+              {{/if}}
+            </div>
+
+            <input type="hidden" name="system.threats.{{threat.index}}.id" value="{{threat.id}}">
+
+            <div class="sdx-progress-line">
+              <progress value="{{threat.clock}}" max="6"></progress>
+              <span>{{threat.clock}} / 6</span>
+            </div>
+
+            <div class="sdx-form-grid">
+              <label>
+                <span>Level</span>
+                <input
+                  type="number"
+                  min="1"
+                  max="10"
+                  name="system.threats.{{threat.index}}.level"
+                  value="{{threat.level}}"
+                  {{#unless ../editable}}disabled{{/unless}}
+                >
+              </label>
+
+              <label>
+                <span>Clock</span>
+                <input
+                  type="number"
+                  min="0"
+                  max="6"
+                  name="system.threats.{{threat.index}}.clock"
+                  value="{{threat.clock}}"
+                  {{#unless ../editable}}disabled{{/unless}}
+                >
+              </label>
+            </div>
+
+            <label>
+              <span>Note</span>
+              <textarea
+                rows="2"
+                name="system.threats.{{threat.index}}.note"
+                {{#unless ../editable}}disabled{{/unless}}
+              >{{threat.note}}</textarea>
+            </label>
+          </article>
+        {{/each}}
+      </div>
+    </section>
+
+    <section class="sdx-base-card">
+      <header class="sdx-section-header">
+        <div>
+          <img src="{{icons.notes}}" alt="">
+          <h2>Notes</h2>
+        </div>
+      </header>
+
+      {{#if editable}}
+        <textarea rows="5" name="system.notes">{{system.notes}}</textarea>
+      {{else}}
+        <div class="sdx-enriched-text">
+          {{{notesHTML}}}
+        </div>
+      {{/if}}
+    </section>
+
+  </main>
+</form>

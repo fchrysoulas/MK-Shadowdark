@@ -1,0 +1,238 @@
+/* styles/quickdraw-icons.css */
+/* Shadowdark Extras - Quickdraw Icons */
+
+/* -------------------------------------------- */
+/* Inventory quickdraw bolt                     */
+/* -------------------------------------------- */
+
+/*
+ * Important:
+ * The injected control class is sdex-quickdraw-toggle.
+ * Older/alternate class names are kept for compatibility.
+ * Inactive/OFF buttons use var(--inactive-control).
+ * The bolt font size is not overridden here.
+ */
+.shadowdark.sheet.player .item .sdex-quickdraw-toggle,
+.shadowdark.sheet.player .item .sdx-quickdraw-toggle,
+.shadowdark.sheet.player .item .sdx-quickdraw-icon,
+.shadowdark.sheet.player .item .sdx-quickdraw-button,
+.shadowdark.sheet.player .item .quickdraw-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 18px;
+  width: 18px;
+  height: 18px;
+  margin: 0 0.2rem 0 0;
+  border-radius: 50%;
+  line-height: 1;
+  text-align: center;
+  cursor: pointer;
+}
+
+/* Inactive/OFF Quickdraw uses the system inactive-control color.
+   Do not set font-size here; let the sheet/system control icon sizing. */
+.shadowdark.sheet.player .item .sdex-quickdraw-toggle.is-off,
+.shadowdark.sheet.player .item .sdex-quickdraw-toggle.is-off i,
+.shadowdark.sheet.player .item .sdx-quickdraw-toggle.is-off,
+.shadowdark.sheet.player .item .sdx-quickdraw-toggle.is-off i,
+.shadowdark.sheet.player .item .sdx-quickdraw-icon.is-off,
+.shadowdark.sheet.player .item .sdx-quickdraw-icon.is-off i,
+.shadowdark.sheet.player .item .quickdraw-icon.is-off,
+.shadowdark.sheet.player .item .quickdraw-icon.is-off i {
+  color: var(--inactive-control);
+  fill: var(--inactive-control);
+  stroke: var(--inactive-control);
+}
+
+.shadowdark.sheet.player .item .sdex-quickdraw-toggle:hover,
+.shadowdark.sheet.player .item .sdx-quickdraw-toggle:hover,
+.shadowdark.sheet.player .item .sdx-quickdraw-icon:hover,
+.shadowdark.sheet.player .item .sdx-quickdraw-button:hover,
+.shadowdark.sheet.player .item .quickdraw-icon:hover {
+  text-shadow: none;
+}
+
+/* Active/selected Quickdraw = black bolt. */
+.shadowdark.sheet.player .item .sdex-quickdraw-toggle.is-on,
+.shadowdark.sheet.player .item .sdex-quickdraw-toggle.is-on i,
+.shadowdark.sheet.player .item .sdx-quickdraw-toggle.is-on,
+.shadowdark.sheet.player .item .sdx-quickdraw-toggle.is-on i,
+.shadowdark.sheet.player .item.sdx-quickdraw-active .sdex-quickdraw-toggle,
+.shadowdark.sheet.player .item.sdx-quickdraw-active .sdex-quickdraw-toggle i,
+.shadowdark.sheet.player .item.sdx-quickdraw-active .sdx-quickdraw-toggle,
+.shadowdark.sheet.player .item.sdx-quickdraw-active .sdx-quickdraw-toggle i,
+.shadowdark.sheet.player .item.sdx-quickdraw-active .sdx-quickdraw-icon,
+.shadowdark.sheet.player .item.sdx-quickdraw-active .sdx-quickdraw-icon i,
+.shadowdark.sheet.player .item.sdx-quickdraw-active .quickdraw-icon,
+.shadowdark.sheet.player .item.sdx-quickdraw-active .quickdraw-icon i {
+  color: #000 !important;
+  fill: #000 !important;
+  stroke: #000 !important;
+  opacity: 1 !important;
+  filter: none !important;
+}
+
+.shadowdark.sheet.player .item .sdex-quickdraw-toggle i,
+.shadowdark.sheet.player .item .sdx-quickdraw-toggle i,
+.shadowdark.sheet.player .item .sdx-quickdraw-icon i,
+.shadowdark.sheet.player .item .sdx-quickdraw-button i,
+.shadowdark.sheet.player .item .quickdraw-icon i {
+  margin: 0;
+  pointer-events: none;
+}
+
+.shadowdark.sheet.player .item.sdx-quickdraw-disabled .sdex-quickdraw-toggle,
+.shadowdark.sheet.player .item.sdx-quickdraw-disabled .sdx-quickdraw-toggle,
+.shadowdark.sheet.player .item.sdx-quickdraw-disabled .sdx-quickdraw-icon,
+.shadowdark.sheet.player .item.sdx-quickdraw-disabled .sdx-quickdraw-button {
+  opacity: 0.35;
+  cursor: not-allowed;
+}
+
+/* -------------------------------------------- */
+/* Name row placement                           */
+/* -------------------------------------------- */
+
+.shadowdark.sheet.player .item .item-name .sdex-quickdraw-toggle,
+.shadowdark.sheet.player .item .item-name .sdx-quickdraw-toggle,
+.shadowdark.sheet.player .item .item-name .sdx-quickdraw-icon,
+.shadowdark.sheet.player .item .item-name .sdx-quickdraw-button {
+  vertical-align: middle;
+}
+
+.shadowdark.sheet.player .item .sdx-item-name-wrap,
+.shadowdark.sheet.player .item .sdx-name-with-quickdraw {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  min-width: 0;
+}
+
+.shadowdark.sheet.player .item .sdx-item-name-text {
+  overflow: hidden;
+  min-width: 0;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* -------------------------------------------- */
+/* Summary line under inventory names           */
+/* -------------------------------------------- */
+
+.shadowdark.sheet.player .sdx-quickdraw-summary,
+.shadowdark.sheet.player .sdx-item-summary,
+.shadowdark.sheet.player .sdx-weapon-properties {
+  display: block;
+  margin-top: 0.12rem;
+  color: rgba(34, 23, 16, 0.68);
+  font-size: 0.76rem;
+  font-weight: 600;
+  line-height: 1.15;
+}
+
+.shadowdark.sheet.player .sdx-quickdraw-summary .sdx-summary-label,
+.shadowdark.sheet.player .sdx-item-summary .sdx-summary-label,
+.shadowdark.sheet.player .sdx-weapon-properties .sdx-summary-label {
+  color: rgba(34, 23, 16, 0.84);
+  font-weight: 800;
+  text-transform: uppercase;
+}
+
+.shadowdark.sheet.player .sdx-quickdraw-summary .sdx-property-pill,
+.shadowdark.sheet.player .sdx-item-summary .sdx-property-pill,
+.shadowdark.sheet.player .sdx-weapon-properties .sdx-property-pill {
+  display: inline-flex;
+  align-items: center;
+  margin: 0.05rem 0.12rem 0.05rem 0;
+  padding: 0.05rem 0.28rem;
+  border: 1px solid rgba(115, 72, 32, 0.22);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.18);
+  font-size: 0.72rem;
+  line-height: 1.1;
+}
+
+/* -------------------------------------------- */
+/* Quickdraw counter and limit notice           */
+/* -------------------------------------------- */
+
+.sdx-quickdraw-counter,
+.sdx-quickdraw-limit {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.25rem;
+  min-height: 1.45rem;
+  padding: 0.1rem 0.45rem;
+  border: 1px solid rgba(115, 72, 32, 0.28);
+  border-radius: 999px;
+  background: rgba(245, 233, 204, 0.72);
+  color: #221710;
+  font-size: 0.75rem;
+  font-weight: 800;
+  line-height: 1;
+}
+
+.sdx-quickdraw-limit.sdx-warning,
+.sdx-quickdraw-counter.sdx-warning {
+  border-color: rgba(141, 47, 34, 0.52);
+  background: rgba(141, 47, 34, 0.14);
+  color: #8d2f22;
+}
+
+/* -------------------------------------------- */
+/* Context menu fallback                        */
+/* -------------------------------------------- */
+
+.sdx-quickdraw-context-menu,
+.sdx-item-context-menu {
+  position: fixed;
+  z-index: 100000;
+  min-width: 180px;
+  padding: 0.25rem;
+  border: 1px solid rgba(115, 72, 32, 0.65);
+  border-radius: 6px;
+  background: rgba(31, 22, 16, 0.98);
+  color: #f7f1de;
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.45);
+}
+
+.sdx-quickdraw-context-menu a,
+.sdx-item-context-menu a,
+.sdx-quickdraw-context-menu button,
+.sdx-item-context-menu button {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  width: 100%;
+  min-height: 1.7rem;
+  padding: 0.25rem 0.45rem;
+  border: 0;
+  border-radius: 4px;
+  background: transparent;
+  color: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.sdx-quickdraw-context-menu a:hover,
+.sdx-item-context-menu a:hover,
+.sdx-quickdraw-context-menu button:hover,
+.sdx-item-context-menu button:hover {
+  background: rgba(201, 162, 95, 0.22);
+  color: #fff0b8;
+  text-shadow: none;
+}
+
+@media (max-width: 620px) {
+  .shadowdark.sheet.player .item .sdex-quickdraw-toggle,
+  .shadowdark.sheet.player .item .sdx-quickdraw-toggle,
+  .shadowdark.sheet.player .item .sdx-quickdraw-icon,
+  .shadowdark.sheet.player .item .sdx-quickdraw-button,
+  .shadowdark.sheet.player .item .quickdraw-icon {
+    width: 20px;
+    height: 20px;
+    flex-basis: 20px;
+  }
+}

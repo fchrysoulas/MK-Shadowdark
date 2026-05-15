@@ -1,0 +1,26 @@
+# OS junk
+.DS_Store
+Thumbs.db
+
+# Editors
+.vscode/
+.idea/
+
+# Logs
+*.log
+
+# Node/build folders, if you use them
+node_modules/
+dist/
+build/
+
+# Foundry local/user data - never commit these
+worlds/
+Data/
+Config/
+Logs/
+Backups/
+
+# Temporary files
+*.tmp
+*.bak

@@ -1,0 +1,456 @@
+/*
+ * Shadowdark Extras - Quickdraw Icons
+ * Foundry VTT v12
+ *
+ * Settings are registered in scripts/settings.js.
+ */
+
+(() => {
+  const MODULE_ID = "shadowdark-extras";
+  const FLAG_KEY = "quickdraw";
+  const QD_ICON_CLASS = "fa-bolt";
+
+  function isDebugEnabled() {
+    try {
+      return !!game.settings.get(MODULE_ID, "debug");
+    } catch (e) {
+      return false;
+    }
+  }
+
+  function dlog(...args) {
+    if (!isDebugEnabled()) return;
+    console.log(`${MODULE_ID} |`, ...args);
+  }
+
+  function dwarn(...args) {
+    if (!isDebugEnabled()) return;
+    console.warn(`${MODULE_ID} |`, ...args);
+  }
+
+  function getLimit() {
+    const v = Number(game.settings.get(MODULE_ID, "quickdrawLimit"));
+    return Number.isFinite(v) ? Math.max(0, Math.floor(v)) : 3;
+  }
+
+  function isQuickdraw(item) {
+    return !!item?.getFlag(MODULE_ID, FLAG_KEY);
+  }
+
+  function countQuickdraw(actor) {
+    return actor?.items?.filter((i) => isQuickdraw(i))?.length ?? 0;
+  }
+
+  function normalizeType(t) {
+    return String(t ?? "").trim().toLowerCase();
+  }
+
+  function collectStringFields(item) {
+    const sys = item?.system ?? {};
+    return [
+      item?.name,
+      item?.type,
+      sys.type,
+      sys.subtype,
+      sys.category,
+      sys.itemType,
+      sys.kind,
+      sys.group
+    ]
+      .filter((x) => typeof x === "string")
+      .map((x) => x.toLowerCase());
+  }
+
+  function looksLikePotion(item) {
+    return collectStringFields(item).some((s) => s.includes("potion"));
+  }
+
+  function looksLikeWand(item) {
+    return collectStringFields(item).some((s) => s.includes("wand"));
+  }
+
+  function looksLikeScroll(item) {
+    return collectStringFields(item).some((s) => s.includes("scroll"));
+  }
+
+  /**
+   * Eligible = Weapon, Basic, Armor, Potion-like, Wand-like, Scroll-like.
+   * If an item is already flagged quickdraw, still show the bolt so it can be unset.
+   */
+  function isEligibleForBolt(item) {
+    if (!item) return false;
+    if (isQuickdraw(item)) return true;
+
+    const t = normalizeType(item.type);
+
+    if (t === "weapon") return true;
+    if (t === "basic") return true;
+    if (t === "armor") return true;
+    if (t === "potion" || t === "consumable" || t === "elixir") return true;
+    if (t === "wand") return true;
+    if (t === "scroll") return true;
+
+    if (looksLikePotion(item)) return true;
+    if (looksLikeWand(item)) return true;
+    if (looksLikeScroll(item)) return true;
+
+    return false;
+  }
+
+  function isAutoSortEnabled() {
+    try {
+      return !!game.settings.get(MODULE_ID, "quickdrawAutoSort");
+    } catch (e) {
+      return true;
+    }
+  }
+
+  /**
+   * Update without re-rendering the sheet to avoid flicker.
+   */
+  async function setQuickdrawNoRender(item, value) {
+    if (!item?.isOwner) {
+      ui.notifications?.warn("You do not have permission to edit this item.");
+      return false;
+    }
+
+    const updateData = value
+      ? { [`flags.${MODULE_ID}.${FLAG_KEY}`]: true }
+      : { [`flags.${MODULE_ID}.-=${FLAG_KEY}`]: null };
+
+    await item.update(updateData, { render: false });
+    return true;
+  }
+
+  async function tryToggleQuickdraw(app, item) {
+    const currentlyOn = isQuickdraw(item);
+
+    if (currentlyOn) {
+      return await setQuickdrawNoRender(item, false);
+    }
+
+    const limit = getLimit();
+    const currentCount = countQuickdraw(app.actor);
+
+    if (limit > 0 && currentCount >= limit) {
+      ui.notifications?.warn(`Quickdraw limit reached (${limit}). Unmark another item first.`);
+      return false;
+    }
+
+    return await setQuickdrawNoRender(item, true);
+  }
+
+  function titleFor(active) {
+    return active ? "Quickdraw (ON) - click to unset" : "Quickdraw (OFF) - click to set";
+  }
+
+  function buildQuickdrawButton(active) {
+    return $(`
+      <a class="item-control sdex-quickdraw-toggle ${active ? "is-on" : "is-off"}"
+         data-action="sdex-quickdraw"
+         role="button"
+         title="${titleFor(active)}">
+        <i class="fa-solid ${QD_ICON_CLASS}"></i>
+      </a>
+    `);
+  }
+
+  /**
+   * IMPORTANT:
+   * We only operate inside the inventory tab/root.
+   * If we cannot find a real inventory root, we do nothing rather than touching spells lists.
+   */
+  function getInventoryRoot(html) {
+    const selectors = [
+      "[data-tab='inventory']",
+      ".tab.inventory",
+      ".inventory.tab",
+      ".inventory",
+      ".inventory-tab",
+      "[data-panel='inventory']"
+    ];
+
+    for (const sel of selectors) {
+      const el = html.find(sel).first();
+      if (el?.length) {
+        dlog("inventory root found by selector", sel);
+        return el;
+      }
+    }
+
+    // Heuristic fallback for Shadowdark layouts:
+    // look for a container that clearly contains the carried gear inventory,
+    // but not spell sections.
+    const heuristic = html.find("section, article, div").filter((_, el) => {
+      const t = ($(el).text() || "").trim();
+      if (!t) return false;
+
+      const hasInventoryMarkers =
+        t.includes("Items") &&
+        t.includes("Qty") &&
+        t.includes("Slots");
+
+      const hasSpellMarkers =
+        t.includes("Spells Known") ||
+        t.includes("Spells from Items") ||
+        t.includes("Duration") && t.includes("Range");
+
+      return hasInventoryMarkers && !hasSpellMarkers;
+    }).first();
+
+    if (heuristic?.length) {
+      dlog("inventory root found by heuristic");
+      return heuristic;
+    }
+
+    dwarn("Could not find inventory root. Quickdraw will not inject.");
+    return null;
+  }
+
+  function getRowMarkerElement(row) {
+    const child = row.find("[data-item-id],[data-item-uuid],[data-document-id],[data-uuid]").first();
+    return child?.length ? child : row;
+  }
+
+  function parseItemIdFromUuidLike(str) {
+    if (!str || typeof str !== "string") return null;
+
+    const idx = str.indexOf(".Item.");
+    if (idx !== -1) return (str.slice(idx + 6).split(".")[0]) || null;
+
+    const idx2 = str.indexOf("Item.");
+    if (idx2 !== -1) return (str.slice(idx2 + 5).split(".")[0]) || null;
+
+    return null;
+  }
+
+  function getItemFromRow(app, row) {
+    const marker = getRowMarkerElement(row);
+
+    const itemId =
+      marker.data("itemId") ||
+      marker.attr("data-item-id") ||
+      marker.data("documentId") ||
+      marker.attr("data-document-id");
+
+    if (itemId) return app.actor?.items?.get(itemId) ?? null;
+
+    const uuidLike =
+      marker.data("itemUuid") ||
+      marker.attr("data-item-uuid") ||
+      marker.data("uuid") ||
+      marker.attr("data-uuid");
+
+    if (uuidLike) {
+      const parsedId = parseItemIdFromUuidLike(uuidLike);
+      if (parsedId) return app.actor?.items?.get(parsedId) ?? null;
+    }
+
+    return null;
+  }
+
+  function getInventoryRows(html) {
+    const root = getInventoryRoot(html);
+    if (!root?.length) return $();
+
+    const rowCandidates = root.find("li.item, .item");
+    const rows = rowCandidates.filter((_, el) => {
+      const $el = $(el);
+      const marker = getRowMarkerElement($el);
+      const hasId = !!(
+        marker.attr("data-item-id") ||
+        marker.data("itemId") ||
+        marker.attr("data-document-id") ||
+        marker.data("documentId")
+      );
+      const hasUuid = !!(
+        marker.attr("data-item-uuid") ||
+        marker.data("itemUuid") ||
+        marker.attr("data-uuid") ||
+        marker.data("uuid")
+      );
+      return hasId || hasUuid;
+    });
+
+    dlog("inventory rows found", rows.length);
+
+    return rows.length ? rows : root.find("[data-item-id],[data-item-uuid],[data-document-id],[data-uuid]");
+  }
+
+  function findRightIconContainer(row) {
+    const selectors = [
+      ".item-controls",
+      ".item-control-group",
+      ".item-controls-container",
+      ".controls",
+      ".item-icons",
+      ".item-buttons",
+      ".item-actions"
+    ];
+
+    for (const sel of selectors) {
+      const el = row.find(sel).first();
+      if (el?.length) return el;
+    }
+
+    const existingControl = row.find("a.item-control, button.item-control, a[data-action], button[data-action]").first();
+    if (existingControl?.length) return existingControl.parent();
+
+    return null;
+  }
+
+  function insertQuickdrawButton(controls, $btn) {
+    const deleteBtn = controls
+      .find(".item-delete, [data-action='delete'], [data-action='remove'], a.item-control.delete, button.item-control.delete")
+      .first();
+
+    if (deleteBtn?.length) deleteBtn.before($btn);
+    else controls.append($btn);
+  }
+
+  function isSpecialAbilitiesGroup(parentEl) {
+    const $parent = $(parentEl);
+    if (!$parent.length) return false;
+
+    const classIdText = [
+      $parent.attr("class") || "",
+      $parent.attr("id") || "",
+      $parent.attr("data-group") || "",
+      $parent.attr("data-category") || ""
+    ]
+      .join(" ")
+      .toLowerCase();
+
+    if (classIdText.includes("special-abilities") || classIdText.includes("specialabilities")) {
+      return true;
+    }
+
+    const container = $parent.closest("section, article, fieldset, .tab, .panel, .group, .items-list, .inventory-group, .grid, .flexcol, .flexrow").first();
+
+    const headerText = [
+      container.attr("class") || "",
+      container.attr("id") || "",
+      container.attr("data-group") || "",
+      container.attr("data-category") || "",
+      container.find("h1, h2, h3, h4, h5, .header, .group-header, .items-header, .section-header, .title, .label")
+        .map((_, el) => $(el).text())
+        .get()
+        .join(" ")
+    ]
+      .join(" ")
+      .toLowerCase();
+
+    return headerText.includes("special abilities");
+  }
+
+  /**
+   * Auto-sort quickdraw items first within inventory lists only.
+   * It never touches spells lists because rows are sourced only from inventory root.
+   * It also skips Special Abilities groups.
+   */
+  function autoSortQuickdraw(html, app) {
+    if (!isAutoSortEnabled()) return;
+
+    const rows = getInventoryRows(html);
+    if (!rows?.length) return;
+
+    const groups = new Map();
+
+    rows.each((idx, el) => {
+      const $row = $(el);
+      const item = getItemFromRow(app, $row);
+      if (!item) return;
+
+      const parent = $row.closest("ol, ul").get(0);
+      if (!parent) return;
+      if (isSpecialAbilitiesGroup(parent)) return;
+
+      if (!groups.has(parent)) groups.set(parent, []);
+      groups.get(parent).push({ rowEl: el, item, index: idx });
+    });
+
+    for (const [parent, entries] of groups.entries()) {
+      const parent$ = $(parent);
+
+      const anyEligible = entries.some((e) => isEligibleForBolt(e.item));
+      if (!anyEligible) continue;
+
+      const sorted = entries.slice().sort((a, b) => {
+        const aq = isEligibleForBolt(a.item) && isQuickdraw(a.item) ? 0 : 1;
+        const bq = isEligibleForBolt(b.item) && isQuickdraw(b.item) ? 0 : 1;
+
+        if (aq !== bq) return aq - bq;
+        return a.index - b.index;
+      });
+
+      for (const ent of sorted) parent$.append(ent.rowEl);
+    }
+  }
+
+  function injectQuickdrawToggles(app, html) {
+    const rows = getInventoryRows(html);
+    if (!rows?.length) return;
+
+    for (const rowEl of rows) {
+      const row = $(rowEl);
+      const item = getItemFromRow(app, row);
+      if (!item) continue;
+
+      const controls = findRightIconContainer(row);
+      if (!controls?.length) continue;
+
+      controls.find(".sdex-quickdraw-toggle").remove();
+
+      if (!isEligibleForBolt(item)) continue;
+
+      const active = isQuickdraw(item);
+      row.toggleClass("sdx-quickdraw-item", active);
+      row.toggleClass("sdx-quickdraw-active", active);
+      row.attr("data-sdx-quickdraw", active ? "true" : "false");
+
+      const $btn = buildQuickdrawButton(active);
+
+      $btn.on("click", async (ev) => {
+        ev.preventDefault();
+        ev.stopPropagation();
+
+        const ok = await tryToggleQuickdraw(app, item);
+        if (!ok) return;
+
+        const nowOn = isQuickdraw(item);
+        $btn.toggleClass("is-on", nowOn).toggleClass("is-off", !nowOn);
+        $btn.attr("title", titleFor(nowOn));
+        row.toggleClass("sdx-quickdraw-item", nowOn);
+        row.toggleClass("sdx-quickdraw-active", nowOn);
+        row.attr("data-sdx-quickdraw", nowOn ? "true" : "false");
+
+        autoSortQuickdraw(html, app);
+      });
+
+      insertQuickdrawButton(controls, $btn);
+    }
+
+    autoSortQuickdraw(html, app);
+
+    dlog("quickdraw summary", {
+      actor: app.actor?.name,
+      limit: getLimit(),
+      currentQuickdraw: countQuickdraw(app.actor),
+      autoSort: isAutoSortEnabled()
+    });
+  }
+
+  function onRender(app, html) {
+    if (!game.settings.get(MODULE_ID, "quickdrawIconEnabled")) return;
+    if (!app?.actor) return;
+    if (game.system?.id !== "shadowdark") return;
+
+    injectQuickdrawToggles(app, html);
+  }
+
+  Hooks.once("init", () => {
+    console.log(`${MODULE_ID} | quickdraw-icons.js loaded (settings registered in settings.js)`);
+  });
+
+  Hooks.on("renderActorSheet", onRender);
+})();

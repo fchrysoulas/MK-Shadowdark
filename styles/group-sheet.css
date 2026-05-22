@@ -1,5 +1,20 @@
 /* styles/group-sheet.css */
 
+.sdx-group-sheet-window .window-content {
+  padding: 0 !important;
+  overflow: hidden !important;
+  background: transparent !important;
+}
+
+.sdx-group-sheet .tab[data-tab]:not(.active) {
+  display: none !important;
+}
+
+.sdx-group-sheet .tab[data-tab].active {
+  display: block;
+}
+
+
 .sdx-group-sheet {
   --sdx-group-bg: rgba(10, 10, 10, 0.96);
   --sdx-group-row: rgba(20, 20, 20, 0.96);
@@ -135,6 +150,7 @@
 
 .sdx-travel-toolbar {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
   gap: 10px;
   border-style: solid;
@@ -183,7 +199,7 @@
 .sdx-group-member {
   position: relative;
   display: grid;
-  grid-template-columns: 72px minmax(320px, 1fr) 430px;
+  grid-template-columns: 72px minmax(240px, 1fr) minmax(250px, auto);
   gap: 12px;
   align-items: center;
   min-height: 88px;
@@ -324,7 +340,8 @@
   display: flex;
   align-items: center;
   justify-content: flex-end;
-  gap: 14px;
+  flex-wrap: wrap;
+  gap: 8px 14px;
   min-width: 0;
 }
 
@@ -746,7 +763,7 @@
 
 .sdx-travel-assigned {
   display: grid;
-  grid-template-columns: 34px minmax(120px, 1fr) 82px 24px;
+  grid-template-columns: 34px minmax(110px, 1fr) minmax(70px, auto) 24px;
   gap: 8px;
   align-items: center;
   width: 100%;
@@ -829,6 +846,25 @@
 
 .sdx-group-notes .editor {
   min-height: 480px;
+}
+
+
+.sdx-group-notes-text {
+  width: 100%;
+  min-height: 480px;
+  resize: vertical;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  border-radius: 4px;
+  background: rgba(0, 0, 0, 0.24);
+  color: var(--sdx-group-text);
+  padding: 10px;
+  font-family: inherit;
+  line-height: 1.35;
+}
+
+.sdx-group-notes-text:focus {
+  outline: none;
+  box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.24);
 }
 
 @media (max-width: 900px) {

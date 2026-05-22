@@ -1,7 +1,9 @@
 // scripts/group-sheet.js
 
 const MODULE_ID = "mk-shadowdark";
+const LEGACY_MODULE_ID = "shadowdark-extras";
 const SHEET_ID = `${MODULE_ID}.SDXGroupSheet`;
+const LEGACY_SHEET_ID = `${LEGACY_MODULE_ID}.SDXGroupSheet`;
 
 const ABILITIES = [
   ["str", "STR"],
@@ -114,6 +116,55 @@ function numberOrZero(value) {
   return Number.isFinite(n) ? n : 0;
 }
 
+function getRawFlag(actor, scope, key) {
+  if (!actor || !scope || !key) return undefined;
+  return actor._source?.flags?.[scope]?.[key];
+}
+
+function getSafeFlag(actor, scope, key) {
+  if (!actor?.getFlag || !scope || !key) return undefined;
+
+  try {
+    return actor.getFlag(scope, key);
+  } catch (error) {
+    const message = String(error?.message ?? error ?? "");
+
+    if (message.includes("Flag scope")) {
+      return undefined;
+    }
+
+    console.warn(`${MODULE_ID} | GroupSheet | Could not read flag ${scope}.${key}`, error);
+    return undefined;
+  }
+}
+
+function getFlagWithLegacy(actor, key, fallback = undefined) {
+  const current = getSafeFlag(actor, MODULE_ID, key);
+  if (current !== undefined) return current;
+
+  // Important: never call actor.getFlag() with LEGACY_MODULE_ID.
+  // Foundry v12 throws when the old module scope is not active.
+  const legacy = getRawFlag(actor, LEGACY_MODULE_ID, key);
+  if (legacy !== undefined) return legacy;
+
+  return fallback;
+}
+
+function getSheetClassFlag(actor) {
+  const current = getSafeFlag(actor, "core", "sheetClass");
+  if (current !== undefined) return current;
+
+  return getRawFlag(actor, "core", "sheetClass");
+}
+
+function isGroupActor(actor) {
+  return Boolean(getFlagWithLegacy(actor, "isGroup", false));
+}
+
+function getGroupInventoryMaxSlots(actor) {
+  return Number(getFlagWithLegacy(actor, "groupInventoryMaxSlots", 10)) || 10;
+}
+
 function getFreeCoinCarry() {
   return globalThis.shadowdark?.defaults?.FREE_COIN_CARRY ?? 100;
 }
@@ -154,7 +205,7 @@ async function resolveItemFromDropData(data) {
 
 function getGroupData(actor) {
   const existing = foundry.utils.deepClone(
-    actor.getFlag(MODULE_ID, "group") ?? {}
+    getFlagWithLegacy(actor, "group", {}) ?? {}
   );
 
   existing.members ??= [];
@@ -288,7 +339,7 @@ function calculateGroupInventorySlots(actor) {
     return sum + calculateItemSlots(item);
   }, 0);
 
-  const max = actor.getFlag(MODULE_ID, "groupInventoryMaxSlots") ?? 10;
+  const max = getGroupInventoryMaxSlots(actor);
 
   return {
     total,
@@ -1269,15 +1320,93 @@ function rerenderOpenGroupSheets(updatedActor) {
   }
 }
 
+let groupSheetRegistered = false;
+
+function settingExists(key) {
+  return game.settings?.settings?.has(`${MODULE_ID}.${key}`);
+}
+
+async function migrateLegacyGroupActors() {
+  if (!game.user?.isGM) return;
+
+  let migrated = 0;
+  let failed = 0;
+
+  for (const actor of game.actors ?? []) {
+    const hasLegacyGroup = Boolean(getRawFlag(actor, LEGACY_MODULE_ID, "isGroup"));
+    const oldSheetClass = getSheetClassFlag(actor) === LEGACY_SHEET_ID;
+
+    if (!hasLegacyGroup && !oldSheetClass) continue;
+
+    const update = {
+      "flags.core.sheetClass": SHEET_ID,
+      [`flags.${MODULE_ID}.isGroup`]: true,
+      [`flags.${MODULE_ID}.groupInventoryMaxSlots`]: getGroupInventoryMaxSlots(actor),
+      [`flags.${MODULE_ID}.group`]: getGroupData(actor),
+    };
+
+    if (actor._source?.flags?.[LEGACY_MODULE_ID]) {
+      update[`flags.-=${LEGACY_MODULE_ID}`] = null;
+    }
+
+    try {
+      await actor.update(update);
+      migrated += 1;
+    } catch (error) {
+      // Some worlds/modules are strict about deleting old flag scopes.
+      // If deletion fails, still copy the data into the new scope.
+      if (update[`flags.-=${LEGACY_MODULE_ID}`] === null) {
+        delete update[`flags.-=${LEGACY_MODULE_ID}`];
+
+        try {
+          await actor.update(update);
+          migrated += 1;
+          console.warn(
+            `${MODULE_ID} | GroupSheet | Migrated legacy group actor "${actor.name}", but could not remove old ${LEGACY_MODULE_ID} flags.`,
+            error
+          );
+          continue;
+        } catch (retryError) {
+          failed += 1;
+          console.error(
+            `${MODULE_ID} | GroupSheet | Failed to migrate legacy group actor "${actor.name}".`,
+            retryError
+          );
+          continue;
+        }
+      }
+
+      failed += 1;
+      console.error(
+        `${MODULE_ID} | GroupSheet | Failed to migrate legacy group actor "${actor.name}".`,
+        error
+      );
+    }
+  }
+
+  if (migrated > 0) {
+    sdxGroupLog(`Migrated ${migrated} legacy group actor(s).`);
+  }
+
+  if (failed > 0) {
+    ui.notifications.warn(`${MODULE_ID}: ${failed} legacy group actor migration(s) failed. Check the console.`);
+  }
+}
+
 export function registerGroupSheet() {
-  game.settings.register(MODULE_ID, "enableGroupActors", {
-    name: "Enable Group Actors",
-    hint: "Adds a MK-Shadowdark group actor sheet for party members, group inventory, travel activity assignments, and group notes.",
-    scope: "world",
-    config: true,
-    type: Boolean,
-    default: true,
-  });
+  if (groupSheetRegistered) return;
+  groupSheetRegistered = true;
+
+  if (!settingExists("enableGroupActors")) {
+    game.settings.register(MODULE_ID, "enableGroupActors", {
+      name: "Enable Group Actors",
+      hint: "Adds a MK-Shadowdark group actor sheet for party members, group inventory, travel activity assignments, and group notes.",
+      scope: "world",
+      config: true,
+      type: Boolean,
+      default: true,
+    });
+  }
 
   Actors.registerSheet(MODULE_ID, SDXGroupSheet, {
     types: ["Player"],
@@ -1285,26 +1414,33 @@ export function registerGroupSheet() {
     label: "MK-Shadowdark: Group Sheet",
   });
 
+  // Do not register the sheet under LEGACY_MODULE_ID.
+  // The ready migration below moves old sheetClass values from
+  // shadowdark-extras.SDXGroupSheet to mk-shadowdark.SDXGroupSheet.
+  // Keeping both registrations can confuse libWrapper-based modules such as Item Piles.
+
   Hooks.on("renderActorDirectory", addActorDirectoryButton);
   Hooks.on("updateActor", rerenderOpenGroupSheets);
 
   Hooks.on("createItem", item => {
-    if (item.actor?.getFlag(MODULE_ID, "isGroup")) {
+    if (isGroupActor(item.actor)) {
       item.actor.sheet?.render(false);
     }
   });
 
   Hooks.on("updateItem", item => {
-    if (item.actor?.getFlag(MODULE_ID, "isGroup")) {
+    if (isGroupActor(item.actor)) {
       item.actor.sheet?.render(false);
     }
   });
 
   Hooks.on("deleteItem", item => {
-    if (item.actor?.getFlag(MODULE_ID, "isGroup")) {
+    if (isGroupActor(item.actor)) {
       item.actor.sheet?.render(false);
     }
   });
+
+  Hooks.once("ready", migrateLegacyGroupActors);
 
   game.mkShadowdark ??= {};
   game.mkShadowdark.createGroupActor = createGroupActor;

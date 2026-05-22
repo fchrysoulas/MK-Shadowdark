@@ -442,10 +442,10 @@
       scope: "client",
       config: true,
       type: Number,
-      default: 999,
+      default: 10,
       range: {
         min: 0,
-        max: 999,
+        max: 20,
         step: 1
       },
       onChange: refreshOpenActorSheets

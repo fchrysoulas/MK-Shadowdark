@@ -4,13 +4,13 @@
  *
  * Shared module boot file.
  * Feature logic lives in separate feature files.
+ *
+ * Base Management has been removed from mk-shadowdark.
  */
-
-import { registerBaseActorFeature } from "./base-actor.js";
 
 (() => {
   const MODULE_ID = "mk-shadowdark";
-  const MODULE_VERSION = "1.0.0";
+  const MODULE_VERSION = "1.0.3";
   const SUBMODULE = "Core";
 
   function log(...args) {
@@ -28,20 +28,20 @@ import { registerBaseActorFeature } from "./base-actor.js";
 
   Hooks.once("init", () => {
     log("init");
-
-    registerBaseActorFeature();
   });
 
   Hooks.once("ready", () => {
     const api = ensureApiNamespace();
 
     if (api) {
-      api.createBaseActor = async (name = "New Base") => {
-        return Actor.create({
-          name,
-          type: `${MODULE_ID}.Base`,
-          img: `modules/${MODULE_ID}/assets/base-management/base.svg`,
-        });
+      // Base Management was removed from mk-shadowdark.
+      // Keep a harmless compatibility stub so old macros/modules that call it
+      // fail gracefully instead of trying to create the removed dotted actor type.
+      api.createBaseActor = async () => {
+        ui.notifications.warn(
+          "Base Management has been removed from MK-Shadowdark. Use the separate bases module instead."
+        );
+        return null;
       };
     }
 

@@ -10,7 +10,7 @@
 
   const MODULE_ID   = "mk-shadowdark";
   const SUBMODULE   = "AutoDamage";
-  const AD_VERSION  = "0.5.7";
+  const AD_VERSION  = "0.5.8";
 
   function adLog(...args) {
     console.log(`${MODULE_ID} | ${SUBMODULE} v${AD_VERSION} |`, ...args);
@@ -41,6 +41,35 @@
   function sleep(ms) {
     return new Promise(resolve => setTimeout(resolve, ms));
   }
+
+  /**
+   * Keep auto-damage authoritative.
+   * Only one active GM should process chat damage, otherwise players can hit
+   * permission errors and multiple GMs can double-apply damage.
+   */
+  function getPrimaryActiveGM() {
+    return game.users
+      .filter(user => user.active && user.isGM)
+      .sort((a, b) => a.id.localeCompare(b.id))[0] ?? null;
+  }
+
+  function isPrimaryActiveGM() {
+    return game.user?.id === getPrimaryActiveGM()?.id;
+  }
+
+  function getMessageAuthor(message) {
+    return message?.author ?? game.users.get(message?._source?.user) ?? null;
+  }
+
+  function hasAutoDamageProcessed(message) {
+    try {
+      return message?.getFlag?.(MODULE_ID, "autoDamageProcessed") === true;
+    } catch (_err) {
+      return false;
+    }
+  }
+
+  const PROCESSING_MESSAGES = new Set();
 
   /**
    * Gently scroll the chat to the bottom after a small delay,
@@ -247,7 +276,7 @@
     const cleanFormula = formula.trim();
     const roll = new Roll(cleanFormula);
 
-    await roll.evaluate({ async: true });
+    await roll.evaluate();
 
     if (!Number.isFinite(roll.total) || roll.total <= 0) return null;
 
@@ -403,17 +432,18 @@
 
   /**
    * Apply damage to all tokens targeted by the user that created the message.
+   * This must be called only by the primary active GM.
    */
   async function applyDamageToTargets(message, damage) {
-    const user = game.users.get(message.user.id);
-    if (!user) {
-      adLog(`Message ${message.id}: no user found; cannot apply damage.`);
+    const author = getMessageAuthor(message);
+    if (!author) {
+      adLog(`Message ${message.id}: no author found; cannot resolve targets.`);
       return;
     }
 
-    const targets = Array.from(user.targets ?? []);
+    const targets = Array.from(author.targets ?? []);
     if (!targets.length) {
-      adLog(`Message ${message.id}: user has no targets; nothing to damage.`);
+      adLog(`Message ${message.id}: author ${author.name} has no targets; nothing to damage.`);
       return;
     }
 
@@ -515,11 +545,14 @@
    */
   async function handleChatMessage(message, context) {
     try {
-      // Avoid double-processing the same card in this session.
-      if (message._sdExtrasDamageApplied) return;
+      // AutoDamage must be authoritative and permission-safe.
+      // Only the primary active GM processes chat damage.
+      if (!isPrimaryActiveGM()) return;
 
       if (!game.settings.get(MODULE_ID, "autoDamageEnabled")) return;
-      if (game.settings.get(MODULE_ID, "autoDamageGMOnly") && !game.user.isGM) return;
+      if (!message?.id) return;
+      if (PROCESSING_MESSAGES.has(message.id)) return;
+      if (hasAutoDamageProcessed(message)) return;
 
       let damageDisplay = null;
 
@@ -577,9 +610,6 @@
         return;
       }
 
-      // Mark as processed so our own updateChatMessage won't re-trigger.
-      message._sdExtrasDamageApplied = true;
-
       // Rule: "Apply damage on success / critical success"
       // Implementation: **skip only when we clearly see a FAILURE**.
       if (outcome === "failure") {
@@ -588,6 +618,17 @@
           debug
         );
         return;
+      }
+
+      PROCESSING_MESSAGES.add(message.id);
+
+      try {
+        await message.setFlag(MODULE_ID, "autoDamageProcessed", true);
+      } catch (err) {
+        console.error(
+          `${MODULE_ID} | ${SUBMODULE} v${AD_VERSION} | Could not set processed flag on message ${message.id}`,
+          err
+        );
       }
 
       const delayMs = Number(game.settings.get(MODULE_ID, "autoDamageDelayMs")) || 0;
@@ -616,6 +657,8 @@
       }
     } catch (err) {
       console.error(`${MODULE_ID} | ${SUBMODULE} v${AD_VERSION} | Error in handleChatMessage`, err);
+    } finally {
+      if (message?.id) PROCESSING_MESSAGES.delete(message.id);
     }
   }
 
@@ -628,15 +671,15 @@
   });
 
   Hooks.once("ready", () => {
-    adLog("ready; hooks active (settings checked per message)");
+    adLog("ready; hooks active; primary active GM applies damage");
   });
 
   Hooks.on("createChatMessage", (message, options, userId) => {
-    handleChatMessage(message, { source: "create", options, userId });
+    void handleChatMessage(message, { source: "create", options, userId });
   });
 
   Hooks.on("updateChatMessage", (message, changes, options, userId) => {
-    handleChatMessage(message, { source: "update", changes, userId });
+    void handleChatMessage(message, { source: "update", changes, options, userId });
   });
 
 })();

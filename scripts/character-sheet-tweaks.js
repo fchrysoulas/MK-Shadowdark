@@ -14,13 +14,12 @@
   const SETTINGS = Object.freeze({
     ENABLED: "characterSheetTweaksEnabled",
     SUMMARY_BAR: "characterSheetTweaksSummaryBar",
-    SUMMARY_BAR_IN_HEADER: "characterSheetTweaksSummaryBarInHeader",
     BAR_ELEMENTS: "characterSheetTweaksBarElements",
-    QUICK_NOTE: "characterSheetTweaksQuickNote",
     HIGHLIGHT_EQUIPPED: "characterSheetTweaksHighlightEquipped",
     FONT_SCALE: "characterSheetTweaksFontScale",
     BAR_VALUE_FONT_SIZE: "characterSheetTweaksBarValueFontSize",
     BAR_BUTTON_RADIUS: "characterSheetTweaksBarButtonRadius",
+    BAR_BUTTON_SCALE: "characterSheetTweaksBarButtonScale",
     BAR_POSITION_X: "characterSheetTweaksBarPositionX",
     BAR_POSITION_Y: "characterSheetTweaksBarPositionY",
     HIDE_LOGO: "characterSheetTweaksHideLogo",
@@ -66,6 +65,8 @@
     if (getSetting(SETTINGS.SUMMARY_BAR, true)) {
       injectSummaryBar(app, form ?? root, data);
     }
+
+    attachNativeLuckWatcher(app, form ?? root);
 
     formatWeaponAttackProperties(app, form ?? root);
 
@@ -145,6 +146,7 @@
       el.style.removeProperty("--sdx-sheet-font-scale");
       el.style.removeProperty("--sdx-bar-value-font-size");
       el.style.removeProperty("--sdx-bar-button-radius");
+      el.style.removeProperty("--sdx-bar-button-scale");
       el.style.removeProperty("--sdx-bar-position-x");
       el.style.removeProperty("--sdx-bar-position-y");
       el.style.removeProperty("--sdx-header-background-image");
@@ -158,21 +160,23 @@
     const fontScale = clampNumber(Number(getSetting(SETTINGS.FONT_SCALE, 100)) || 100, 80, 130);
     const valueFontSize = clampNumber(Number(getSetting(SETTINGS.BAR_VALUE_FONT_SIZE, 11)) || 11, 8, 24);
     const barButtonRadius = clampNumber(Number(getSetting(SETTINGS.BAR_BUTTON_RADIUS, 999)) || 0, 0, 999);
+    const barButtonScale = clampNumber(Number(getSetting(SETTINGS.BAR_BUTTON_SCALE, 100)) || 100, 70, 140);
     const barPositionX = clampNumber(Number(getSetting(SETTINGS.BAR_POSITION_X, 0)) || 0, -250, 250);
     const barPositionY = clampNumber(Number(getSetting(SETTINGS.BAR_POSITION_Y, 0)) || 0, -150, 150);
-    const summaryBarInHeader = getSetting(SETTINGS.SUMMARY_BAR_IN_HEADER, true);
+    const summaryBarEnabled = getSetting(SETTINGS.SUMMARY_BAR, true);
 
     for (const el of uniqueElements([windowEl, form])) {
       el.classList.add("sdx-character-sheet-tweaks");
       el.style.setProperty("--sdx-sheet-font-scale", String(fontScale / 100));
       el.style.setProperty("--sdx-bar-value-font-size", `${valueFontSize}px`);
       el.style.setProperty("--sdx-bar-button-radius", `${barButtonRadius}px`);
+      el.style.setProperty("--sdx-bar-button-scale", String(barButtonScale / 100));
       el.style.setProperty("--sdx-bar-position-x", `${barPositionX}px`);
       el.style.setProperty("--sdx-bar-position-y", `${barPositionY}px`);
 
       if (hideLogo) el.classList.add("sdx-hide-shadowdark-logo");
       if (highlightEquipped) el.classList.add("sdx-highlight-equipped");
-      if (summaryBarInHeader) el.classList.add("sdx-summary-bar-in-header");
+      if (summaryBarEnabled) el.classList.add("sdx-summary-bar-in-header");
 
       if (headerBackground) {
         el.classList.add("sdx-has-header-background");
@@ -193,6 +197,7 @@
     const fontScale = clampNumber(Number(getSetting(SETTINGS.FONT_SCALE, 100)) || 100, 80, 130);
     const valueFontSize = clampNumber(Number(getSetting(SETTINGS.BAR_VALUE_FONT_SIZE, 11)) || 11, 8, 24);
     const barButtonRadius = clampNumber(Number(getSetting(SETTINGS.BAR_BUTTON_RADIUS, 999)) || 0, 0, 999);
+    const barButtonScale = clampNumber(Number(getSetting(SETTINGS.BAR_BUTTON_SCALE, 100)) || 100, 70, 140);
     const barPositionX = clampNumber(Number(getSetting(SETTINGS.BAR_POSITION_X, 0)) || 0, -250, 250);
     const barPositionY = clampNumber(Number(getSetting(SETTINGS.BAR_POSITION_Y, 0)) || 0, -150, 150);
 
@@ -201,12 +206,11 @@
     bar.style.setProperty("--sdx-sheet-font-scale", String(fontScale / 100));
     bar.style.setProperty("--sdx-bar-value-font-size", `${valueFontSize}px`);
     bar.style.setProperty("--sdx-bar-button-radius", `${barButtonRadius}px`);
+    bar.style.setProperty("--sdx-bar-button-scale", String(barButtonScale / 100));
     bar.style.setProperty("--sdx-bar-position-x", `${barPositionX}px`);
     bar.style.setProperty("--sdx-bar-position-y", `${barPositionY}px`);
 
     const chips = buildSummaryChips(actor, data);
-    const noteEnabled = getSetting(SETTINGS.QUICK_NOTE, false);
-    const note = actor.getFlag(MODULE_ID, "characterSheetQuickNote") ?? "";
 
     bar.innerHTML = `
       <div class="sdx-character-sheet-bar__main">
@@ -214,15 +218,9 @@
           ${chips.map(renderChip).join("")}
         </div>
       </div>
-
-      ${noteEnabled ? renderQuickNote(note) : ""}
     `;
 
     insertSummaryBar(root, bar);
-
-    bar.querySelector('[data-sdx-action="quick-note"]')?.addEventListener("change", event => {
-      onQuickNoteChange(event, actor);
-    });
 
     bar.querySelectorAll('[data-sdx-action="roll-ability"]').forEach(element => {
       element.addEventListener("click", event => onRollAbilityCheck(event, actor));
@@ -235,9 +233,8 @@
 
   function insertSummaryBar(root, bar) {
     const header = root.querySelector?.("header.SD-header");
-    const shouldUseHeader = getSetting(SETTINGS.SUMMARY_BAR_IN_HEADER, true);
 
-    if (shouldUseHeader && header) {
+    if (header) {
       bar.classList.add("sdx-in-header");
       header.append(bar);
       return;
@@ -485,30 +482,6 @@
     `;
   }
 
-  function renderQuickNote(note) {
-    return `
-      <div class="sdx-character-sheet-note">
-        <label>
-          <span>Note</span>
-          <input
-            type="text"
-            value="${escapeHtml(note)}"
-            placeholder="Torch bearer, wounds, travel role, reminders..."
-            autocomplete="off"
-            data-sdx-action="quick-note"
-          >
-        </label>
-      </div>
-    `;
-  }
-
-  async function onQuickNoteChange(event, actor) {
-    event.preventDefault();
-    event.stopPropagation();
-
-    const value = String(event.currentTarget?.value ?? "").trim();
-    await actor.setFlag(MODULE_ID, "characterSheetQuickNote", value);
-  }
 
   async function onRollAbilityCheck(event, actor) {
     event.preventDefault();
@@ -525,6 +498,56 @@
     } catch (err) {
       console.error(`${MODULE_ID} v${MODULE_VERSION} | ${SUBMODULE} | ability roll error`, err);
       ui.notifications?.error(`MK-Shadowdark | Could not roll ${ability.toUpperCase()} check.`);
+    }
+  }
+
+  function attachNativeLuckWatcher(app, root) {
+    const actor = app.actor ?? app.object;
+    if (!actor || !root?.querySelectorAll) return;
+
+    root.querySelectorAll('input[name="system.luck.available"]').forEach(input => {
+      if (input.dataset?.sdxLuckChatWatcher === "true") return;
+      if (input.dataset) input.dataset.sdxLuckChatWatcher = "true";
+
+      input.addEventListener("change", event => onNativeLuckAvailableChange(event, actor));
+    });
+
+    root.querySelectorAll('input[name="system.luck.remaining"]').forEach(input => {
+      if (input.dataset?.sdxLuckChatWatcher === "true") return;
+      if (input.dataset) input.dataset.sdxLuckChatWatcher = "true";
+
+      input.addEventListener("change", event => onNativeLuckRemainingChange(event, actor));
+    });
+  }
+
+  async function onNativeLuckAvailableChange(event, actor) {
+    // Do not prevent or stop the native Shadowdark sheet update.
+    // This listener only mirrors the header-bar Luck chat message.
+    if (!actor) return;
+
+    try {
+      const target = event.currentTarget;
+      const nextAvailable = Boolean(target?.checked);
+      const nextRemaining = nextAvailable ? 1 : 0;
+
+      await createLuckChatMessage(actor, nextAvailable, nextRemaining, isPulpMode());
+    } catch (err) {
+      console.error(`${MODULE_ID} v${MODULE_VERSION} | ${SUBMODULE} | native luck chat error`, err);
+    }
+  }
+
+  async function onNativeLuckRemainingChange(event, actor) {
+    // Pulp mode uses a numeric Luck field instead of the checkbox.
+    if (!actor) return;
+
+    try {
+      const oldRemaining = Number(getLuckState(actor).remaining ?? 0);
+      const newRemaining = Number(event.currentTarget?.value ?? 0);
+      if (!Number.isFinite(newRemaining) || newRemaining === oldRemaining) return;
+
+      await createLuckChatMessage(actor, newRemaining > oldRemaining, newRemaining, true);
+    } catch (err) {
+      console.error(`${MODULE_ID} v${MODULE_VERSION} | ${SUBMODULE} | native pulp luck chat error`, err);
     }
   }
 

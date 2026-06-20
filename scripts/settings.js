@@ -299,7 +299,7 @@
     registerSetting("quickdrawIconEnabled", {
       name: "Quickdraw | Enable Toggles",
       hint: "Adds a clickable Quickdraw icon to eligible inventory rows only: Weapon, Basic, Armor, Potion, Wand, Scroll.",
-      scope: "client",
+      scope: "world",
       config: true,
       type: Boolean,
       default: true,
@@ -309,7 +309,7 @@
     registerSetting("quickdrawAutoSort", {
       name: "Quickdraw | Auto-sort Items",
       hint: "Moves quickdraw-marked items to the top of inventory lists only.",
-      scope: "client",
+      scope: "world",
       config: true,
       type: Boolean,
       default: true,
@@ -334,7 +334,7 @@
     registerSetting("debug", {
       name: "Quickdraw | Debug Mode",
       hint: "Logs Quickdraw debug information to the browser console.",
-      scope: "client",
+      scope: "world",
       config: true,
       type: Boolean,
       default: false
@@ -359,17 +359,7 @@
     registerSetting("characterSheetTweaksSummaryBar", {
       name: "Character Sheet | Summary Bar",
       hint: "Adds a compact floating summary bar to the Shadowdark player sheet.",
-      scope: "client",
-      config: true,
-      type: Boolean,
-      default: true,
-      onChange: refreshOpenActorSheets
-    });
-
-    registerSetting("characterSheetTweaksSummaryBarInHeader", {
-      name: "Character Sheet | Summary Bar Over Header",
-      hint: "Places the MK-Shadowdark summary bar floating inside the Shadowdark header/banner area.",
-      scope: "client",
+      scope: "world",
       config: true,
       type: Boolean,
       default: true,
@@ -379,27 +369,17 @@
     registerSetting("characterSheetTweaksBarElements", {
       name: "Character Sheet | Bar Elements",
       hint: "Comma-separated list of bar elements, in display order. Available: LVL, HP, AC, XP, LUCK, SLOTS, STR, DEX, CON, INT, WIS, CHA. Use | to add a vertical divider.",
-      scope: "client",
+      scope: "world",
       config: true,
       type: String,
       default: "LVL,HP,AC,XP,LUCK,SLOTS,STR,DEX,CON,INT,WIS,CHA",
       onChange: refreshOpenActorSheets
     });
 
-    registerSetting("characterSheetTweaksQuickNote", {
-      name: "Character Sheet | Quick Note",
-      hint: "Adds a compact per-actor note field inside the summary bar.",
-      scope: "world",
-      config: true,
-      type: Boolean,
-      default: false,
-      onChange: refreshOpenActorSheets
-    });
-
     registerSetting("characterSheetTweaksHighlightEquipped", {
       name: "Character Sheet | Highlight Quickdraw Items",
       hint: "Highlights Quickdraw rows in Shadowdark inventory lists. Equipped items are not highlighted unless they are also Quickdraw.",
-      scope: "client",
+      scope: "world",
       config: true,
       type: Boolean,
       default: true,
@@ -409,7 +389,7 @@
     registerSetting("characterSheetTweaksFontScale", {
       name: "Character Sheet | Extra UI Font Scale",
       hint: "Adjusts only the MK-Shadowdark summary bar font size.",
-      scope: "client",
+      scope: "world",
       config: true,
       type: Number,
       default: 100,
@@ -424,7 +404,7 @@
     registerSetting("characterSheetTweaksBarValueFontSize", {
       name: "Character Sheet | Bar Value Font Size",
       hint: "Font size in pixels for the value line inside each character sheet bar element.",
-      scope: "client",
+      scope: "world",
       config: true,
       type: Number,
       default: 11,
@@ -439,14 +419,29 @@
     registerSetting("characterSheetTweaksBarButtonRadius", {
       name: "Character Sheet | Bar Button Radius",
       hint: "Corner radius in pixels for each bar element. Use 0 for square, 6-12 for rounded boxes, or 999 for pill/circle style.",
-      scope: "client",
+      scope: "world",
       config: true,
       type: Number,
       default: 10,
       range: {
         min: 0,
         max: 20,
-        step: 1
+        step: 1,
+      },
+      onChange: refreshOpenActorSheets
+    });
+
+    registerSetting("characterSheetTweaksBarButtonScale", {
+      name: "Character Sheet | Bar Button Scale",
+      hint: "Scales only the pushable buttons in the floating bar, such as Luck and ability checks.",
+      scope: "world",
+      config: true,
+      type: Number,
+      default: 100,
+      range: {
+        min: 70,
+        max: 140,
+        step: 5
       },
       onChange: refreshOpenActorSheets
     });
@@ -454,7 +449,7 @@
     registerSetting("characterSheetTweaksBarPositionX", {
       name: "Character Sheet | Bar Position X",
       hint: "Horizontal offset in pixels for the floating character sheet bar. Negative moves left, positive moves right.",
-      scope: "client",
+      scope: "world",
       config: true,
       type: Number,
       default: 0,
@@ -469,7 +464,7 @@
     registerSetting("characterSheetTweaksBarPositionY", {
       name: "Character Sheet | Bar Position Y",
       hint: "Vertical offset in pixels for the floating character sheet bar. Negative moves up, positive moves down.",
-      scope: "client",
+      scope: "world",
       config: true,
       type: Number,
       default: 0,
@@ -484,7 +479,7 @@
     registerSetting("characterSheetTweaksHideLogo", {
       name: "Character Sheet | Hide Shadowdark Logo",
       hint: "Removes the Shadowdark logo text from the top of player character sheets.",
-      scope: "client",
+      scope: "world",
       config: true,
       type: Boolean,
       default: false,
@@ -494,7 +489,7 @@
     registerSetting("characterSheetTweaksHeaderBackgroundImage", {
       name: "Character Sheet | Header Background Image",
       hint: "Optional image path for the player sheet header background. Bare filenames are read from modules/mk-shadowdark/assets/.",
-      scope: "client",
+      scope: "world",
       config: true,
       type: String,
       default: "",
@@ -505,7 +500,7 @@
     registerSetting("characterSheetTweaksDebug", {
       name: "Character Sheet | Debug Mode",
       hint: "Logs Character Sheet Tweaks debug information to the browser console.",
-      scope: "client",
+      scope: "world",
       config: true,
       type: Boolean,
       default: false
@@ -572,7 +567,7 @@
     registerSetting("equipmentHandsDebug", {
       name: "Equipment Hands | Debug Mode",
       hint: "Logs Equipment Hands debug information to the browser console.",
-      scope: "client",
+      scope: "world",
       config: true,
       type: Boolean,
       default: false

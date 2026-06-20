@@ -26,6 +26,7 @@ form.sdx-character-sheet-tweaks {
   --sdx-sheet-font-scale: 1;
   --sdx-bar-value-font-size: 11px;
   --sdx-bar-button-radius: 999px;
+  --sdx-bar-button-scale: 1;
   --sdx-bar-position-x: 0px;
   --sdx-bar-position-y: 0px;
   --sdx-sheet-bar-background: rgba(0, 0, 0, 0.08);
@@ -121,6 +122,8 @@ button.sdx-sheet-chip {
   line-height: inherit;
   cursor: pointer;
   border: 1px solid var(--sdx-sheet-chip-border);
+  transform: scale(var(--sdx-bar-button-scale, 1));
+  transform-origin: center;
 }
 
 button.sdx-sheet-chip:hover,
@@ -282,44 +285,6 @@ button.sdx-sheet-chip:focus-visible {
   background: rgba(255, 255, 255, 0.42);
 }
 
-/* -------------------------------------------- */
-/* Quick Note                                   */
-/* -------------------------------------------- */
-
-.sdx-character-sheet-note label {
-  display: grid;
-  grid-template-columns: auto 1fr;
-  align-items: center;
-  gap: 0.35rem;
-}
-
-.sdx-character-sheet-note span {
-  font-size: 0.76em;
-  font-weight: 700;
-  letter-spacing: 0.04em;
-  text-transform: uppercase;
-}
-
-.sdx-character-sheet-note input {
-  width: 100%;
-  min-height: 1.35rem;
-  padding: 0.08rem 0.35rem;
-  border: 1px solid var(--sdx-sheet-chip-border);
-  border-radius: 4px;
-  background: var(--sdx-sheet-chip-background);
-  color: inherit;
-  font-size: calc(10px * var(--sdx-sheet-font-scale));
-}
-
-.sdx-character-sheet-note input::placeholder {
-  opacity: 0.62;
-}
-
-.shadowdark.sheet.player.sdx-summary-bar-in-header .SD-header .sdx-character-sheet-note input {
-  border-color: rgba(255, 255, 255, 0.25);
-  background: rgba(0, 0, 0, 0.32);
-  color: #f4efe3;
-}
 
 /* -------------------------------------------- */
 /* Equipped item highlight                      */
@@ -339,10 +304,6 @@ button.sdx-sheet-chip:focus-visible {
     left: 6px;
     right: 6px;
     bottom: 6px;
-  }
-
-  .sdx-character-sheet-note label {
-    grid-template-columns: 1fr;
   }
 }
 
@@ -372,6 +333,8 @@ button.sdx-sheet-chip:focus-visible {
 
 .shadowdark.sheet.player .sdx-character-sheet-bar button.sdx-sheet-chip {
   border: 1px solid var(--sdx-sheet-chip-border) !important;
+  transform: scale(var(--sdx-bar-button-scale, 1));
+  transform-origin: center;
 }
 
 .shadowdark.sheet.player .sdx-character-sheet-bar .sdx-sheet-chip strong,

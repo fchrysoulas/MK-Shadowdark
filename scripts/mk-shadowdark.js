@@ -10,7 +10,7 @@
 
 (() => {
   const MODULE_ID = "mk-shadowdark";
-  const MODULE_VERSION = "1.0.3";
+  const MODULE_VERSION = "1.0.0";
   const SUBMODULE = "Core";
 
   function log(...args) {

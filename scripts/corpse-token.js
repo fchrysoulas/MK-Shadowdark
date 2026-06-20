@@ -1,8 +1,7 @@
 /*
  * MK Shadowdark - Corpse Token Automation
- * Version 1.0.9
  * Foundry VTT v12 compatible
- * Shadowdark RPG v3.5.0 compatible
+ * Shadowdark RPG compatible
  *
  * Import this file from the mk-shadowdark module entry file:
  *   import "./corpse-token.js";
@@ -34,7 +33,6 @@ const FLAG_KEY = "corpseToken";
 
 const HP_PATH = "system.attributes.hp.value";
 const DEFAULT_CORPSE_IMAGE = "https://foundry.mikrokouneli.gr/worlds/shadowdark/tokens/ds_corpse.png";
-const CODE_VERSION = "1.0.9";
 
 const SETTINGS = {
   enabled: "corpseTokenEnabled",
@@ -88,6 +86,11 @@ const tokenProcessingTimers = new Map();
 
 function log(...args) {
   console.log(`${FEATURE_LABEL} |`, ...args);
+}
+
+function getModuleVersion() {
+  const mod = game.modules.get(MODULE_ID);
+  return mod?.version ?? mod?.data?.version ?? "unknown";
 }
 
 function warn(...args) {
@@ -486,7 +489,7 @@ function readStoredValue(document, key) {
     // Macro fallback from earlier versions, kept so previously changed tokens can still restore.
     ?? document?.flags?.world?.mkCorpseToken?.[key]
     ?? document?._source?.flags?.world?.mkCorpseToken?.[key]
-    // Legacy macro v1.0.2 fallback. Do not use getFlag() for this inactive scope.
+    // Legacy macro fallback. Do not use getFlag() for this inactive scope.
     ?? document?.flags?.["mk-corpse-token"]?.[key]
     ?? document?._source?.flags?.["mk-corpse-token"]?.[key];
 }
@@ -525,7 +528,7 @@ function buildStoredFlags(original, fallPoint, previous = {}, debugData = {}) {
     [`flags.${MODULE_ID}.${FLAG_KEY}.originalBottomCenterY`]: previous.originalBottomCenterY ?? fallPoint.y,
     [`flags.${MODULE_ID}.${FLAG_KEY}.changedAt`]: now,
     [`flags.${MODULE_ID}.${FLAG_KEY}.debug`]: {
-      version: CODE_VERSION,
+      version: getModuleVersion(),
       changedAt: now,
       fallPoint: {
         x: fallPoint.x,

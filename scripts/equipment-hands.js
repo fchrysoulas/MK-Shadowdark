@@ -16,8 +16,12 @@
 
 (() => {
   const MODULE_ID = "mk-shadowdark";
-  const MODULE_VERSION = "1.0.1";
   const SUBMODULE = "EquipmentHands";
+
+  function getModuleVersion() {
+    const mod = game.modules.get(MODULE_ID);
+    return mod?.version ?? mod?.data?.version ?? "unknown";
+  }
 
   const MODE_WARN = "warn";
   const MODE_BLOCK = "block";
@@ -27,11 +31,11 @@
 
   function log(...args) {
     if (!isDebugEnabled()) return;
-    console.log(`${MODULE_ID} v${MODULE_VERSION} | ${SUBMODULE} |`, ...args);
+    console.log(`${MODULE_ID} v${getModuleVersion()} | ${SUBMODULE} |`, ...args);
   }
 
   function warn(...args) {
-    console.warn(`${MODULE_ID} v${MODULE_VERSION} | ${SUBMODULE} |`, ...args);
+    console.warn(`${MODULE_ID} v${getModuleVersion()} | ${SUBMODULE} |`, ...args);
   }
 
   function setting(key, fallback) {
@@ -560,6 +564,6 @@
       };
     }
 
-    console.log(`${MODULE_ID} v${MODULE_VERSION} | ${SUBMODULE} | ready`);
+    console.log(`${MODULE_ID} v${getModuleVersion()} | ${SUBMODULE} | ready`);
   });
 })();

@@ -20,10 +20,14 @@
 
   const MODULE_ID = "mk-shadowdark";
   const SUBMODULE = "DeathTimer";
-  const DT_VERSION = "1.5.3";
+
+  function getModuleVersion() {
+    const mod = game.modules.get(MODULE_ID);
+    return mod?.version ?? mod?.data?.version ?? "unknown";
+  }
 
   function dtLog(...args) {
-    console.log(`${MODULE_ID} | ${SUBMODULE} v${DT_VERSION} |`, ...args);
+    console.log(`${MODULE_ID} | ${SUBMODULE} v${getModuleVersion()} |`, ...args);
   }
 
   function numOrNull(v) {

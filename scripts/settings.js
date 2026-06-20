@@ -8,11 +8,15 @@
 
 (() => {
   const MODULE_ID = "mk-shadowdark";
-  const MODULE_VERSION = "1.0.0";
   const SUBMODULE = "Settings";
 
+  function getModuleVersion() {
+    const mod = game.modules.get(MODULE_ID);
+    return mod?.version ?? mod?.data?.version ?? "unknown";
+  }
+
   function log(...args) {
-    console.log(`${MODULE_ID} v${MODULE_VERSION} | ${SUBMODULE} |`, ...args);
+    console.log(`${MODULE_ID} v${getModuleVersion()} | ${SUBMODULE} |`, ...args);
   }
 
   function settingExists(key) {
@@ -21,7 +25,7 @@
 
   function registerSetting(key, data) {
     if (settingExists(key)) {
-      console.warn(`${MODULE_ID} v${MODULE_VERSION} | ${SUBMODULE} | Setting already registered: ${key}`);
+      console.warn(`${MODULE_ID} v${getModuleVersion()} | ${SUBMODULE} | Setting already registered: ${key}`);
       return;
     }
 
@@ -40,7 +44,7 @@
 
       canvas.tokens.placeables.forEach(token => token.refresh());
     } catch (err) {
-      console.error(`${MODULE_ID} v${MODULE_VERSION} | ${SUBMODULE} | refreshTokenShadowsNow error`, err);
+      console.error(`${MODULE_ID} v${getModuleVersion()} | ${SUBMODULE} | refreshTokenShadowsNow error`, err);
     }
   }
 
@@ -52,7 +56,7 @@
         }
       }
     } catch (err) {
-      console.error(`${MODULE_ID} v${MODULE_VERSION} | ${SUBMODULE} | refreshOpenActorSheets error`, err);
+      console.error(`${MODULE_ID} v${getModuleVersion()} | ${SUBMODULE} | refreshOpenActorSheets error`, err);
     }
   }
 
@@ -723,7 +727,7 @@
     try {
       injectSettingHeaders(html);
     } catch (err) {
-      console.error(`${MODULE_ID} v${MODULE_VERSION} | ${SUBMODULE} | settings header inject error`, err);
+      console.error(`${MODULE_ID} v${getModuleVersion()} | ${SUBMODULE} | settings header inject error`, err);
     }
   });
 

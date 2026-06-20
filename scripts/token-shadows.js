@@ -8,19 +8,23 @@
 
 (() => {
   const MODULE_ID = "mk-shadowdark";
-  const MODULE_VERSION = "1.0.0";
   const SUBMODULE = "TokenShadows";
 
   const SHADOW_PROP = "_sdeTokenShadow";
   const SHADOW_FILTER_PROP = "_sdeTokenShadowBlurFilter";
   const SHADOW_NAME = "sde-token-shadow";
 
+  function getModuleVersion() {
+    const mod = game.modules.get(MODULE_ID);
+    return mod?.version ?? mod?.data?.version ?? "unknown";
+  }
+
   function log(...args) {
-    console.log(`${MODULE_ID} v${MODULE_VERSION} | ${SUBMODULE} |`, ...args);
+    console.log(`${MODULE_ID} v${getModuleVersion()} | ${SUBMODULE} |`, ...args);
   }
 
   function warn(...args) {
-    console.warn(`${MODULE_ID} v${MODULE_VERSION} | ${SUBMODULE} |`, ...args);
+    console.warn(`${MODULE_ID} v${getModuleVersion()} | ${SUBMODULE} |`, ...args);
   }
 
   function clampNumber(value, min, max, fallback) {

@@ -8,8 +8,12 @@
 
 (() => {
   const MODULE_ID = "mk-shadowdark";
-  const MODULE_VERSION = "1.0.0";
   const SUBMODULE = "Character Sheet Tweaks";
+
+  function getModuleVersion() {
+    const mod = game.modules.get(MODULE_ID);
+    return mod?.version ?? mod?.data?.version ?? "unknown";
+  }
 
   const SETTINGS = Object.freeze({
     ENABLED: "characterSheetTweaksEnabled",
@@ -43,7 +47,7 @@
     try {
       onRenderActorSheet(app, html, data);
     } catch (err) {
-      console.error(`${MODULE_ID} v${MODULE_VERSION} | ${SUBMODULE} | render error`, err);
+      console.error(`${MODULE_ID} v${getModuleVersion()} | ${SUBMODULE} | render error`, err);
     }
   });
 
@@ -496,7 +500,7 @@
         fastForward: Boolean(event.shiftKey)
       });
     } catch (err) {
-      console.error(`${MODULE_ID} v${MODULE_VERSION} | ${SUBMODULE} | ability roll error`, err);
+      console.error(`${MODULE_ID} v${getModuleVersion()} | ${SUBMODULE} | ability roll error`, err);
       ui.notifications?.error(`MK-Shadowdark | Could not roll ${ability.toUpperCase()} check.`);
     }
   }
@@ -532,7 +536,7 @@
 
       await createLuckChatMessage(actor, nextAvailable, nextRemaining, isPulpMode());
     } catch (err) {
-      console.error(`${MODULE_ID} v${MODULE_VERSION} | ${SUBMODULE} | native luck chat error`, err);
+      console.error(`${MODULE_ID} v${getModuleVersion()} | ${SUBMODULE} | native luck chat error`, err);
     }
   }
 
@@ -547,7 +551,7 @@
 
       await createLuckChatMessage(actor, newRemaining > oldRemaining, newRemaining, true);
     } catch (err) {
-      console.error(`${MODULE_ID} v${MODULE_VERSION} | ${SUBMODULE} | native pulp luck chat error`, err);
+      console.error(`${MODULE_ID} v${getModuleVersion()} | ${SUBMODULE} | native pulp luck chat error`, err);
     }
   }
 
@@ -578,7 +582,7 @@
 
       await createLuckChatMessage(actor, nextAvailable, nextRemaining, pulpMode);
     } catch (err) {
-      console.error(`${MODULE_ID} v${MODULE_VERSION} | ${SUBMODULE} | luck toggle error`, err);
+      console.error(`${MODULE_ID} v${getModuleVersion()} | ${SUBMODULE} | luck toggle error`, err);
       ui.notifications?.error("MK-Shadowdark | Could not update Luck.");
     }
   }
@@ -641,7 +645,7 @@
         `;
         link.classList.add("sdx-attack-formatted");
       }).catch(err => {
-        console.warn(`${MODULE_ID} v${MODULE_VERSION} | ${SUBMODULE} | attack property format error`, err);
+        console.warn(`${MODULE_ID} v${getModuleVersion()} | ${SUBMODULE} | attack property format error`, err);
       });
     }
   }
@@ -1000,6 +1004,6 @@
 
   function log(...args) {
     if (!getSetting(SETTINGS.DEBUG, false)) return;
-    console.log(`${MODULE_ID} v${MODULE_VERSION} | ${SUBMODULE} |`, ...args);
+    console.log(`${MODULE_ID} v${getModuleVersion()} | ${SUBMODULE} |`, ...args);
   }
 })();

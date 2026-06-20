@@ -5,12 +5,16 @@
 (() => {
   const MODULE_ID = "mk-shadowdark";
   const FEATURE = "EditableQty";
-  const VERSION = "1.1.0";
 
   const SETTING_ENABLED = "editableQtyEnabled";
 
+  function getModuleVersion() {
+    const mod = game.modules.get(MODULE_ID);
+    return mod?.version ?? mod?.data?.version ?? "unknown";
+  }
+
   function log(...args) {
-    console.log(`${MODULE_ID} | ${FEATURE} v${VERSION} |`, ...args);
+    console.log(`${MODULE_ID} | ${FEATURE} v${getModuleVersion()} |`, ...args);
   }
 
   function getPropertySafe(object, path) {

@@ -8,12 +8,16 @@
 (() => {
   // scripts/auto-apply-damage.js
 
-  const MODULE_ID   = "mk-shadowdark";
-  const SUBMODULE   = "AutoDamage";
-  const AD_VERSION  = "0.5.8";
+  const MODULE_ID = "mk-shadowdark";
+  const SUBMODULE = "AutoDamage";
+
+  function getModuleVersion() {
+    const mod = game.modules.get(MODULE_ID);
+    return mod?.version ?? mod?.data?.version ?? "unknown";
+  }
 
   function adLog(...args) {
-    console.log(`${MODULE_ID} | ${SUBMODULE} v${AD_VERSION} |`, ...args);
+    console.log(`${MODULE_ID} | ${SUBMODULE} v${getModuleVersion()} |`, ...args);
   }
 
   /* ---------------------------------------- */
@@ -90,14 +94,14 @@
           }
         } catch (err) {
           console.error(
-            `${MODULE_ID} | ${SUBMODULE} v${AD_VERSION} | Error scrolling chat`,
+            `${MODULE_ID} | ${SUBMODULE} v${getModuleVersion()} | Error scrolling chat`,
             err
           );
         }
       }, delay);
     } catch (err) {
       console.error(
-        `${MODULE_ID} | ${SUBMODULE} v${AD_VERSION} | Error scheduling chat scroll`,
+        `${MODULE_ID} | ${SUBMODULE} v${getModuleVersion()} | Error scheduling chat scroll`,
         err
       );
     }
@@ -141,7 +145,7 @@
       await doMove(baseX, baseY);
     } catch (err) {
       console.error(
-        `${MODULE_ID} | ${SUBMODULE} v${AD_VERSION} | Error shaking token`,
+        `${MODULE_ID} | ${SUBMODULE} v${getModuleVersion()} | Error shaking token`,
         err
       );
     }
@@ -290,7 +294,7 @@
       }
     } catch (err) {
       console.error(
-        `${MODULE_ID} | ${SUBMODULE} v${AD_VERSION} | Error showing 3D dice`,
+        `${MODULE_ID} | ${SUBMODULE} v${getModuleVersion()} | Error showing 3D dice`,
         err
       );
     }
@@ -335,7 +339,7 @@
         };
       } catch (err) {
         console.error(
-          `${MODULE_ID} | ${SUBMODULE} v${AD_VERSION} | Error rolling formula "${inner}"`,
+          `${MODULE_ID} | ${SUBMODULE} v${getModuleVersion()} | Error rolling formula "${inner}"`,
           err
         );
         return null;
@@ -357,7 +361,7 @@
         };
       } catch (err) {
         console.error(
-          `${MODULE_ID} | ${SUBMODULE} v${AD_VERSION} | Error rolling formula "${inner}"`,
+          `${MODULE_ID} | ${SUBMODULE} v${getModuleVersion()} | Error rolling formula "${inner}"`,
           err
         );
         return null;
@@ -395,7 +399,7 @@
       };
     } catch (err) {
       console.error(
-        `${MODULE_ID} | ${SUBMODULE} v${AD_VERSION} | Error rolling inline formula "${inner}"`,
+        `${MODULE_ID} | ${SUBMODULE} v${getModuleVersion()} | Error rolling inline formula "${inner}"`,
         err
       );
       return null;
@@ -534,7 +538,7 @@
       scrollChatToBottom();
     } catch (err) {
       console.error(
-        `${MODULE_ID} | ${SUBMODULE} v${AD_VERSION} | Error appending damage display`,
+        `${MODULE_ID} | ${SUBMODULE} v${getModuleVersion()} | Error appending damage display`,
         err
       );
     }
@@ -626,7 +630,7 @@
         await message.setFlag(MODULE_ID, "autoDamageProcessed", true);
       } catch (err) {
         console.error(
-          `${MODULE_ID} | ${SUBMODULE} v${AD_VERSION} | Could not set processed flag on message ${message.id}`,
+          `${MODULE_ID} | ${SUBMODULE} v${getModuleVersion()} | Could not set processed flag on message ${message.id}`,
           err
         );
       }
@@ -656,7 +660,7 @@
         scrollChatToBottom();
       }
     } catch (err) {
-      console.error(`${MODULE_ID} | ${SUBMODULE} v${AD_VERSION} | Error in handleChatMessage`, err);
+      console.error(`${MODULE_ID} | ${SUBMODULE} v${getModuleVersion()} | Error in handleChatMessage`, err);
     } finally {
       if (message?.id) PROCESSING_MESSAGES.delete(message.id);
     }

@@ -10,11 +10,15 @@
 
 (() => {
   const MODULE_ID = "mk-shadowdark";
-  const MODULE_VERSION = "1.0.0";
   const SUBMODULE = "Core";
 
+  function getModuleVersion() {
+    const mod = game.modules.get(MODULE_ID);
+    return mod?.version ?? mod?.data?.version ?? "unknown";
+  }
+
   function log(...args) {
-    console.log(`${MODULE_ID} v${MODULE_VERSION} | ${SUBMODULE} |`, ...args);
+    console.log(`${MODULE_ID} v${getModuleVersion()} | ${SUBMODULE} |`, ...args);
   }
 
   function ensureApiNamespace() {
@@ -22,7 +26,7 @@
     if (!mod) return null;
 
     mod.api = mod.api ?? {};
-    mod.api.version = MODULE_VERSION;
+    mod.api.version = getModuleVersion();
     return mod.api;
   }
 

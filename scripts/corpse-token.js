@@ -46,8 +46,7 @@ const SETTINGS = {
   autoRestoreWhenHealed: "corpseTokenAutoRestoreWhenHealed",
   alignVisualBottom: "corpseTokenAlignVisualBottom",
   yOffset: "corpseTokenYOffset",
-  applyDelayMs: "corpseTokenApplyDelayMs",
-  debugToChat: "corpseTokenDebugToChat"
+  applyDelayMs: "corpseTokenApplyDelayMs"
 };
 
 const DEFAULTS = {
@@ -62,15 +61,12 @@ const DEFAULTS = {
   [SETTINGS.autoRestoreWhenHealed]: false,
   [SETTINGS.alignVisualBottom]: true,
   [SETTINGS.yOffset]: 0,
-  [SETTINGS.applyDelayMs]: 750,
-  [SETTINGS.debugToChat]: false
+  [SETTINGS.applyDelayMs]: 750
 };
 
 const SETTINGS_UI = {
   dividerId: "mk-shadowdark-corpse-token-settings-divider",
   dividerClass: "mk-shadowdark-settings-divider",
-  debugId: "mk-shadowdark-corpse-token-debug-button",
-  debugRowId: "mk-shadowdark-corpse-token-debug-row",
   label: "CORPSE TOKEN"
 };
 
@@ -760,12 +756,6 @@ function cacheActorDeathPositions(actor, source) {
   for (const document of documents) captureTokenPositionForDeath(document, source);
 }
 
-function formatNumber(value) {
-  const number = Number(value);
-  if (!Number.isFinite(number)) return "-";
-  return Number.isInteger(number) ? String(number) : String(Math.round(number * 100) / 100);
-}
-
 function tokenCoordinateReport(tokenOrDocument) {
   const document = getTokenDocument(tokenOrDocument);
   const token = getTokenObject(tokenOrDocument);
@@ -823,73 +813,6 @@ function tokenCoordinateReport(tokenOrDocument) {
   };
 }
 
-function coordinateRowHtml(label, stateOrPoint) {
-  if (!stateOrPoint) {
-    return `
-      <tr>
-        <th>${escapeHtml(label)}</th>
-        <td colspan="6">-</td>
-      </tr>
-    `;
-  }
-
-  const x = stateOrPoint.x ?? stateOrPoint?.bottomCenter?.x ?? stateOrPoint?.fallPoint?.x;
-  const y = stateOrPoint.y ?? stateOrPoint?.bottomCenter?.y ?? stateOrPoint?.fallPoint?.y;
-
-  return `
-    <tr>
-      <th>${escapeHtml(label)}</th>
-      <td>${formatNumber(x)}</td>
-      <td>${formatNumber(y)}</td>
-      <td>${formatNumber(stateOrPoint.width)}</td>
-      <td>${formatNumber(stateOrPoint.height)}</td>
-      <td>${formatNumber(stateOrPoint.pixelWidth ?? stateOrPoint.footprintPixelWidth)}</td>
-      <td>${formatNumber(stateOrPoint.pixelHeight ?? stateOrPoint.footprintPixelHeight)}</td>
-    </tr>
-  `;
-}
-
-function buildCoordinateReportHtml(report) {
-  const initial = report.lastCorpseDebug?.initial;
-  const intended = report.lastCorpseDebug?.intendedCorpse;
-  const fallPoint = report.lastCorpseDebug?.fallPoint;
-  const cachedFallPoint = report.cachedDeathPosition?.fallPoint;
-
-  return `
-    <div class="mk-shadowdark-corpse-token-debug-chat">
-      <h3>Corpse Token Coordinate Debug - ${escapeHtml(report.name)}</h3>
-      <p><strong>Actor:</strong> ${escapeHtml(report.actorName ?? "-")} | <strong>Type:</strong> ${escapeHtml(report.actorType ?? "-")} | <strong>HP:</strong> ${escapeHtml(report.hp ?? "-")}</p>
-      <table>
-        <thead>
-          <tr>
-            <th>Position</th>
-            <th>X</th>
-            <th>Y</th>
-            <th>W</th>
-            <th>H</th>
-            <th>Pixel W</th>
-            <th>Pixel H</th>
-          </tr>
-        </thead>
-        <tbody>
-          ${coordinateRowHtml("Current top-left", report.current)}
-          ${coordinateRowHtml("Current fall point", report.current.fallPoint)}
-          ${coordinateRowHtml("Current rendered bottom", report.current.renderedBottomCenter)}
-          ${coordinateRowHtml("Initial top-left", initial)}
-          ${coordinateRowHtml("Initial fall point", fallPoint)}
-          ${coordinateRowHtml("Cached fall point", cachedFallPoint)}
-          ${coordinateRowHtml("Intended corpse top-left", intended)}
-          ${coordinateRowHtml("Intended corpse visual bottom", intended?.corpseVisualBottomCenter)}
-          ${coordinateRowHtml("Intended corpse footprint bottom", intended?.corpseFootprintBottomCenter)}
-          ${coordinateRowHtml("Saved original top-left", report.savedOriginal)}
-          ${coordinateRowHtml("Saved original fall point", report.savedOriginal.bottomCenter)}
-        </tbody>
-      </table>
-      <p><em>The fall point is the original standing footprint bottom-center: document x + width/2, document y + height. In v1.0.8 the actual opaque corpse PNG bottom is aligned to this point, not selected tokens, targeted tokens, or merely the 1x1 token footprint.</em></p>
-    </div>
-  `;
-}
-
 async function debugSelectedTokenCoordinates() {
   if (!game.user?.isGM) {
     ui.notifications.warn("Only the GM can debug corpse token coordinates.");
@@ -916,15 +839,7 @@ async function debugSelectedTokenCoordinates() {
   }
   console.groupEnd();
 
-  if (getSetting(SETTINGS.debugToChat)) {
-    await ChatMessage.create({
-      speaker: ChatMessage.getSpeaker(),
-      content: reports.map(buildCoordinateReportHtml).join("<hr>")
-    });
-    ui.notifications.info(`Wrote coordinate debug for ${reports.length} selected token(s) to chat and console.`);
-  } else {
-    ui.notifications.info(`Wrote coordinate debug for ${reports.length} selected token(s) to the console.`);
-  }
+  ui.notifications.info(`Wrote coordinate debug for ${reports.length} selected token(s) to the console.`);
 
   return reports;
 }
@@ -1355,39 +1270,6 @@ function injectSettingsDividerStyle() {
       height: 0;
     }
 
-    .mk-shadowdark-corpse-token-debug-row {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      gap: 1rem;
-      margin: 0.25rem 0 0.5rem;
-      padding: 0.35rem 0;
-    }
-
-    .mk-shadowdark-corpse-token-debug-row .notes {
-      flex: 1 1 auto;
-      margin: 0;
-      opacity: 0.85;
-    }
-
-    .mk-shadowdark-corpse-token-debug-row button {
-      flex: 0 0 auto;
-      white-space: nowrap;
-    }
-
-    .mk-shadowdark-corpse-token-debug-chat table {
-      width: 100%;
-      border-collapse: collapse;
-      margin-top: 0.35rem;
-    }
-
-    .mk-shadowdark-corpse-token-debug-chat th,
-    .mk-shadowdark-corpse-token-debug-chat td {
-      padding: 0.15rem 0.25rem;
-      border-bottom: 1px solid rgba(0, 0, 0, 0.15);
-      text-align: left;
-      vertical-align: top;
-    }
   `;
 
   document.head.appendChild(style);
@@ -1423,23 +1305,7 @@ function addSettingsDividerBeforeCorpseTokenSettings(html) {
     <span class="mk-shadowdark-settings-divider-line" aria-hidden="true"></span>
   `;
 
-  const debugRow = document.createElement("div");
-  debugRow.id = SETTINGS_UI.debugRowId;
-  debugRow.className = "mk-shadowdark-corpse-token-debug-row";
-  debugRow.innerHTML = `
-    <p class="notes">Debug selected token coordinates. Writes current, saved initial, fall point, intended corpse top-left, opaque image bottom, and texture bounds to chat and console.</p>
-    <button type="button" id="${SETTINGS_UI.debugId}">
-      <i class="fas fa-ruler-combined"></i> Debug Coordinates
-    </button>
-  `;
-
   firstRow.parentNode.insertBefore(divider, firstRow);
-  firstRow.parentNode.insertBefore(debugRow, firstRow);
-
-  debugRow.querySelector(`#${SETTINGS_UI.debugId}`)?.addEventListener("click", (event) => {
-    event.preventDefault();
-    debugSelectedTokenCoordinates();
-  });
 }
 
 function registerSettings() {
@@ -1527,15 +1393,6 @@ function registerSettings() {
     type: Number,
     range: { min: 0, max: 5000, step: 50 },
     default: DEFAULTS[SETTINGS.applyDelayMs]
-  });
-
-  game.settings.register(MODULE_ID, SETTINGS.debugToChat, {
-    name: "Corpse Token: Debug To Chat",
-    hint: "When enabled, the Debug Coordinates button also posts a chat card. Disabled by default to avoid triggering Automated Animations and Auto Damage chat listeners.",
-    scope: "world",
-    config: true,
-    type: Boolean,
-    default: DEFAULTS[SETTINGS.debugToChat]
   });
 
   game.settings.register(MODULE_ID, SETTINGS.postChatMessage, {

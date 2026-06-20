@@ -158,6 +158,7 @@
 
 .sdx-travel-toolbar button,
 .sdx-speed-control select {
+  width: auto;
   min-height: 30px;
   border: 1px solid rgba(255, 255, 255, 0.14);
   border-radius: 4px;
@@ -167,10 +168,15 @@
 
 .sdx-travel-toolbar button {
   display: inline-flex;
+  flex: 0 0 auto;
   align-items: center;
   gap: 6px;
   padding: 4px 9px;
   cursor: pointer;
+}
+
+.sdx-travel-toolbar button[data-action="reset-travel"] {
+  margin-left: auto;
 }
 
 .sdx-travel-toolbar button:hover,
@@ -180,6 +186,7 @@
 
 .sdx-speed-control {
   display: inline-flex;
+  flex: 0 0 auto;
   align-items: center;
   gap: 7px;
   color: var(--sdx-group-text);
@@ -191,19 +198,18 @@
 }
 
 .sdx-group-members {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 12px;
 }
 
 .sdx-group-member {
   position: relative;
-  display: grid;
-  grid-template-columns: 72px minmax(240px, 1fr) minmax(250px, auto);
-  gap: 12px;
-  align-items: center;
-  min-height: 88px;
-  padding: 10px 12px;
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  min-height: 0;
+  padding: 12px;
   border: 1px solid var(--sdx-group-row-border);
   border-radius: 5px;
   background: var(--sdx-group-row);
@@ -211,8 +217,8 @@
 
 .sdx-member-remove {
   position: absolute;
-  top: 3px;
-  left: 64px;
+  top: 7px;
+  right: 7px;
   width: 18px;
   height: 18px;
   padding: 0;
@@ -225,10 +231,12 @@
 }
 
 .sdx-member-image {
-  width: 62px;
-  height: 62px;
+  width: 176px;
+  height: 176px;
+  align-self: center;
+  margin-bottom: 9px;
   object-fit: cover;
-  border: 1px solid rgba(255, 255, 255, 0.25);
+  border: 0;
   border-radius: 4px;
   cursor: pointer;
 }
@@ -239,9 +247,12 @@
 
 .sdx-member-name-row {
   display: flex;
-  align-items: baseline;
-  gap: 8px;
-  margin-bottom: 5px;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  min-height: 43px;
+  margin-bottom: 8px;
+  text-align: center;
 }
 
 .sdx-member-name {
@@ -249,9 +260,9 @@
   border: 0;
   background: transparent;
   color: #dedede;
-  font-size: 18px;
+  font-size: 17px;
   font-weight: 800;
-  text-align: left;
+  text-align: center;
   cursor: pointer;
 }
 
@@ -270,10 +281,10 @@
 
 .sdx-member-hp-row {
   display: grid;
-  grid-template-columns: 26px 56px 1fr;
-  gap: 8px;
+  grid-template-columns: auto auto;
+  gap: 5px 8px;
   align-items: center;
-  margin-bottom: 7px;
+  margin-bottom: 9px;
 }
 
 .sdx-small-label {
@@ -289,6 +300,7 @@
 }
 
 .sdx-hp-bar {
+  grid-column: 1 / -1;
   height: 8px;
   overflow: hidden;
   border-radius: 4px;
@@ -302,18 +314,18 @@
 }
 
 .sdx-member-abilities {
-  display: flex;
-  gap: 7px;
-  flex-wrap: wrap;
+  display: grid;
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+  gap: 4px;
 }
 
 .sdx-ability-button {
   display: grid;
   grid-template-rows: auto auto;
   place-items: center;
-  width: 42px;
-  min-height: 38px;
-  padding: 3px 4px;
+  width: 100%;
+  min-height: 32px;
+  padding: 2px 2px;
   border: 1px solid rgba(255, 255, 255, 0.12);
   border-radius: 4px;
   background: var(--sdx-group-panel);
@@ -328,42 +340,51 @@
 
 .sdx-ability-button span {
   color: var(--sdx-group-muted);
-  font-size: 9px;
+  font-size: 8px;
   font-weight: 800;
 }
 
 .sdx-ability-button strong {
-  font-size: 13px;
+  font-size: 12px;
 }
 
 .sdx-member-side-stats {
-  display: flex;
-  align-items: center;
-  justify-content: flex-end;
-  flex-wrap: wrap;
-  gap: 8px 14px;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 7px;
   min-width: 0;
+  margin-top: 10px;
 }
 
 .sdx-side-stat {
   display: flex;
   align-items: center;
-  gap: 5px;
-  white-space: nowrap;
+  justify-content: center;
+  gap: 4px;
+  min-height: 28px;
+  padding: 3px 5px;
+  border: 1px solid rgba(255, 255, 255, 0.09);
+  border-radius: 4px;
+  background: rgba(255, 255, 255, 0.035);
   color: var(--sdx-group-muted);
-  font-size: 12px;
+  font-size: 11px;
   font-weight: 800;
+  text-align: center;
   text-transform: uppercase;
 }
 
 .sdx-side-stat strong {
   color: #e4e4e4;
-  font-size: 15px;
+  font-size: 14px;
 }
 
 .sdx-side-stat.sdx-danger strong,
 .sdx-inventory-slots.sdx-danger strong {
   color: #ff6378;
+}
+
+.sdx-xp-stat {
+  grid-column: 1 / -1;
 }
 
 .sdx-xp-stat button {
@@ -868,14 +889,12 @@
 }
 
 @media (max-width: 900px) {
-  .sdx-group-member {
-    grid-template-columns: 72px 1fr;
+  .sdx-group-members {
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
   }
 
   .sdx-member-side-stats {
-    grid-column: 1 / -1;
-    justify-content: flex-start;
-    flex-wrap: wrap;
+    grid-template-columns: 1fr;
   }
 
   .sdx-travel-grid {

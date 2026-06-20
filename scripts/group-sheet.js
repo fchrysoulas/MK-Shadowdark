@@ -4,6 +4,9 @@ const MODULE_ID = "mk-shadowdark";
 const LEGACY_MODULE_ID = "shadowdark-extras";
 const SHEET_ID = `${MODULE_ID}.SDXGroupSheet`;
 const LEGACY_SHEET_ID = `${LEGACY_MODULE_ID}.SDXGroupSheet`;
+const GROUP_HP_DEFAULT = 1;
+const GROUP_HP_VALUE_PATH = "system.attributes.hp.value";
+const GROUP_HP_MAX_PATH = "system.attributes.hp.max";
 
 const ABILITIES = [
   ["str", "STR"],
@@ -159,6 +162,32 @@ function getSheetClassFlag(actor) {
 
 function isGroupActor(actor) {
   return Boolean(getFlagWithLegacy(actor, "isGroup", false));
+}
+
+function numericProperty(document, path) {
+  const number = Number(foundry.utils.getProperty(document, path));
+  return Number.isFinite(number) ? number : null;
+}
+
+function buildGroupHpDefaultUpdate(actor) {
+  const update = {};
+  const hpValue = numericProperty(actor, GROUP_HP_VALUE_PATH);
+  const hpMax = numericProperty(actor, GROUP_HP_MAX_PATH);
+
+  if (hpValue !== GROUP_HP_DEFAULT) update[GROUP_HP_VALUE_PATH] = GROUP_HP_DEFAULT;
+  if (hpMax !== GROUP_HP_DEFAULT) update[GROUP_HP_MAX_PATH] = GROUP_HP_DEFAULT;
+
+  return update;
+}
+
+async function ensureGroupActorHpDefaults(actor) {
+  if (!actor?.update || !isGroupActor(actor)) return false;
+
+  const update = buildGroupHpDefaultUpdate(actor);
+  if (!Object.keys(update).length) return false;
+
+  await actor.update(update);
+  return true;
 }
 
 function getGroupInventoryMaxSlots(actor) {
@@ -545,6 +574,14 @@ export async function createGroupActor() {
     name: "New Group",
     type: "Player",
     img: "icons/svg/cowled.svg",
+    system: {
+      attributes: {
+        hp: {
+          value: GROUP_HP_DEFAULT,
+          max: GROUP_HP_DEFAULT,
+        },
+      },
+    },
     flags: {
       core: {
         sheetClass: SHEET_ID,
@@ -1393,6 +1430,37 @@ async function migrateLegacyGroupActors() {
   }
 }
 
+async function ensureExistingGroupActorHpDefaults() {
+  if (!game.user?.isGM) return;
+
+  let updated = 0;
+  let failed = 0;
+
+  for (const actor of game.actors ?? []) {
+    if (!isGroupActor(actor)) continue;
+
+    try {
+      if (await ensureGroupActorHpDefaults(actor)) updated += 1;
+    } catch (error) {
+      failed += 1;
+      console.error(`${MODULE_ID} | GroupSheet | Failed to set HP defaults for group actor "${actor.name}".`, error);
+    }
+  }
+
+  if (updated > 0) {
+    sdxGroupLog(`Set HP defaults on ${updated} group actor(s).`);
+  }
+
+  if (failed > 0) {
+    ui.notifications.warn(`${MODULE_ID}: ${failed} group actor HP default update(s) failed. Check the console.`);
+  }
+}
+
+async function onReadyGroupSheetMaintenance() {
+  await migrateLegacyGroupActors();
+  await ensureExistingGroupActorHpDefaults();
+}
+
 export function registerGroupSheet() {
   if (groupSheetRegistered) return;
   groupSheetRegistered = true;
@@ -1440,7 +1508,7 @@ export function registerGroupSheet() {
     }
   });
 
-  Hooks.once("ready", migrateLegacyGroupActors);
+  Hooks.once("ready", onReadyGroupSheetMaintenance);
 
   game.mkShadowdark ??= {};
   game.mkShadowdark.createGroupActor = createGroupActor;

@@ -28,7 +28,6 @@
   "esmodules": [
     "scripts/settings.js",
     "scripts/auto-apply-damage.js",
-    "scripts/base-actor.js",
     "scripts/character-sheet-tweaks.js",
     "scripts/death-timer.js",
     "scripts/editable-qty.js",
@@ -43,7 +42,6 @@
   "styles": [
     "styles/mk-shadowdark.css",
     "styles/auto-apply-damage.css",
-    "styles/base-actor.css",
     "styles/character-sheet-tweaks.css",
     "styles/group-sheet.css",
     "styles/quickdraw-icons.css"
@@ -55,16 +53,6 @@
       "path": "lang/en.json"
     }
   ],
-  "documentTypes": {
-    "Actor": {
-      "Base": {
-        "htmlFields": [
-          "system.base.description",
-          "system.notes"
-        ]
-      }
-    }
-  },
   "url": "https://github.com/fchrysoulas/MK-Shadowdark",
   "manifest": "https://github.com/fchrysoulas/MK-Shadowdark/releases/latest/download/module.json",
   "download": "https://github.com/fchrysoulas/MK-Shadowdark/releases/latest/download/mk-shadowdark.zip"

@@ -24,6 +24,8 @@
   --sdx-group-accent: #b72b44;
   --sdx-group-panel: rgba(255, 255, 255, 0.06);
   --sdx-group-panel-hover: rgba(255, 255, 255, 0.1);
+  --sdx-member-portrait-size: 176px;
+  --sdx-member-card-min-width: 200px;
   --sdx-camping-assigned-token-size: 28px;
   --sdx-camping-assigned-portrait-size: 22px;
 
@@ -40,6 +42,7 @@
 .sdx-group-sheet select,
 .sdx-group-sheet input {
   font-family: inherit;
+  color: white;
 }
 
 .sdx-group-header {
@@ -100,7 +103,7 @@
 
 .sdx-group-nav {
   display: grid;
-  grid-template-columns: repeat(4, 1fr);
+  grid-template-columns: repeat(5, 1fr);
   min-height: 42px;
   border-bottom: 1px solid rgba(255, 255, 255, 0.12);
   background: rgba(0, 0, 0, 0.32);
@@ -177,10 +180,6 @@
   cursor: pointer;
 }
 
-.sdx-travel-toolbar button[data-action="reset-travel"] {
-  margin-left: auto;
-}
-
 .sdx-travel-toolbar button:hover,
 .sdx-speed-control select:hover {
   background: var(--sdx-group-panel-hover);
@@ -201,7 +200,7 @@
 
 .sdx-group-members {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(var(--sdx-member-card-min-width), 1fr));
   gap: 12px;
 }
 
@@ -233,8 +232,8 @@
 }
 
 .sdx-member-image {
-  width: 176px;
-  height: 176px;
+  width: var(--sdx-member-portrait-size);
+  height: var(--sdx-member-portrait-size);
   align-self: center;
   margin-bottom: 9px;
   object-fit: cover;
@@ -502,7 +501,7 @@
 
 .sdx-shared-items-table-header {
   display: grid;
-  grid-template-columns: minmax(220px, 1fr) 70px 70px 34px;
+  grid-template-columns: minmax(220px, 1fr) 88px 72px;
   gap: 0;
   align-items: center;
   min-height: 34px;
@@ -514,13 +513,17 @@
   text-transform: uppercase;
 }
 
+.sdx-shared-items-table-header span:nth-child(n + 2) {
+  text-align: center;
+}
+
 .sdx-shared-items-table-body {
   min-height: 68px;
 }
 
 .sdx-shared-item-row {
   display: grid;
-  grid-template-columns: minmax(220px, 1fr) 70px 70px 34px;
+  grid-template-columns: minmax(220px, 1fr) 88px 72px;
   gap: 0;
   align-items: center;
   min-height: 42px;
@@ -562,12 +565,11 @@
 .sdx-shared-item-qty-cell {
   display: inline-flex;
   align-items: center;
-  justify-content: flex-start;
+  justify-content: center;
   gap: 5px;
 }
 
-.sdx-shared-item-qty-cell button,
-.sdx-shared-item-actions-cell button {
+.sdx-shared-item-qty-cell button {
   display: inline-grid;
   place-items: center;
   width: 19px;
@@ -580,8 +582,7 @@
   font-size: 8px;
 }
 
-.sdx-shared-item-qty-cell button:hover,
-.sdx-shared-item-actions-cell button:hover {
+.sdx-shared-item-qty-cell button:hover {
   background: rgba(255, 255, 255, 0.2);
 }
 
@@ -590,6 +591,7 @@
   color: #e0e0e0;
   font-size: 13px;
   font-weight: 800;
+  text-align: center;
 }
 
 .sdx-shared-items-empty {
@@ -724,6 +726,42 @@
   line-height: 1.35;
 }
 
+.sdx-campfire-resources {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 6px;
+  margin-top: 8px;
+}
+
+.sdx-campfire-resources span {
+  display: inline-grid;
+  grid-template-columns: auto auto;
+  gap: 5px;
+  align-items: center;
+  justify-content: center;
+  min-width: 0;
+  padding: 4px 7px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 4px;
+  background: rgba(255, 255, 255, 0.04);
+  color: #dcdcdc;
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.sdx-campfire-resources i {
+  color: #ffb45f;
+}
+
+.sdx-campfire-resources strong {
+  display: inline;
+  margin: 0;
+  color: #f0f0f0;
+  font-size: 13px;
+  letter-spacing: 0;
+  text-transform: none;
+}
+
 .sdx-camping-roster {
   display: flex;
   gap: 8px;
@@ -767,6 +805,53 @@
 
 .sdx-camping-roster-member.is-assigned {
   border-color: rgba(255, 75, 31, 0.42);
+}
+
+.sdx-camping-roster-member.is-unavailable,
+.sdx-travel-member-toggle:disabled {
+  cursor: not-allowed;
+  opacity: 0.48;
+}
+
+.sdx-camping-roster-member.is-unavailable:hover,
+.sdx-travel-member-toggle:disabled:hover {
+  border-color: rgba(255, 255, 255, 0.1);
+  background: rgba(255, 255, 255, 0.035);
+}
+
+.sdx-camping-reset {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  align-self: stretch;
+  flex: 0 0 42px;
+  width: 42px;
+  min-width: 42px;
+  max-width: 42px;
+  min-height: 42px;
+  padding: 0;
+  gap: 0;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 5px;
+  background: rgba(255, 255, 255, 0.035);
+  color: var(--sdx-group-text);
+  font-size: 0;
+  cursor: pointer;
+}
+
+.sdx-camping-reset:hover {
+  border-color: rgba(255, 255, 255, 0.3);
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.sdx-camping-reset i {
+  margin: 0;
+  font-size: 14px;
+}
+
+.sdx-camping-reset:disabled {
+  cursor: not-allowed;
+  opacity: 0.5;
 }
 
 .sdx-camping-portrait {
@@ -920,6 +1005,16 @@
 .sdx-travel-roll:hover {
   background: rgba(255, 75, 31, 0.12);
   text-shadow: 0 0 8px rgba(255, 75, 31, 0.5);
+}
+
+.sdx-travel-roll:disabled {
+  color: rgba(255, 255, 255, 0.22);
+  cursor: not-allowed;
+}
+
+.sdx-travel-roll:disabled:hover {
+  background: transparent;
+  text-shadow: none;
 }
 
 .sdx-camping-assignment-row {
@@ -1121,6 +1216,6 @@
 
   .sdx-shared-items-table-header,
   .sdx-shared-item-row {
-    grid-template-columns: minmax(160px, 1fr) 70px 60px 30px;
+    grid-template-columns: minmax(160px, 1fr) 88px 60px;
   }
 }

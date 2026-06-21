@@ -10,6 +10,16 @@ const GROUP_HP_MAX_PATH = "system.attributes.hp.max";
 const CAMPING_MEMBER_DRAG_TYPE = "application/x-mk-shadowdark-camping-member";
 const GROUP_SETTING_ASSIGNED_TOKEN_SIZE = "groupSheetAssignedTokenSize";
 const GROUP_ASSIGNED_TOKEN_SIZE_DEFAULT = 28;
+const GROUP_SETTING_MEMBER_PORTRAIT_SIZE = "groupSheetMemberPortraitSize";
+const GROUP_MEMBER_PORTRAIT_SIZE_DEFAULT = 176;
+const GROUP_SETTING_CAMPING_FOOD_KEYWORDS = "groupSheetCampingFoodKeywords";
+const GROUP_CAMPING_FOOD_KEYWORDS_DEFAULT = "ration,rations,food";
+const GROUP_SETTING_CAMPING_TORCH_KEYWORDS = "groupSheetCampingTorchKeywords";
+const GROUP_CAMPING_TORCH_KEYWORDS_DEFAULT = "torch,torches";
+const GROUP_SETTING_CAMPING_WATER_KEYWORDS = "groupSheetCampingWaterKeywords";
+const GROUP_CAMPING_WATER_KEYWORDS_DEFAULT = "water,waterskin,waterskins";
+const GROUP_SHEET_SOCKET_FEATURE = "groupSheet";
+const GROUP_SHEET_SOCKET_ASSIGN_TRAVEL = "assignTravelActivity";
 
 const ABILITIES = [
   ["str", "STR"],
@@ -140,6 +150,111 @@ function numberOrZero(value) {
   return Number.isFinite(n) ? n : 0;
 }
 
+function quantityOrOne(item) {
+  const raw = item?.system?.quantity?.value ?? item?.system?.quantity;
+  const n = Number(raw);
+  return Number.isFinite(n) ? Math.max(0, n) : 1;
+}
+
+function normalizeItemName(item) {
+  return String(item?.name ?? "").trim().toLowerCase();
+}
+
+function isLostItem(item) {
+  return Boolean(item?.system?.lost);
+}
+
+function splitCampingKeywords(value) {
+  return String(value ?? "")
+    .split(",")
+    .map(keyword => keyword.trim().toLowerCase())
+    .filter(Boolean);
+}
+
+function escapeRegExp(value) {
+  return String(value).replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
+function itemNameMatchesKeyword(itemName, keyword) {
+  if (!keyword) return false;
+  const pattern = new RegExp(`\\b${escapeRegExp(keyword)}s?\\b`, "i");
+  return pattern.test(itemName);
+}
+
+function itemMatchesAnyKeyword(item, keywords = []) {
+  const name = normalizeItemName(item);
+  return keywords.some(keyword => itemNameMatchesKeyword(name, keyword));
+}
+
+function getCampingResourceKeywords() {
+  return {
+    food: splitCampingKeywords(
+      getSettingValue(GROUP_SETTING_CAMPING_FOOD_KEYWORDS, GROUP_CAMPING_FOOD_KEYWORDS_DEFAULT),
+    ),
+    torches: splitCampingKeywords(
+      getSettingValue(GROUP_SETTING_CAMPING_TORCH_KEYWORDS, GROUP_CAMPING_TORCH_KEYWORDS_DEFAULT),
+    ),
+    water: splitCampingKeywords(
+      getSettingValue(GROUP_SETTING_CAMPING_WATER_KEYWORDS, GROUP_CAMPING_WATER_KEYWORDS_DEFAULT),
+    ),
+  };
+}
+
+function countCampingResourceItems(items = [], keywords = getCampingResourceKeywords()) {
+  const totals = {
+    food: 0,
+    torches: 0,
+    water: 0,
+  };
+
+  for (const item of items ?? []) {
+    if (!item || isLostItem(item)) continue;
+
+    const quantity = quantityOrOne(item);
+    if (itemMatchesAnyKeyword(item, keywords.food)) totals.food += quantity;
+    if (itemMatchesAnyKeyword(item, keywords.torches)) totals.torches += quantity;
+    if (itemMatchesAnyKeyword(item, keywords.water)) totals.water += quantity;
+  }
+
+  return totals;
+}
+
+function buildCampingResources(memberActors = [], groupActor) {
+  const keywords = getCampingResourceKeywords();
+  const memberTotals = {
+    food: 0,
+    torches: 0,
+    water: 0,
+  };
+
+  for (const actor of memberActors) {
+    const actorTotals = countCampingResourceItems(actor?.items, keywords);
+    memberTotals.food += actorTotals.food;
+    memberTotals.torches += actorTotals.torches;
+    memberTotals.water += actorTotals.water;
+  }
+
+  const sharedTotals = countCampingResourceItems(groupActor?.items, keywords);
+
+  return {
+    food: {
+      members: memberTotals.food,
+      shared: sharedTotals.food,
+      total: memberTotals.food + sharedTotals.food,
+    },
+    torches: {
+      members: memberTotals.torches,
+      shared: sharedTotals.torches,
+      total: memberTotals.torches + sharedTotals.torches,
+    },
+    water: {
+      members: memberTotals.water,
+      shared: sharedTotals.water,
+      total: memberTotals.water + sharedTotals.water,
+    },
+  };
+}
+
 function clampNumber(value, fallback, min, max) {
   const n = Number(value);
   if (!Number.isFinite(n)) return fallback;
@@ -164,14 +279,41 @@ function getAssignedTokenSizeSetting() {
   );
 }
 
+function getMemberPortraitSizeSetting() {
+  return clampNumber(
+    getSettingValue(GROUP_SETTING_MEMBER_PORTRAIT_SIZE, GROUP_MEMBER_PORTRAIT_SIZE_DEFAULT),
+    GROUP_MEMBER_PORTRAIT_SIZE_DEFAULT,
+    96,
+    260
+  );
+}
+
 function buildGroupSheetStyle() {
   const tokenSize = getAssignedTokenSizeSetting();
   const portraitSize = Math.max(12, tokenSize - 6);
+  const memberPortraitSize = getMemberPortraitSizeSetting();
+  const memberCardMinWidth = Math.max(160, memberPortraitSize + 24);
 
   return [
+    `--sdx-member-portrait-size: ${memberPortraitSize}px`,
+    `--sdx-member-card-min-width: ${memberCardMinWidth}px`,
     `--sdx-camping-assigned-token-size: ${tokenSize}px`,
     `--sdx-camping-assigned-portrait-size: ${portraitSize}px`,
   ].join("; ");
+}
+
+function canUserControlActor(actor, user = game.user) {
+  if (!actor || !user) return false;
+  if (user.isGM) return true;
+
+  const character = typeof user.character === "string"
+    ? game.actors?.get(user.character)
+    : user.character;
+  if (character && (actor.id === character.id || actor.uuid === character.uuid)) return true;
+
+  if (user.id === game.user?.id && actor.isOwner) return true;
+
+  return actor.testUserPermission?.(user, "OWNER") ?? false;
 }
 
 function getRawFlag(actor, scope, key) {
@@ -510,6 +652,8 @@ async function buildMemberData(actor) {
     type: actor.type,
     className: await getActorClassName(actor),
     isPlayer: actor.type === "Player",
+    canAssign: canUserControlActor(actor),
+    canRoll: canUserControlActor(actor),
     hp: {
       value: hpValue,
       max: hpMax,
@@ -596,6 +740,33 @@ function getAssignedTravelActivityByMember(groupData) {
   return assignedByMember;
 }
 
+function setTravelActivityMember(groupData, activityKey, actorUuid, assigned) {
+  if (!activityKey || !actorUuid) return;
+
+  for (const activity of TRAVEL_ACTIVITIES) {
+    const activityData = groupData.travel.activities[activity.key] ?? {
+      actorUuids: [],
+    };
+
+    const existing = Array.isArray(activityData.actorUuids)
+      ? activityData.actorUuids
+      : [];
+
+    activityData.actorUuids = existing.filter(uuid => uuid !== actorUuid);
+    groupData.travel.activities[activity.key] = activityData;
+  }
+
+  if (!assigned) return;
+
+  const activityData = groupData.travel.activities[activityKey] ?? {
+    actorUuids: [],
+  };
+
+  activityData.actorUuids ??= [];
+  activityData.actorUuids.push(actorUuid);
+  groupData.travel.activities[activityKey] = activityData;
+}
+
 function buildTravelMemberRoster(groupData, members = []) {
   const assignedByMember = getAssignedTravelActivityByMember(groupData);
 
@@ -608,6 +779,7 @@ function buildTravelMemberRoster(groupData, members = []) {
       name: member.name,
       img: member.img,
       className: member.className,
+      canAssign: member.canAssign,
       assigned: Boolean(assignedActivityKey),
       assignedActivityKey,
       assignedActivityName
@@ -636,6 +808,7 @@ async function buildTravelActivities(groupData, members = []) {
         name: assignedActor.name,
         img: assignedActor.img,
         className: await getActorClassName(assignedActor),
+        canRoll: canUserControlActor(assignedActor),
       });
     }
 
@@ -650,14 +823,17 @@ async function buildTravelActivities(groupData, members = []) {
         name: member.name,
         img: member.img,
         className: member.className,
+        canAssign: member.canAssign,
         assigned,
         assignedElsewhere,
         assignedActivityName,
-        title: assigned
-          ? `Remove ${member.name} from ${activity.name}`
-          : assignedElsewhere
-            ? `Move ${member.name} from ${assignedActivityName} to ${activity.name}`
-            : `Assign ${member.name} to ${activity.name}`
+        title: !member.canAssign
+          ? `${member.name} is controlled by another user`
+          : assigned
+            ? `Remove ${member.name} from ${activity.name}`
+            : assignedElsewhere
+              ? `Move ${member.name} from ${assignedActivityName} to ${activity.name}`
+              : `Assign ${member.name} to ${activity.name}`
       };
     });
 
@@ -665,6 +841,7 @@ async function buildTravelActivities(groupData, members = []) {
       ...activity,
       assigned,
       hasAssigned: assigned.length > 0,
+      canRoll: assigned.some(actor => actor.canRoll),
       memberOptions,
       hasMemberOptions: memberOptions.length > 0,
       assignmentLabel: assigned.length
@@ -766,16 +943,40 @@ export class SDXGroupSheet extends ActorSheet {
     return `modules/${MODULE_ID}/templates/group-sheet.hbs`;
   }
 
+  _disableFields(form) {
+    super._disableFields(form);
+    this._enablePlayerCampingControls(form);
+  }
+
+  _enablePlayerCampingControls(root) {
+    const element = root?.jquery ? root[0] : root?.[0] ?? root;
+    if (!element?.querySelectorAll) return;
+
+    const selectors = [
+      ".sdx-travel-roll[data-has-assigned='true']",
+      ".sdx-camping-roster-member[data-can-assign='true']",
+      ".sdx-travel-member-toggle[data-can-assign='true']",
+      ".sdx-camping-assigned-chip",
+    ];
+
+    element.querySelectorAll(selectors.join(",")).forEach(control => {
+      control.disabled = false;
+      control.removeAttribute("disabled");
+    });
+  }
+
   async getData(options = {}) {
     const context = await super.getData(options);
     const groupData = getGroupData(this.actor);
 
     const members = [];
+    const memberActors = [];
 
     for (const uuid of groupData.members) {
       const memberActor = await resolveActorFromUuid(uuid);
       if (!memberActor) continue;
 
+      memberActors.push(memberActor);
       members.push(await buildMemberData(memberActor));
     }
 
@@ -799,6 +1000,7 @@ export class SDXGroupSheet extends ActorSheet {
       members,
       hasMembers: members.length > 0,
       canEditGroup: this.isEditable && game.user.isGM,
+      campingResources: buildCampingResources(memberActors, this.actor),
       inventory: {
         items: inventoryItems,
         hasItems: inventoryItems.length > 0,
@@ -829,6 +1031,8 @@ export class SDXGroupSheet extends ActorSheet {
 
   activateListeners(html) {
     super.activateListeners(html);
+    this._normalizeCampingResetButton(html);
+    this._enablePlayerCampingControls(html);
 
     html.find("[data-action='open-member']").on("click", event => {
       this._onOpenMember(event);
@@ -882,28 +1086,15 @@ export class SDXGroupSheet extends ActorSheet {
       this._onCampingMemberDragEnd(event);
     });
 
-    html.find(".sdx-travel-card[data-travel-activity-key]").on("dragenter", event => {
-      this._onCampingActivityDragEnter(event);
-    });
-
-    html.find(".sdx-travel-card[data-travel-activity-key]").on("dragover", event => {
-      this._onCampingActivityDragOver(event);
-    });
-
-    html.find(".sdx-travel-card[data-travel-activity-key]").on("dragleave", event => {
-      this._onCampingActivityDragLeave(event);
-    });
-
-    html.find(".sdx-travel-card[data-travel-activity-key]").on("drop", event => {
-      this._onCampingActivityDrop(event);
+    html[0]?.querySelectorAll(".sdx-travel-card[data-travel-activity-key]").forEach(card => {
+      card.addEventListener("dragenter", event => this._onCampingActivityDragEnter(event), true);
+      card.addEventListener("dragover", event => this._onCampingActivityDragOver(event), true);
+      card.addEventListener("dragleave", event => this._onCampingActivityDragLeave(event), true);
+      card.addEventListener("drop", event => this._onCampingActivityDrop(event), true);
     });
 
     html.find("[data-action='open-item']").on("click", event => {
       this._onOpenItem(event);
-    });
-
-    html.find("[data-action='delete-item']").on("click", event => {
-      this._onDeleteItem(event);
     });
 
     html.find("[data-action='item-increment']").on("click", event => {
@@ -925,6 +1116,25 @@ export class SDXGroupSheet extends ActorSheet {
     html.find("[data-action='divide-coins']").on("click", event => {
       this._onDivideCoins(event);
     });
+  }
+
+  _normalizeCampingResetButton(root) {
+    const element = root?.jquery ? root[0] : root?.[0] ?? root;
+    if (!element?.querySelector) return;
+
+    const resetButton = element.querySelector("[data-action='reset-travel']");
+    if (!resetButton) return;
+
+    resetButton.classList.add("sdx-camping-reset");
+    resetButton.setAttribute("data-tooltip", "Reset Assignments");
+    resetButton.removeAttribute("title");
+    resetButton.setAttribute("aria-label", "Reset Assignments");
+    resetButton.innerHTML = '<i class="fas fa-undo"></i>';
+
+    const roster = element.querySelector(".sdx-camping-roster");
+    if (roster && !roster.contains(resetButton)) {
+      roster.appendChild(resetButton);
+    }
   }
 
   async _saveGroupData(groupData) {
@@ -950,7 +1160,16 @@ export class SDXGroupSheet extends ActorSheet {
 
         if (travelCard) {
           const activityKey = travelCard.dataset.travelActivityKey;
-          await this._assignTravelActivity(activityKey, droppedActor);
+          if (game.user.isGM || this.actor.isOwner) {
+            await this._assignTravelActivity(activityKey, droppedActor);
+          } else {
+            await this._requestTravelActivityMember(activityKey, droppedActor.uuid, true);
+          }
+          return false;
+        }
+
+        if (!travelCard && !game.user.isGM) {
+          ui.notifications.warn("Only the GM can add members to a group.");
           return false;
         }
 
@@ -984,6 +1203,11 @@ export class SDXGroupSheet extends ActorSheet {
   }
 
   async _addMember(memberActor) {
+    if (!game.user.isGM) {
+      ui.notifications.warn("Only the GM can add members to a group.");
+      return;
+    }
+
     const groupData = getGroupData(this.actor);
     const uuid = memberActor.uuid;
 
@@ -1004,40 +1228,60 @@ export class SDXGroupSheet extends ActorSheet {
     const groupData = getGroupData(this.actor);
 
     if (!groupData.members.includes(memberActor.uuid)) {
+      if (!game.user.isGM) {
+        ui.notifications.warn("Only the GM can add members to a group.");
+        return;
+      }
+
       groupData.members.push(memberActor.uuid);
     }
 
-    this._setTravelActivityMember(groupData, activityKey, memberActor.uuid, true);
+    setTravelActivityMember(groupData, activityKey, memberActor.uuid, true);
 
     await this._saveGroupData(groupData);
     this.render(false);
   }
 
-  _setTravelActivityMember(groupData, activityKey, actorUuid, assigned) {
-    if (!activityKey || !actorUuid) return;
+  async _requestTravelActivityMember(activityKey, actorUuid, assigned) {
+    const activity = TRAVEL_ACTIVITIES.find(existing => existing.key === activityKey);
+    const memberActor = await resolveActorFromUuid(actorUuid);
 
-    for (const activity of TRAVEL_ACTIVITIES) {
-      const activityData = groupData.travel.activities[activity.key] ?? {
-        actorUuids: [],
-      };
+    if (!activity || !memberActor) return false;
 
-      const existing = Array.isArray(activityData.actorUuids)
-        ? activityData.actorUuids
-        : [];
-
-      activityData.actorUuids = existing.filter(uuid => uuid !== actorUuid);
-      groupData.travel.activities[activity.key] = activityData;
+    if (!canUserControlActor(memberActor)) {
+      ui.notifications.warn(`You can only assign characters you control.`);
+      return false;
     }
 
-    if (!assigned) return;
+    const groupData = getGroupData(this.actor);
+    if (!groupData.members.includes(actorUuid)) {
+      ui.notifications.warn(`${memberActor.name} is not in this group.`);
+      return false;
+    }
 
-    const activityData = groupData.travel.activities[activityKey] ?? {
-      actorUuids: [],
-    };
+    if (game.user.isGM || this.actor.isOwner) {
+      setTravelActivityMember(groupData, activityKey, actorUuid, assigned);
+      await this._saveGroupData(groupData);
+      this.render(false);
+      return true;
+    }
 
-    activityData.actorUuids ??= [];
-    activityData.actorUuids.push(actorUuid);
-    groupData.travel.activities[activityKey] = activityData;
+    if (!game.socket || !getPrimaryActiveGm()) {
+      ui.notifications.warn("A GM must be connected for players to assign camping tasks.");
+      return false;
+    }
+
+    game.socket.emit(`module.${MODULE_ID}`, {
+      feature: GROUP_SHEET_SOCKET_FEATURE,
+      action: GROUP_SHEET_SOCKET_ASSIGN_TRAVEL,
+      groupActorUuid: this.actor.uuid,
+      activityKey,
+      actorUuid,
+      assigned: Boolean(assigned),
+      userId: game.user.id,
+    });
+
+    return true;
   }
 
   async _onOpenMember(event) {
@@ -1058,6 +1302,11 @@ export class SDXGroupSheet extends ActorSheet {
 
   async _onRemoveMember(event) {
     event.preventDefault();
+
+    if (!game.user.isGM) {
+      ui.notifications.warn("Only the GM can remove members from a group.");
+      return;
+    }
 
     const row = event.currentTarget.closest("[data-member-uuid]");
     const uuid = row?.dataset?.memberUuid;
@@ -1097,6 +1346,11 @@ export class SDXGroupSheet extends ActorSheet {
 
   async _onChangeXp(event, delta) {
     event.preventDefault();
+
+    if (!game.user.isGM) {
+      ui.notifications.warn("Only the GM can adjust XP from the group sheet.");
+      return;
+    }
 
     const row = event.currentTarget.closest("[data-member-uuid]");
     const uuid = row?.dataset?.memberUuid;
@@ -1141,10 +1395,13 @@ export class SDXGroupSheet extends ActorSheet {
   async _onResetTravel(event) {
     event.preventDefault();
 
+    if (!game.user.isGM) {
+      ui.notifications.warn("Only the GM can reset camping assignments.");
+      return;
+    }
+
     const groupData = getGroupData(this.actor);
 
-    groupData.travel.weather = "normal";
-    groupData.travel.speed = "normal";
     groupData.travel.activities = {};
 
     for (const activity of TRAVEL_ACTIVITIES) {
@@ -1174,10 +1431,7 @@ export class SDXGroupSheet extends ActorSheet {
       : [];
     const currentlyAssignedHere = actorUuids.includes(actorUuid);
 
-    this._setTravelActivityMember(groupData, activityKey, actorUuid, !currentlyAssignedHere);
-
-    await this._saveGroupData(groupData);
-    this.render(false);
+    await this._requestTravelActivityMember(activityKey, actorUuid, !currentlyAssignedHere);
   }
 
   _onToggleTravelPicker(event) {
@@ -1202,16 +1456,29 @@ export class SDXGroupSheet extends ActorSheet {
     const dataTransfer = nativeEvent.dataTransfer;
     const actorUuid = event.currentTarget?.dataset?.memberUuid;
 
+    if (event.currentTarget?.classList?.contains("is-unavailable")) {
+      event.preventDefault();
+      return;
+    }
+
     if (!dataTransfer || !actorUuid) return;
 
     dataTransfer.effectAllowed = "move";
-    dataTransfer.setData(CAMPING_MEMBER_DRAG_TYPE, actorUuid);
+    this._campingDragActorUuid = actorUuid;
+
+    try {
+      dataTransfer.setData(CAMPING_MEMBER_DRAG_TYPE, actorUuid);
+    } catch (_error) {
+      // Some browser shells only allow standard drag data types.
+    }
+
     dataTransfer.setData("text/plain", actorUuid);
 
     event.currentTarget.classList.add("is-dragging");
   }
 
   _onCampingMemberDragEnd(event) {
+    this._campingDragActorUuid = "";
     event.currentTarget?.classList.remove("is-dragging");
     this.element?.find?.(".sdx-travel-card.is-drag-over")?.removeClass("is-drag-over");
   }
@@ -1220,6 +1487,7 @@ export class SDXGroupSheet extends ActorSheet {
     if (!this._hasCampingDragData(event)) return;
 
     event.preventDefault();
+    event.stopPropagation();
     event.currentTarget?.classList.add("is-drag-over");
   }
 
@@ -1228,7 +1496,8 @@ export class SDXGroupSheet extends ActorSheet {
     if (!this._hasCampingDragData(event)) return;
 
     event.preventDefault();
-    nativeEvent.dataTransfer.dropEffect = "move";
+    event.stopPropagation();
+    if (nativeEvent.dataTransfer) nativeEvent.dataTransfer.dropEffect = "move";
     event.currentTarget?.classList.add("is-drag-over");
   }
 
@@ -1242,36 +1511,41 @@ export class SDXGroupSheet extends ActorSheet {
   }
 
   async _onCampingActivityDrop(event) {
+    event.preventDefault();
+    event.stopPropagation();
+    event.stopImmediatePropagation?.();
+
     const actorUuid = this._getCampingDragActorUuid(event);
     const activityKey = event.currentTarget?.dataset?.travelActivityKey;
 
-    if (!actorUuid || !activityKey) return;
-
-    event.preventDefault();
-    event.stopPropagation();
     event.currentTarget?.classList.remove("is-drag-over");
+    this._campingDragActorUuid = "";
+
+    if (!actorUuid || !activityKey) return;
 
     const groupData = getGroupData(this.actor);
     if (!groupData.members.includes(actorUuid)) return;
 
-    this._setTravelActivityMember(groupData, activityKey, actorUuid, true);
-
-    await this._saveGroupData(groupData);
-    this.render(false);
+    await this._requestTravelActivityMember(activityKey, actorUuid, true);
   }
 
   _getCampingDragActorUuid(event) {
     const nativeEvent = event.originalEvent ?? event;
     const dataTransfer = nativeEvent.dataTransfer;
-    if (!dataTransfer) return "";
+    if (!dataTransfer) return this._campingDragActorUuid || "";
 
-    return dataTransfer.getData(CAMPING_MEMBER_DRAG_TYPE) || dataTransfer.getData("text/plain") || "";
+    return dataTransfer.getData(CAMPING_MEMBER_DRAG_TYPE)
+      || dataTransfer.getData("text/plain")
+      || this._campingDragActorUuid
+      || "";
   }
 
   _hasCampingDragData(event) {
     const nativeEvent = event.originalEvent ?? event;
     const types = Array.from(nativeEvent.dataTransfer?.types ?? []);
-    return types.includes(CAMPING_MEMBER_DRAG_TYPE);
+    return Boolean(this._campingDragActorUuid)
+      || types.includes(CAMPING_MEMBER_DRAG_TYPE)
+      || types.includes("text/plain");
   }
 
   async _pickTravelAbility(activity) {
@@ -1331,15 +1605,23 @@ export class SDXGroupSheet extends ActorSheet {
     const ability = await this._pickTravelAbility(activity);
     if (!ability) return;
 
+    let rolled = 0;
+
     for (const actorUuid of actorUuids) {
       const actor = await resolveActorFromUuid(actorUuid);
       if (!actor) continue;
+      if (!canUserControlActor(actor)) continue;
 
       await rollActorAbility(actor, ability, {
         event,
         target: activity.dc,
         fastForward: event.shiftKey,
       });
+      rolled += 1;
+    }
+
+    if (rolled === 0) {
+      ui.notifications.warn(`You can only roll ${activity.name} for characters you control.`);
     }
   }
 
@@ -1361,29 +1643,6 @@ export class SDXGroupSheet extends ActorSheet {
     const item = this.actor.items.get(itemId);
 
     item?.sheet?.render(true);
-  }
-
-  async _onDeleteItem(event) {
-    event.preventDefault();
-
-    const row = event.currentTarget.closest("[data-item-id]");
-    const itemId = row?.dataset?.itemId;
-    const item = this.actor.items.get(itemId);
-
-    if (!item) return;
-
-    const confirmed = await Dialog.confirm({
-      title: "Delete Item",
-      content: `<p>Delete <strong>${item.name}</strong> from the group inventory?</p>`,
-      yes: () => true,
-      no: () => false,
-      defaultYes: false,
-    });
-
-    if (!confirmed) return;
-
-    await this.actor.deleteEmbeddedDocuments("Item", [itemId]);
-    this.render(false);
   }
 
   async _onChangeItemQuantity(event, delta) {
@@ -1618,6 +1877,52 @@ function rerenderAllOpenGroupSheets() {
   }
 }
 
+function getPrimaryActiveGm() {
+  return Array.from(game.users ?? [])
+    .filter(user => user.active && user.isGM)
+    .sort((a, b) => a.id.localeCompare(b.id))[0] ?? null;
+}
+
+function isPrimaryActiveGm() {
+  return game.user?.isGM && getPrimaryActiveGm()?.id === game.user.id;
+}
+
+async function handleTravelAssignmentSocketRequest(data) {
+  if (!isPrimaryActiveGm()) return;
+
+  const activityKey = data?.activityKey;
+  const actorUuid = data?.actorUuid;
+  const groupActorUuid = data?.groupActorUuid;
+  const requestingUser = game.users.get(data?.userId);
+
+  if (!requestingUser || !activityKey || !actorUuid || !groupActorUuid) return;
+  if (!TRAVEL_ACTIVITIES.some(activity => activity.key === activityKey)) return;
+
+  const groupActor = await resolveActorFromUuid(groupActorUuid);
+  const memberActor = await resolveActorFromUuid(actorUuid);
+
+  if (!isGroupActor(groupActor) || !memberActor) return;
+  if (!canUserControlActor(memberActor, requestingUser)) return;
+
+  const groupData = getGroupData(groupActor);
+  if (!groupData.members.includes(actorUuid)) return;
+
+  setTravelActivityMember(groupData, activityKey, actorUuid, Boolean(data.assigned));
+  await groupActor.setFlag(MODULE_ID, "group", groupData);
+}
+
+function registerGroupSheetSocket() {
+  game.socket?.on(`module.${MODULE_ID}`, data => {
+    if (data?.feature !== GROUP_SHEET_SOCKET_FEATURE) return;
+
+    if (data.action === GROUP_SHEET_SOCKET_ASSIGN_TRAVEL) {
+      handleTravelAssignmentSocketRequest(data).catch(error => {
+        console.error(`${MODULE_ID} | GroupSheet | Travel assignment socket error`, error);
+      });
+    }
+  });
+}
+
 let groupSheetRegistered = false;
 
 function settingExists(key) {
@@ -1725,6 +2030,7 @@ async function onReadyGroupSheetMaintenance() {
 export function registerGroupSheet() {
   if (groupSheetRegistered) return;
   groupSheetRegistered = true;
+  registerGroupSheetSocket();
 
   if (!settingExists("enableGroupActors")) {
     game.settings.register(MODULE_ID, "enableGroupActors", {
@@ -1750,6 +2056,59 @@ export function registerGroupSheet() {
         max: 64,
         step: 1,
       },
+      onChange: rerenderAllOpenGroupSheets,
+    });
+  }
+
+  if (!settingExists(GROUP_SETTING_MEMBER_PORTRAIT_SIZE)) {
+    game.settings.register(MODULE_ID, GROUP_SETTING_MEMBER_PORTRAIT_SIZE, {
+      name: "Group Sheet | Member Portrait Size",
+      hint: "Minimum portrait width and height for character cards in the Group Sheet Members tab.",
+      scope: "world",
+      config: true,
+      type: Number,
+      default: GROUP_MEMBER_PORTRAIT_SIZE_DEFAULT,
+      range: {
+        min: 96,
+        max: 260,
+        step: 1,
+      },
+      onChange: rerenderAllOpenGroupSheets,
+    });
+  }
+
+  if (!settingExists(GROUP_SETTING_CAMPING_FOOD_KEYWORDS)) {
+    game.settings.register(MODULE_ID, GROUP_SETTING_CAMPING_FOOD_KEYWORDS, {
+      name: "Group Sheet | Camping Food Keywords",
+      hint: "Comma-separated item name keywords counted as food or rations in the Camping campfire summary.",
+      scope: "world",
+      config: true,
+      type: String,
+      default: GROUP_CAMPING_FOOD_KEYWORDS_DEFAULT,
+      onChange: rerenderAllOpenGroupSheets,
+    });
+  }
+
+  if (!settingExists(GROUP_SETTING_CAMPING_TORCH_KEYWORDS)) {
+    game.settings.register(MODULE_ID, GROUP_SETTING_CAMPING_TORCH_KEYWORDS, {
+      name: "Group Sheet | Camping Torch Keywords",
+      hint: "Comma-separated item name keywords counted as torches in the Camping campfire summary.",
+      scope: "world",
+      config: true,
+      type: String,
+      default: GROUP_CAMPING_TORCH_KEYWORDS_DEFAULT,
+      onChange: rerenderAllOpenGroupSheets,
+    });
+  }
+
+  if (!settingExists(GROUP_SETTING_CAMPING_WATER_KEYWORDS)) {
+    game.settings.register(MODULE_ID, GROUP_SETTING_CAMPING_WATER_KEYWORDS, {
+      name: "Group Sheet | Camping Water Keywords",
+      hint: "Comma-separated item name keywords counted as water in the Camping campfire summary.",
+      scope: "world",
+      config: true,
+      type: String,
+      default: GROUP_CAMPING_WATER_KEYWORDS_DEFAULT,
       onChange: rerenderAllOpenGroupSheets,
     });
   }

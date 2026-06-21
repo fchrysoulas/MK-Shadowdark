@@ -16,23 +16,28 @@
 
   <nav class="sdx-group-nav tabs" data-group="primary">
     <a class="item active" data-tab="members"><i class="fas fa-users"></i> Members</a>
-    <a class="item" data-tab="travel"><i class="fas fa-campground"></i> Camping</a>
+    <a class="item" data-tab="traveling"><i class="fas fa-route"></i> Traveling</a>
+    <a class="item" data-tab="camping"><i class="fas fa-campground"></i> Camping</a>
     <a class="item" data-tab="inventory"><i class="fas fa-box-open"></i> Inventory</a>
     <a class="item" data-tab="notes"><i class="fas fa-scroll"></i> Notes</a>
   </nav>
 
   <section class="sdx-group-content">
     <div class="tab sdx-group-tab sdx-group-tab-body active" data-group="primary" data-tab="members">
+      {{#if sdx.canEditGroup}}
       <div class="sdx-group-dropzone">
         <i class="fas fa-hand-pointer"></i>
         Drop actors here, or use the sheet header button to add controlled tokens.
       </div>
+      {{/if}}
 
       {{#if sdx.hasMembers}}
       <div class="sdx-group-members">
         {{#each sdx.members}}
         <article class="sdx-group-member" data-member-uuid="{{uuid}}">
+          {{#if ../sdx.canEditGroup}}
           <button type="button" class="sdx-member-remove" data-action="remove-member" title="Remove member"><i class="fas fa-times"></i></button>
+          {{/if}}
 
           <img class="sdx-member-image" src="{{img}}" alt="{{name}}" data-action="open-member">
 
@@ -63,8 +68,10 @@
             <span class="sdx-side-stat">LVL <strong>{{level}}</strong></span>
             <span class="sdx-side-stat sdx-xp-stat">
               XP <strong>{{xp.value}}/{{xp.next}}</strong>
+              {{#if ../sdx.canEditGroup}}
               <button type="button" data-action="xp-decrement" title="Decrease XP"><i class="fas fa-minus"></i></button>
               <button type="button" data-action="xp-increment" title="Increase XP"><i class="fas fa-plus"></i></button>
+              {{/if}}
             </span>
             <span class="sdx-side-stat {{#if slots.over}}sdx-danger{{/if}}">Slots <strong>{{slots.total}}/{{slots.max}}</strong></span>
           </div>
@@ -72,25 +79,11 @@
         {{/each}}
       </div>
       {{else}}
-      <div class="sdx-empty-group">No members yet. Drop player actors or tokens onto this sheet.</div>
+      <div class="sdx-empty-group">{{#if sdx.canEditGroup}}No members yet. Drop player actors or tokens onto this sheet.{{else}}No members yet. Ask the GM to add party members.{{/if}}</div>
       {{/if}}
     </div>
 
-    <div class="tab sdx-group-tab sdx-group-tab-body" data-group="primary" data-tab="travel">
-      <section class="sdx-camping-info">
-        <div class="sdx-camping-procedure">
-          <ol>
-            <li>The PCs make task checks in any order they choose.</li>
-            <li>After resolving tasks, the GM follows normal resting and random encounter procedures.</li>
-          </ol>
-        </div>
-
-        <div class="sdx-campfire-note">
-          <strong>Campfire</strong>
-          <p>The PCs can make a campfire using 3 torches; it lasts 8 hours while a PC remains near to it and casts light out to a near distance.</p>
-        </div>
-      </section>
-
+    <div class="tab sdx-group-tab sdx-group-tab-body" data-group="primary" data-tab="traveling">
       <div class="sdx-travel-toolbar">
         <button type="button" data-action="cycle-weather"><i class="fas fa-cloud-sun-rain"></i> Weather: {{sdx.travel.weatherLabel}}</button>
 
@@ -101,27 +94,62 @@
             {{/each}}
           </select>
         </label>
-
-        <button type="button" data-action="reset-travel"><i class="fas fa-undo"></i> Reset Assignments</button>
       </div>
+    </div>
+
+    <div class="tab sdx-group-tab sdx-group-tab-body" data-group="primary" data-tab="camping">
+      <section class="sdx-camping-info">
+        <div class="sdx-camping-procedure">
+          <ol>
+            <strong>PROCEDURE</strong>
+            <li>The PCs make task checks in any order they choose.</li>
+            <li>After resolving tasks, the GM follows normal resting and random encounter procedures.</li>
+          </ol>
+        </div>
+
+        <div class="sdx-campfire-note">
+          <strong>Campfire</strong>
+          <p>The PCs can make a campfire using 3 torches; it lasts 8 hours while a PC remains near to it and casts light out to a near distance.</p>
+          <div class="sdx-campfire-resources">
+            <span title="Total food and rations carried by members plus shared group inventory">
+              <i class="fas fa-utensils"></i>
+              <strong>{{sdx.campingResources.food.total}}</strong>
+            </span>
+            <span title="Total torches carried by members plus shared group inventory">
+              <i class="fas fa-fire"></i>
+              <strong>{{sdx.campingResources.torches.total}}</strong>
+            </span>
+            <span title="Total water carried by members plus shared group inventory">
+              <i class="fas fa-tint"></i>
+              <strong>{{sdx.campingResources.water.total}}</strong>
+            </span>
+          </div>
+        </div>
+      </section>
 
       {{#if sdx.travel.hasMembers}}
       <div class="sdx-camping-roster">
         {{#each sdx.travel.members}}
         <button
           type="button"
-          class="sdx-camping-roster-member {{#if assigned}}is-assigned{{/if}}"
+          class="sdx-camping-roster-member {{#if assigned}}is-assigned{{/if}} {{#unless canAssign}}is-unavailable{{/unless}}"
           data-action="open-member"
           data-camping-member-drag="true"
           data-member-uuid="{{uuid}}"
-          draggable="true"
-          title="{{#if assignedActivityName}}{{name}}: {{assignedActivityName}}{{else}}{{name}} is unassigned{{/if}}"
+          data-can-assign="{{#if canAssign}}true{{else}}false{{/if}}"
+          draggable="{{#if canAssign}}true{{else}}false{{/if}}"
+          title="{{#unless canAssign}}{{name}} is controlled by another user{{else}}{{#if assignedActivityName}}{{name}}: {{assignedActivityName}}{{else}}{{name}} is unassigned{{/if}}{{/unless}}"
         >
           <span class="sdx-camping-portrait"><img src="{{img}}" alt="{{name}}"></span>
           <span>{{name}}</span>
           {{#if assignedActivityName}}<small>{{assignedActivityName}}</small>{{else}}<small>Free</small>{{/if}}
         </button>
         {{/each}}
+        {{#if sdx.canEditGroup}}
+        <button type="button" class="sdx-camping-reset" data-action="reset-travel" data-tooltip="Reset Assignments" aria-label="Reset Assignments">
+          <i class="fas fa-undo"></i>
+        </button>
+        {{/if}}
       </div>
       {{else}}
       <div class="sdx-camping-roster-empty">Add members to the group to assign camping tasks.</div>
@@ -140,7 +168,7 @@
               <span class="sdx-travel-meta">{{abilityLabel}} <b>DC {{dc}}</b></span>
             </div>
 
-            <button type="button" class="sdx-travel-roll" data-action="roll-travel-activity" title="Roll {{name}}">
+            <button type="button" class="sdx-travel-roll" data-action="roll-travel-activity" data-has-assigned="{{#if hasAssigned}}true{{else}}false{{/if}}" title="{{#if hasAssigned}}Roll {{name}}{{else}}Assign a character to roll {{name}}{{/if}}" {{#unless hasAssigned}}disabled{{/unless}}>
               <i class="fas fa-dice-d20"></i>
             </button>
           </header>
@@ -168,7 +196,9 @@
                 class="sdx-travel-member-toggle {{#if assigned}}is-assigned{{/if}} {{#if assignedElsewhere}}is-assigned-elsewhere{{/if}}"
                 data-action="toggle-travel-participant"
                 data-member-uuid="{{uuid}}"
+                data-can-assign="{{#if canAssign}}true{{else}}false{{/if}}"
                 title="{{title}}"
+                {{#unless canAssign}}disabled{{/unless}}
               >
                 <span class="sdx-camping-portrait"><img src="{{img}}" alt="{{name}}"></span>
                 <span>{{name}}</span>
@@ -197,7 +227,6 @@
               <span>Item</span>
               <span>Qty</span>
               <span>Slots</span>
-              <span></span>
             </div>
 
             <div class="sdx-shared-items-table-body">
@@ -216,10 +245,6 @@
                 </div>
 
                 <div class="sdx-shared-item-slots-cell">{{slots}}</div>
-
-                <div class="sdx-shared-item-actions-cell">
-                  <button type="button" data-action="delete-item" title="Delete item"><i class="fas fa-trash"></i></button>
-                </div>
               </div>
               {{/each}}
               {{else}}

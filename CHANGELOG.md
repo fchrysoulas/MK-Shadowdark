@@ -8,6 +8,7 @@
 - Reworked Group Sheet member cards into a side-by-side layout with larger borderless portraits and compact six-stat rows.
 - Set Group actors to use a safe `1/1` HP default to avoid Health Estimate errors.
 - Removed the obsolete Corpse Token debug coordinates setting from the settings menu.
+- Removed stale Base Management manifest and localization entries.
 - Consolidated feature logging/version display around the module manifest version instead of per-file version numbers.
 - Added local attribution for bundled Game-icons.net Camping icons.
 

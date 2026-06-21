@@ -8,6 +8,8 @@ const GROUP_HP_DEFAULT = 1;
 const GROUP_HP_VALUE_PATH = "system.attributes.hp.value";
 const GROUP_HP_MAX_PATH = "system.attributes.hp.max";
 const CAMPING_MEMBER_DRAG_TYPE = "application/x-mk-shadowdark-camping-member";
+const GROUP_SETTING_ASSIGNED_TOKEN_SIZE = "groupSheetAssignedTokenSize";
+const GROUP_ASSIGNED_TOKEN_SIZE_DEFAULT = 28;
 
 const ABILITIES = [
   ["str", "STR"],
@@ -136,6 +138,40 @@ function optionLabel(options, value) {
 function numberOrZero(value) {
   const n = Number(value);
   return Number.isFinite(n) ? n : 0;
+}
+
+function clampNumber(value, fallback, min, max) {
+  const n = Number(value);
+  if (!Number.isFinite(n)) return fallback;
+  return Math.max(min, Math.min(max, n));
+}
+
+function getSettingValue(key, fallback) {
+  try {
+    if (!settingExists(key)) return fallback;
+    return game.settings.get(MODULE_ID, key);
+  } catch (_error) {
+    return fallback;
+  }
+}
+
+function getAssignedTokenSizeSetting() {
+  return clampNumber(
+    getSettingValue(GROUP_SETTING_ASSIGNED_TOKEN_SIZE, GROUP_ASSIGNED_TOKEN_SIZE_DEFAULT),
+    GROUP_ASSIGNED_TOKEN_SIZE_DEFAULT,
+    20,
+    64
+  );
+}
+
+function buildGroupSheetStyle() {
+  const tokenSize = getAssignedTokenSizeSetting();
+  const portraitSize = Math.max(12, tokenSize - 6);
+
+  return [
+    `--sdx-camping-assigned-token-size: ${tokenSize}px`,
+    `--sdx-camping-assigned-portrait-size: ${portraitSize}px`,
+  ].join("; ");
 }
 
 function getRawFlag(actor, scope, key) {
@@ -758,6 +794,7 @@ export class SDXGroupSheet extends ActorSheet {
 
     context.sdx = {
       isGroup: true,
+      sheetStyle: buildGroupSheetStyle(),
       summary: buildHeaderSummary(members),
       members,
       hasMembers: members.length > 0,
@@ -1575,6 +1612,12 @@ function rerenderOpenGroupSheets(updatedActor) {
   }
 }
 
+function rerenderAllOpenGroupSheets() {
+  for (const app of Object.values(ui.windows ?? {})) {
+    if (app instanceof SDXGroupSheet) app.render(false);
+  }
+}
+
 let groupSheetRegistered = false;
 
 function settingExists(key) {
@@ -1691,6 +1734,23 @@ export function registerGroupSheet() {
       config: true,
       type: Boolean,
       default: true,
+    });
+  }
+
+  if (!settingExists(GROUP_SETTING_ASSIGNED_TOKEN_SIZE)) {
+    game.settings.register(MODULE_ID, GROUP_SETTING_ASSIGNED_TOKEN_SIZE, {
+      name: "Group Sheet | Assigned Token Size",
+      hint: "Pixel size for assigned member portrait tokens in Camping task cards.",
+      scope: "world",
+      config: true,
+      type: Number,
+      default: GROUP_ASSIGNED_TOKEN_SIZE_DEFAULT,
+      range: {
+        min: 20,
+        max: 64,
+        step: 1,
+      },
+      onChange: rerenderAllOpenGroupSheets,
     });
   }
 

@@ -24,6 +24,8 @@
   --sdx-group-accent: #b72b44;
   --sdx-group-panel: rgba(255, 255, 255, 0.06);
   --sdx-group-panel-hover: rgba(255, 255, 255, 0.1);
+  --sdx-camping-assigned-token-size: 28px;
+  --sdx-camping-assigned-portrait-size: 22px;
 
   display: flex;
   flex-direction: column;
@@ -921,9 +923,10 @@
 }
 
 .sdx-camping-assignment-row {
-  display: block;
-  align-items: center;
-  padding: 0 10px 10px;
+  display: grid;
+  place-items: center;
+  min-height: calc(var(--sdx-camping-assigned-token-size) + 18px);
+  padding: 8px 10px 10px;
   cursor: pointer;
 }
 
@@ -932,22 +935,28 @@
 }
 
 .sdx-camping-assignment-summary {
-  display: flex;
+  display: inline-flex;
   align-items: center;
+  justify-content: center;
+  flex-wrap: wrap;
   gap: 5px;
+  width: fit-content;
+  max-width: 100%;
   min-width: 0;
-  overflow: hidden;
+  margin: 0 auto;
+  overflow: visible;
+  text-align: center;
 }
 
 .sdx-camping-assigned-chip {
-  display: inline-flex;
-  align-items: center;
-  gap: 5px;
-  max-width: 120px;
-  min-height: 26px;
-  padding: 2px 6px 2px 3px;
+  display: inline-grid;
+  place-items: center;
+  flex: 0 0 auto;
+  width: var(--sdx-camping-assigned-token-size);
+  height: var(--sdx-camping-assigned-token-size);
+  padding: 2px;
   border: 1px solid rgba(255, 255, 255, 0.12);
-  border-radius: 999px;
+  border-radius: 4px;
   background: rgba(255, 75, 31, 0.14);
   color: var(--sdx-group-text);
   cursor: pointer;
@@ -959,18 +968,9 @@
 }
 
 .sdx-camping-assigned-chip .sdx-camping-portrait {
-  width: 21px;
-  height: 21px;
-  border-radius: 50%;
-}
-
-.sdx-camping-assigned-chip span {
-  overflow: hidden;
-  color: #f0f0f0;
-  font-size: 11px;
-  font-weight: 800;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  width: var(--sdx-camping-assigned-portrait-size);
+  height: var(--sdx-camping-assigned-portrait-size);
+  border-radius: 3px;
 }
 
 .sdx-camping-unassigned {

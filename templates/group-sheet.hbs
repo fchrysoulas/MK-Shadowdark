@@ -1,4 +1,4 @@
-<form class="sdx-group-sheet {{cssClass}}" autocomplete="off">
+<form class="sdx-group-sheet {{cssClass}}" autocomplete="off" style="{{sdx.sheetStyle}}">
   <header class="sdx-group-header">
     <img class="sdx-group-image" src="{{actor.img}}" data-edit="img" title="{{actor.name}}" alt="{{actor.name}}">
 
@@ -149,9 +149,8 @@
             <div class="sdx-camping-assignment-summary" title="{{assignmentLabel}}">
               {{#if hasAssigned}}
               {{#each assigned}}
-              <button type="button" class="sdx-camping-assigned-chip" data-action="open-member" data-assigned-actor-uuid="{{uuid}}">
+              <button type="button" class="sdx-camping-assigned-chip" data-action="open-member" data-assigned-actor-uuid="{{uuid}}" title="{{name}}">
                 <span class="sdx-camping-portrait"><img src="{{img}}" alt="{{name}}"></span>
-                <span>{{name}}</span>
               </button>
               {{/each}}
               {{else}}

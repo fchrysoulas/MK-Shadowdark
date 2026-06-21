@@ -744,7 +744,8 @@
       { title: "Quickdraw", firstKey: "quickdrawIconEnabled" },
       { title: "Character Sheet", firstKey: "characterSheetTweaksEnabled" },
       { title: "Equipment Hands", firstKey: "equipmentHandsEnabled" },
-      { title: "Time Passes", firstKey: "timePassesEnabled" }
+      { title: "Time Passes", firstKey: "timePassesEnabled" },
+      { title: "Group Sheet", firstKey: "enableGroupActors" }
     ];
 
     for (const group of groups) {

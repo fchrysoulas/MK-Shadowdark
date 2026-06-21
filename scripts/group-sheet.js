@@ -7,6 +7,7 @@ const LEGACY_SHEET_ID = `${LEGACY_MODULE_ID}.SDXGroupSheet`;
 const GROUP_HP_DEFAULT = 1;
 const GROUP_HP_VALUE_PATH = "system.attributes.hp.value";
 const GROUP_HP_MAX_PATH = "system.attributes.hp.max";
+const CAMPING_MEMBER_DRAG_TYPE = "application/x-mk-shadowdark-camping-member";
 
 const ABILITIES = [
   ["str", "STR"],
@@ -32,13 +33,17 @@ const WEATHER_OPTIONS = [
   { value: "cold", label: "Cold" },
 ];
 
+const campingIcon = fileName => `modules/${MODULE_ID}/assets/icons/camping/${fileName}.svg`;
+
 const TRAVEL_ACTIVITIES = [
   {
     key: "battenDown",
-    name: "Batten Down",
+    name: "Bed Down",
     dc: 12,
-    abilities: ["int", "con"],
-    abilityLabel: "INT / CON",
+    abilities: ["wis", "con"],
+    abilityLabel: "WIS / CON",
+    icon: campingIcon("bed-down"),
+    description: "You do not need to make checks to benefit from rest if your sleep is interrupted during this rest.",
   },
   {
     key: "cook",
@@ -46,6 +51,8 @@ const TRAVEL_ACTIVITIES = [
     dc: 12,
     abilities: ["int", "wis"],
     abilityLabel: "INT / WIS",
+    icon: campingIcon("cook"),
+    description: "Each PC who consumes a ration gains +2 temporary HP that lasts 1 day.",
   },
   {
     key: "craft",
@@ -53,6 +60,8 @@ const TRAVEL_ACTIVITIES = [
     dc: 12,
     abilities: ["dex"],
     abilityLabel: "DEX",
+    icon: campingIcon("craft"),
+    description: "Create an item or repair a broken piece of mundane gear.",
   },
   {
     key: "entertain",
@@ -60,13 +69,17 @@ const TRAVEL_ACTIVITIES = [
     dc: 12,
     abilities: ["cha"],
     abilityLabel: "CHA",
+    icon: campingIcon("entertain"),
+    description: "Grant 1 luck token to another PC.",
   },
   {
     key: "firewood",
-    name: "Firewood",
+    name: "Scavenge",
     dc: 12,
     abilities: ["str", "con"],
     abilityLabel: "STR / CON",
+    icon: campingIcon("scavenge"),
+    description: "Make one free campfire this rest without expending torches.",
   },
   {
     key: "hunt",
@@ -74,6 +87,8 @@ const TRAVEL_ACTIVITIES = [
     dc: 12,
     abilities: ["str", "dex"],
     abilityLabel: "STR / DEX",
+    icon: campingIcon("hunt"),
+    description: "Find 1d4 rations. You cannot hunt if you pushed during today's travel.",
   },
   {
     key: "keepWatch",
@@ -81,6 +96,8 @@ const TRAVEL_ACTIVITIES = [
     dc: 12,
     abilities: ["wis"],
     abilityLabel: "WIS",
+    icon: campingIcon("keep-watch"),
+    description: "You cannot be surprised during one half of the rest (you choose which).",
   },
   {
     key: "predict",
@@ -88,6 +105,8 @@ const TRAVEL_ACTIVITIES = [
     dc: 12,
     abilities: ["int", "wis"],
     abilityLabel: "INT / WIS",
+    icon: campingIcon("predict"),
+    description: "You may force a re-roll of tomorrow's weather after learning the result.",
   },
 ];
 
@@ -243,6 +262,8 @@ function getGroupData(actor) {
   existing.travel.speed ??= "normal";
   existing.travel.activities ??= {};
 
+  const assignedMembers = new Set();
+
   for (const activity of TRAVEL_ACTIVITIES) {
     const current = existing.travel.activities[activity.key] ?? {};
 
@@ -256,6 +277,13 @@ function getGroupData(actor) {
       current.actorUuids = migrated;
       delete current.actorUuid;
     }
+
+    current.actorUuids = current.actorUuids.filter(uuid => {
+      if (!uuid) return false;
+      if (assignedMembers.has(uuid)) return false;
+      assignedMembers.add(uuid);
+      return true;
+    });
 
     existing.travel.activities[activity.key] = current;
   }
@@ -511,8 +539,49 @@ function buildInventoryItemData(item) {
   };
 }
 
-async function buildTravelActivities(groupData) {
+function getTravelActivityName(key) {
+  return TRAVEL_ACTIVITIES.find(activity => activity.key === key)?.name ?? "";
+}
+
+function getAssignedTravelActivityByMember(groupData) {
+  const assignedByMember = new Map();
+
+  for (const activity of TRAVEL_ACTIVITIES) {
+    const activityData = groupData.travel.activities?.[activity.key] ?? {};
+    const actorUuids = Array.isArray(activityData.actorUuids)
+      ? activityData.actorUuids
+      : [];
+
+    for (const uuid of actorUuids) {
+      if (!assignedByMember.has(uuid)) assignedByMember.set(uuid, activity.key);
+    }
+  }
+
+  return assignedByMember;
+}
+
+function buildTravelMemberRoster(groupData, members = []) {
+  const assignedByMember = getAssignedTravelActivityByMember(groupData);
+
+  return members.map(member => {
+    const assignedActivityKey = assignedByMember.get(member.uuid) ?? "";
+    const assignedActivityName = assignedActivityKey ? getTravelActivityName(assignedActivityKey) : "";
+
+    return {
+      uuid: member.uuid,
+      name: member.name,
+      img: member.img,
+      className: member.className,
+      assigned: Boolean(assignedActivityKey),
+      assignedActivityKey,
+      assignedActivityName
+    };
+  });
+}
+
+async function buildTravelActivities(groupData, members = []) {
   const result = [];
+  const assignedByMember = getAssignedTravelActivityByMember(groupData);
 
   for (const activity of TRAVEL_ACTIVITIES) {
     const activityData = groupData.travel.activities?.[activity.key] ?? {};
@@ -534,10 +603,37 @@ async function buildTravelActivities(groupData) {
       });
     }
 
+    const memberOptions = members.map(member => {
+      const assignedActivityKey = assignedByMember.get(member.uuid) ?? "";
+      const assigned = assignedActivityKey === activity.key;
+      const assignedElsewhere = Boolean(assignedActivityKey && assignedActivityKey !== activity.key);
+      const assignedActivityName = assignedElsewhere ? getTravelActivityName(assignedActivityKey) : "";
+
+      return {
+        uuid: member.uuid,
+        name: member.name,
+        img: member.img,
+        className: member.className,
+        assigned,
+        assignedElsewhere,
+        assignedActivityName,
+        title: assigned
+          ? `Remove ${member.name} from ${activity.name}`
+          : assignedElsewhere
+            ? `Move ${member.name} from ${assignedActivityName} to ${activity.name}`
+            : `Assign ${member.name} to ${activity.name}`
+      };
+    });
+
     result.push({
       ...activity,
       assigned,
       hasAssigned: assigned.length > 0,
+      memberOptions,
+      hasMemberOptions: memberOptions.length > 0,
+      assignmentLabel: assigned.length
+        ? assigned.map(actor => actor.name).join(", ")
+        : "Unassigned",
     });
   }
 
@@ -685,7 +781,9 @@ export class SDXGroupSheet extends ActorSheet {
           ...option,
           selected: option.value === groupData.travel.speed,
         })),
-        activities: await buildTravelActivities(groupData),
+        members: buildTravelMemberRoster(groupData, members),
+        hasMembers: members.length > 0,
+        activities: await buildTravelActivities(groupData, members),
       },
     };
 
@@ -731,12 +829,36 @@ export class SDXGroupSheet extends ActorSheet {
       this._onRollTravelActivity(event);
     });
 
-    html.find("[data-action='clear-travel-activity']").on("click", event => {
-      this._onClearTravelActivity(event);
+    html.find("[data-action='toggle-travel-participant']").on("click", event => {
+      this._onToggleTravelParticipant(event);
     });
 
-    html.find("[data-action='clear-travel-participant']").on("click", event => {
-      this._onClearTravelParticipant(event);
+    html.find("[data-action='toggle-travel-picker']").on("click", event => {
+      this._onToggleTravelPicker(event);
+    });
+
+    html.find("[data-camping-member-drag='true']").on("dragstart", event => {
+      this._onCampingMemberDragStart(event);
+    });
+
+    html.find("[data-camping-member-drag='true']").on("dragend", event => {
+      this._onCampingMemberDragEnd(event);
+    });
+
+    html.find(".sdx-travel-card[data-travel-activity-key]").on("dragenter", event => {
+      this._onCampingActivityDragEnter(event);
+    });
+
+    html.find(".sdx-travel-card[data-travel-activity-key]").on("dragover", event => {
+      this._onCampingActivityDragOver(event);
+    });
+
+    html.find(".sdx-travel-card[data-travel-activity-key]").on("dragleave", event => {
+      this._onCampingActivityDragLeave(event);
+    });
+
+    html.find(".sdx-travel-card[data-travel-activity-key]").on("drop", event => {
+      this._onCampingActivityDrop(event);
     });
 
     html.find("[data-action='open-item']").on("click", event => {
@@ -848,24 +970,42 @@ export class SDXGroupSheet extends ActorSheet {
       groupData.members.push(memberActor.uuid);
     }
 
-    const activityData = groupData.travel.activities[activityKey] ?? {
-      actorUuids: [],
-    };
-
-    activityData.actorUuids ??= [];
-
-    if (!activityData.actorUuids.includes(memberActor.uuid)) {
-      activityData.actorUuids.push(memberActor.uuid);
-    }
-
-    groupData.travel.activities[activityKey] = activityData;
+    this._setTravelActivityMember(groupData, activityKey, memberActor.uuid, true);
 
     await this._saveGroupData(groupData);
     this.render(false);
   }
 
+  _setTravelActivityMember(groupData, activityKey, actorUuid, assigned) {
+    if (!activityKey || !actorUuid) return;
+
+    for (const activity of TRAVEL_ACTIVITIES) {
+      const activityData = groupData.travel.activities[activity.key] ?? {
+        actorUuids: [],
+      };
+
+      const existing = Array.isArray(activityData.actorUuids)
+        ? activityData.actorUuids
+        : [];
+
+      activityData.actorUuids = existing.filter(uuid => uuid !== actorUuid);
+      groupData.travel.activities[activity.key] = activityData;
+    }
+
+    if (!assigned) return;
+
+    const activityData = groupData.travel.activities[activityKey] ?? {
+      actorUuids: [],
+    };
+
+    activityData.actorUuids ??= [];
+    activityData.actorUuids.push(actorUuid);
+    groupData.travel.activities[activityKey] = activityData;
+  }
+
   async _onOpenMember(event) {
     event.preventDefault();
+    event.stopPropagation();
 
     const container = event.currentTarget.closest(
       "[data-member-uuid], [data-assigned-actor-uuid]"
@@ -980,43 +1120,121 @@ export class SDXGroupSheet extends ActorSheet {
     this.render(false);
   }
 
-  async _onClearTravelActivity(event) {
+  async _onToggleTravelParticipant(event) {
     event.preventDefault();
+    event.stopPropagation();
 
     const card = event.currentTarget.closest("[data-travel-activity-key]");
     const activityKey = card?.dataset?.travelActivityKey;
+    const actorUuid = event.currentTarget.dataset.memberUuid;
 
-    if (!activityKey) return;
+    if (!activityKey || !actorUuid) return;
 
     const groupData = getGroupData(this.actor);
-    groupData.travel.activities[activityKey] = {
-      actorUuids: [],
-    };
+    const activityData = groupData.travel.activities[activityKey] ?? {};
+    const actorUuids = Array.isArray(activityData.actorUuids)
+      ? activityData.actorUuids
+      : [];
+    const currentlyAssignedHere = actorUuids.includes(actorUuid);
+
+    this._setTravelActivityMember(groupData, activityKey, actorUuid, !currentlyAssignedHere);
 
     await this._saveGroupData(groupData);
     this.render(false);
   }
 
-  async _onClearTravelParticipant(event) {
+  _onToggleTravelPicker(event) {
     event.preventDefault();
+    event.stopPropagation();
 
     const card = event.currentTarget.closest("[data-travel-activity-key]");
-    const participant = event.currentTarget.closest("[data-assigned-actor-uuid]");
+    if (!card) return;
 
-    const activityKey = card?.dataset?.travelActivityKey;
-    const actorUuid = participant?.dataset?.assignedActorUuid;
+    const tab = card.closest(".sdx-group-tab");
+    const wasOpen = card.classList.contains("is-picking");
 
-    if (!activityKey || !actorUuid) return;
+    tab?.querySelectorAll(".sdx-travel-card.is-picking").forEach(existing => {
+      existing.classList.remove("is-picking");
+    });
+
+    if (!wasOpen) card.classList.add("is-picking");
+  }
+
+  _onCampingMemberDragStart(event) {
+    const nativeEvent = event.originalEvent ?? event;
+    const dataTransfer = nativeEvent.dataTransfer;
+    const actorUuid = event.currentTarget?.dataset?.memberUuid;
+
+    if (!dataTransfer || !actorUuid) return;
+
+    dataTransfer.effectAllowed = "move";
+    dataTransfer.setData(CAMPING_MEMBER_DRAG_TYPE, actorUuid);
+    dataTransfer.setData("text/plain", actorUuid);
+
+    event.currentTarget.classList.add("is-dragging");
+  }
+
+  _onCampingMemberDragEnd(event) {
+    event.currentTarget?.classList.remove("is-dragging");
+    this.element?.find?.(".sdx-travel-card.is-drag-over")?.removeClass("is-drag-over");
+  }
+
+  _onCampingActivityDragEnter(event) {
+    if (!this._hasCampingDragData(event)) return;
+
+    event.preventDefault();
+    event.currentTarget?.classList.add("is-drag-over");
+  }
+
+  _onCampingActivityDragOver(event) {
+    const nativeEvent = event.originalEvent ?? event;
+    if (!this._hasCampingDragData(event)) return;
+
+    event.preventDefault();
+    nativeEvent.dataTransfer.dropEffect = "move";
+    event.currentTarget?.classList.add("is-drag-over");
+  }
+
+  _onCampingActivityDragLeave(event) {
+    const nativeEvent = event.originalEvent ?? event;
+    const card = event.currentTarget;
+    const relatedTarget = nativeEvent.relatedTarget;
+
+    if (relatedTarget && card?.contains?.(relatedTarget)) return;
+    card?.classList.remove("is-drag-over");
+  }
+
+  async _onCampingActivityDrop(event) {
+    const actorUuid = this._getCampingDragActorUuid(event);
+    const activityKey = event.currentTarget?.dataset?.travelActivityKey;
+
+    if (!actorUuid || !activityKey) return;
+
+    event.preventDefault();
+    event.stopPropagation();
+    event.currentTarget?.classList.remove("is-drag-over");
 
     const groupData = getGroupData(this.actor);
-    const activityData = groupData.travel.activities[activityKey];
+    if (!groupData.members.includes(actorUuid)) return;
 
-    activityData.actorUuids = (activityData.actorUuids ?? []).filter(
-      uuid => uuid !== actorUuid
-    );
+    this._setTravelActivityMember(groupData, activityKey, actorUuid, true);
 
     await this._saveGroupData(groupData);
     this.render(false);
+  }
+
+  _getCampingDragActorUuid(event) {
+    const nativeEvent = event.originalEvent ?? event;
+    const dataTransfer = nativeEvent.dataTransfer;
+    if (!dataTransfer) return "";
+
+    return dataTransfer.getData(CAMPING_MEMBER_DRAG_TYPE) || dataTransfer.getData("text/plain") || "";
+  }
+
+  _hasCampingDragData(event) {
+    const nativeEvent = event.originalEvent ?? event;
+    const types = Array.from(nativeEvent.dataTransfer?.types ?? []);
+    return types.includes(CAMPING_MEMBER_DRAG_TYPE);
   }
 
   async _pickTravelAbility(activity) {
@@ -1468,7 +1686,7 @@ export function registerGroupSheet() {
   if (!settingExists("enableGroupActors")) {
     game.settings.register(MODULE_ID, "enableGroupActors", {
       name: "Enable Group Actors",
-      hint: "Adds a MK-Shadowdark group actor sheet for party members, group inventory, travel activity assignments, and group notes.",
+      hint: "Adds a MK-Shadowdark group actor sheet for party members, group inventory, camping task assignments, and group notes.",
       scope: "world",
       config: true,
       type: Boolean,

@@ -16,7 +16,7 @@
 
   <nav class="sdx-group-nav tabs" data-group="primary">
     <a class="item active" data-tab="members"><i class="fas fa-users"></i> Members</a>
-    <a class="item" data-tab="travel"><i class="fas fa-route"></i> Travel</a>
+    <a class="item" data-tab="travel"><i class="fas fa-campground"></i> Camping</a>
     <a class="item" data-tab="inventory"><i class="fas fa-box-open"></i> Inventory</a>
     <a class="item" data-tab="notes"><i class="fas fa-scroll"></i> Notes</a>
   </nav>
@@ -77,6 +77,20 @@
     </div>
 
     <div class="tab sdx-group-tab sdx-group-tab-body" data-group="primary" data-tab="travel">
+      <section class="sdx-camping-info">
+        <div class="sdx-camping-procedure">
+          <ol>
+            <li>The PCs make task checks in any order they choose.</li>
+            <li>After resolving tasks, the GM follows normal resting and random encounter procedures.</li>
+          </ol>
+        </div>
+
+        <div class="sdx-campfire-note">
+          <strong>Campfire</strong>
+          <p>The PCs can make a campfire using 3 torches; it lasts 8 hours while a PC remains near to it and casts light out to a near distance.</p>
+        </div>
+      </section>
+
       <div class="sdx-travel-toolbar">
         <button type="button" data-action="cycle-weather"><i class="fas fa-cloud-sun-rain"></i> Weather: {{sdx.travel.weatherLabel}}</button>
 
@@ -91,15 +105,39 @@
         <button type="button" data-action="reset-travel"><i class="fas fa-undo"></i> Reset Assignments</button>
       </div>
 
+      {{#if sdx.travel.hasMembers}}
+      <div class="sdx-camping-roster">
+        {{#each sdx.travel.members}}
+        <button
+          type="button"
+          class="sdx-camping-roster-member {{#if assigned}}is-assigned{{/if}}"
+          data-action="open-member"
+          data-camping-member-drag="true"
+          data-member-uuid="{{uuid}}"
+          draggable="true"
+          title="{{#if assignedActivityName}}{{name}}: {{assignedActivityName}}{{else}}{{name}} is unassigned{{/if}}"
+        >
+          <span class="sdx-camping-portrait"><img src="{{img}}" alt="{{name}}"></span>
+          <span>{{name}}</span>
+          {{#if assignedActivityName}}<small>{{assignedActivityName}}</small>{{else}}<small>Free</small>{{/if}}
+        </button>
+        {{/each}}
+      </div>
+      {{else}}
+      <div class="sdx-camping-roster-empty">Add members to the group to assign camping tasks.</div>
+      {{/if}}
+
       <div class="sdx-travel-grid">
         {{#each sdx.travel.activities}}
         <article class="sdx-travel-card" data-travel-activity-key="{{key}}">
           <header class="sdx-travel-card-header">
-            <div class="sdx-travel-dc">DC <strong>{{dc}}</strong></div>
+            <span class="sdx-travel-activity-icon" aria-hidden="true">
+              <img src="{{icon}}" alt="">
+            </span>
 
-            <div class="sdx-travel-title">
-              <strong>{{name}}</strong>
-              <span>{{abilityLabel}}</span>
+            <div class="sdx-travel-title" data-tooltip="{{description}}" aria-label="{{description}}" tabindex="0">
+              <strong class="sdx-travel-name">{{name}}</strong>
+              <span class="sdx-travel-meta">{{abilityLabel}} <b>DC {{dc}}</b></span>
             </div>
 
             <button type="button" class="sdx-travel-roll" data-action="roll-travel-activity" title="Roll {{name}}">
@@ -107,29 +145,40 @@
             </button>
           </header>
 
-          <div class="sdx-travel-drop-area">
-            {{#if hasAssigned}}
-            <div class="sdx-travel-assigned-list">
+          <div class="sdx-camping-assignment-row" data-action="toggle-travel-picker" title="Choose assigned members">
+            <div class="sdx-camping-assignment-summary" title="{{assignmentLabel}}">
+              {{#if hasAssigned}}
               {{#each assigned}}
-              <div class="sdx-travel-assigned" data-assigned-actor-uuid="{{uuid}}">
-                <img src="{{img}}" alt="{{name}}" data-action="open-member">
-                <button type="button" class="sdx-travel-assigned-name" data-action="open-member">{{name}}</button>
-                <span>{{className}}</span>
-                <button type="button" class="sdx-travel-clear" data-action="clear-travel-participant" title="Remove"><i class="fas fa-times"></i></button>
-              </div>
+              <button type="button" class="sdx-camping-assigned-chip" data-action="open-member" data-assigned-actor-uuid="{{uuid}}">
+                <span class="sdx-camping-portrait"><img src="{{img}}" alt="{{name}}"></span>
+                <span>{{name}}</span>
+              </button>
+              {{/each}}
+              {{else}}
+              <span class="sdx-camping-unassigned">Unassigned</span>
+              {{/if}}
+            </div>
+          </div>
+
+          {{#if hasMemberOptions}}
+          <div class="sdx-camping-picker-panel">
+            <div class="sdx-travel-member-picker">
+              {{#each memberOptions}}
+              <button
+                type="button"
+                class="sdx-travel-member-toggle {{#if assigned}}is-assigned{{/if}} {{#if assignedElsewhere}}is-assigned-elsewhere{{/if}}"
+                data-action="toggle-travel-participant"
+                data-member-uuid="{{uuid}}"
+                title="{{title}}"
+              >
+                <span class="sdx-camping-portrait"><img src="{{img}}" alt="{{name}}"></span>
+                <span>{{name}}</span>
+                {{#if assignedActivityName}}<small>{{assignedActivityName}}</small>{{/if}}
+              </button>
               {{/each}}
             </div>
-            {{else}}
-            <div class="sdx-travel-empty">
-              <i class="fas fa-user-plus"></i>
-              <span>Drop one or more members here.</span>
-            </div>
-            {{/if}}
-
-            <button type="button" class="sdx-travel-clear-all" data-action="clear-travel-activity">
-              <i class="fas fa-eraser"></i> Clear
-            </button>
           </div>
+          {{/if}}
         </article>
         {{/each}}
       </div>

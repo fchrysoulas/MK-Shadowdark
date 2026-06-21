@@ -267,8 +267,7 @@
 }
 
 .sdx-member-name:hover,
-.sdx-inventory-name:hover,
-.sdx-travel-assigned-name:hover {
+.sdx-inventory-name:hover {
   color: white;
   text-shadow: 0 0 6px rgba(255, 255, 255, 0.25);
 }
@@ -670,70 +669,236 @@
 }
 
 /* -------------------------------------------- */
-/* Travel                                       */
+/* Camping                                      */
 /* -------------------------------------------- */
+
+.sdx-camping-info {
+  display: grid;
+  grid-template-columns: minmax(280px, 1fr) minmax(260px, 0.85fr);
+  gap: 10px;
+  margin-bottom: 10px;
+}
+
+.sdx-camping-procedure,
+.sdx-campfire-note {
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 5px;
+  background: rgba(255, 255, 255, 0.04);
+  color: var(--sdx-group-text);
+}
+
+.sdx-camping-procedure {
+  padding: 8px 12px 8px 30px;
+}
+
+.sdx-camping-procedure ol {
+  margin: 0;
+  padding: 0;
+}
+
+.sdx-camping-procedure li {
+  margin: 3px 0;
+  padding-left: 2px;
+  line-height: 1.35;
+}
+
+.sdx-campfire-note {
+  padding: 8px 10px;
+}
+
+.sdx-campfire-note strong {
+  display: block;
+  margin-bottom: 3px;
+  color: #f0f0f0;
+  font-size: 13px;
+  font-weight: 900;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.sdx-campfire-note p {
+  margin: 0;
+  color: var(--sdx-group-muted);
+  line-height: 1.35;
+}
+
+.sdx-camping-roster {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 10px;
+  padding: 8px;
+  overflow-x: auto;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 5px;
+  background: rgba(255, 255, 255, 0.035);
+}
+
+.sdx-camping-roster-member {
+  display: grid;
+  grid-template-columns: 34px minmax(80px, 1fr);
+  grid-template-rows: auto auto;
+  gap: 1px 7px;
+  align-items: center;
+  flex: 0 0 150px;
+  min-height: 42px;
+  padding: 4px 6px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 5px;
+  background: rgba(255, 255, 255, 0.035);
+  color: var(--sdx-group-text);
+  text-align: left;
+  cursor: grab;
+}
+
+.sdx-camping-roster-member:hover {
+  border-color: rgba(255, 255, 255, 0.3);
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.sdx-camping-roster-member:active {
+  cursor: grabbing;
+}
+
+.sdx-camping-roster-member.is-dragging {
+  opacity: 0.55;
+}
+
+.sdx-camping-roster-member.is-assigned {
+  border-color: rgba(255, 75, 31, 0.42);
+}
+
+.sdx-camping-portrait {
+  display: block;
+  overflow: hidden;
+  border: 0;
+  border-radius: 4px;
+}
+
+.sdx-camping-portrait img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: center 16%;
+  transform: scale(1.35);
+  transform-origin: center 18%;
+}
+
+.sdx-camping-roster-member .sdx-camping-portrait {
+  grid-row: 1 / 3;
+  width: 32px;
+  height: 32px;
+}
+
+.sdx-camping-roster-member span,
+.sdx-camping-roster-member small {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.sdx-camping-roster-member span {
+  color: #e6e6e6;
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.sdx-camping-roster-member small {
+  color: var(--sdx-group-muted);
+  font-size: 10px;
+  font-style: italic;
+}
+
+.sdx-camping-roster-empty {
+  margin-bottom: 10px;
+  padding: 10px;
+  border: 1px dashed rgba(255, 255, 255, 0.15);
+  border-radius: 5px;
+  color: var(--sdx-group-muted);
+  text-align: center;
+}
 
 .sdx-travel-grid {
   display: grid;
-  grid-template-columns: repeat(2, minmax(280px, 1fr));
-  gap: 14px;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 10px;
 }
 
 .sdx-travel-card {
-  min-height: 128px;
+  position: relative;
   border: 1px solid rgba(255, 255, 255, 0.14);
   border-radius: 5px;
   background: var(--sdx-group-row);
-  overflow: hidden;
+  overflow: visible;
+}
+
+.sdx-travel-card:hover,
+.sdx-travel-card:focus-within {
+  z-index: 20;
+}
+
+.sdx-travel-card.is-drag-over {
+  border-color: rgba(255, 75, 31, 0.85);
+  background: rgba(255, 75, 31, 0.08);
+  box-shadow: inset 0 0 0 1px rgba(255, 75, 31, 0.4);
 }
 
 .sdx-travel-card-header {
   display: grid;
-  grid-template-columns: 58px 1fr 34px;
-  gap: 10px;
-  align-items: center;
-  min-height: 52px;
+  grid-template-columns: 34px minmax(0, 1fr) 30px;
+  gap: 8px;
+  align-items: start;
+  min-height: 0;
   padding: 8px 10px;
   border-bottom: 1px solid rgba(255, 255, 255, 0.12);
 }
 
-.sdx-travel-dc {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  color: var(--sdx-group-muted);
-  font-size: 11px;
-  font-weight: 900;
-  text-transform: uppercase;
-}
-
-.sdx-travel-dc strong {
+.sdx-travel-activity-icon {
   display: inline-grid;
   place-items: center;
-  min-width: 30px;
-  min-height: 28px;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.25);
-  color: #e6e6e6;
-  font-size: 15px;
+  width: 30px;
+  height: 30px;
+  border-radius: 4px;
+}
+
+.sdx-travel-activity-icon img {
+  width: 28px;
+  height: 28px;
+  object-fit: contain;
+  opacity: 0.9;
+  filter: drop-shadow(0 0 5px rgba(255, 75, 31, 0.35));
 }
 
 .sdx-travel-title {
   display: flex;
   flex-direction: column;
   min-width: 0;
+  position: relative;
 }
 
-.sdx-travel-title strong {
+.sdx-travel-name {
   color: #e8e8e8;
-  font-size: 17px;
+  font-size: 16px;
   font-weight: 900;
+  line-height: 1.15;
 }
 
-.sdx-travel-title span {
+.sdx-travel-meta {
   color: var(--sdx-group-muted);
-  font-size: 12px;
+  font-size: 11px;
   font-weight: 800;
   letter-spacing: 0.04em;
+  line-height: 1.2;
+}
+
+.sdx-travel-meta b {
+  color: #dcdcdc;
+  font-weight: 900;
+  white-space: nowrap;
+}
+
+.sdx-travel-title:focus {
+  outline: 1px solid rgba(255, 75, 31, 0.45);
+  outline-offset: 2px;
 }
 
 .sdx-travel-roll {
@@ -755,102 +920,147 @@
   text-shadow: 0 0 8px rgba(255, 75, 31, 0.5);
 }
 
-.sdx-travel-drop-area {
-  display: grid;
-  gap: 8px;
-  min-height: 74px;
-  padding: 10px;
+.sdx-camping-assignment-row {
+  display: block;
+  align-items: center;
+  padding: 0 10px 10px;
+  cursor: pointer;
 }
 
-.sdx-travel-empty {
+.sdx-camping-assignment-row:hover .sdx-camping-unassigned {
+  color: #d8d8d8;
+}
+
+.sdx-camping-assignment-summary {
   display: flex;
-  flex-direction: column;
   align-items: center;
   gap: 5px;
-  padding: 14px;
-  color: rgba(255, 255, 255, 0.25);
-  font-size: 13px;
+  min-width: 0;
+  overflow: hidden;
 }
 
-.sdx-travel-empty i {
-  font-size: 22px;
-}
-
-.sdx-travel-assigned-list {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-}
-
-.sdx-travel-assigned {
-  display: grid;
-  grid-template-columns: 34px minmax(110px, 1fr) minmax(70px, auto) 24px;
-  gap: 8px;
+.sdx-camping-assigned-chip {
+  display: inline-flex;
   align-items: center;
-  width: 100%;
-  padding: 5px 7px;
+  gap: 5px;
+  max-width: 120px;
+  min-height: 26px;
+  padding: 2px 6px 2px 3px;
   border: 1px solid rgba(255, 255, 255, 0.12);
-  border-radius: 4px;
-  background: rgba(255, 255, 255, 0.04);
-}
-
-.sdx-travel-assigned img {
-  width: 30px;
-  height: 30px;
-  object-fit: cover;
-  border: 1px solid rgba(255, 255, 255, 0.2);
-  border-radius: 3px;
-  cursor: pointer;
-}
-
-.sdx-travel-assigned-name {
-  padding: 0;
-  border: 0;
-  background: transparent;
-  color: #dedede;
-  font-size: 13px;
-  font-weight: 800;
-  text-align: left;
-  cursor: pointer;
-}
-
-.sdx-travel-assigned span {
-  color: var(--sdx-group-muted);
-  font-size: 11px;
-  font-style: italic;
-}
-
-.sdx-travel-clear,
-.sdx-travel-clear-all {
-  display: inline-grid;
-  place-items: center;
-  min-height: 22px;
-  padding: 0 6px;
-  border: 0;
-  border-radius: 3px;
-  background: rgba(255, 255, 255, 0.1);
+  border-radius: 999px;
+  background: rgba(255, 75, 31, 0.14);
   color: var(--sdx-group-text);
-  font-size: 9px;
   cursor: pointer;
 }
 
-.sdx-travel-clear {
-  width: 22px;
-  height: 22px;
-  padding: 0;
+.sdx-camping-assigned-chip:hover {
+  border-color: rgba(255, 255, 255, 0.3);
+  background: rgba(255, 75, 31, 0.22);
 }
 
-.sdx-travel-clear:hover,
-.sdx-travel-clear-all:hover {
-  background: rgba(255, 255, 255, 0.2);
+.sdx-camping-assigned-chip .sdx-camping-portrait {
+  width: 21px;
+  height: 21px;
+  border-radius: 50%;
 }
 
-.sdx-travel-clear-all {
-  justify-self: end;
-  color: var(--sdx-group-muted);
+.sdx-camping-assigned-chip span {
+  overflow: hidden;
+  color: #f0f0f0;
   font-size: 11px;
   font-weight: 800;
-  text-transform: uppercase;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.sdx-camping-unassigned {
+  min-height: 26px;
+  padding: 4px 8px;
+  overflow: hidden;
+  color: var(--sdx-group-muted);
+  font-size: 12px;
+  font-style: italic;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.sdx-camping-picker-panel {
+  display: none;
+  padding: 0 10px 10px;
+}
+
+.sdx-travel-card.is-picking .sdx-camping-picker-panel {
+  display: block;
+}
+
+.sdx-travel-member-picker {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(70px, 1fr));
+  gap: 7px;
+  padding-top: 8px;
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.sdx-travel-member-toggle {
+  display: grid;
+  grid-template-rows: 36px auto auto;
+  justify-items: center;
+  gap: 3px;
+  min-height: 76px;
+  padding: 5px 4px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 5px;
+  background: rgba(255, 255, 255, 0.04);
+  color: var(--sdx-group-text);
+  cursor: pointer;
+}
+
+.sdx-travel-member-toggle:hover {
+  border-color: rgba(255, 255, 255, 0.3);
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.sdx-travel-member-toggle .sdx-camping-portrait {
+  width: 34px;
+  height: 34px;
+}
+
+.sdx-travel-member-toggle span {
+  max-width: 100%;
+  overflow: hidden;
+  color: #dedede;
+  font-size: 11px;
+  font-weight: 800;
+  line-height: 1.15;
+  text-align: center;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.sdx-travel-member-toggle small {
+  max-width: 100%;
+  overflow: hidden;
+  color: var(--sdx-group-muted);
+  font-size: 9px;
+  font-style: italic;
+  line-height: 1.1;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.sdx-travel-member-toggle.is-assigned {
+  border-color: rgba(255, 75, 31, 0.75);
+  background: rgba(255, 75, 31, 0.16);
+  box-shadow: inset 0 0 0 1px rgba(255, 75, 31, 0.35);
+}
+
+.sdx-travel-member-toggle.is-assigned span {
+  color: #fff;
+}
+
+.sdx-travel-member-toggle.is-assigned-elsewhere {
+  border-style: dashed;
+  opacity: 0.72;
 }
 
 /* -------------------------------------------- */
@@ -898,6 +1108,10 @@
   }
 
   .sdx-travel-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .sdx-camping-info {
     grid-template-columns: 1fr;
   }
 

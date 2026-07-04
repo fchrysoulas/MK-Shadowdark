@@ -1,6 +1,6 @@
 /*
  * MK-Shadowdark - Luck Reroll
- * Foundry VTT v12
+ * Foundry VTT v12/v13
  *
  * Settings are registered in scripts/settings.js.
  */
@@ -90,12 +90,26 @@
     });
   }
 
+  function asJQuery(html) {
+    if (!html) return null;
+    if (html.jquery) return html;
+
+    try {
+      return $(html);
+    } catch (_err) {
+      return null;
+    }
+  }
+
   /**
    * Inject Luck buttons under each dice-roll box.
    * (So an attack card with attack + damage will get 2 buttons.)
    */
   function addLuckButtons(message, html) {
-    const rollBoxes = html.find(".dice-roll");
+    const $html = asJQuery(html);
+    if (!$html?.length) return;
+
+    const rollBoxes = $html.find(".dice-roll");
     if (!rollBoxes.length) return;
 
     const actor = getActorFromMessage(message);
@@ -112,7 +126,7 @@
     if (!luckStillAvailable && !luckAlreadyUsedOnMessage) return;
 
     // Avoid duplication on re-render
-    if (html.find(".sd-luck-reroll-button").length) return;
+    if ($html.find(".sd-luck-reroll-button").length) return;
 
     rollBoxes.each((index, el) => {
       const $roll = $(el);
@@ -144,7 +158,7 @@
     });
 
     // Per-message click handler
-    html.on("click", ".sd-luck-reroll-button", onLuckButtonClick);
+    $html.on("click", ".sd-luck-reroll-button", onLuckButtonClick);
   }
 
   /**
@@ -215,7 +229,7 @@
     try {
       const rollData = actor.getRollData ? actor.getRollData() : actor.system || {};
       roll = new RollClass(formula, rollData);
-      await roll.evaluate({ async: true });
+      await roll.evaluate();
     } catch (err) {
       console.error(`${MODULE_ID} | Error evaluating Luck roll`, err);
       ui.notifications?.error?.("MK-Shadowdark: Failed to roll Luck reroll.");

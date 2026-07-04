@@ -863,7 +863,7 @@ async function rollActorAbility(actor, ability, options = {}) {
   const label = ABILITIES.find(([key]) => key === ability)?.[1] ?? ability.toUpperCase();
   const mod = Number(actor.system?.abilities?.[ability]?.mod ?? 0) || 0;
 
-  const roll = await new Roll(`1d20 + ${mod}`).evaluate({ async: true });
+  const roll = await new Roll(`1d20 + ${mod}`).evaluate();
 
   await roll.toMessage({
     speaker: ChatMessage.getSpeaker({ actor }),
@@ -871,6 +871,20 @@ async function rollActorAbility(actor, ability, options = {}) {
   });
 
   return roll;
+}
+
+function getRootElement(html) {
+  if (!html) return null;
+  if (html instanceof HTMLElement) return html;
+  if (html[0] instanceof HTMLElement) return html[0];
+  return null;
+}
+
+function getDialogFieldValue(html, selector) {
+  if (html?.find) return html.find(selector).val();
+
+  const root = getRootElement(html);
+  return root?.querySelector?.(selector)?.value;
 }
 
 export async function createGroupActor() {
@@ -1572,7 +1586,7 @@ export class SDXGroupSheet extends ActorSheet {
         roll: {
           icon: "<i class='fas fa-dice-d20'></i>",
           label: "Roll",
-          callback: html => html.find("[name='ability']").val(),
+          callback: html => getDialogFieldValue(html, "[name='ability']"),
         },
         cancel: {
           icon: "<i class='fas fa-times'></i>",
@@ -1827,7 +1841,7 @@ function addActorDirectoryButton(app, html) {
   const enabled = game.settings.get(MODULE_ID, "enableGroupActors");
   if (!enabled) return;
 
-  const root = html?.[0] ?? html;
+  const root = getRootElement(html);
   if (!root) return;
 
   if (root.querySelector(".sdx-create-group-actor")) return;

@@ -1,6 +1,6 @@
 /*
  * MK-Shadowdark - Quickdraw Icons
- * Foundry VTT v12
+ * Foundry VTT v12/v13
  *
  * Settings are registered in scripts/settings.js.
  */
@@ -153,6 +153,17 @@
         <i class="fa-solid ${QD_ICON_CLASS}"></i>
       </a>
     `);
+  }
+
+  function asJQuery(html) {
+    if (!html) return null;
+    if (html.jquery) return html;
+
+    try {
+      return $(html);
+    } catch (_err) {
+      return null;
+    }
   }
 
   /**
@@ -445,7 +456,10 @@
     if (!app?.actor) return;
     if (game.system?.id !== "shadowdark") return;
 
-    injectQuickdrawToggles(app, html);
+    const $html = asJQuery(html);
+    if (!$html?.length) return;
+
+    injectQuickdrawToggles(app, $html);
   }
 
   Hooks.once("init", () => {

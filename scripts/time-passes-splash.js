@@ -1,13 +1,13 @@
 /*
  * MK-Shadowdark - Time Passes Splash
- * Foundry VTT v12
+ * Foundry VTT v12/v13
  *
  * Settings are registered in scripts/settings.js.
  */
 
 (() => {
   // scripts/time-passes-splash.js
-  // MK-Shadowdark - Time Passes Splash (Foundry VTT v12)
+  // MK-Shadowdark - Time Passes Splash (Foundry VTT v12/v13)
   //
   // Flow:
   // 1) Splash #1: preText (+ optional progress bar) for N ms (everyone)
@@ -266,7 +266,7 @@
     await new Promise((resolve) => setTimeout(resolve, Math.max(0, preDurationMs)));
 
     // 3) roll publicly (3D dice)
-    const roll = await (new Roll(rollFormula)).evaluate({ async: true });
+    const roll = await (new Roll(rollFormula)).evaluate();
 
     const PUBLIC = CONST?.DICE_ROLL_MODES?.PUBLIC ?? "publicroll";
     await roll.toMessage(

@@ -4,7 +4,7 @@ Quality-of-life extras and small expansions for the Shadowdark RPG system in Fou
 
 ## Compatibility
 
-- Foundry VTT v12
+- Foundry VTT v12 or v13
 - Shadowdark RPG system 3.5.0+
 
 ## Features

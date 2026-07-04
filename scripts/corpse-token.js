@@ -1,6 +1,6 @@
 /*
  * MK Shadowdark - Corpse Token Automation
- * Foundry VTT v12 compatible
+ * Foundry VTT v12/v13 compatible
  * Shadowdark RPG compatible
  *
  * Import this file from the mk-shadowdark module entry file:

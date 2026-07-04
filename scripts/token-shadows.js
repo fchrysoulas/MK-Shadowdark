@@ -1,6 +1,6 @@
 /*
  * MK-Shadowdark - Token Shadows
- * Foundry VTT v12
+ * Foundry VTT v12/v13
  *
  * Draws configurable blurred oval shadows under tokens.
  * Settings are registered in scripts/settings.js.

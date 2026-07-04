@@ -1,6 +1,6 @@
 /*
  * MK-Shadowdark - Death Timer
- * Foundry VTT v12
+ * Foundry VTT v12/v13
  *
  * Settings are registered in scripts/settings.js.
  */
@@ -376,7 +376,7 @@
     const minTurns = Number(game.settings.get(MODULE_ID, "deathTimerMinTurns") ?? 1);
 
     const timerRoll = new Roll("1d4 + @con", { con: conMod });
-    await timerRoll.evaluate({ async: true });
+    await timerRoll.evaluate();
 
     const turns = Math.max(minTurns, timerRoll.total ?? 1);
 
@@ -424,7 +424,7 @@
     const rollMode = game.settings.get("core", "rollMode");
 
     const d20 = new Roll("1d20");
-    await d20.evaluate({ async: true });
+    await d20.evaluate();
 
     const roll = d20.total ?? 0;
 

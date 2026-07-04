@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+## 1.0.2
+
+- Added Foundry VTT v13 compatibility while retaining v12 support.
 - Updated the Group Sheet travel tab into a Camping tab with camping procedure text, campfire rules, and revised camping task names/descriptions.
 - Added a compact Camping task board with local Game-icons.net activity icons, Foundry tooltips, and drag-and-drop member assignment from the roster.
 - Enforced one Camping task assignment per member and added assignment reset support.

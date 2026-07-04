@@ -1,6 +1,6 @@
 /*
  * MK-Shadowdark - Settings
- * Foundry VTT v12
+ * Foundry VTT v12/v13
  *
  * Central registry for all MK-Shadowdark settings.
  * Feature files should read settings, not register them.
@@ -58,6 +58,13 @@
     } catch (err) {
       console.error(`${MODULE_ID} v${getModuleVersion()} | ${SUBMODULE} | refreshOpenActorSheets error`, err);
     }
+  }
+
+  function getRootElement(html) {
+    if (!html) return null;
+    if (html instanceof HTMLElement) return html;
+    if (html[0] instanceof HTMLElement) return html[0];
+    return null;
   }
 
   Hooks.once("init", () => {
@@ -732,8 +739,9 @@
   });
 
   function injectSettingHeaders(html) {
-    if (!html?.find) return;
-    if (html.find(".sdx-setting-header").length) return;
+    const root = getRootElement(html);
+    if (!root?.querySelector) return;
+    if (root.querySelector(".sdx-setting-header")) return;
 
     const groups = [
       { title: "Luck Reroll", firstKey: "enableLuckReroll" },
@@ -749,19 +757,19 @@
     ];
 
     for (const group of groups) {
-      const settingGroup = findSettingFormGroup(html, group.firstKey);
-      if (!settingGroup?.length) continue;
+      const settingGroup = findSettingFormGroup(root, group.firstKey);
+      if (!settingGroup) continue;
 
-      settingGroup.before(`<h3 class="sdx-setting-header">${group.title}</h3>`);
+      settingGroup.insertAdjacentHTML("beforebegin", `<h3 class="sdx-setting-header">${group.title}</h3>`);
     }
   }
 
-  function findSettingFormGroup(html, key) {
-    let el = html.find(`[name="${MODULE_ID}.${key}"]`).first();
-    if (el?.length) return el.closest(".form-group");
+  function findSettingFormGroup(root, key) {
+    let el = root.querySelector(`[name="${MODULE_ID}.${key}"]`);
+    if (el) return el.closest(".form-group");
 
-    el = html.find(`.form-group[data-setting-id="${MODULE_ID}.${key}"]`).first();
-    if (el?.length) return el;
+    el = root.querySelector(`.form-group[data-setting-id="${MODULE_ID}.${key}"]`);
+    if (el) return el;
 
     return null;
   }

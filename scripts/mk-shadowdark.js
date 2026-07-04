@@ -1,6 +1,6 @@
 /*
  * MK-Shadowdark - Core
- * Foundry VTT v12
+ * Foundry VTT v12/v13
  *
  * Shared module boot file.
  * Feature logic lives in separate feature files.

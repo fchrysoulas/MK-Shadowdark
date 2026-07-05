@@ -20,6 +20,8 @@
 
   const MODULE_ID = "mk-shadowdark";
   const SUBMODULE = "DeathTimer";
+  const DEATH_TIMER_STATUS_ID = "sdx-death-timer";
+  const DEATH_TIMER_CHAT_ICON = "modules/mk-shadowdark/assets/icons/blood-drop-red.png";
 
   function getModuleVersion() {
     const mod = game.modules.get(MODULE_ID);
@@ -158,6 +160,27 @@
 
       .sdx-death-timer-btn i { margin: 0; color: inherit !important; }
       .sdx-death-timer-btn:hover{ filter: brightness(0.97); }
+
+      .sdx-death-timer-chat-line {
+        display: grid;
+        grid-template-columns: 34px minmax(0, 1fr);
+        align-items: center;
+        gap: 0.55rem;
+        margin: 0.1rem 0;
+      }
+
+      .sdx-death-timer-chat-icon {
+        width: 34px;
+        height: 34px;
+        object-fit: contain;
+        margin: 0;
+        border: 0;
+      }
+
+      .sdx-death-timer-chat-text {
+        min-width: 0;
+        line-height: 1.25;
+      }
     `;
     document.head.appendChild(style);
   }
@@ -176,6 +199,23 @@
 
   function escapeAttribute(value) {
     return escapeHTML(value).replace(/"/g, "&quot;");
+  }
+
+  function renderChatIcon(src, label = "Death Timer") {
+    if (!src) return "";
+
+    const safeSrc = escapeAttribute(src);
+    const safeLabel = escapeAttribute(label);
+    return `<img class="sdx-death-timer-chat-icon" src="${safeSrc}" alt="${safeLabel}" title="${safeLabel}">`;
+  }
+
+  function renderChatLine(src, label, content) {
+    return `
+      <div class="sdx-death-timer-chat-line">
+        ${renderChatIcon(src, label)}
+        <div class="sdx-death-timer-chat-text">${content}</div>
+      </div>
+    `;
   }
 
 
@@ -229,6 +269,26 @@
     return se?.img ?? se?.icon ?? "icons/svg/skull.svg";
   }
 
+  function refreshActorTokenEffects(actor) {
+    window.setTimeout(() => {
+      try {
+        const tokens = actor?.getActiveTokens?.(true, true) ?? actor?.getActiveTokens?.() ?? [];
+
+        for (const token of tokens) {
+          if (typeof token.drawEffects === "function") {
+            Promise.resolve(token.drawEffects()).catch(err => {
+              console.warn(`${MODULE_ID} | ${SUBMODULE} token effect redraw error`, err);
+            });
+          } else if (typeof token.refresh === "function") {
+            token.refresh();
+          }
+        }
+      } catch (err) {
+        console.warn(`${MODULE_ID} | ${SUBMODULE} token effect refresh error`, err);
+      }
+    }, 50);
+  }
+
   function effectHasStatus(effect, statusId) {
     if (!effect) return false;
     if (effect.statuses?.has?.(statusId)) return true;
@@ -240,6 +300,7 @@
 
   function findDeathTimerEffect(actor) {
     return actor.effects.find(e => e.getFlag(MODULE_ID, "isDeathTimer") === true)
+      || actor.effects.find(e => effectHasStatus(e, DEATH_TIMER_STATUS_ID))
       || actor.effects.find(e => typeof e.name === "string" && e.name.startsWith("Death Timer ("));
   }
 
@@ -275,7 +336,8 @@
 
     const data = {
       name,
-      icon,
+      img: icon,
+      statuses: [DEATH_TIMER_STATUS_ID],
       disabled: false,
       changes: [],
       flags: {
@@ -284,7 +346,7 @@
           turns
         },
         core: {
-          statusId: "sdx-death-timer"
+          statusId: DEATH_TIMER_STATUS_ID
         }
       }
     };
@@ -295,15 +357,19 @@
     } else {
       await actor.createEmbeddedDocuments("ActiveEffect", [data]);
     }
+
+    refreshActorTokenEffects(actor);
   }
 
   async function removeDeathTimerEffect(actor) {
     const effects = actor.effects.filter(e =>
       e.getFlag(MODULE_ID, "isDeathTimer") === true ||
+      effectHasStatus(e, DEATH_TIMER_STATUS_ID) ||
       (typeof e.name === "string" && e.name.startsWith("Death Timer ("))
     );
     if (!effects.length) return;
     await actor.deleteEmbeddedDocuments("ActiveEffect", effects.map(e => e.id));
+    refreshActorTokenEffects(actor);
   }
 
   async function upsertDeadEffect(actor) {
@@ -313,7 +379,7 @@
     const data = {
       name: "Dead",
       description: "Dead",
-      icon,
+      img: icon,
       statuses: [statusId],
       disabled: false,
       changes: [],
@@ -333,6 +399,8 @@
     } else {
       await actor.createEmbeddedDocuments("ActiveEffect", [data]);
     }
+
+    refreshActorTokenEffects(actor);
   }
 
   async function removeDeadEffect(actor) {
@@ -347,6 +415,7 @@
 
     if (!effects.length) return;
     await actor.deleteEmbeddedDocuments("ActiveEffect", effects.map(e => e.id));
+    refreshActorTokenEffects(actor);
   }
 
   async function clearAllDeathState(actor) {
@@ -389,9 +458,11 @@
     await timerRoll.toMessage(
       {
         speaker,
-        flavor:
-          `☠ <b>${actor.name}</b> - Death Timer started: <b>${turns}</b> turn(s). ` +
-          `<span style="opacity:0.85">(1d4 ${sign} ${abs}, min ${minTurns})</span>`
+        flavor: renderChatLine(
+          DEATH_TIMER_CHAT_ICON,
+          `Death Timer (${turns})`,
+          `<b>${actor.name}</b> - Death Timer started: <b>${turns}</b> turn(s). <span style="opacity:0.85">(1d4 ${sign} ${abs}, min ${minTurns})</span>`
+        )
       },
       { rollMode }
     );
@@ -414,7 +485,11 @@
 
     await ChatMessage.create({
       speaker,
-      content: `☠ <b>${actor.name}</b> is now <b>Dead</b>.`,
+      content: renderChatLine(
+        getBuiltInDeadStatusIcon(),
+        "Dead",
+        `<b>${actor.name}</b> is now <b>Dead</b>.`
+      ),
       whisper: rollMode === "gmroll" ? ChatMessage.getWhisperRecipients("GM").map(u => u.id) : undefined
     });
   }
@@ -434,9 +509,11 @@
       await d20.toMessage(
         {
           speaker,
-          flavor:
-            `🎲 <b>${actor.name}</b> - Death Check: <b>20</b>. ` +
-            `<span style="opacity:0.9">You revive and gain <b>1 HP</b>${ok ? "" : " (HP field not found)"}. Death Timer removed.</span>`
+          flavor: renderChatLine(
+            DEATH_TIMER_CHAT_ICON,
+            `Death Timer (${currentTurns})`,
+            `<b>${actor.name}</b> - Death Check: <b>20</b>. <span style="opacity:0.9">You revive and gain <b>1 HP</b>${ok ? "" : " (HP field not found)"}. Death Timer removed.</span>`
+          )
         },
         { rollMode }
       );
@@ -456,9 +533,11 @@
     await d20.toMessage(
       {
         speaker,
-        flavor:
-          `🎲 <b>${actor.name}</b> - Death Check: <b>${roll}</b>. ` +
-          `<span style="opacity:0.9">Timer reduced by <b>${delta}</b> - now <b>${nextTurns}</b> turn(s).</span>`
+        flavor: renderChatLine(
+          DEATH_TIMER_CHAT_ICON,
+          `Death Timer (${currentTurns})`,
+          `<b>${actor.name}</b> - Death Check: <b>${roll}</b>. <span style="opacity:0.9">Timer reduced by <b>${delta}</b> - now <b>${nextTurns}</b> turn(s).</span>`
+        )
       },
       { rollMode }
     );

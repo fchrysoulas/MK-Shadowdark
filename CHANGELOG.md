@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+- Fixed Death Timer token effect icons in Foundry VTT v13 by using ActiveEffect `img` data and a status id.
+- Added larger Death Timer/Dead icons in a two-column chat message layout, using `blood-drop-red.png` for Death Timer roll chat icons.
+
 ## 1.0.2
 
 - Added Foundry VTT v13 compatibility while retaining v12 support.

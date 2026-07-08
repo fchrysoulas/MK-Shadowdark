@@ -129,38 +129,38 @@
     const tokenH = token.h ?? gridSize;
 
     const widthFactor = clampNumber(
-      getSetting("tokenShadowWidthFactor", 0.5),
+      getSetting("tokenShadowWidthFactor", 0.75),
       0.1,
       2,
-      0.5
+      0.75
     );
 
     const heightGridFactor = clampNumber(
-      getSetting("tokenShadowHeightGridFactor", 0.05),
+      getSetting("tokenShadowHeightGridFactor", 0.12),
       0.01,
       1,
-      0.05
+      0.12
     );
 
     const offsetYFactor = clampNumber(
-      getSetting("tokenShadowOffsetYFactor", 0.3),
+      getSetting("tokenShadowOffsetYFactor", 1.1),
       -1,
       2,
-      0.3
+      1.1
     );
 
     const alpha = clampNumber(
-      getSetting("tokenShadowAlpha", 0.7),
+      getSetting("tokenShadowAlpha", 0.55),
       0,
       1,
-      0.7
+      0.55
     );
 
     const blurStrength = clampNumber(
-      getSetting("tokenShadowBlur", 8),
+      getSetting("tokenShadowBlur", 5),
       0,
       40,
-      8
+      5
     );
 
     const blurQuality = clampNumber(

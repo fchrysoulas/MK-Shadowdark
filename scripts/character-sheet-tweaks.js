@@ -32,11 +32,13 @@
   });
 
   const DEFAULT_BAR_ELEMENTS = [
-    "LVL", "HP", "AC", "XP", "LUCK", "SLOTS",
-    "STR", "DEX", "CON", "INT", "WIS", "CHA"
+    "HP", "LUCK", "|", "STR", "DEX", "CON", "INT", "WIS", "CHA", "SLOTS"
   ];
 
-  const VALID_BAR_ELEMENTS = new Set([...DEFAULT_BAR_ELEMENTS, "|"]);
+  const VALID_BAR_ELEMENTS = new Set([
+    "LVL", "HP", "AC", "XP", "LUCK", "SLOTS",
+    "STR", "DEX", "CON", "INT", "WIS", "CHA", "|"
+  ]);
   const ABILITY_ELEMENTS = new Set(["STR", "DEX", "CON", "INT", "WIS", "CHA"]);
 
   Hooks.once("init", () => {
@@ -159,14 +161,14 @@
 
   function applySheetClasses(windowEl, form) {
     const highlightEquipped = getSetting(SETTINGS.HIGHLIGHT_EQUIPPED, true);
-    const hideLogo = getSetting(SETTINGS.HIDE_LOGO, false);
+    const hideLogo = getSetting(SETTINGS.HIDE_LOGO, true);
     const headerBackground = normalizeImagePath(getSetting(SETTINGS.HEADER_BG, ""));
-    const fontScale = clampNumber(Number(getSetting(SETTINGS.FONT_SCALE, 100)) || 100, 80, 130);
-    const valueFontSize = clampNumber(Number(getSetting(SETTINGS.BAR_VALUE_FONT_SIZE, 11)) || 11, 8, 24);
-    const barButtonRadius = clampNumber(Number(getSetting(SETTINGS.BAR_BUTTON_RADIUS, 999)) || 0, 0, 999);
+    const fontScale = clampNumber(Number(getSetting(SETTINGS.FONT_SCALE, 120)) || 120, 80, 130);
+    const valueFontSize = clampNumber(Number(getSetting(SETTINGS.BAR_VALUE_FONT_SIZE, 13)) || 13, 8, 24);
+    const barButtonRadius = clampNumber(Number(getSetting(SETTINGS.BAR_BUTTON_RADIUS, 8)) || 0, 0, 999);
     const barButtonScale = clampNumber(Number(getSetting(SETTINGS.BAR_BUTTON_SCALE, 100)) || 100, 70, 140);
-    const barPositionX = clampNumber(Number(getSetting(SETTINGS.BAR_POSITION_X, 0)) || 0, -250, 250);
-    const barPositionY = clampNumber(Number(getSetting(SETTINGS.BAR_POSITION_Y, 0)) || 0, -150, 150);
+    const barPositionX = clampNumber(Number(getSetting(SETTINGS.BAR_POSITION_X, 20)) || 0, -250, 250);
+    const barPositionY = clampNumber(Number(getSetting(SETTINGS.BAR_POSITION_Y, 8)) || 0, -150, 150);
     const summaryBarEnabled = getSetting(SETTINGS.SUMMARY_BAR, true);
 
     for (const el of uniqueElements([windowEl, form])) {
@@ -198,12 +200,12 @@
     if (!actor) return;
 
     const bar = document.createElement("div");
-    const fontScale = clampNumber(Number(getSetting(SETTINGS.FONT_SCALE, 100)) || 100, 80, 130);
-    const valueFontSize = clampNumber(Number(getSetting(SETTINGS.BAR_VALUE_FONT_SIZE, 11)) || 11, 8, 24);
-    const barButtonRadius = clampNumber(Number(getSetting(SETTINGS.BAR_BUTTON_RADIUS, 999)) || 0, 0, 999);
+    const fontScale = clampNumber(Number(getSetting(SETTINGS.FONT_SCALE, 120)) || 120, 80, 130);
+    const valueFontSize = clampNumber(Number(getSetting(SETTINGS.BAR_VALUE_FONT_SIZE, 13)) || 13, 8, 24);
+    const barButtonRadius = clampNumber(Number(getSetting(SETTINGS.BAR_BUTTON_RADIUS, 8)) || 0, 0, 999);
     const barButtonScale = clampNumber(Number(getSetting(SETTINGS.BAR_BUTTON_SCALE, 100)) || 100, 70, 140);
-    const barPositionX = clampNumber(Number(getSetting(SETTINGS.BAR_POSITION_X, 0)) || 0, -250, 250);
-    const barPositionY = clampNumber(Number(getSetting(SETTINGS.BAR_POSITION_Y, 0)) || 0, -150, 150);
+    const barPositionX = clampNumber(Number(getSetting(SETTINGS.BAR_POSITION_X, 20)) || 0, -250, 250);
+    const barPositionY = clampNumber(Number(getSetting(SETTINGS.BAR_POSITION_Y, 8)) || 0, -150, 150);
 
     bar.className = "sdx-character-sheet-bar flex0";
     bar.dataset.actorId = actor.id ?? "";

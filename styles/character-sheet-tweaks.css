@@ -23,12 +23,12 @@
 .window-app.sdx-character-sheet-tweaks,
 .app.sdx-character-sheet-tweaks,
 form.sdx-character-sheet-tweaks {
-  --sdx-sheet-font-scale: 1;
-  --sdx-bar-value-font-size: 11px;
-  --sdx-bar-button-radius: 999px;
+  --sdx-sheet-font-scale: 1.2;
+  --sdx-bar-value-font-size: 13px;
+  --sdx-bar-button-radius: 8px;
   --sdx-bar-button-scale: 1;
-  --sdx-bar-position-x: 0px;
-  --sdx-bar-position-y: 0px;
+  --sdx-bar-position-x: 20px;
+  --sdx-bar-position-y: 8px;
   --sdx-sheet-bar-background: rgba(0, 0, 0, 0.08);
   --sdx-sheet-bar-border: rgba(0, 0, 0, 0.28);
   --sdx-sheet-chip-background: rgba(0, 0, 0, 0.10);
@@ -110,7 +110,7 @@ form.sdx-hide-shadowdark-logo .SD-header .shadowdark-logo {
   min-height: 1.95rem;
   padding: 0.16rem 0.34rem;
   border: none;
-  border-radius: var(--sdx-bar-button-radius, 999px);
+  border-radius: var(--sdx-bar-button-radius, 8px);
   background: var(--sdx-sheet-chip-background);
   color: var(--sdx-sheet-chip-text);
   white-space: nowrap;
@@ -328,7 +328,7 @@ button.sdx-sheet-chip:focus-visible {
   min-height: 1.85rem !important;
   text-align: center !important;
   border: none !important;
-  border-radius: var(--sdx-bar-button-radius, 999px) !important;
+  border-radius: var(--sdx-bar-button-radius, 8px) !important;
 }
 
 .shadowdark.sheet.player .sdx-character-sheet-bar button.sdx-sheet-chip {
@@ -350,7 +350,7 @@ button.sdx-sheet-chip:focus-visible {
 }
 
 .shadowdark.sheet.player .sdx-character-sheet-bar .sdx-sheet-chip span {
-  font-size: var(--sdx-bar-value-font-size, 11px) !important;
+  font-size: var(--sdx-bar-value-font-size, 13px) !important;
 }
 
 .shadowdark.sheet.player .sdx-character-sheet-bar .sdx-luck-chip span {

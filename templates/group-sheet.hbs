@@ -94,6 +94,121 @@
             {{/each}}
           </select>
         </label>
+
+        {{#if sdx.canEditGroup}}
+        <button type="button" data-action="start-travel-rolls" {{#unless sdx.travel.hasAssigned}}disabled{{/unless}}>
+          <i class="fas fa-bullhorn"></i> Prompt Travelling
+        </button>
+        {{/if}}
+      </div>
+
+      <div class="sdx-travel-progress" data-prompt-id="{{sdx.travel.progress.promptId}}" data-travel-duration-ms="{{sdx.travel.progress.durationMs}}" style="--sdx-travel-progress-fill: {{sdx.travel.progress.percent}}%;">
+        <span class="sdx-travel-progress-track" aria-hidden="true">
+          <span class="sdx-travel-progress-fill" data-travel-progress-fill></span>
+        </span>
+        {{#each sdx.travel.progress.steps}}
+        <div class="sdx-travel-progress-step {{#if complete}}is-complete{{/if}} {{#if failed}}is-failed{{/if}} {{#if successOutcome}}is-success-result{{/if}} {{#if failureOutcome}}is-failure-result{{/if}} {{#if active}}is-active{{/if}} {{#if pending}}is-pending{{/if}} {{#if empty}}is-empty{{/if}}" data-travel-progress-step="{{key}}">
+          <span class="sdx-travel-progress-node">
+            <img src="{{icon}}" alt="">
+          </span>
+          <span class="sdx-travel-progress-label">{{name}}</span>
+          <span class="sdx-travel-progress-count">
+            <span data-progress-completed>{{completedCount}}</span>/<span data-progress-assigned>{{assignedCount}}</span>
+          </span>
+          <span class="sdx-travel-progress-status" data-progress-status>{{statusLabel}}</span>
+          <span class="sdx-travel-progress-results" data-progress-results>
+            {{#each resultMarks}}
+            <span data-travel-result="{{type}}" title="{{label}}">{{symbol}}</span>
+            {{/each}}
+          </span>
+        </div>
+        {{/each}}
+      </div>
+
+      {{#if sdx.travel.hasMembers}}
+      <div class="sdx-camping-roster sdx-travel-roster">
+        {{#each sdx.travel.members}}
+        <button
+          type="button"
+          class="sdx-camping-roster-member {{#if assigned}}is-assigned{{/if}} {{#unless canAssign}}is-unavailable{{/unless}}"
+          data-action="open-member"
+          data-camping-member-drag="true"
+          data-activity-kind="travel"
+          data-member-uuid="{{uuid}}"
+          data-can-assign="{{#if canAssign}}true{{else}}false{{/if}}"
+          draggable="{{#if canAssign}}true{{else}}false{{/if}}"
+          title="{{#unless canAssign}}{{name}} is controlled by another user{{else}}{{#if assignedActivityName}}{{name}}: {{assignedActivityName}}{{else}}{{name}} is unassigned{{/if}}{{/unless}}"
+        >
+          <span class="sdx-camping-portrait"><img src="{{img}}" alt="{{name}}"></span>
+          <span>{{name}}</span>
+          {{#if assignedActivityName}}<small>{{assignedActivityName}}</small>{{else}}<small>Free</small>{{/if}}
+        </button>
+        {{/each}}
+        {{#if sdx.canEditGroup}}
+        <button type="button" class="sdx-camping-reset" data-action="reset-travel" data-activity-kind="travel" data-tooltip="Reset Travel Assignments" aria-label="Reset Travel Assignments">
+          <i class="fas fa-undo"></i>
+        </button>
+        {{/if}}
+      </div>
+      {{else}}
+      <div class="sdx-camping-roster-empty">Add members to the group to assign travel tasks.</div>
+      {{/if}}
+
+      <div class="sdx-travel-grid">
+        {{#each sdx.travel.activities}}
+        <article class="sdx-travel-card" data-activity-kind="travel" data-travel-activity-key="{{key}}">
+          <header class="sdx-travel-card-header">
+            <span class="sdx-travel-activity-icon" aria-hidden="true">
+              <img src="{{icon}}" alt="">
+            </span>
+
+            <div class="sdx-travel-title" data-tooltip="{{description}}" aria-label="{{description}}" tabindex="0">
+              <strong class="sdx-travel-name">{{name}}</strong>
+              <span class="sdx-travel-meta">{{abilityLabel}} <b>DC {{dc}}</b></span>
+            </div>
+
+            <button type="button" class="sdx-travel-roll" data-action="roll-travel-activity" data-has-assigned="{{#if hasAssigned}}true{{else}}false{{/if}}" title="{{#if hasAssigned}}Roll {{name}}{{else}}Assign a character to roll {{name}}{{/if}}" {{#unless hasAssigned}}disabled{{/unless}}>
+              <i class="fas fa-dice-d20"></i>
+            </button>
+          </header>
+
+          <div class="sdx-camping-assignment-row" data-action="toggle-travel-picker" title="Choose assigned members">
+            <div class="sdx-camping-assignment-summary" title="{{assignmentLabel}}">
+              {{#if hasAssigned}}
+              {{#each assigned}}
+              <button type="button" class="sdx-camping-assigned-chip" data-action="open-member" data-assigned-actor-uuid="{{uuid}}" title="{{name}}">
+                <span class="sdx-camping-portrait"><img src="{{img}}" alt="{{name}}"></span>
+              </button>
+              {{/each}}
+              {{else}}
+              <span class="sdx-camping-unassigned">Unassigned</span>
+              {{/if}}
+            </div>
+          </div>
+
+          {{#if hasMemberOptions}}
+          <div class="sdx-camping-picker-panel">
+            <div class="sdx-travel-member-picker">
+              {{#each memberOptions}}
+              <button
+                type="button"
+                class="sdx-travel-member-toggle {{#if assigned}}is-assigned{{/if}} {{#if assignedElsewhere}}is-assigned-elsewhere{{/if}}"
+                data-action="toggle-travel-participant"
+                data-member-uuid="{{uuid}}"
+                data-can-assign="{{#if canAssign}}true{{else}}false{{/if}}"
+                title="{{title}}"
+                {{#unless canAssign}}disabled{{/unless}}
+              >
+                <span class="sdx-camping-portrait"><img src="{{img}}" alt="{{name}}"></span>
+                <span>{{name}}</span>
+                {{#if assignedActivityName}}<small>{{assignedActivityName}}</small>{{/if}}
+              </button>
+              {{/each}}
+            </div>
+          </div>
+          {{/if}}
+        </article>
+        {{/each}}
       </div>
     </div>
 
@@ -127,14 +242,15 @@
         </div>
       </section>
 
-      {{#if sdx.travel.hasMembers}}
+      {{#if sdx.camping.hasMembers}}
       <div class="sdx-camping-roster">
-        {{#each sdx.travel.members}}
+        {{#each sdx.camping.members}}
         <button
           type="button"
           class="sdx-camping-roster-member {{#if assigned}}is-assigned{{/if}} {{#unless canAssign}}is-unavailable{{/unless}}"
           data-action="open-member"
           data-camping-member-drag="true"
+          data-activity-kind="camping"
           data-member-uuid="{{uuid}}"
           data-can-assign="{{#if canAssign}}true{{else}}false{{/if}}"
           draggable="{{#if canAssign}}true{{else}}false{{/if}}"
@@ -146,7 +262,7 @@
         </button>
         {{/each}}
         {{#if sdx.canEditGroup}}
-        <button type="button" class="sdx-camping-reset" data-action="reset-travel" data-tooltip="Reset Assignments" aria-label="Reset Assignments">
+        <button type="button" class="sdx-camping-reset" data-action="reset-travel" data-activity-kind="camping" data-tooltip="Reset Camping Assignments" aria-label="Reset Camping Assignments">
           <i class="fas fa-undo"></i>
         </button>
         {{/if}}
@@ -156,8 +272,8 @@
       {{/if}}
 
       <div class="sdx-travel-grid">
-        {{#each sdx.travel.activities}}
-        <article class="sdx-travel-card" data-travel-activity-key="{{key}}">
+        {{#each sdx.camping.activities}}
+        <article class="sdx-travel-card" data-activity-kind="camping" data-travel-activity-key="{{key}}">
           <header class="sdx-travel-card-header">
             <span class="sdx-travel-activity-icon" aria-hidden="true">
               <img src="{{icon}}" alt="">

@@ -153,11 +153,11 @@
 
     registerSetting("tokenShadowWidthFactor", {
       name: "Token Shadows | Width Factor",
-      hint: "Controls the shadow width relative to the token width. Default 0.5.",
+      hint: "Controls the shadow width relative to the token width. Default 0.75.",
       scope: "world",
       config: true,
       type: Number,
-      default: 0.5,
+      default: 0.75,
       range: {
         min: 0.1,
         max: 2,
@@ -168,11 +168,11 @@
 
     registerSetting("tokenShadowHeightGridFactor", {
       name: "Token Shadows | Height Grid Factor",
-      hint: "Controls the shadow height relative to the grid size. Default 0.05.",
+      hint: "Controls the shadow height relative to the grid size. Default 0.12.",
       scope: "world",
       config: true,
       type: Number,
-      default: 0.05,
+      default: 0.12,
       range: {
         min: 0.01,
         max: 1,
@@ -183,11 +183,11 @@
 
     registerSetting("tokenShadowOffsetYFactor", {
       name: "Token Shadows | Y Offset Factor",
-      hint: "Controls how high the shadow sits under the token. Higher values move it higher. Default 0.3.",
+      hint: "Controls how high the shadow sits under the token. Higher values move it higher. Default 1.1.",
       scope: "world",
       config: true,
       type: Number,
-      default: 0.3,
+      default: 1.1,
       range: {
         min: -1,
         max: 2,
@@ -198,11 +198,11 @@
 
     registerSetting("tokenShadowAlpha", {
       name: "Token Shadows | Opacity",
-      hint: "Shadow opacity. 0 is invisible, 1 is fully opaque. Default 0.7.",
+      hint: "Shadow opacity. 0 is invisible, 1 is fully opaque. Default 0.55.",
       scope: "world",
       config: true,
       type: Number,
-      default: 0.7,
+      default: 0.55,
       range: {
         min: 0,
         max: 1,
@@ -213,11 +213,11 @@
 
     registerSetting("tokenShadowBlur", {
       name: "Token Shadows | Blur Strength",
-      hint: "Controls how soft or blurry the token shadow appears. Set to 0 for a hard shadow. Default 8.",
+      hint: "Controls how soft or blurry the token shadow appears. Set to 0 for a hard shadow. Default 5.",
       scope: "world",
       config: true,
       type: Number,
-      default: 8,
+      default: 5,
       range: {
         min: 0,
         max: 40,
@@ -383,7 +383,7 @@
       scope: "world",
       config: true,
       type: String,
-      default: "LVL,HP,AC,XP,LUCK,SLOTS,STR,DEX,CON,INT,WIS,CHA",
+      default: "HP, LUCK,|,STR,DEX,CON,INT,WIS,CHA, SLOTS",
       onChange: refreshOpenActorSheets
     });
 
@@ -403,7 +403,7 @@
       scope: "world",
       config: true,
       type: Number,
-      default: 100,
+      default: 120,
       range: {
         min: 80,
         max: 130,
@@ -418,7 +418,7 @@
       scope: "world",
       config: true,
       type: Number,
-      default: 11,
+      default: 13,
       range: {
         min: 8,
         max: 24,
@@ -433,7 +433,7 @@
       scope: "world",
       config: true,
       type: Number,
-      default: 10,
+      default: 8,
       range: {
         min: 0,
         max: 20,
@@ -463,7 +463,7 @@
       scope: "world",
       config: true,
       type: Number,
-      default: 0,
+      default: 20,
       range: {
         min: -250,
         max: 250,
@@ -478,7 +478,7 @@
       scope: "world",
       config: true,
       type: Number,
-      default: 0,
+      default: 8,
       range: {
         min: -150,
         max: 150,
@@ -493,7 +493,7 @@
       scope: "world",
       config: true,
       type: Boolean,
-      default: false,
+      default: true,
       onChange: refreshOpenActorSheets
     });
 
@@ -722,6 +722,107 @@
         min: 8,
         max: 128,
         step: 1
+      }
+    });
+
+    /* -------------------- */
+    /* Group Sheet          */
+    /* -------------------- */
+
+    registerSetting("enableGroupActors", {
+      name: "Enable Group Actors",
+      hint: "Adds a MK-Shadowdark group actor sheet for party members, group inventory, travel and camping task assignments, and group notes.",
+      scope: "world",
+      config: true,
+      type: Boolean,
+      default: true
+    });
+
+    registerSetting("groupSheetAssignedTokenSize", {
+      name: "Group Sheet | Assigned Token Size",
+      hint: "Pixel size for assigned member portrait tokens in Travel and Camping task cards.",
+      scope: "world",
+      config: true,
+      type: Number,
+      default: 28,
+      range: {
+        min: 20,
+        max: 64,
+        step: 1
+      },
+      onChange: refreshOpenActorSheets
+    });
+
+    registerSetting("groupSheetMemberPortraitSize", {
+      name: "Group Sheet | Member Portrait Size",
+      hint: "Minimum portrait width and height for character cards in the Group Sheet Members tab.",
+      scope: "world",
+      config: true,
+      type: Number,
+      default: 176,
+      range: {
+        min: 96,
+        max: 260,
+        step: 1
+      },
+      onChange: refreshOpenActorSheets
+    });
+
+    registerSetting("groupSheetCampingFoodKeywords", {
+      name: "Group Sheet | Camping Food Keywords",
+      hint: "Comma-separated item name keywords counted as food or rations in the Camping campfire summary.",
+      scope: "world",
+      config: true,
+      type: String,
+      default: "ration,rations,food",
+      onChange: refreshOpenActorSheets
+    });
+
+    registerSetting("groupSheetCampingTorchKeywords", {
+      name: "Group Sheet | Camping Torch Keywords",
+      hint: "Comma-separated item name keywords counted as torches in the Camping campfire summary.",
+      scope: "world",
+      config: true,
+      type: String,
+      default: "torch,torches",
+      onChange: refreshOpenActorSheets
+    });
+
+    registerSetting("groupSheetCampingWaterKeywords", {
+      name: "Group Sheet | Camping Water Keywords",
+      hint: "Comma-separated item name keywords counted as water in the Camping campfire summary.",
+      scope: "world",
+      config: true,
+      type: String,
+      default: "water,waterskin,waterskins",
+      onChange: refreshOpenActorSheets
+    });
+
+    registerSetting("groupSheetTravelPrepDurationMs", {
+      name: "Group Sheet | Travelling Prep Duration (ms)",
+      hint: "Delay before the Travelling splash progress bar begins. Players may roll their assigned/default Travelling stat during this window.",
+      scope: "world",
+      config: true,
+      type: Number,
+      default: 10000,
+      range: {
+        min: 0,
+        max: 60000,
+        step: 500
+      }
+    });
+
+    registerSetting("groupSheetTravelProgressDurationMs", {
+      name: "Group Sheet | Travelling Progress Duration (ms)",
+      hint: "Total Travelling splash progress duration. Rolls resolve at each quarter of this duration as the bar reaches Pathfind, March, Lookout, and Scavenge.",
+      scope: "world",
+      config: true,
+      type: Number,
+      default: 8000,
+      range: {
+        min: 1000,
+        max: 60000,
+        step: 500
       }
     });
   });

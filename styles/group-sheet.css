@@ -185,6 +185,11 @@
   background: var(--sdx-group-panel-hover);
 }
 
+.sdx-travel-toolbar button:disabled {
+  cursor: not-allowed;
+  opacity: 0.45;
+}
+
 .sdx-speed-control {
   display: inline-flex;
   flex: 0 0 auto;
@@ -196,6 +201,191 @@
 
 .sdx-speed-control select {
   padding: 2px 24px 2px 8px;
+}
+
+.sdx-travel-progress {
+  position: relative;
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 0;
+  margin: 0 0 10px;
+  padding: 9px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 5px;
+  background: rgba(255, 255, 255, 0.035);
+}
+
+.sdx-travel-progress-track {
+  position: absolute;
+  z-index: 0;
+  top: 25px;
+  left: calc(12.5% + 9px);
+  right: calc(12.5% + 9px);
+  height: 5px;
+  overflow: hidden;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.12);
+  pointer-events: none;
+}
+
+.sdx-travel-progress-fill {
+  display: block;
+  width: var(--sdx-travel-progress-fill, 0%);
+  height: 100%;
+  border-radius: inherit;
+  background: linear-gradient(90deg, rgba(255, 75, 31, 0.85), rgba(242, 208, 133, 0.9));
+}
+
+.sdx-travel-progress-step {
+  position: relative;
+  z-index: 1;
+  display: grid;
+  grid-template-rows: 34px auto auto auto auto;
+  justify-items: center;
+  gap: 2px;
+  min-width: 0;
+  color: var(--sdx-group-muted);
+  text-align: center;
+}
+
+.sdx-travel-progress-step::before,
+.sdx-travel-progress-step::after {
+  content: "";
+  position: absolute;
+  top: 16px;
+  height: 3px;
+  background: rgba(255, 255, 255, 0.12);
+}
+
+.sdx-travel-progress-step::before {
+  left: 0;
+  right: 50%;
+}
+
+.sdx-travel-progress-step::after {
+  left: 50%;
+  right: 0;
+}
+
+.sdx-travel-progress-step:first-child::before,
+.sdx-travel-progress-step:last-child::after {
+  display: none;
+}
+
+.sdx-travel-progress-step.is-complete::before,
+.sdx-travel-progress-step.is-complete::after,
+.sdx-travel-progress-step.is-active::before {
+  background: rgba(255, 75, 31, 0.72);
+}
+
+.sdx-travel-progress-step.is-failed::before,
+.sdx-travel-progress-step.is-failed::after {
+  background: rgba(170, 58, 58, 0.72);
+}
+
+.sdx-travel-progress-node {
+  position: relative;
+  z-index: 1;
+  display: inline-grid;
+  place-items: center;
+  width: 32px;
+  height: 32px;
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  border-radius: 50%;
+  background: rgba(10, 10, 10, 0.96);
+}
+
+.sdx-travel-progress-node img {
+  width: 23px;
+  height: 23px;
+  object-fit: contain;
+  opacity: 0.75;
+}
+
+.sdx-travel-progress-step.is-active .sdx-travel-progress-node,
+.sdx-travel-progress-step.is-complete .sdx-travel-progress-node {
+  border-color: rgba(255, 75, 31, 0.78);
+  box-shadow: 0 0 0 2px rgba(255, 75, 31, 0.16);
+}
+
+.sdx-travel-progress-step.is-failed .sdx-travel-progress-node {
+  border-color: rgba(210, 74, 74, 0.78);
+  box-shadow: 0 0 0 2px rgba(210, 74, 74, 0.14);
+}
+
+.sdx-travel-progress-step.is-active .sdx-travel-progress-node img,
+.sdx-travel-progress-step.is-complete .sdx-travel-progress-node img {
+  opacity: 1;
+  filter: drop-shadow(0 0 5px rgba(255, 75, 31, 0.35));
+}
+
+.sdx-travel-progress-step.is-failed .sdx-travel-progress-node img {
+  opacity: 1;
+  filter: drop-shadow(0 0 5px rgba(210, 74, 74, 0.3));
+}
+
+.sdx-travel-progress-label {
+  max-width: 100%;
+  overflow: hidden;
+  color: #e4e4e4;
+  font-size: 12px;
+  font-weight: 900;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.sdx-travel-progress-count {
+  color: #d0d0d0;
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.sdx-travel-progress-status {
+  max-width: 100%;
+  overflow: hidden;
+  font-size: 10px;
+  font-style: italic;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.sdx-travel-progress-step.is-active .sdx-travel-progress-status {
+  color: #ffb29e;
+}
+
+.sdx-travel-progress-step.is-complete .sdx-travel-progress-status {
+  color: #a8e6b0;
+}
+
+.sdx-travel-progress-step.is-success-result .sdx-travel-progress-status {
+  color: #a8e6b0;
+}
+
+.sdx-travel-progress-step.is-failure-result .sdx-travel-progress-status {
+  color: #ff9a9a;
+}
+
+.sdx-travel-progress-step.is-failed .sdx-travel-progress-status {
+  color: #ff9a9a;
+}
+
+.sdx-travel-progress-results {
+  display: flex;
+  justify-content: center;
+  gap: 3px;
+  min-height: 14px;
+  color: var(--sdx-group-muted);
+  font-size: 11px;
+  font-weight: 900;
+  line-height: 1;
+}
+
+.sdx-travel-progress-results [data-travel-result="success"] {
+  color: #a8e6b0;
+}
+
+.sdx-travel-progress-results [data-travel-result="failure"] {
+  color: #ff9a9a;
 }
 
 .sdx-group-members {
@@ -1159,6 +1349,263 @@
 }
 
 /* -------------------------------------------- */
+/* Travel Roll Prompt                           */
+/* -------------------------------------------- */
+
+#sdx-travel-roll-prompt {
+  --sdx-group-text: #d8d8d8;
+  --sdx-group-muted: #9b9b9b;
+
+  position: fixed;
+  inset: 0;
+  z-index: 100000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  background: rgba(0, 0, 0, 0.76);
+  opacity: 0;
+  transition: opacity 180ms ease;
+}
+
+#sdx-travel-roll-prompt.is-visible {
+  opacity: 1;
+}
+
+body.sdx-travel-prompt-open .window-app.dialog,
+body.sdx-travel-prompt-open .app.window-app.dialog,
+body.sdx-travel-prompt-open .application.dialog,
+body.sdx-travel-prompt-open .dialog.application {
+  z-index: 100010 !important;
+}
+
+.sdx-travel-prompt-card {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  width: min(960px, 94vw);
+  max-height: 88vh;
+  padding: 24px;
+  overflow: auto;
+  border: 2px solid var(--color-border-dark, #3a3a3a);
+  border-radius: 14px;
+  background: rgba(20, 20, 20, 0.95);
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.6);
+  color: var(--sdx-group-text);
+}
+
+.sdx-travel-prompt-close {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  display: inline-grid;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.06);
+  color: var(--sdx-group-text);
+  cursor: pointer;
+}
+
+.sdx-travel-prompt-close:hover {
+  background: rgba(255, 255, 255, 0.12);
+}
+
+.sdx-travel-prompt-header {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  padding-right: 30px;
+  text-align: center;
+}
+
+.sdx-travel-prompt-header h2 {
+  margin: 0;
+  color: var(--color-text-light-highlight, #f2f2f2);
+  font-size: 38px;
+  font-weight: 900;
+  letter-spacing: 0.05em;
+  line-height: 1.1;
+  text-shadow: 0 2px 8px rgba(0, 0, 0, 0.9);
+  text-transform: uppercase;
+}
+
+.sdx-travel-prompt-header span,
+.sdx-travel-prompt-status {
+  color: var(--sdx-group-muted);
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.sdx-travel-prompt-status {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 6px 12px;
+  text-align: center;
+}
+
+.sdx-travel-prompt-assignments {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  gap: 8px;
+}
+
+.sdx-travel-prompt-assignment {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  align-items: center;
+  min-width: 0;
+  padding: 8px;
+  border: 1px solid rgba(255, 255, 255, 0.13);
+  border-radius: 6px;
+  background: rgba(255, 255, 255, 0.04);
+  text-align: center;
+}
+
+.sdx-travel-prompt-assignment.is-complete {
+  border-color: rgba(92, 190, 108, 0.45);
+  background: rgba(92, 190, 108, 0.08);
+}
+
+.sdx-travel-prompt-assignment.is-default {
+  border-style: dashed;
+}
+
+.sdx-travel-prompt-token {
+  order: 1;
+  width: 58px;
+  height: 58px;
+  object-fit: cover;
+  object-position: center 18%;
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  border-radius: 6px;
+}
+
+.sdx-travel-prompt-assignment-main {
+  order: 3;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  width: 100%;
+  min-width: 0;
+}
+
+.sdx-travel-prompt-assignment-main strong,
+.sdx-travel-prompt-assignment-main span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.sdx-travel-prompt-assignment-main strong {
+  color: #f0f0f0;
+  font-size: 15px;
+  font-weight: 900;
+}
+
+.sdx-travel-prompt-assignment-main span {
+  color: var(--sdx-group-muted);
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.sdx-travel-prompt-assignment-main b {
+  color: #dcdcdc;
+}
+
+.sdx-travel-prompt-default {
+  margin-left: 4px;
+  color: #f2d085;
+  font-style: normal;
+}
+
+.sdx-travel-prompt-assignment-controls {
+  order: 2;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+}
+
+.sdx-travel-prompt-roll {
+  min-height: 28px;
+  width: min(120px, 100%);
+  padding: 0 10px;
+  border: 1px solid rgba(242, 208, 133, 0.42);
+  border-radius: 4px;
+  background: rgba(242, 208, 133, 0.12);
+  color: #f4dfaa;
+  font-size: 12px;
+  font-weight: 900;
+  cursor: pointer;
+}
+
+.sdx-travel-prompt-roll:hover {
+  border-color: rgba(242, 208, 133, 0.7);
+  background: rgba(242, 208, 133, 0.2);
+}
+
+.sdx-travel-prompt-roll:disabled {
+  cursor: not-allowed;
+  opacity: 0.5;
+}
+
+.sdx-travel-prompt-waiting {
+  min-height: 28px;
+  width: min(120px, 100%);
+  border: 1px solid rgba(255, 255, 255, 0.13);
+  border-radius: 4px;
+  background: rgba(255, 255, 255, 0.06);
+  color: var(--sdx-group-text);
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.sdx-travel-prompt-waiting {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 8px;
+}
+
+.sdx-travel-roll-flavor {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 8px;
+}
+
+.sdx-travel-roll-outcome {
+  display: inline-flex;
+  align-items: center;
+  min-height: 20px;
+  padding: 1px 7px;
+  border-radius: 4px;
+  font-size: 11px;
+  font-weight: 900;
+  text-transform: uppercase;
+}
+
+.sdx-travel-roll-outcome.is-success {
+  background: rgba(70, 150, 84, 0.18);
+  color: #4fba62;
+}
+
+.sdx-travel-roll-outcome.is-failure {
+  background: rgba(168, 57, 57, 0.18);
+  color: #d86161;
+}
+
+/* -------------------------------------------- */
 /* Notes                                        */
 /* -------------------------------------------- */
 
@@ -1203,6 +1650,35 @@
   }
 
   .sdx-travel-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .sdx-travel-progress {
+    grid-template-columns: 1fr;
+    gap: 7px;
+  }
+
+  .sdx-travel-progress-step {
+    grid-template-columns: 34px minmax(0, 1fr) auto auto;
+    grid-template-rows: auto;
+    justify-items: start;
+    text-align: left;
+  }
+
+  .sdx-travel-progress-step::before,
+  .sdx-travel-progress-step::after {
+    display: none;
+  }
+
+  .sdx-travel-prompt-card {
+    padding: 18px;
+  }
+
+  .sdx-travel-prompt-header h2 {
+    font-size: 30px;
+  }
+
+  .sdx-travel-prompt-assignments {
     grid-template-columns: 1fr;
   }
 

@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+- Changed Travelling prompts so only player/GM submitted rolls are used; the progress bar now starts after all travelling rolls are complete and reveals stored results at each activity.
+- Updated Travelling prompt roll buttons to explicitly request the Shadowdark ability-check dialog so modifiers and ADV/DISADV can be adjusted before rolling.
+- Updated Travelling task results so at least one successful traveller roll makes that task a success.
+
 ## 1.0.3
 
 - Fixed Death Timer token effect icons in Foundry VTT v13 by using ActiveEffect `img` data and a status id.

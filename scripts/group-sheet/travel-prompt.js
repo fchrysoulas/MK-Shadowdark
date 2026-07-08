@@ -9,8 +9,6 @@ import {
   GROUP_SHEET_SOCKET_UPDATE_TRAVEL,
   MODULE_ID,
   TRAVEL_ACTIVITIES,
-  TRAVEL_AUTO_ROLL_RESULT_TIMEOUT_MS,
-  TRAVEL_PROMPT_AUTO_CLOSE_MS,
   TRAVEL_PROMPT_BODY_CLASS,
   TRAVEL_PROMPT_ELEMENT_ID,
   TRAVEL_ROLL_RESULT_TIMEOUT_MS,
@@ -27,14 +25,17 @@ import {
   getEffectiveTravelAssignments,
   getGroupData,
   getTravelAssignmentKey,
+  getTravelAssignmentKeys,
   isActivityStore,
 } from "./activities.js";
-import { getTravelPrepDurationMs, getTravelProgressDurationMs } from "./group-settings.js";
+import { getTravelProgressDurationMs } from "./group-settings.js";
 import { getTravelRollOutcome, isTravelRollResultParseable, rollTravelAbilityAndWait } from "./rolls.js";
 import { travelPromptTimers } from "./state.js";
 import { clampNumber, clampPercent, escapeHtml } from "./utils.js";
 import { isPrimaryActiveGm } from "./users.js";
 function renderTravelResultMarks(step) {
+  if (!step?.resolved) return "";
+
   const successes = Math.max(0, Number(step?.successes ?? 0) || 0);
   const failures = Math.max(0, Number(step?.failures ?? 0) || 0);
   const marks = [];
@@ -53,7 +54,6 @@ function renderTravelResultMarks(step) {
 function renderTravelProgressSteps(progress) {
   const percent = Number(progress?.percent ?? 0) || 0;
   const durationMs = Number(progress?.durationMs ?? 0) || 0;
-  const prepDurationMs = Number(progress?.prepDurationMs ?? 0) || 0;
   const progressStartedAt = Number(progress?.progressStartedAt ?? 0) || 0;
 
   return `
@@ -61,7 +61,6 @@ function renderTravelProgressSteps(progress) {
       class="sdx-travel-progress"
       data-prompt-id="${escapeHtml(progress?.promptId ?? "")}"
       data-travel-duration-ms="${escapeHtml(durationMs)}"
-      data-travel-prep-duration-ms="${escapeHtml(prepDurationMs)}"
       data-travel-progress-started-at="${escapeHtml(progressStartedAt)}"
       style="--sdx-travel-progress-fill: ${escapeHtml(percent)}%;"
     >
@@ -144,27 +143,14 @@ function renderTravelPromptAssignment(assignment, options = {}) {
   `;
 }
 
-function clearTravelPromptAutoClose(wrap) {
-  if (wrap?._sdxTravelAutoCloseTimer) {
-    clearTimeout(wrap._sdxTravelAutoCloseTimer);
-    wrap._sdxTravelAutoCloseTimer = null;
-  }
-}
-
 function clearTravelPromptClientTimers(wrap) {
   if (wrap?._sdxTravelProgressStartTimer) {
     clearTimeout(wrap._sdxTravelProgressStartTimer);
     wrap._sdxTravelProgressStartTimer = null;
   }
-
-  if (wrap?._sdxTravelPrepEndTimer) {
-    clearTimeout(wrap._sdxTravelPrepEndTimer);
-    wrap._sdxTravelPrepEndTimer = null;
-  }
 }
 
 function removeTravelPromptElement(wrap) {
-  clearTravelPromptAutoClose(wrap);
   clearTravelPromptClientTimers(wrap);
   wrap?.remove?.();
   if (!document.getElementById(TRAVEL_PROMPT_ELEMENT_ID)) {
@@ -172,22 +158,10 @@ function removeTravelPromptElement(wrap) {
   }
 }
 
-function scheduleTravelPromptAutoClose(wrap) {
-  clearTravelPromptAutoClose(wrap);
-  if (!wrap) return;
-
-  wrap._sdxTravelAutoCloseTimer = setTimeout(() => {
-    removeTravelPromptElement(wrap);
-  }, TRAVEL_PROMPT_AUTO_CLOSE_MS);
-}
-
 function getTravelProgressStartTime(progress = {}, progressEl = null) {
-  const explicit = Number(progress.progressStartedAt ?? progressEl?.dataset.travelProgressStartedAt ?? 0);
+  const explicit = Number(progress?.progressStartedAt ?? progressEl?.dataset.travelProgressStartedAt ?? 0);
   if (Number.isFinite(explicit) && explicit > 0) return explicit;
-
-  const startedAt = Number(progress.startedAt ?? 0) || Date.now();
-  const prepDurationMs = Number(progress.prepDurationMs ?? progressEl?.dataset.travelPrepDurationMs ?? 0) || 0;
-  return startedAt + Math.max(0, prepDurationMs);
+  return 0;
 }
 
 function disableTravelPromptRollControls(wrap) {
@@ -201,25 +175,6 @@ function disableTravelPromptRollControls(wrap) {
   if (status) status.textContent = "Travelling is resolving. Watch the route progress.";
 }
 
-function scheduleTravelPromptPrepEnd(wrap, progress = {}) {
-  if (!wrap) return;
-  if (wrap._sdxTravelPrepEndTimer) {
-    clearTimeout(wrap._sdxTravelPrepEndTimer);
-    wrap._sdxTravelPrepEndTimer = null;
-  }
-
-  const remainingMs = getTravelProgressStartTime(progress, wrap.querySelector(".sdx-travel-progress")) - Date.now();
-  if (remainingMs <= 0) {
-    disableTravelPromptRollControls(wrap);
-    return;
-  }
-
-  wrap._sdxTravelPrepEndTimer = setTimeout(() => {
-    wrap._sdxTravelPrepEndTimer = null;
-    disableTravelPromptRollControls(wrap);
-  }, remainingMs);
-}
-
 function startTravelProgressAnimation(wrap, progress = {}) {
   const progressEl = wrap?.querySelector?.(".sdx-travel-progress");
   const fill = progressEl?.querySelector?.("[data-travel-progress-fill]");
@@ -227,9 +182,10 @@ function startTravelProgressAnimation(wrap, progress = {}) {
 
   const durationMs = Math.max(0, Number(progress.durationMs ?? progressEl.dataset.travelDurationMs ?? 0) || 0);
   const progressStartedAt = getTravelProgressStartTime(progress, progressEl);
+  const resolving = Boolean(progress.resolving) || (Boolean(progress.active) && progressStartedAt > 0 && !progress.complete);
   const resolvedPercent = clampPercent(progress.percent ?? 0);
 
-  if (!progress.active || progress.complete || durationMs <= 0) {
+  if (!progress.active || !resolving || progress.complete || durationMs <= 0 || progressStartedAt <= 0) {
     clearTravelPromptClientTimers(wrap);
     fill.style.transition = "none";
     fill.style.width = `${progress.complete ? 100 : resolvedPercent}%`;
@@ -237,8 +193,8 @@ function startTravelProgressAnimation(wrap, progress = {}) {
     return;
   }
 
-  const remainingPrepMs = progressStartedAt - Date.now();
-  if (remainingPrepMs > 0) {
+  const remainingStartMs = progressStartedAt - Date.now();
+  if (remainingStartMs > 0) {
     fill.style.transition = "none";
     fill.style.width = "0%";
     progressEl.style.setProperty("--sdx-travel-progress-fill", "0%");
@@ -246,7 +202,7 @@ function startTravelProgressAnimation(wrap, progress = {}) {
       wrap._sdxTravelProgressStartTimer = setTimeout(() => {
         wrap._sdxTravelProgressStartTimer = null;
         startTravelProgressAnimation(wrap, progress);
-      }, remainingPrepMs);
+      }, remainingStartMs);
     }
     return;
   }
@@ -271,18 +227,22 @@ async function showTravelRollPrompt(payload = {}) {
   const existing = document.getElementById(TRAVEL_PROMPT_ELEMENT_ID);
   if (existing) removeTravelPromptElement(existing);
 
-  const progressStartTime = getTravelProgressStartTime(payload.progress);
-  const prepActive = Boolean(payload.progress?.active) && !payload.progress?.complete && Date.now() < progressStartTime;
+  const progressStartedAt = getTravelProgressStartTime(payload.progress);
+  const resolving = Boolean(payload.progress?.resolving)
+    || (Boolean(payload.progress?.active) && !payload.progress?.complete && progressStartedAt > 0);
+  const rollingOpen = Boolean(payload.progress?.active) && !payload.progress?.complete && !resolving;
   const assignmentRows = await Promise.all((payload.assignments ?? []).map(async assignment => {
     const actor = await resolveActorFromUuid(assignment.actorUuid);
     return {
       assignment,
-      canRoll: prepActive && canUserControlActor(actor),
+      canRoll: rollingOpen && canUserControlActor(actor),
     };
   }));
-  const statusText = prepActive
-    ? "Players may roll their travelling stat before the route begins."
-    : "Travelling is resolving. Watch the route progress.";
+  const statusText = payload.progress?.complete
+    ? "Travelling complete."
+    : resolving
+      ? "Travelling is resolving. Watch the route progress."
+      : "Waiting for all travelling rolls.";
 
   const wrap = document.createElement("div");
   wrap.id = TRAVEL_PROMPT_ELEMENT_ID;
@@ -316,8 +276,6 @@ async function showTravelRollPrompt(payload = {}) {
     wrap.classList.add("is-visible");
     startTravelProgressAnimation(wrap, payload.progress);
   });
-  scheduleTravelPromptPrepEnd(wrap, payload.progress);
-  scheduleTravelPromptAutoClose(wrap);
 
   wrap.querySelector("[data-action='travel-prompt-close']")?.addEventListener("click", event => {
     event.preventDefault();
@@ -371,7 +329,7 @@ async function onTravelPromptPlayerRollClick(event) {
   const progressEl = wrap?.querySelector(".sdx-travel-progress");
   if (!row || !wrap) return;
 
-  if (Date.now() >= getTravelProgressStartTime({}, progressEl)) {
+  if (getTravelProgressStartTime({}, progressEl) > 0) {
     disableTravelPromptRollControls(wrap);
     ui.notifications?.warn?.("Travelling progress has already begun.");
     return;
@@ -459,6 +417,11 @@ function applyTravelPromptUpdate(data = {}) {
 
   const progressEl = wrap.querySelector(".sdx-travel-progress");
   const fill = progressEl?.querySelector("[data-travel-progress-fill]");
+  if (progressEl && data.progress) {
+    progressEl.dataset.travelDurationMs = String(data.progress.durationMs ?? 0);
+    progressEl.dataset.travelProgressStartedAt = String(data.progress.progressStartedAt ?? 0);
+  }
+
   if (progressEl && fill && data.progress && (!data.progress.active || data.progress.complete)) {
     const percent = data.progress.complete ? 100 : clampPercent(data.progress.percent ?? 0);
     fill.style.transition = "none";
@@ -466,9 +429,20 @@ function applyTravelPromptUpdate(data = {}) {
     progressEl.style.setProperty("--sdx-travel-progress-fill", `${percent}%`);
   }
 
-  if (data.progress?.complete) {
+  if (data.progress) {
     const status = wrap.querySelector("[data-travel-prompt-status-text]") ?? wrap.querySelector(".sdx-travel-prompt-status");
-    if (status) status.textContent = "Travelling complete.";
+    const resolving = Boolean(data.progress.resolving)
+      || (Boolean(data.progress.active) && !data.progress.complete && Number(data.progress.progressStartedAt ?? 0) > 0);
+
+    if (resolving || data.progress.complete) disableTravelPromptRollControls(wrap);
+    if (status) {
+      status.textContent = data.progress.complete
+        ? "Travelling complete."
+        : resolving
+          ? "Travelling is resolving. Watch the route progress."
+          : "Waiting for all travelling rolls.";
+    }
+    startTravelProgressAnimation(wrap, data.progress);
   }
 }
 
@@ -477,7 +451,6 @@ function handleTravelPromptTransport(data = {}) {
     showTravelRollPrompt(data.payload).catch(error => {
       console.error(`${MODULE_ID} | GroupSheet | Travel prompt display error`, error);
     });
-    scheduleTravelPromptSequence(data.payload);
   }
 
   if (data.action === GROUP_SHEET_SOCKET_UPDATE_TRAVEL) {
@@ -539,11 +512,14 @@ function scheduleTravelPromptSequence(payload = {}) {
   if (payload.progress?.complete) return;
 
   const progress = payload.progress ?? {};
+  const progressStartedAt = Number(progress.progressStartedAt ?? 0) || 0;
+  const resolving = Boolean(progress.resolving) || (Boolean(progress.active) && progressStartedAt > 0);
+  if (!resolving || progressStartedAt <= 0) return;
+
   const durationMs = Math.max(1000, Number(progress.durationMs ?? getTravelProgressDurationMs()) || getTravelProgressDurationMs());
-  const startedAt = Number(progress.startedAt ?? payload.startedAt ?? 0) || Date.now();
-  const prepDurationMs = Math.max(0, Number(progress.prepDurationMs ?? getTravelPrepDurationMs()) || 0);
-  const progressStartedAt = Number(progress.progressStartedAt ?? 0) || (startedAt + prepDurationMs);
   const resolvedCount = Math.max(0, Number(progress.totalResolved ?? 0) || 0);
+  if (resolvedCount >= TRAVEL_ACTIVITIES.length) return;
+
   const nextBreakpoint = Math.min(TRAVEL_ACTIVITIES.length, resolvedCount + 1);
   const stepDuration = durationMs / TRAVEL_ACTIVITIES.length;
   const targetTime = progressStartedAt + (stepDuration * nextBreakpoint);
@@ -603,6 +579,8 @@ async function resolveNextTravelPromptStep(groupActorUuid, promptId) {
     ? groupData.travel.prompt.results
     : {};
   const progress = buildTravelProgress(groupData);
+  if (!progress.resolving || progress.progressStartedAt <= 0) return null;
+
   const step = progress.steps.find(existing => !existing.resolved);
   const activity = step ? getActivityByKey(ACTIVITY_KIND_TRAVEL, step.key) : null;
 
@@ -638,43 +616,10 @@ async function resolveNextTravelPromptStep(groupActorUuid, promptId) {
       console.warn(`${MODULE_ID} | GroupSheet | Could not announce empty travel step`, error);
     }
   } else {
-    for (const assignment of assignments) {
-      const key = getTravelAssignmentKey(activity.key, assignment.actorUuid);
-      const actor = await resolveActorFromUuid(assignment.actorUuid);
-      if (completedKeys.has(key)) continue;
-      if (!actor) {
-        result.failures += 1;
-        completedKeys.add(key);
-        continue;
-      }
-
-      const ability = getBestActivityAbility(actor, activity);
-      if (!ability) {
-        result.failures += 1;
-        completedKeys.add(key);
-        continue;
-      }
-
-      try {
-        const rollResult = await rollTravelAbilityAndWait(actor, ability, activity, {
-          fastForward: true,
-          timeoutMs: TRAVEL_AUTO_ROLL_RESULT_TIMEOUT_MS,
-        });
-        if (!isTravelRollResultParseable(rollResult)) {
-          throw new Error(`No parseable ${activity.name} roll result for ${actor.name}.`);
-        }
-        const outcome = getTravelRollOutcome(rollResult, activity.dc);
-        if (outcome.success) {
-          result.successes += outcome.count;
-        } else {
-          result.failures += outcome.count;
-        }
-        completedKeys.add(key);
-      } catch (error) {
-        console.warn(`${MODULE_ID} | GroupSheet | Could not resolve ${actor.name} ${activity.name}`, error);
-        result.failures += 1;
-        completedKeys.add(key);
-      }
+    const assignmentKeys = assignments.map(assignment => getTravelAssignmentKey(activity.key, assignment.actorUuid));
+    const allAssignmentsRolled = assignmentKeys.every(key => completedKeys.has(key));
+    if (!allAssignmentsRolled) {
+      return null;
     }
 
     groupData.travel.prompt.completedKeys = [...completedKeys];
@@ -740,8 +685,29 @@ async function applyTravelPlayerRollResult(groupActor, data = {}, requestingUser
   groupData.travel.prompt.completedKeys = [...completedKeys];
   groupData.travel.prompt.results[activity.key] = result;
 
+  const requiredKeys = getTravelAssignmentKeys(groupData);
+  const allRollsComplete = requiredKeys.length > 0 && requiredKeys.every(key => completedKeys.has(key));
+  const progressStartedAt = Number(groupData.travel.prompt.progressStartedAt ?? 0) || 0;
+  const shouldStartProgress = allRollsComplete && progressStartedAt <= 0;
+
+  if (shouldStartProgress) {
+    groupData.travel.prompt.progressStartedAt = Date.now();
+    groupData.travel.prompt.resolvedSteps = [];
+    groupData.travel.prompt.failedSteps = [];
+  }
+
   await groupActor.setFlag(MODULE_ID, "group", groupData);
-  return emitTravelPromptUpdate(groupActor, groupData);
+  const update = await emitTravelPromptUpdate(groupActor, groupData);
+
+  if (shouldStartProgress) {
+    scheduleTravelPromptSequence({
+      groupActorUuid: groupActor.uuid,
+      promptId: groupData.travel.prompt.id,
+      progress: update.progress,
+    });
+  }
+
+  return update;
 }
 export {
   removeTravelPromptElement,

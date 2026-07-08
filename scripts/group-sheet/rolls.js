@@ -4,11 +4,65 @@ import { ABILITIES, MODULE_ID, TRAVEL_ROLL_RESULT_TIMEOUT_MS } from "./constants
 import { getActorAbilityModifier } from "./actors.js";
 import { travelRollWaiters } from "./state.js";
 import { escapeHtml } from "./utils.js";
+function buildNativeStatCheckConfig(options = {}) {
+  const fastForward = Boolean(options.fastForward);
+  const dc = Number(options.dc ?? options.target);
+  const config = {
+    skipPrompt: fastForward,
+  };
+
+  if (Number.isFinite(dc)) config.mainRoll = { dc };
+
+  return config;
+}
+
+function buildNativeAbilityRollOptions(options = {}) {
+  const fastForward = Boolean(options.fastForward);
+
+  return {
+    ...options,
+    fastForward,
+    skipPrompt: fastForward,
+    skipDialog: fastForward,
+    dialog: !fastForward,
+    configureDialog: !fastForward,
+  };
+}
+
+async function rollNativeAbilityCheck(actor, ability, options = {}) {
+  if (typeof actor?.system?.rollStatCheck === "function") {
+    return {
+      called: true,
+      result: await actor.system.rollStatCheck(ability, buildNativeStatCheckConfig(options)),
+    };
+  }
+
+  const rollOptions = buildNativeAbilityRollOptions(options);
+  const methodNames = [
+    "rollAbilityCheck",
+    "rollAbilityTest",
+    "rollAbility",
+  ];
+
+  for (const methodName of methodNames) {
+    const method = actor?.[methodName];
+    if (typeof method !== "function") continue;
+
+    return {
+      called: true,
+      result: await method.call(actor, ability, rollOptions),
+    };
+  }
+
+  return { called: false, result: undefined };
+}
+
 async function rollActorAbility(actor, ability, options = {}) {
   if (!actor || !ability) return;
 
-  if (!options.forceManual && typeof actor.rollAbility === "function") {
-    return actor.rollAbility(ability, options);
+  if (!options.forceManual) {
+    const nativeRoll = await rollNativeAbilityCheck(actor, ability, options);
+    if (nativeRoll.called) return nativeRoll.result;
   }
 
   const label = ABILITIES.find(([key]) => key === ability)?.[1] ?? ability.toUpperCase();
@@ -380,6 +434,11 @@ async function rollTravelAbilityAndWait(actor, ability, activity, options = {}) 
   }
 
   if (isTravelRollResultParseable(immediateResult)) {
+    waiter.cancel();
+    return immediateResult;
+  }
+
+  if (immediateResult === false) {
     waiter.cancel();
     return immediateResult;
   }

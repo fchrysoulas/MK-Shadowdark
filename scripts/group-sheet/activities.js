@@ -4,14 +4,13 @@ import {
   ACTIVITY_KIND_CAMPING,
   ACTIVITY_KIND_TRAVEL,
   CAMPING_ACTIVITIES,
-  GROUP_TRAVEL_PREP_DURATION_DEFAULT_MS,
   TRAVEL_ACTIVITIES,
   TRAVEL_DEFAULT_ACTIVITY_KEY,
 } from "./constants.js";
 import { canUserControlActor, getFlagWithLegacy, resolveActorFromUuid } from "./actors.js";
 import { getActorClassName } from "./inventory.js";
-import { getTravelPrepDurationMs, getTravelProgressDurationMs } from "./group-settings.js";
-import { clampNumber, hasOwn } from "./utils.js";
+import { getTravelProgressDurationMs } from "./group-settings.js";
+import { hasOwn } from "./utils.js";
 function getActivityKind(kind) {
   return kind === ACTIVITY_KIND_TRAVEL ? ACTIVITY_KIND_TRAVEL : ACTIVITY_KIND_CAMPING;
 }
@@ -84,12 +83,7 @@ function normalizeTravelPrompt(value) {
   prompt.id = String(prompt.id ?? "");
   prompt.active = Boolean(prompt.active);
   prompt.startedAt = Number(prompt.startedAt ?? 0) || 0;
-  prompt.prepDurationMs = clampNumber(
-    prompt.prepDurationMs ?? getTravelPrepDurationMs(),
-    GROUP_TRAVEL_PREP_DURATION_DEFAULT_MS,
-    0,
-    60000
-  );
+  prompt.progressStartedAt = Number(prompt.progressStartedAt ?? 0) || 0;
   prompt.completedKeys = Array.isArray(prompt.completedKeys)
     ? [...new Set(prompt.completedKeys.filter(Boolean).map(String))]
     : [];
@@ -197,12 +191,8 @@ function buildTravelProgress(groupData) {
     : {};
   const promptActive = Boolean(groupData.travel.prompt?.active);
   const startedAt = Number(groupData.travel.prompt?.startedAt ?? 0) || 0;
-  const prepDurationMs = clampNumber(
-    groupData.travel.prompt?.prepDurationMs ?? getTravelPrepDurationMs(),
-    GROUP_TRAVEL_PREP_DURATION_DEFAULT_MS,
-    0,
-    60000
-  );
+  const progressStartedAt = Number(groupData.travel.prompt?.progressStartedAt ?? 0) || 0;
+  const resolving = promptActive && progressStartedAt > 0;
   const assignments = getEffectiveTravelAssignments(groupData);
   let activeStepFound = false;
   let totalAssigned = 0;
@@ -222,26 +212,28 @@ function buildTravelProgress(groupData) {
     const resolved = resolvedSteps.has(activity.key) || failed;
     const allRolled = hasAssigned && completedCount >= assignedCount;
     const complete = resolved && allRolled;
-    const active = promptActive && !resolved && !activeStepFound;
+    const active = resolving && !resolved && !activeStepFound;
     const result = isActivityStore(promptResults[activity.key])
       ? promptResults[activity.key]
       : {};
     const successes = Math.max(0, Number(result.successes ?? 0) || 0);
     const failures = Math.max(0, Number(result.failures ?? 0) || 0);
-    const successOutcome = resolved && successes > failures;
+    const successOutcome = resolved && successes > 0;
     const failureOutcome = resolved && !successOutcome;
-    const resultMarks = [
-      ...Array.from({ length: successes }, () => ({
-        type: "success",
-        symbol: "V",
-        label: "Success",
-      })),
-      ...Array.from({ length: failures }, () => ({
-        type: "failure",
-        symbol: "X",
-        label: "Failure",
-      })),
-    ];
+    const resultMarks = resolved
+      ? [
+        ...Array.from({ length: successes }, () => ({
+          type: "success",
+          symbol: "V",
+          label: "Success",
+        })),
+        ...Array.from({ length: failures }, () => ({
+          type: "failure",
+          symbol: "X",
+          label: "Failure",
+        })),
+      ]
+      : [];
 
     if (active) activeStepFound = true;
     totalAssigned += assignedCount;
@@ -251,15 +243,17 @@ function buildTravelProgress(groupData) {
     let statusLabel = "Waiting";
     if (resolved) {
       statusLabel = successOutcome ? "Success" : "Failure";
+    } else if (resolving && active) {
+      statusLabel = "Revealing";
     } else if (allRolled) {
       statusLabel = "Ready";
     } else if (!hasAssigned) {
-      statusLabel = active
+      statusLabel = resolving && active
         ? "No Assignment"
         : promptActive
           ? "Waiting"
           : "Unassigned";
-    } else if (active) {
+    } else if (promptActive) {
       statusLabel = "Rolling";
     }
 
@@ -279,7 +273,7 @@ function buildTravelProgress(groupData) {
       failures,
       resultMarks,
       active,
-      pending: promptActive && !resolved && !active,
+      pending: resolving && !resolved && !active,
       empty: !hasAssigned,
       statusLabel,
     };
@@ -287,14 +281,15 @@ function buildTravelProgress(groupData) {
 
   return {
     active: promptActive,
+    resolving,
     promptId: groupData.travel.prompt?.id ?? "",
     startedAt,
-    prepDurationMs,
-    progressStartedAt: startedAt + prepDurationMs,
+    progressStartedAt,
     durationMs: getTravelProgressDurationMs(),
     totalAssigned,
     totalCompleted,
     totalResolved,
+    rollingComplete: totalAssigned > 0 && totalCompleted >= totalAssigned,
     percent: Math.min(100, (totalResolved / TRAVEL_ACTIVITIES.length) * 100),
     complete: totalResolved >= TRAVEL_ACTIVITIES.length,
     steps,

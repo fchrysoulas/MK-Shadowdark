@@ -798,23 +798,9 @@
       onChange: refreshOpenActorSheets
     });
 
-    registerSetting("groupSheetTravelPrepDurationMs", {
-      name: "Group Sheet | Travelling Prep Duration (ms)",
-      hint: "Delay before the Travelling splash progress bar begins. Players may roll their assigned/default Travelling stat during this window.",
-      scope: "world",
-      config: true,
-      type: Number,
-      default: 10000,
-      range: {
-        min: 0,
-        max: 60000,
-        step: 500
-      }
-    });
-
     registerSetting("groupSheetTravelProgressDurationMs", {
       name: "Group Sheet | Travelling Progress Duration (ms)",
-      hint: "Total Travelling splash progress duration. Rolls resolve at each quarter of this duration as the bar reaches Pathfind, March, Lookout, and Scavenge.",
+      hint: "Total Travelling splash progress duration after every traveller has rolled. Results reveal as the bar reaches Pathfind, March, Lookout, and Scavenge.",
       scope: "world",
       config: true,
       type: Number,

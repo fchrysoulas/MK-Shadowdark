@@ -1375,7 +1375,8 @@
 body.sdx-travel-prompt-open .window-app.dialog,
 body.sdx-travel-prompt-open .app.window-app.dialog,
 body.sdx-travel-prompt-open .application.dialog,
-body.sdx-travel-prompt-open .dialog.application {
+body.sdx-travel-prompt-open .dialog.application,
+body.sdx-travel-prompt-open #sd-roll-dialog {
   z-index: 100010 !important;
 }
 

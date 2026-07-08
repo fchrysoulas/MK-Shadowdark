@@ -5,9 +5,7 @@ import {
   GROUP_MEMBER_PORTRAIT_SIZE_DEFAULT,
   GROUP_SETTING_ASSIGNED_TOKEN_SIZE,
   GROUP_SETTING_MEMBER_PORTRAIT_SIZE,
-  GROUP_SETTING_TRAVEL_PREP_DURATION_MS,
   GROUP_SETTING_TRAVEL_PROGRESS_DURATION_MS,
-  GROUP_TRAVEL_PREP_DURATION_DEFAULT_MS,
   GROUP_TRAVEL_PROGRESS_DURATION_DEFAULT_MS,
   MODULE_ID,
 } from "./constants.js";
@@ -39,15 +37,6 @@ function getMemberPortraitSizeSetting() {
   );
 }
 
-function getTravelPrepDurationMs() {
-  return clampNumber(
-    getSettingValue(GROUP_SETTING_TRAVEL_PREP_DURATION_MS, GROUP_TRAVEL_PREP_DURATION_DEFAULT_MS),
-    GROUP_TRAVEL_PREP_DURATION_DEFAULT_MS,
-    0,
-    60000
-  );
-}
-
 function getTravelProgressDurationMs() {
   return clampNumber(
     getSettingValue(GROUP_SETTING_TRAVEL_PROGRESS_DURATION_MS, GROUP_TRAVEL_PROGRESS_DURATION_DEFAULT_MS),
@@ -74,7 +63,6 @@ export {
   getSettingValue,
   getAssignedTokenSizeSetting,
   getMemberPortraitSizeSetting,
-  getTravelPrepDurationMs,
   getTravelProgressDurationMs,
   buildGroupSheetStyle,
 };

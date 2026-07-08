@@ -32,7 +32,7 @@ import {
   normalizeTravelPrompt,
   setActivityMember,
 } from "./activities.js";
-import { buildGroupSheetStyle, getTravelPrepDurationMs } from "./group-settings.js";
+import { buildGroupSheetStyle } from "./group-settings.js";
 import {
   buildCampingResources,
   buildHeaderSummary,
@@ -46,7 +46,6 @@ import {
   broadcastTravelPromptChat,
   clearTravelPromptTimer,
   removeTravelPromptElement,
-  scheduleTravelPromptSequence,
   showTravelRollPrompt,
 } from "./travel-prompt.js";
 import { getDialogFieldValue, numberOrZero, optionLabel } from "./utils.js";
@@ -629,7 +628,7 @@ class SDXGroupSheet extends ActorSheet {
       id: createTravelPromptId(),
       active: true,
       startedAt,
-      prepDurationMs: getTravelPrepDurationMs(),
+      progressStartedAt: 0,
       completedKeys: [],
       failedSteps: [],
       resolvedSteps: [],
@@ -640,7 +639,6 @@ class SDXGroupSheet extends ActorSheet {
 
     const payload = await buildTravelPromptPayload(this.actor, groupData);
     await showTravelRollPrompt(payload);
-    scheduleTravelPromptSequence(payload);
 
     game.socket?.emit(`module.${MODULE_ID}`, {
       feature: GROUP_SHEET_SOCKET_FEATURE,

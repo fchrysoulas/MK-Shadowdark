@@ -10,15 +10,15 @@ With -Publish, the script also creates the matching GitHub release when it does
 not exist, or updates the existing release by replacing the attached assets.
 
 .EXAMPLE
-.\release.ps1
+.\tools\release.ps1
 
 Builds the local Foundry release assets.
 
 .EXAMPLE
-.\release.ps1 -Publish
+.\tools\release.ps1 -Publish
 
 Builds the assets, creates or updates the GitHub release, and attaches
-module.json and mk-shadowdark-crafting.zip.
+module.json and mk-shadowdark.zip.
 #>
 [CmdletBinding(SupportsShouldProcess = $true)]
 param(
@@ -48,6 +48,28 @@ function Test-IsSubPath {
   $rootPrefix = "$fullRoot$([System.IO.Path]::DirectorySeparatorChar)"
 
   return $fullPath.Equals($fullRoot, $comparison) -or $fullPath.StartsWith($rootPrefix, $comparison)
+}
+
+function Get-RepositoryRoot {
+  param(
+    [Parameter(Mandatory = $true)]
+    [string]$StartPath
+  )
+
+  $current = (Resolve-Path -LiteralPath $StartPath).Path
+
+  while ($true) {
+    if (Test-Path -LiteralPath (Join-Path $current "module.json") -PathType Leaf) {
+      return $current
+    }
+
+    $parent = Split-Path -Parent $current
+    if ([string]::IsNullOrWhiteSpace($parent) -or $parent -eq $current) {
+      throw "Could not find repository root from $StartPath. Expected to find module.json in this directory or a parent."
+    }
+
+    $current = $parent
+  }
 }
 
 function ConvertTo-GitHubRepositorySlug {
@@ -458,7 +480,7 @@ function Test-GitHubReleaseExists {
   throw "GitHub CLI command failed while checking release $RepositorySlug@$TagName`: $message"
 }
 
-$repoRoot = $PSScriptRoot
+$repoRoot = Get-RepositoryRoot -StartPath $PSScriptRoot
 $manifestPath = Join-Path $repoRoot "module.json"
 
 if (-not (Test-Path -LiteralPath $manifestPath)) {

@@ -16,7 +16,6 @@ Quality-of-life extras and small expansions for the Shadowdark RPG system in Fou
 - **Equipment Hands**: checks equipped weapons, shields, and hand-occupying gear against available hand slots, either warning or blocking invalid loadouts.
 - **Group Sheet**: adds a party/group actor sheet for members, shared inventory, notes, and Camping task assignment.
 - **Camping Tasks**: provides Bed Down, Cook, Craft, Entertain, Scavenge, Hunt, Keep Watch, and Predict tasks with DCs, tooltips, icons, and drag-and-drop member assignment.
-- **Luck Reroll**: adds a reroll button under chat dice rolls for actors with Luck remaining.
 - **Quickdraw**: marks eligible inventory items as quickdraw, optionally auto-sorting them to the top of inventory lists.
 - **Time Passes**: lets the GM show a configurable time-passes splash and roll for a random encounter.
 - **Token Shadows**: draws configurable soft shadows under tokens on the canvas.

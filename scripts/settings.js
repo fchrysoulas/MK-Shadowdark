@@ -63,19 +63,6 @@
     log("registering settings");
 
     /* -------------------- */
-    /* Luck Reroll          */
-    /* -------------------- */
-
-    registerSetting("enableLuckReroll", {
-      name: "Luck Reroll | Enabled",
-      hint: "Adds a Luck Reroll button under each dice roll in chat for actors who still have Luck available.",
-      scope: "world",
-      config: true,
-      type: Boolean,
-      default: true
-    });
-
-    /* -------------------- */
     /* Auto Damage          */
     /* -------------------- */
 
@@ -823,7 +810,6 @@
     if (root.querySelector(".sdx-setting-header")) return;
 
     const groups = [
-      { title: "Luck Reroll", firstKey: "enableLuckReroll" },
       { title: "Auto Damage", firstKey: "autoDamageEnabled" },
       { title: "Token Shadows", firstKey: "tokenShadowsEnabled" },
       { title: "Death Timer", firstKey: "deathTimerEnabled" },

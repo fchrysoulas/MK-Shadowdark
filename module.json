@@ -2,7 +2,7 @@
   "id": "mk-shadowdark",
   "title": "MK-Shadowdark",
   "description": "Quality-of-life extras and expansions for the Shadowdark RPG system.",
-  "version": "1.0.3",
+  "version": "1.0.4",
   "compatibility": {
     "minimum": "12",
     "verified": "13",
@@ -34,7 +34,6 @@
     "scripts/editable-qty.js",
     "scripts/equipment-hands.js",
     "scripts/group-sheet.js",
-    "scripts/luck-reroll.js",
     "scripts/quickdraw-icons.js",
     "scripts/time-passes-splash.js",
     "scripts/token-shadows.js",

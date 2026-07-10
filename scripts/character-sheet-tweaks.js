@@ -1,5 +1,6 @@
 (() => {
   const MODULE_ID = "mk-shadowdark";
+  const LEGACY_MODULE_ID = "shadowdark-extras";
   const SUBMODULE = "Character Sheet Tweaks";
 
   function getModuleVersion() {
@@ -153,12 +154,29 @@
 
   function isPlayerActorSheet(app) {
     const actor = app?.actor ?? app?.object;
+    if (isGroupActor(actor)) return false;
+
     const type = String(actor?.type ?? "").toLowerCase();
     const appClasses = Array.from(app?.options?.classes ?? [])
       .join(" ")
       .toLowerCase();
 
     return type === "player" || appClasses.includes("player");
+  }
+
+  function isGroupActor(actor) {
+    if (!actor) return false;
+
+    try {
+      if (actor.getFlag?.(MODULE_ID, "isGroup")) return true;
+    } catch (_err) {
+      // Foundry v12 may throw on missing/inactive flag scopes.
+    }
+
+    return Boolean(
+      actor._source?.flags?.[MODULE_ID]?.isGroup
+      || actor._source?.flags?.[LEGACY_MODULE_ID]?.isGroup
+    );
   }
 
   function isShadowdarkItemSheet(app, root) {
@@ -557,17 +575,70 @@
     event.stopPropagation();
 
     const ability = String(event.currentTarget?.dataset?.sdxAbility ?? "").toLowerCase();
-    if (!ability || typeof actor?.rollAbility !== "function") return;
+    if (!ability || !actor) return;
 
     try {
-      await actor.rollAbility(ability, {
+      const nativeRoll = await rollNativeAbilityCheck(actor, ability, {
         event,
         fastForward: Boolean(event.shiftKey)
       });
+
+      if (!nativeRoll.called) {
+        ui.notifications?.warn("MK-Shadowdark | This Shadowdark actor cannot roll ability checks from the summary bar.");
+      }
     } catch (err) {
       console.error(`${MODULE_ID} v${getModuleVersion()} | ${SUBMODULE} | ability roll error`, err);
       ui.notifications?.error(`MK-Shadowdark | Could not roll ${ability.toUpperCase()} check.`);
     }
+  }
+
+  function buildNativeStatCheckConfig(options = {}) {
+    const fastForward = Boolean(options.fastForward);
+
+    return {
+      skipPrompt: fastForward
+    };
+  }
+
+  function buildNativeAbilityRollOptions(options = {}) {
+    const fastForward = Boolean(options.fastForward);
+
+    return {
+      ...options,
+      fastForward,
+      skipPrompt: fastForward,
+      skipDialog: fastForward,
+      dialog: !fastForward,
+      configureDialog: !fastForward
+    };
+  }
+
+  async function rollNativeAbilityCheck(actor, ability, options = {}) {
+    if (typeof actor?.system?.rollStatCheck === "function") {
+      return {
+        called: true,
+        result: await actor.system.rollStatCheck(ability, buildNativeStatCheckConfig(options))
+      };
+    }
+
+    const rollOptions = buildNativeAbilityRollOptions(options);
+    const methodNames = [
+      "rollAbilityCheck",
+      "rollAbilityTest",
+      "rollAbility"
+    ];
+
+    for (const methodName of methodNames) {
+      const method = actor?.[methodName];
+      if (typeof method !== "function") continue;
+
+      return {
+        called: true,
+        result: await method.call(actor, ability, rollOptions)
+      };
+    }
+
+    return { called: false, result: undefined };
   }
 
   function attachNativeLuckWatcher(app, root) {

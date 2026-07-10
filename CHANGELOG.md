@@ -2,6 +2,13 @@
 
 ## Unreleased
 
+## 1.0.6
+
+- Fixed the Create Actor dialog so the Group option is appended without hiding Shadowdark's normal actor types or showing the obsolete Base type.
+- Added an image file picker to the Time Passes skull icon path setting.
+- Fixed Character Sheet Tweaks so player-only summary bar controls do not appear on Group Sheets.
+- Fixed Character Sheet Tweaks summary bar ability buttons in Foundry v13 by using Shadowdark's native stat-check API.
+
 ## 1.0.5
 
 - Changed Corpse Token image selection to require a configured image picker setting instead of using a hardcoded default image.

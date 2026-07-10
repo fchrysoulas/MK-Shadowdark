@@ -687,6 +687,7 @@
       scope: "world",
       config: true,
       type: String,
+      filePicker: "image",
       default: "icons/svg/skull.svg"
     });
 

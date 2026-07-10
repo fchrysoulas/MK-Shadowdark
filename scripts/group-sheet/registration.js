@@ -36,6 +36,7 @@ import { sdxGroupLog } from "./utils.js";
 import { getGameUserById, isPrimaryActiveGm } from "./users.js";
 
 const GROUP_ACTOR_DIALOG_TYPE = "Group";
+const OBSOLETE_ACTOR_DIALOG_TYPES = new Set(["Base", "base"]);
 let actorCreateDialogPatched = false;
 
 function escapeHtml(value) {
@@ -49,13 +50,32 @@ function escapeHtml(value) {
 }
 
 function getActorDocumentTypes() {
-  const documentTypes =
-    game.system?.documentTypes?.Actor ??
-    game.documentTypes?.Actor ??
-    CONFIG.Actor?.documentClass?.metadata?.types ??
-    [];
+  const typeSources = [
+    CONFIG.Actor?.typeLabels,
+    CONFIG.Actor?.dataModels,
+    game.system?.documentTypes?.Actor,
+    game.documentTypes?.Actor,
+    CONFIG.Actor?.documentClass?.metadata?.types,
+    game.system?.model?.Actor,
+    game.system?.template?.Actor?.types,
+  ];
 
-  return [...new Set(Array.from(documentTypes).filter(Boolean))];
+  const types = [];
+  for (const source of typeSources) {
+    if (!source) continue;
+
+    if (Array.isArray(source)) {
+      types.push(...source);
+    } else if (source instanceof Set) {
+      types.push(...source);
+    } else if (typeof source === "object") {
+      types.push(...Object.keys(source));
+    }
+  }
+
+  types.push("Player", "NPC");
+
+  return [...new Set(types.filter(type => type && !OBSOLETE_ACTOR_DIALOG_TYPES.has(type)))];
 }
 
 function getActorTypeLabel(type) {

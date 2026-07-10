@@ -36,6 +36,72 @@ form.sdx-character-sheet-tweaks {
   --sdx-sheet-chip-label: inherit;
   --sdx-sheet-chip-text: inherit;
   --sdx-quickdraw-highlight: rgba(75, 210, 110, 0.18);
+  --sdx-display-font: "Blackcraft", var(--font-primary, serif);
+  --sdx-section-font: "Old Newspaper Font", var(--font-primary, serif);
+}
+
+/* -------------------------------------------- */
+/* Darkest Sun Sheet Styling                     */
+/* -------------------------------------------- */
+
+.shadowdark.sheet.sdx-character-sheet-tweaks .SD-title input {
+  color: #ffffff;
+  font-family: var(--sdx-display-font);
+  font-size: 3.2rem;
+  line-height: 1;
+  min-height: 90px;
+  padding-top: 14px;
+  text-shadow: 2px 2px #000000;
+}
+
+.shadowdark.sheet.sdx-character-sheet-tweaks .SD-box .header label,
+.shadowdark.sheet.sdx-character-sheet-tweaks .SD-banner {
+  font-family: var(--sdx-display-font);
+  font-size: 22px;
+  line-height: 1.15;
+  text-transform: none;
+}
+
+.shadowdark.sheet.sdx-character-sheet-tweaks h3 {
+  font-family: var(--sdx-section-font);
+  font-size: 18px;
+}
+
+.shadowdark.sheet.sdx-character-sheet-tweaks .SD-nav {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-evenly;
+  margin: 0 0 8px;
+  padding: 0;
+  border-bottom: none;
+  background-color: #000000;
+}
+
+.shadowdark.sheet.sdx-character-sheet-tweaks .SD-nav a {
+  margin: 0;
+  padding: 7px;
+  color: #999999;
+  font-family: var(--sdx-display-font);
+  font-size: 18px;
+}
+
+.shadowdark.sheet.sdx-character-sheet-tweaks .SD-nav a.active {
+  color: #000000;
+  text-decoration: none;
+  border-top: 2px solid #848484;
+  background-color: #e8e3cc;
+}
+
+.shadowdark.sheet.sdx-character-sheet-tweaks img.portrait {
+  border: 0;
+}
+
+.shadowdark.sheet.sdx-character-sheet-tweaks .SD-content-body {
+  padding: 5px 15px;
+}
+
+.shadowdark.sheet.sdx-character-sheet-tweaks .SD-header {
+  margin: 0;
 }
 
 /* -------------------------------------------- */

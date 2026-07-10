@@ -32,36 +32,166 @@ import { handleTravelRollChatMessage } from "./rolls.js";
 import { createGroupActor, SDXGroupSheet } from "./sheet.js";
 import { travelPromptChatMessagesSeen } from "./state.js";
 import { applyTravelPlayerRollResult, handleTravelPromptTransport } from "./travel-prompt.js";
-import { getRootElement, sdxGroupLog } from "./utils.js";
+import { sdxGroupLog } from "./utils.js";
 import { getGameUserById, isPrimaryActiveGm } from "./users.js";
-function addActorDirectoryButton(app, html) {
-  if (!game.user.isGM) return;
 
-  const enabled = getSettingValue("enableGroupActors", true);
-  if (!enabled) return;
+const GROUP_ACTOR_DIALOG_TYPE = "Group";
+let actorCreateDialogPatched = false;
 
-  const root = getRootElement(html);
-  if (!root) return;
+function escapeHtml(value) {
+  return String(value ?? "").replace(/[&<>"']/g, character => ({
+    "&": "&amp;",
+    "<": "&lt;",
+    ">": "&gt;",
+    "\"": "&quot;",
+    "'": "&#39;",
+  }[character]));
+}
 
-  if (root.querySelector(".sdx-create-group-actor")) return;
+function getActorDocumentTypes() {
+  const documentTypes =
+    game.system?.documentTypes?.Actor ??
+    game.documentTypes?.Actor ??
+    CONFIG.Actor?.documentClass?.metadata?.types ??
+    [];
 
-  const header =
-    root.querySelector(".directory-header .header-actions") ??
-    root.querySelector(".directory-header") ??
-    root;
+  return [...new Set(Array.from(documentTypes).filter(Boolean))];
+}
 
-  const button = document.createElement("button");
-  button.type = "button";
-  button.classList.add("sdx-create-group-actor");
-  button.innerHTML = `<i class="fas fa-users"></i> Group`;
-  button.title = "Create MK-Shadowdark Group";
+function getActorTypeLabel(type) {
+  if (type === GROUP_ACTOR_DIALOG_TYPE) return "Group";
 
-  button.addEventListener("click", event => {
-    event.preventDefault();
-    createGroupActor();
-  });
+  const label = CONFIG.Actor?.typeLabels?.[type];
+  if (label) return game.i18n.localize(label);
 
-  header.appendChild(button);
+  const typeKey = `TYPES.Actor.${type}`;
+  const localized = game.i18n.localize(typeKey);
+  return localized === typeKey ? type : localized;
+}
+
+function getActorCreationFormData(html) {
+  const root = html?.[0] ?? html;
+  const form = root?.querySelector?.("form");
+  if (!form) return {};
+
+  if (globalThis.FormDataExtended) {
+    return new FormDataExtended(form).object;
+  }
+
+  return Object.fromEntries(new FormData(form).entries());
+}
+
+function getFolderId(folder) {
+  if (!folder) return null;
+  return typeof folder === "string" ? folder : folder.id ?? null;
+}
+
+function getActorFolderOptions(selectedFolder) {
+  const selectedFolderId = getFolderId(selectedFolder);
+  const folders = Array.from(game.folders ?? [])
+    .filter(folder => folder.type === "Actor")
+    .sort((a, b) => String(a.name).localeCompare(String(b.name)));
+
+  if (!folders.length) return "";
+
+  const options = folders.map(folder => `
+    <option value="${escapeHtml(folder.id)}" ${folder.id === selectedFolderId ? "selected" : ""}>
+      ${escapeHtml(folder.name)}
+    </option>
+  `).join("");
+
+  return `
+    <div class="form-group">
+      <label>Folder</label>
+      <select name="folder">
+        <option value=""></option>
+        ${options}
+      </select>
+    </div>
+  `;
+}
+
+function shouldOfferGroupActorType(data = {}) {
+  return game.user?.isGM &&
+    getSettingValue("enableGroupActors", true) &&
+    (!data.type || data.type === GROUP_ACTOR_DIALOG_TYPE);
+}
+
+function buildActorCreateDialogContent(data = {}) {
+  const selectedType = data.type || getActorDocumentTypes()[0] || "Player";
+  const typeOptions = [...new Set([...getActorDocumentTypes(), GROUP_ACTOR_DIALOG_TYPE])]
+    .map(type => `
+      <option value="${escapeHtml(type)}" ${type === selectedType ? "selected" : ""}>
+        ${escapeHtml(getActorTypeLabel(type))}
+      </option>
+    `)
+    .join("");
+
+  return `
+    <form autocomplete="off">
+      <div class="form-group">
+        <label>Name</label>
+        <input type="text" name="name" value="${escapeHtml(data.name ?? "")}" autofocus>
+      </div>
+      <div class="form-group">
+        <label>Type</label>
+        <select name="type">${typeOptions}</select>
+      </div>
+      ${getActorFolderOptions(data.folder)}
+    </form>
+  `;
+}
+
+async function handleActorCreateDialog(actorClass, data, html) {
+  const formData = getActorCreationFormData(html);
+
+  if (formData.type === GROUP_ACTOR_DIALOG_TYPE) {
+    return createGroupActor({
+      name: formData.name || data.name || "New Group",
+      folder: formData.folder || getFolderId(data.folder),
+    });
+  }
+
+  const createData = foundry.utils.mergeObject(foundry.utils.deepClone(data), formData);
+  if (!createData.folder) delete createData.folder;
+
+  return actorClass.create(createData, { renderSheet: true });
+}
+
+function patchActorCreateDialog() {
+  if (actorCreateDialogPatched || !Actor?.createDialog) return;
+  actorCreateDialogPatched = true;
+
+  const originalCreateDialog = Actor.createDialog;
+
+  Actor.createDialog = function patchedCreateDialog(data = {}, options = {}, ...args) {
+    if (!shouldOfferGroupActorType(data)) {
+      return originalCreateDialog.call(this, data, options, ...args);
+    }
+
+    const actorClass = this?.create ? this : Actor;
+    const actorLabel = game.i18n.localize(actorClass.metadata?.label ?? "DOCUMENT.Actor");
+    const title = game.i18n.format("DOCUMENT.Create", { type: actorLabel }) || "Create Actor";
+
+    return Dialog.wait({
+      title,
+      content: buildActorCreateDialogContent(data),
+      buttons: {
+        create: {
+          icon: "<i class='fas fa-plus'></i>",
+          label: title,
+          callback: html => handleActorCreateDialog(actorClass, data, html),
+        },
+        cancel: {
+          icon: "<i class='fas fa-times'></i>",
+          label: "Cancel",
+          callback: () => null,
+        },
+      },
+      default: "create",
+      close: () => null,
+    }, options);
+  };
 }
 
 function rerenderOpenGroupSheets(updatedActor) {
@@ -285,7 +415,7 @@ function registerGroupSheet() {
   // shadowdark-extras.SDXGroupSheet to mk-shadowdark.SDXGroupSheet.
   // Keeping both registrations can confuse libWrapper-based modules such as Item Piles.
 
-  Hooks.on("renderActorDirectory", addActorDirectoryButton);
+  patchActorCreateDialog();
   Hooks.on("updateActor", rerenderOpenGroupSheets);
   Hooks.on("createChatMessage", handleTravelPromptChatMessage);
 

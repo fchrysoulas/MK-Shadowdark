@@ -629,13 +629,6 @@
   text-align: center;
 }
 
-.sdx-create-group-actor {
-  display: inline-flex;
-  align-items: center;
-  gap: 5px;
-  margin-left: 4px;
-}
-
 /* -------------------------------------------- */
 /* Inventory                                    */
 /* -------------------------------------------- */

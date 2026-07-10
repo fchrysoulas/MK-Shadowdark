@@ -27,6 +27,20 @@
     "HP", "LUCK", "|", "STR", "DEX", "CON", "INT", "WIS", "CHA", "SLOTS"
   ];
 
+  const ACTOR_SHEET_RENDER_HOOKS = [
+    "renderActorSheet",
+    "renderShadowdarkActorSheet",
+    "renderShadowdarkActorSheetV2",
+    "renderActorSheetShadowdark"
+  ];
+
+  const ITEM_SHEET_RENDER_HOOKS = [
+    "renderItemSheet",
+    "renderShadowdarkItemSheet",
+    "renderShadowdarkItemSheetV2",
+    "renderItemSheetShadowdark"
+  ];
+
   const VALID_BAR_ELEMENTS = new Set([
     "LVL", "HP", "AC", "XP", "LUCK", "SLOTS",
     "STR", "DEX", "CON", "INT", "WIS", "CHA", "|"
@@ -37,28 +51,50 @@
     log("initialized");
   });
 
-  Hooks.on("renderActorSheet", (app, html, data) => {
-    try {
-      onRenderActorSheet(app, html, data);
-    } catch (err) {
-      console.error(`${MODULE_ID} v${getModuleVersion()} | ${SUBMODULE} | render error`, err);
-    }
-  });
+  for (const hookName of ACTOR_SHEET_RENDER_HOOKS) {
+    Hooks.on(hookName, (app, html, data) => {
+      try {
+        onRenderActorSheet(app, html, data);
+      } catch (err) {
+        console.error(`${MODULE_ID} v${getModuleVersion()} | ${SUBMODULE} | render error`, err);
+      }
+    });
+  }
+
+  for (const hookName of ITEM_SHEET_RENDER_HOOKS) {
+    Hooks.on(hookName, (app, html, data) => {
+      try {
+        onRenderItemSheet(app, html, data);
+      } catch (err) {
+        console.error(`${MODULE_ID} v${getModuleVersion()} | ${SUBMODULE} | item render error`, err);
+      }
+    });
+  }
 
   function onRenderActorSheet(app, html, data) {
     const root = getRootElement(html);
     if (!root?.querySelector) return;
 
-    if (!isShadowdarkPlayerSheet(app, root)) return;
+    if (!isShadowdarkActorSheet(app, root)) return;
 
     const form = getPlayerForm(root);
     const windowEl = getWindowElement(root);
+    const isPlayer = isPlayerActorSheet(app);
 
     cleanupSheet(root, windowEl, form);
 
     if (!getSetting(SETTINGS.ENABLED, true)) return;
 
-    applySheetClasses(windowEl, form);
+    applySheetClasses(windowEl, form, {
+      highlightEquipped: isPlayer && getSetting(SETTINGS.HIGHLIGHT_EQUIPPED, true),
+      hideLogo: getSetting(SETTINGS.HIDE_LOGO, true),
+      summaryBar: isPlayer && getSetting(SETTINGS.SUMMARY_BAR, true)
+    });
+
+    if (!isPlayer) {
+      log("applied visual style", app.actor?.name ?? app.object?.name ?? "unknown actor");
+      return;
+    }
 
     if (getSetting(SETTINGS.SUMMARY_BAR, true)) {
       injectSummaryBar(app, form ?? root, data);
@@ -81,30 +117,68 @@
     log("applied", app.actor?.name ?? app.object?.name ?? "unknown actor");
   }
 
+  function onRenderItemSheet(app, html, _data) {
+    const root = getRootElement(html);
+    if (!root?.querySelector) return;
+    if (!isShadowdarkItemSheet(app, root)) return;
+
+    const form = getPlayerForm(root);
+    const windowEl = getWindowElement(root);
+
+    cleanupSheet(root, windowEl, form);
+
+    if (!getSetting(SETTINGS.ENABLED, true)) return;
+
+    applySheetClasses(windowEl, form, {
+      highlightEquipped: false,
+      hideLogo: false,
+      summaryBar: false
+    });
+
+    log("applied item visual style", app.item?.name ?? app.object?.name ?? "unknown item");
+  }
+
   /* -------------------------------------------- */
   /* Sheet Detection                              */
   /* -------------------------------------------- */
 
-  function isShadowdarkPlayerSheet(app, root) {
+  function isShadowdarkActorSheet(app, root) {
     if (game.system?.id !== "shadowdark") return false;
 
     const actor = app?.actor ?? app?.object;
     if (!actor || actor.documentName !== "Actor") return false;
 
-    const type = String(actor.type ?? "").toLowerCase();
+    return looksLikeShadowdarkSheet(root);
+  }
+
+  function isPlayerActorSheet(app) {
+    const actor = app?.actor ?? app?.object;
+    const type = String(actor?.type ?? "").toLowerCase();
     const appClasses = Array.from(app?.options?.classes ?? [])
       .join(" ")
       .toLowerCase();
 
-    const looksLikeShadowdark35PlayerSheet = Boolean(
-      root.querySelector?.("header.SD-header")
-      && root.querySelector?.("nav.SD-nav[data-group='primary'], nav.SD-nav")
-      && root.querySelector?.("section.SD-content-body")
-    );
-
-    if (!looksLikeShadowdark35PlayerSheet) return false;
-
     return type === "player" || appClasses.includes("player");
+  }
+
+  function isShadowdarkItemSheet(app, root) {
+    if (game.system?.id !== "shadowdark") return false;
+
+    const item = app?.item ?? app?.object;
+    if (!item || item.documentName !== "Item") return false;
+
+    return looksLikeShadowdarkSheet(root);
+  }
+
+  function looksLikeShadowdarkSheet(root) {
+    return Boolean(
+      root.matches?.(".shadowdark.sheet")
+      || root.querySelector?.(".shadowdark.sheet")
+      || (
+        root.querySelector?.("header.SD-header")
+        && root.querySelector?.("section.SD-content-body, .SD-content-body")
+      )
+    );
   }
 
   function getRootElement(html) {
@@ -151,9 +225,7 @@
     }
   }
 
-  function applySheetClasses(windowEl, form) {
-    const highlightEquipped = getSetting(SETTINGS.HIGHLIGHT_EQUIPPED, true);
-    const hideLogo = getSetting(SETTINGS.HIDE_LOGO, true);
+  function applySheetClasses(windowEl, form, { highlightEquipped = false, hideLogo = false, summaryBar = false } = {}) {
     const headerBackground = normalizeImagePath(getSetting(SETTINGS.HEADER_BG, ""));
     const fontScale = clampNumber(Number(getSetting(SETTINGS.FONT_SCALE, 120)) || 120, 80, 130);
     const valueFontSize = clampNumber(Number(getSetting(SETTINGS.BAR_VALUE_FONT_SIZE, 13)) || 13, 8, 24);
@@ -161,7 +233,6 @@
     const barButtonScale = clampNumber(Number(getSetting(SETTINGS.BAR_BUTTON_SCALE, 100)) || 100, 70, 140);
     const barPositionX = clampNumber(Number(getSetting(SETTINGS.BAR_POSITION_X, 20)) || 0, -250, 250);
     const barPositionY = clampNumber(Number(getSetting(SETTINGS.BAR_POSITION_Y, 8)) || 0, -150, 150);
-    const summaryBarEnabled = getSetting(SETTINGS.SUMMARY_BAR, true);
 
     for (const el of uniqueElements([windowEl, form])) {
       el.classList.add("sdx-character-sheet-tweaks");
@@ -174,7 +245,7 @@
 
       if (hideLogo) el.classList.add("sdx-hide-shadowdark-logo");
       if (highlightEquipped) el.classList.add("sdx-highlight-equipped");
-      if (summaryBarEnabled) el.classList.add("sdx-summary-bar-in-header");
+      if (summaryBar) el.classList.add("sdx-summary-bar-in-header");
 
       if (headerBackground) {
         el.classList.add("sdx-has-header-background");
@@ -956,7 +1027,7 @@
     }
 
     if (clean.startsWith("images/")) {
-      return toFoundryRoute(`modules/${MODULE_ID}/assets/${clean}`);
+      return toFoundryRoute(clean);
     }
 
     if (clean.includes("/")) {

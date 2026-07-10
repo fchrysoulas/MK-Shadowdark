@@ -2,7 +2,13 @@
 
 ## Unreleased
 
+## 1.0.5
+
 - Changed Corpse Token image selection to require a configured image picker setting instead of using a hardcoded default image.
+- Added scoped Shadowdark player sheet typography and navigation styling to Character Sheet Tweaks.
+- Updated Character Sheet header background paths under `images/` to resolve from the Foundry host root.
+- Extended Character Sheet Tweaks visual styling to Shadowdark NPC actor sheets and item sheets while keeping player-only controls on player sheets.
+- Moved Group creation into the standard Create Actor type dropdown and removed the separate Actor Directory Group button.
 
 ## 1.0.4
 

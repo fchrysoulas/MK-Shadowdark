@@ -478,7 +478,7 @@
 
     registerSetting("characterSheetTweaksHeaderBackgroundImage", {
       name: "Character Sheet | Header Background Image",
-      hint: "Optional image path for the player sheet header background. Bare filenames are read from modules/mk-shadowdark/assets/.",
+      hint: "Optional image path for the player sheet header background. File picker paths under images/ are read from the Foundry host root; bare filenames are read from modules/mk-shadowdark/assets/.",
       scope: "world",
       config: true,
       type: String,

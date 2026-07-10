@@ -50,14 +50,14 @@ import {
 } from "./travel-prompt.js";
 import { clampNumber, getDialogFieldValue, numberOrZero, optionLabel } from "./utils.js";
 import { getPrimaryActiveGm } from "./users.js";
-async function createGroupActor() {
+async function createGroupActor({ name = "New Group", folder = null } = {}) {
   if (!game.user.isGM) {
     ui.notifications.warn("Only the GM can create a MK-Shadowdark group.");
     return null;
   }
 
-  const actor = await Actor.create({
-    name: "New Group",
+  const actorData = {
+    name: String(name || "").trim() || "New Group",
     type: "Player",
     img: "icons/svg/cowled.svg",
     system: {
@@ -88,9 +88,12 @@ async function createGroupActor() {
         },
       },
     },
-  });
+  };
 
-  actor.sheet.render(true);
+  if (folder) actorData.folder = folder;
+
+  const actor = await Actor.create(actorData);
+  actor?.sheet?.render(true);
   return actor;
 }
 

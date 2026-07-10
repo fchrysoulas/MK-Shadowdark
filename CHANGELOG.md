@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Changed Corpse Token image selection to require a configured image picker setting instead of using a hardcoded default image.
+
 ## 1.0.4
 
 - Changed Travelling prompts so only player/GM submitted rolls are used; the progress bar now starts after all travelling rolls are complete and reveals stored results at each activity.

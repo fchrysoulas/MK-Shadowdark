@@ -3,7 +3,6 @@ const FEATURE_LABEL = "MK Shadowdark Corpse Token";
 const FLAG_KEY = "corpseToken";
 
 const HP_PATH = "system.attributes.hp.value";
-const DEFAULT_CORPSE_IMAGE = "https://foundry.mikrokouneli.gr/worlds/shadowdark/tokens/ds_corpse.png";
 
 const SETTINGS = {
   enabled: "corpseTokenEnabled",
@@ -22,7 +21,7 @@ const SETTINGS = {
 
 const DEFAULTS = {
   [SETTINGS.enabled]: true,
-  [SETTINGS.corpseImage]: DEFAULT_CORPSE_IMAGE,
+  [SETTINGS.corpseImage]: "",
   [SETTINGS.onlyNpcs]: true,
   [SETTINGS.width]: 1,
   [SETTINGS.height]: 1,
@@ -46,6 +45,7 @@ const DEATH_POSITION_CACHE_TTL_MS = 10_000;
 
 let scanTimer = null;
 let updateInProgress = false;
+let missingCorpseImageWarningShown = false;
 const deathPositionCache = new Map();
 const imageAlphaBoundsCache = new Map();
 const actorProcessingTimers = new Map();
@@ -83,6 +83,24 @@ function getSetting(key) {
   } catch (_err) {
     return DEFAULTS[key];
   }
+}
+
+function getCorpseImageSetting() {
+  return String(getSetting(SETTINGS.corpseImage) ?? "").trim();
+}
+
+function hasConfiguredCorpseImage({ notify = true } = {}) {
+  const corpseImage = getCorpseImageSetting();
+  if (corpseImage) return true;
+
+  if (!missingCorpseImageWarningShown) {
+    missingCorpseImageWarningShown = true;
+    const message = "Corpse Token image is not configured. Select an image in the MK-Shadowdark module settings.";
+    warn(message);
+    if (notify) ui?.notifications?.warn?.(message);
+  }
+
+  return false;
 }
 
 function toFiniteNumber(value, fallback) {
@@ -817,7 +835,8 @@ async function debugSelectedTokenCoordinates() {
 
 function isAlreadyCorpse(tokenOrDocument) {
   const state = getTokenState(tokenOrDocument);
-  const corpseImage = getSetting(SETTINGS.corpseImage);
+  const corpseImage = getCorpseImageSetting();
+  if (!corpseImage) return false;
   const corpseWidth = toFiniteNumber(getSetting(SETTINGS.width), 1);
   const corpseHeight = toFiniteNumber(getSetting(SETTINGS.height), 1);
   const corpseScale = toFiniteNumber(getSetting(SETTINGS.scale), 0.7);
@@ -830,7 +849,8 @@ function isAlreadyCorpse(tokenOrDocument) {
 }
 
 async function getCorpsePlacementForFallPoint(fallPoint) {
-  const corpseImage = getSetting(SETTINGS.corpseImage);
+  const corpseImage = getCorpseImageSetting();
+  if (!corpseImage) throw new Error("Corpse Token image is not configured.");
   const corpseWidth = toFiniteNumber(getSetting(SETTINGS.width), 1);
   const corpseHeight = toFiniteNumber(getSetting(SETTINGS.height), 1);
   const corpseScale = toFiniteNumber(getSetting(SETTINGS.scale), 0.7);
@@ -932,6 +952,7 @@ async function applyCorpseToToken(tokenOrDocument) {
   const actor = document?.actor ?? token?.actor;
 
   if (!document || !actor) return false;
+  if (!hasConfiguredCorpseImage()) return false;
   if (!shouldProcessActor(actor)) return false;
 
   const hp = getHp(actor);
@@ -1290,12 +1311,17 @@ function registerSettings() {
   });
 
   game.settings.register(MODULE_ID, SETTINGS.corpseImage, {
-    name: "Corpse Token: Image Path",
-    hint: "Image used for dead NPC tokens.",
+    name: "Corpse Token: Image",
+    hint: "Select the image used for dead NPC tokens. No corpse token is applied until an image is selected.",
     scope: "world",
     config: true,
     type: String,
-    default: DEFAULTS[SETTINGS.corpseImage]
+    filePicker: "image",
+    default: DEFAULTS[SETTINGS.corpseImage],
+    onChange: () => {
+      missingCorpseImageWarningShown = false;
+      imageAlphaBoundsCache.clear();
+    }
   });
 
   game.settings.register(MODULE_ID, SETTINGS.onlyNpcs, {

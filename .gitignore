@@ -27,4 +27,4 @@ Backups/
 
 # Agents & release
 .agents
-/release.ps1
+tools/

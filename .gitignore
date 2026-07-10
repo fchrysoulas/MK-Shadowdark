@@ -24,3 +24,7 @@ Backups/
 # Temporary files
 *.tmp
 *.bak
+
+# Agents & release
+.agents
+release.ps1

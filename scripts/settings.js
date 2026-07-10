@@ -1,11 +1,3 @@
-/*
- * MK-Shadowdark - Settings
- * Foundry VTT v12/v13
- *
- * Central registry for all MK-Shadowdark settings.
- * Feature files should read settings, not register them.
- */
-
 (() => {
   const MODULE_ID = "mk-shadowdark";
   const SUBMODULE = "Settings";

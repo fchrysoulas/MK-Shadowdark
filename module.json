@@ -29,6 +29,7 @@
     "scripts/settings.js",
     "scripts/auto-apply-damage.js",
     "scripts/character-sheet-tweaks.js",
+    "scripts/corpse-token.js",
     "scripts/death-timer.js",
     "scripts/editable-qty.js",
     "scripts/equipment-hands.js",

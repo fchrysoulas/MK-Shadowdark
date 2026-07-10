@@ -1,5 +1,3 @@
-// scripts/group-sheet/rolls.js
-
 import { ABILITIES, MODULE_ID, TRAVEL_ROLL_RESULT_TIMEOUT_MS } from "./constants.js";
 import { getActorAbilityModifier } from "./actors.js";
 import { travelRollWaiters } from "./state.js";

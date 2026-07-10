@@ -95,6 +95,14 @@
           </select>
         </label>
 
+        <label class="sdx-travel-number-control">MPH
+          <input type="number" data-action="change-miles-per-hour" value="{{sdx.travel.milesPerHour}}" min="0" max="100" step="0.1">
+        </label>
+
+        <label class="sdx-travel-number-control">Hexes
+          <input type="number" data-action="change-hexes-to-explore" value="{{sdx.travel.hexesToExplore}}" min="0" max="999" step="1">
+        </label>
+
         {{#if sdx.canEditGroup}}
         <button type="button" data-action="start-travel-rolls" {{#unless sdx.travel.hasAssigned}}disabled{{/unless}}>
           <i class="fas fa-bullhorn"></i> Prompt Travelling

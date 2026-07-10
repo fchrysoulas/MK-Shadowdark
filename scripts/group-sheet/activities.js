@@ -1,16 +1,16 @@
-// scripts/group-sheet/activities.js
-
 import {
   ACTIVITY_KIND_CAMPING,
   ACTIVITY_KIND_TRAVEL,
   CAMPING_ACTIVITIES,
+  GROUP_TRAVEL_HEXES_DEFAULT,
+  GROUP_TRAVEL_MILES_PER_HOUR_DEFAULT,
   TRAVEL_ACTIVITIES,
   TRAVEL_DEFAULT_ACTIVITY_KEY,
 } from "./constants.js";
 import { canUserControlActor, getFlagWithLegacy, resolveActorFromUuid } from "./actors.js";
 import { getActorClassName } from "./inventory.js";
 import { getTravelProgressDurationMs } from "./group-settings.js";
-import { hasOwn } from "./utils.js";
+import { clampNumber, hasOwn } from "./utils.js";
 function getActivityKind(kind) {
   return kind === ACTIVITY_KIND_TRAVEL ? ACTIVITY_KIND_TRAVEL : ACTIVITY_KIND_CAMPING;
 }
@@ -351,6 +351,18 @@ function getGroupData(actor) {
   existing.camping ??= {};
   existing.travel.weather ??= "normal";
   existing.travel.speed ??= "normal";
+  existing.travel.milesPerHour = clampNumber(
+    existing.travel.milesPerHour,
+    GROUP_TRAVEL_MILES_PER_HOUR_DEFAULT,
+    0,
+    100
+  );
+  existing.travel.hexesToExplore = Math.round(clampNumber(
+    existing.travel.hexesToExplore,
+    GROUP_TRAVEL_HEXES_DEFAULT,
+    0,
+    999
+  ));
 
   const legacyTravelActivities = isActivityStore(existing.travel.activities)
     ? existing.travel.activities

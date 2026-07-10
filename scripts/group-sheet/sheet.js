@@ -1,5 +1,3 @@
-// scripts/group-sheet/sheet.js
-
 import {
   ABILITIES,
   ACTIVITY_KIND_CAMPING,
@@ -10,6 +8,8 @@ import {
   GROUP_SHEET_SOCKET_ASSIGN_TRAVEL,
   GROUP_SHEET_SOCKET_FEATURE,
   GROUP_SHEET_SOCKET_PROMPT_TRAVEL,
+  GROUP_TRAVEL_HEXES_DEFAULT,
+  GROUP_TRAVEL_MILES_PER_HOUR_DEFAULT,
   MODULE_ID,
   SHEET_ID,
   SPEED_OPTIONS,
@@ -48,7 +48,7 @@ import {
   removeTravelPromptElement,
   showTravelRollPrompt,
 } from "./travel-prompt.js";
-import { getDialogFieldValue, numberOrZero, optionLabel } from "./utils.js";
+import { clampNumber, getDialogFieldValue, numberOrZero, optionLabel } from "./utils.js";
 import { getPrimaryActiveGm } from "./users.js";
 async function createGroupActor() {
   if (!game.user.isGM) {
@@ -205,6 +205,8 @@ class SDXGroupSheet extends ActorSheet {
         weather: groupData.travel.weather,
         weatherLabel: optionLabel(WEATHER_OPTIONS, groupData.travel.weather),
         speed: groupData.travel.speed,
+        milesPerHour: groupData.travel.milesPerHour,
+        hexesToExplore: groupData.travel.hexesToExplore,
         speedOptions: SPEED_OPTIONS.map(option => ({
           ...option,
           selected: option.value === groupData.travel.speed,
@@ -251,6 +253,14 @@ class SDXGroupSheet extends ActorSheet {
 
     html.find("[data-action='change-speed']").on("change", event => {
       this._onChangeSpeed(event);
+    });
+
+    html.find("[data-action='change-miles-per-hour']").on("change", event => {
+      this._onChangeMilesPerHour(event);
+    });
+
+    html.find("[data-action='change-hexes-to-explore']").on("change", event => {
+      this._onChangeHexesToExplore(event);
     });
 
     html.find("[data-action='start-travel-rolls']").on("click", event => {
@@ -599,6 +609,36 @@ class SDXGroupSheet extends ActorSheet {
 
     const groupData = getGroupData(this.actor);
     groupData.travel.speed = event.currentTarget.value;
+
+    await this._saveGroupData(groupData);
+    this.render(false);
+  }
+
+  async _onChangeMilesPerHour(event) {
+    event.preventDefault();
+
+    const groupData = getGroupData(this.actor);
+    groupData.travel.milesPerHour = clampNumber(
+      event.currentTarget.value,
+      GROUP_TRAVEL_MILES_PER_HOUR_DEFAULT,
+      0,
+      100
+    );
+
+    await this._saveGroupData(groupData);
+    this.render(false);
+  }
+
+  async _onChangeHexesToExplore(event) {
+    event.preventDefault();
+
+    const groupData = getGroupData(this.actor);
+    groupData.travel.hexesToExplore = Math.round(clampNumber(
+      event.currentTarget.value,
+      GROUP_TRAVEL_HEXES_DEFAULT,
+      0,
+      999
+    ));
 
     await this._saveGroupData(groupData);
     this.render(false);

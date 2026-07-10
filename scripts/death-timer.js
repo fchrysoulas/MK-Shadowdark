@@ -1,23 +1,4 @@
-/*
- * MK-Shadowdark - Death Timer
- * Foundry VTT v12/v13
- *
- * Settings are registered in scripts/settings.js.
- */
-
 (() => {
-  // scripts/death-timer.js
-  // MK-Shadowdark - Death Timer (NO HBS MODS)
-  // Skull-only button with tooltip.
-  // HP <= 0 logic:
-  // - First click at 0 HP: roll 1d4 + CON mod (min 1), add condition "Death Timer (X)"
-  // - Subsequent clicks at 0 HP: roll 1d20
-  //   - 20: remove condition and set HP to 1
-  //   - 1: reduce timer by 2
-  //   - 2-19: reduce timer by 1
-  // - When timer reaches 0: remove "Death Timer" and add the system's built-in Dead status
-  // - If the actor gains HP at any time: remove Death Timer and Dead automatically
-
   const MODULE_ID = "mk-shadowdark";
   const SUBMODULE = "DeathTimer";
   const DEATH_TIMER_STATUS_ID = "sdx-death-timer";

@@ -1,5 +1,3 @@
-// scripts/group-sheet/actors.js
-
 import {
   GROUP_HP_DEFAULT,
   GROUP_HP_MAX_PATH,

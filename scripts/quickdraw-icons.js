@@ -1,10 +1,3 @@
-/*
- * MK-Shadowdark - Quickdraw Icons
- * Foundry VTT v12/v13
- *
- * Settings are registered in scripts/settings.js.
- */
-
 (() => {
   const MODULE_ID = "mk-shadowdark";
   const FLAG_KEY = "quickdraw";

@@ -1,25 +1,4 @@
-/*
- * MK-Shadowdark - Time Passes Splash
- * Foundry VTT v12/v13
- *
- * Settings are registered in scripts/settings.js.
- */
-
 (() => {
-  // scripts/time-passes-splash.js
-  // MK-Shadowdark - Time Passes Splash (Foundry VTT v12/v13)
-  //
-  // Flow:
-  // 1) Splash #1: preText (+ optional progress bar) for N ms (everyone)
-  // 2) Roll Nd6 publicly (Dice So Nice / 3D dice)
-  // 3) Encounter rule:
-  //    - If rolling multiple d6: encounter if ANY die shows 1
-  //    - If rolling 1d6: encounter if the die shows 1
-  // 4) If encounter: Splash #2: encounterText + inline skull (same line), no number
-  //    Else: nothing
-  //
-  // Broadcast via ChatMessage flags (reliable across clients)
-
   const MODULE_ID = "mk-shadowdark";
   const FLAG_KEY = "timePassesSplash";
   const HOOK_FLAG = "__sdxTimePassesSplashHookInstalled";

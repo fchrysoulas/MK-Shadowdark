@@ -1,7 +1,3 @@
-/* ---------------------------------------- */
-/* MK-Shadowdark - Editable Qty         */
-/* ---------------------------------------- */
-
 (() => {
   const MODULE_ID = "mk-shadowdark";
   const FEATURE = "EditableQty";

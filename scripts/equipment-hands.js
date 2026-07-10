@@ -1,19 +1,3 @@
-/*
- * MK-Shadowdark - Equipment Hands
- * Foundry VTT v12/v13
- *
- * Validates hand-slot usage for equipped Shadowdark items.
- * Settings are registered in scripts/settings.js.
- *
- * Rules:
- * - Characters have a configurable number of hand slots, default 2.
- * - Equipped 1H weapons use 1 hand.
- * - Equipped 2H weapons use 2 hands.
- * - Equipped shields use 1 hand.
- * - Equipped items with the "Occupies One Hand" property use 1 hand.
- * - Optional setting can disallow dual wielding.
- */
-
 (() => {
   const MODULE_ID = "mk-shadowdark";
   const SUBMODULE = "EquipmentHands";

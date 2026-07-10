@@ -1,13 +1,4 @@
-/*
- * MK-Shadowdark - Luck Reroll
- * Foundry VTT v12/v13
- *
- * Settings are registered in scripts/settings.js.
- */
-
 (() => {
-  // scripts/luck-reroll.js
-
   const MODULE_ID = "mk-shadowdark";
   const LUCK_BUTTON_LABEL = "Luck Reroll";
 
@@ -24,7 +15,6 @@
    */
   Hooks.on("renderChatMessage", (message, html, data) => {
     try {
-      // module setting is registered in scripts/settings.js
       if (!game.settings.get(MODULE_ID, "enableLuckReroll")) return;
       if (game.system.id !== "shadowdark") return;
 

@@ -1,13 +1,3 @@
-/*
- * MK-Shadowdark - Core
- * Foundry VTT v12/v13
- *
- * Shared module boot file.
- * Feature logic lives in separate feature files.
- *
- * Base Management has been removed from mk-shadowdark.
- */
-
 (() => {
   const MODULE_ID = "mk-shadowdark";
   const SUBMODULE = "Core";

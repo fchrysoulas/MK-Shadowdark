@@ -1,4 +1,3 @@
-// scripts/group-sheet/users.js
 function getPrimaryActiveGm() {
   return Array.from(game.users ?? [])
     .filter(user => user.active && user.isGM)

@@ -1,5 +1,3 @@
-// scripts/group-sheet/group-settings.js
-
 import {
   GROUP_ASSIGNED_TOKEN_SIZE_DEFAULT,
   GROUP_MEMBER_PORTRAIT_SIZE_DEFAULT,

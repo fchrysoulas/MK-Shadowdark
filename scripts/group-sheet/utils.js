@@ -1,5 +1,3 @@
-// scripts/group-sheet/utils.js
-
 import { MODULE_ID } from "./constants.js";
 function sdxGroupLog(...args) {
   console.log(`${MODULE_ID} | GroupSheet |`, ...args);

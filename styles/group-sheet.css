@@ -45,6 +45,23 @@
   color: white;
 }
 
+.sdx-group-sheet select {
+  background-color: #171717;
+  color-scheme: dark;
+}
+
+.sdx-group-sheet select option,
+.sdx-group-sheet select optgroup {
+  background-color: #171717;
+  color: var(--sdx-group-text);
+}
+
+.sdx-group-sheet select option:checked,
+.sdx-group-sheet select option:hover {
+  background-color: #2458b8;
+  color: #ffffff;
+}
+
 .sdx-group-header {
   display: flex;
   align-items: center;
@@ -162,7 +179,8 @@
 }
 
 .sdx-travel-toolbar button,
-.sdx-speed-control select {
+.sdx-speed-control select,
+.sdx-travel-number-control input {
   width: auto;
   min-height: 30px;
   border: 1px solid rgba(255, 255, 255, 0.14);
@@ -181,7 +199,9 @@
 }
 
 .sdx-travel-toolbar button:hover,
-.sdx-speed-control select:hover {
+.sdx-speed-control select:hover,
+.sdx-travel-number-control input:hover,
+.sdx-travel-number-control input:focus {
   background: var(--sdx-group-panel-hover);
 }
 
@@ -190,7 +210,8 @@
   opacity: 0.45;
 }
 
-.sdx-speed-control {
+.sdx-speed-control,
+.sdx-travel-number-control {
   display: inline-flex;
   flex: 0 0 auto;
   align-items: center;
@@ -201,6 +222,12 @@
 
 .sdx-speed-control select {
   padding: 2px 24px 2px 8px;
+}
+
+.sdx-travel-number-control input {
+  width: 68px;
+  padding: 2px 7px;
+  text-align: right;
 }
 
 .sdx-travel-progress {

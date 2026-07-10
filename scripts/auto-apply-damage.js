@@ -1,13 +1,4 @@
-/*
- * MK-Shadowdark - Auto Damage
- * Foundry VTT v12/v13
- *
- * Settings are registered in scripts/settings.js.
- */
-
 (() => {
-  // scripts/auto-apply-damage.js
-
   const MODULE_ID = "mk-shadowdark";
   const SUBMODULE = "AutoDamage";
 

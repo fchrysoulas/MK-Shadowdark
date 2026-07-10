@@ -18,6 +18,7 @@ Guidance for AI agents working in this repository.
 - Keep user-facing behavior configurable through Foundry settings when the surrounding feature already follows that pattern.
 - Use the manifest version from `game.modules.get("mk-shadowdark")`; do not add per-file version constants.
 - Preserve existing compatibility behavior, especially the harmless Base Management API stub in `scripts/mk-shadowdark.js`, unless the task explicitly changes it.
+- Avoid repeated file-header comments or path-only comments in JavaScript files. Keep comments only where they explain non-obvious behavior, compatibility constraints, migration rules, or timing/order requirements.
 
 ## UI And Assets
 
@@ -37,6 +38,15 @@ Guidance for AI agents working in this repository.
 - Travelling progress starts only after every required traveller roll is submitted. The bar then reveals stored results at each activity breakpoint.
 - A travelling activity succeeds if at least one submitted roll for that activity succeeds. Empty/unassigned activities still count as failures.
 - Travelling prompt updates should continue to work through module sockets and the chat-flag fallback for active player/observer clients.
+
+## Feature Notes
+
+- Corpse Token Automation lives in `scripts/corpse-token.js`; if it should be active, ensure it is listed in `module.json` `esmodules`. It is GM-only, watches Shadowdark HP updates, resolves the actual token document whose HP changed, and must never use selected or targeted tokens as the automation position source.
+- Corpse Token placement preserves the original standing bottom-center fall point, aligns the visible opaque bottom of the corpse image to that point, and performs delayed realignment so damage shake or other token movement does not move the corpse away from the saved fall point. Manual debug/restore macros may use selected tokens, but automation must not.
+- Corpse Token has legacy local settings registration; future setting changes should be coordinated with the central `scripts/settings.js` pattern instead of adding more feature-local settings.
+- Death Timer adds a skull-only sheet button without replacing Handlebars templates. At 0 HP, the first click rolls `1d4 + CON mod` with the configured minimum and creates `Death Timer (X)`; later clicks roll `1d20`, where 20 revives at 1 HP, 1 reduces the timer by 2, and 2-19 reduces it by 1. At 0 turns, remove Death Timer and apply the system Dead status; healing removes Death Timer and Dead.
+- Equipment Hands validates equipped Shadowdark items against configurable hand slots. Equipped one-handed weapons, shields, and items with the `Occupies One Hand` property use 1 hand; two-handed weapons use 2 hands; the dual-wield setting can disallow more than one weapon.
+- Time Passes broadcasts through ChatMessage flags so all clients receive the splash. The flow is pre-splash, public roll, and optional encounter splash; any d6 showing 1 triggers the encounter, including multi-die formulas.
 
 ## Validation
 

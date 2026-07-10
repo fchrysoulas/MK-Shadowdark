@@ -1,5 +1,3 @@
-// scripts/group-sheet/travel-prompt.js
-
 import {
   ACTIVITY_KIND_TRAVEL,
   GROUP_SHEET_CHAT_FLAG_TRAVEL_PROMPT,

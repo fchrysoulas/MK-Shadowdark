@@ -1,5 +1,3 @@
-// scripts/group-sheet/inventory.js
-
 import {
   ABILITIES,
   GROUP_CAMPING_FOOD_KEYWORDS_DEFAULT,

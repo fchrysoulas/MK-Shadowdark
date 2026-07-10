@@ -1,5 +1,3 @@
-// scripts/group-sheet/constants.js
-
 export const MODULE_ID = "mk-shadowdark";
 export const LEGACY_MODULE_ID = "shadowdark-extras";
 export const SHEET_ID = `${MODULE_ID}.SDXGroupSheet`;
@@ -20,6 +18,8 @@ export const GROUP_SETTING_CAMPING_WATER_KEYWORDS = "groupSheetCampingWaterKeywo
 export const GROUP_CAMPING_WATER_KEYWORDS_DEFAULT = "water,waterskin,waterskins";
 export const GROUP_SETTING_TRAVEL_PROGRESS_DURATION_MS = "groupSheetTravelProgressDurationMs";
 export const GROUP_TRAVEL_PROGRESS_DURATION_DEFAULT_MS = 8000;
+export const GROUP_TRAVEL_MILES_PER_HOUR_DEFAULT = 3;
+export const GROUP_TRAVEL_HEXES_DEFAULT = 1;
 export const GROUP_SHEET_SOCKET_FEATURE = "groupSheet";
 export const GROUP_SHEET_SOCKET_ASSIGN_TRAVEL = "assignTravelActivity";
 export const GROUP_SHEET_SOCKET_PROMPT_TRAVEL = "promptTravelRolls";

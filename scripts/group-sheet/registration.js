@@ -1,5 +1,3 @@
-// scripts/group-sheet/registration.js
-
 import {
   ACTIVITY_KINDS,
   GROUP_SHEET_CHAT_FLAG_TRAVEL_PROMPT,

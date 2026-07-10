@@ -1,32 +1,3 @@
-/*
- * MK Shadowdark - Corpse Token Automation
- * Foundry VTT v12/v13 compatible
- * Shadowdark RPG compatible
- *
- * Import this file from the mk-shadowdark module entry file:
- *   import "./corpse-token.js";
- *
- * Behavior:
- * - GM-only automation.
- * - Watches Shadowdark HP updates.
- * - Resolves the actual token whose actor/token HP changed.
- * - Never uses the currently selected or targeted token as the position source.
- * - When an NPC token reaches HP 0 or lower, changes it to the corpse image.
- * - Resizes corpse token to 1x1.
- * - Sets texture scale to 0.7.
- * - Preserves the original standing bottom-center fall point captured before the HP update finishes.
- * - Aligns the actual opaque bottom of the corpse PNG to that fall point, compensating for texture scale and transparent padding.
- * - Delays corpse application and performs follow-up realignment so post-damage shake/return animations cannot move the corpse away from the fall point.
- * - Stores original token image, position, size, texture scale, and debug data for restoration.
- * - Does not post automation chat messages by default, to avoid triggering chat-message automation modules.
- *
- * Coordinate rule:
- * - The only reference point used for automation is the token document whose HP reached 0.
- * - Selected and targeted tokens are only used by the manual debug/restore macros, never by automation.
- * - Controlled/selected tokens are never used.
- * - Targeted tokens are never used.
- */
-
 const MODULE_ID = "mk-shadowdark";
 const FEATURE_LABEL = "MK Shadowdark Corpse Token";
 const FLAG_KEY = "corpseToken";

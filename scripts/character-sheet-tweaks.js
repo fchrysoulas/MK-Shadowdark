@@ -1,11 +1,3 @@
-/*
- * MK-Shadowdark - Character Sheet Tweaks
- * Foundry VTT v12/v13
- * Shadowdark system 3.5.x aware
- *
- * Does not replace Shadowdark system templates.
- */
-
 (() => {
   const MODULE_ID = "mk-shadowdark";
   const SUBMODULE = "Character Sheet Tweaks";

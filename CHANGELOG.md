@@ -5,6 +5,8 @@
 - Changed Travelling prompts so only player/GM submitted rolls are used; the progress bar now starts after all travelling rolls are complete and reveals stored results at each activity.
 - Updated Travelling prompt roll buttons to explicitly request the Shadowdark ability-check dialog so modifiers and ADV/DISADV can be adjusted before rolling.
 - Updated Travelling task results so at least one successful traveller roll makes that task a success.
+- Updated Group Sheet dropdown menus to use dark themed option lists.
+- Added editable Travelling miles-per-hour and intended-hex count fields to the Group Sheet toolbar.
 
 ## 1.0.3
 

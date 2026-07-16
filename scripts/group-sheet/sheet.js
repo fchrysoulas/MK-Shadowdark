@@ -50,6 +50,11 @@ import {
 } from "./travel-prompt.js";
 import { clampNumber, getDialogFieldValue, numberOrZero, optionLabel } from "./utils.js";
 import { getPrimaryActiveGm } from "./users.js";
+
+const ActorSheetBase = globalThis.foundry?.appv1?.sheets?.ActorSheet ?? globalThis.ActorSheet;
+const TextEditorImplementation =
+  globalThis.foundry?.applications?.ux?.TextEditor?.implementation ?? globalThis.TextEditor;
+
 async function createGroupActor({ name = "New Group", folder = null } = {}) {
   if (!game.user.isGM) {
     ui.notifications.warn("Only the GM can create a MK-Shadowdark group.");
@@ -97,7 +102,7 @@ async function createGroupActor({ name = "New Group", folder = null } = {}) {
   return actor;
 }
 
-class SDXGroupSheet extends ActorSheet {
+class SDXGroupSheet extends ActorSheetBase {
   static get defaultOptions() {
     return foundry.utils.mergeObject(super.defaultOptions, {
       classes: ["shadowdark", "sheet", "actor", "sdx-group-sheet-window"],
@@ -171,7 +176,7 @@ class SDXGroupSheet extends ActorSheet {
     const travelProgress = buildTravelProgress(groupData);
     const travelPromptActorCount = getTravelAssignmentKeys(groupData).length;
 
-    context.notesHTML = await TextEditor.enrichHTML(
+    context.notesHTML = await TextEditorImplementation.enrichHTML(
       this.actor.system?.notes ?? "",
       {
         secrets: this.actor.isOwner,
@@ -363,7 +368,7 @@ class SDXGroupSheet extends ActorSheet {
   async _onDrop(event) {
     event.preventDefault();
 
-    const data = TextEditor.getDragEventData(event);
+    const data = TextEditorImplementation.getDragEventData(event);
     if (!data) return false;
 
     const travelCard = event.target.closest?.("[data-travel-activity-key]");

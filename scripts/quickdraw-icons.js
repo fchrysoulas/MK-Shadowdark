@@ -166,7 +166,9 @@
    */
   function getInventoryRoot(html) {
     const selectors = [
+      "[data-tab='tab-inventory']",
       "[data-tab='inventory']",
+      ".tab-inventory",
       ".tab.inventory",
       ".inventory.tab",
       ".inventory",
@@ -289,7 +291,8 @@
       ".controls",
       ".item-icons",
       ".item-buttons",
-      ".item-actions"
+      ".item-actions",
+      ".actions"
     ];
 
     for (const sel of selectors) {

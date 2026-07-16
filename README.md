@@ -4,8 +4,9 @@ Quality-of-life extras and small expansions for the Shadowdark RPG system in Fou
 
 ## Compatibility
 
-- Foundry VTT v12 or v13
-- Shadowdark RPG system 3.5.0+
+- Foundry VTT v12 through v14
+- Shadowdark RPG system 3.5.0+ (verified with 4.0.6)
+- Foundry VTT v14 requires a v14-compatible Shadowdark release (4.0.0+)
 
 ## Features
 

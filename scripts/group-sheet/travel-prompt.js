@@ -474,8 +474,8 @@ async function broadcastTravelPromptChat(action, payload = {}) {
       },
     };
 
-    const messageType = globalThis.CONST?.CHAT_MESSAGE_TYPES?.OTHER;
-    if (messageType !== undefined) messageData.type = messageType;
+    const messageStyle = globalThis.CONST?.CHAT_MESSAGE_STYLES?.OTHER;
+    if (messageStyle !== undefined) messageData.style = messageStyle;
 
     const message = await ChatMessage.create(messageData);
 

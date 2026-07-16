@@ -28,3 +28,4 @@ Backups/
 # Agents & release
 .agents
 tools/
+release.ps1

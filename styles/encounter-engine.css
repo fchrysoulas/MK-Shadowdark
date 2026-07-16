@@ -1,0 +1,229 @@
+.mk-sd-encounter-card {
+  --mk-sd-encounter-border: rgba(190, 175, 145, 0.58);
+  --mk-sd-encounter-panel: rgba(18, 18, 18, 0.95);
+  --mk-sd-encounter-panel-soft: rgba(255, 255, 255, 0.045);
+  --mk-sd-encounter-text: var(--color-text-light-highlight, #f2efe5);
+  --mk-sd-encounter-muted: rgba(242, 239, 229, 0.66);
+
+  overflow: hidden;
+  border: 1px solid var(--mk-sd-encounter-border);
+  border-radius: 8px;
+  background:
+    linear-gradient(145deg, rgba(255, 255, 255, 0.035), transparent 45%),
+    var(--mk-sd-encounter-panel);
+  color: var(--mk-sd-encounter-text);
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.38);
+}
+
+.mk-sd-encounter-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 13px 14px 11px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  background: rgba(0, 0, 0, 0.24);
+}
+
+.mk-sd-encounter-header h3 {
+  margin: 2px 0 0;
+  border: 0;
+  color: var(--mk-sd-encounter-text);
+  font-size: 1.08rem;
+  line-height: 1.25;
+}
+
+.mk-sd-encounter-header .content-link {
+  border: 0;
+  background: transparent;
+  color: inherit;
+  font-weight: 700;
+  text-shadow: none;
+}
+
+.mk-sd-encounter-header .content-link i {
+  margin-right: 4px;
+  font-size: 0.78em;
+}
+
+.mk-sd-encounter-kicker {
+  color: var(--mk-sd-encounter-muted);
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+
+.mk-sd-encounter-formula {
+  display: inline-block;
+  margin-left: 4px;
+  color: var(--mk-sd-encounter-muted);
+  font-size: 0.72em;
+  font-weight: 400;
+}
+
+.mk-sd-encounter-disposition {
+  flex: 0 0 auto;
+  padding: 3px 7px;
+  border: 1px solid currentColor;
+  border-radius: 999px;
+  font-size: 0.65rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.mk-sd-encounter-disposition.is-hostile {
+  color: #e57d70;
+}
+
+.mk-sd-encounter-disposition.is-friendly {
+  color: #88c98f;
+}
+
+.mk-sd-encounter-disposition.is-neutral {
+  color: #d7c784;
+}
+
+.mk-sd-encounter-context {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px 12px;
+  padding: 8px 14px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  color: var(--mk-sd-encounter-muted);
+  font-size: 0.72rem;
+}
+
+.mk-sd-encounter-context i {
+  margin-right: 3px;
+}
+
+.mk-sd-encounter-grid {
+  padding: 7px 10px;
+}
+
+.mk-sd-encounter-row {
+  display: grid;
+  grid-template-columns: minmax(72px, 0.32fr) minmax(0, 1fr) 24px;
+  align-items: center;
+  gap: 8px;
+  min-height: 31px;
+  padding: 4px 4px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.mk-sd-encounter-card.is-public .mk-sd-encounter-row {
+  grid-template-columns: minmax(72px, 0.32fr) minmax(0, 1fr);
+}
+
+.mk-sd-encounter-row:last-child {
+  border-bottom: 0;
+}
+
+.mk-sd-encounter-label {
+  color: var(--mk-sd-encounter-muted);
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.mk-sd-encounter-value {
+  min-width: 0;
+  color: var(--mk-sd-encounter-text);
+  line-height: 1.25;
+}
+
+.mk-sd-encounter-value small {
+  display: block;
+  margin-top: 2px;
+  color: var(--mk-sd-encounter-muted);
+  font-size: 0.68rem;
+}
+
+.mk-sd-encounter-icon-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  min-height: 22px;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--mk-sd-encounter-muted);
+  line-height: 1;
+}
+
+.mk-sd-encounter-icon-button:hover,
+.mk-sd-encounter-icon-button:focus {
+  color: var(--mk-sd-encounter-text);
+  box-shadow: none;
+  text-shadow: 0 0 5px currentColor;
+}
+
+.mk-sd-encounter-controls {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 7px;
+  padding: 9px 12px 11px;
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+  background: rgba(0, 0, 0, 0.18);
+}
+
+.mk-sd-encounter-controls button {
+  min-height: 30px;
+  margin: 0;
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  background: rgba(255, 255, 255, 0.055);
+  color: var(--mk-sd-encounter-text);
+  font-size: 0.74rem;
+  line-height: 1.1;
+}
+
+.mk-sd-encounter-controls button:hover {
+  border-color: var(--mk-sd-encounter-border);
+  background: rgba(255, 255, 255, 0.1);
+}
+
+.mk-sd-encounter-controls button i {
+  margin-right: 4px;
+}
+
+.mk-sd-encounter-footer {
+  padding: 5px 12px;
+  border-top: 1px solid rgba(255, 255, 255, 0.06);
+  color: rgba(242, 239, 229, 0.43);
+  font-size: 0.64rem;
+  text-align: right;
+}
+
+.mk-sd-encounter-dialog .form-group,
+.mk-sd-encounter-profiles-dialog .form-group {
+  align-items: flex-start;
+}
+
+.mk-sd-encounter-dialog select {
+  min-width: 0;
+}
+
+.mk-sd-encounter-profiles-dialog {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}
+
+.mk-sd-encounter-profiles-dialog textarea {
+  flex: 1 1 auto;
+  width: 100%;
+  min-height: 560px;
+  padding: 10px;
+  resize: vertical;
+  font-family: var(--font-mono, monospace);
+  font-size: 12px;
+  line-height: 1.35;
+  tab-size: 2;
+  white-space: pre;
+}

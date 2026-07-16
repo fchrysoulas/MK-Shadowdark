@@ -1,0 +1,36 @@
+name: Build Encounter Phase 1
+
+on:
+  push:
+    branches:
+      - agent/encounter-engine-phase-1
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  package:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Validate module
+        run: |
+          node --check scripts/encounter-engine.js
+          python -m json.tool module.json > /dev/null
+
+      - name: Build full module ZIP
+        run: |
+          mkdir -p dist
+          zip -r dist/mk-shadowdark-1.1.0.zip . \
+            -x '.git/*' '.github/*' 'dist/*'
+
+      - name: Upload module artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: mk-shadowdark-1.1.0
+          path: dist/mk-shadowdark-1.1.0.zip
+          if-no-files-found: error
+          retention-days: 7

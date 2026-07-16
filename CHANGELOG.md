@@ -2,6 +2,14 @@
 
 ## Unreleased
 
+## 1.0.7
+
+- Added Foundry VTT v14 compatibility and verified Shadowdark RPG 4.0.6 support.
+- Updated the Group Sheet to use Foundry's namespaced legacy Actor Sheet and Actor collection APIs.
+- Updated hidden transport chat messages to use chat message styles instead of the removed message type constants.
+- Added direct Shadowdark 4 damage-roll detection for Auto Damage.
+- Updated Quickdraw inventory selectors for the Shadowdark 4 player sheet.
+
 ## 1.0.6
 
 - Fixed the Create Actor dialog so the Group option is appended without hiding Shadowdark's normal actor types or showing the obsolete Base type.

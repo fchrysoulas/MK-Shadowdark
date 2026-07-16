@@ -198,11 +198,25 @@
     let damageTotal  = null;
     let damageSource = null;
 
+    // Shadowdark 4 stores evaluated main and damage rolls directly on the
+    // message. Prefer that structured data over parsing localized chat HTML.
+    const messageRolls = Array.from(message?.rolls ?? []);
+    const mainRoll = messageRolls.find(roll => roll?.options?.type === "main");
+    const damageRoll = messageRolls.find(roll => roll?.options?.type === "damage");
+
+    if (damageRoll) {
+      const total = Number(damageRoll.total);
+      if (Number.isFinite(total) && total > 0) {
+        damageTotal = total;
+        damageSource = "shadowdark-v4-damage-roll";
+      }
+    }
+
     // ---- Detect weapon card ----
     const isWeaponCard = /Type:\s*(Melee|Ranged|Missile|Thrown)/i.test(text);
     debug.isWeaponCard = isWeaponCard;
 
-    if (isWeaponCard) {
+    if (damageTotal == null && isWeaponCard) {
       const dmgIdx = text.indexOf("Damage"); // capital D: property label
       if (dmgIdx !== -1) {
         const segment = text.slice(dmgIdx); // from "Damage" to end
@@ -231,6 +245,11 @@
 
     // ---- Outcome detection (independent of damage) ----
     let outcome = detectOutcomeFromFlags(message);
+
+    if (!outcome && mainRoll) {
+      if (mainRoll.success === true) outcome = "success";
+      else if (mainRoll.success === false) outcome = "failure";
+    }
 
     if (!outcome) {
       const hasSuccessWord =

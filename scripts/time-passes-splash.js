@@ -165,7 +165,7 @@
     // helper message to deliver flags to all clients
     const msg = await ChatMessage.create({
       speaker: ChatMessage.getSpeaker(),
-      type: CONST.CHAT_MESSAGE_TYPES.OTHER,
+      style: CONST.CHAT_MESSAGE_STYLES.OTHER,
       content: `<span style="display:none">sdx-time-passes</span>`,
       flags: { [MODULE_ID]: { [FLAG_KEY]: payload } }
     });

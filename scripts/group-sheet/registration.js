@@ -424,7 +424,14 @@ function registerGroupSheet() {
   groupSheetRegistered = true;
   registerGroupSheetSocket();
 
-  Actors.registerSheet(MODULE_ID, SDXGroupSheet, {
+  const ActorsCollection =
+    globalThis.foundry?.documents?.collections?.Actors ?? globalThis.Actors;
+
+  if (!ActorsCollection?.registerSheet) {
+    throw new Error(`${MODULE_ID} | GroupSheet | Foundry Actor sheet registration API is unavailable.`);
+  }
+
+  ActorsCollection.registerSheet(MODULE_ID, SDXGroupSheet, {
     types: ["Player"],
     makeDefault: false,
     label: "MK-Shadowdark: Group Sheet",

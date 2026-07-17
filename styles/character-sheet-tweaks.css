@@ -194,12 +194,15 @@
   margin: 0 0 8px;
   padding: 0;
   border-bottom: none;
-  background-color: #000000;
+  background: #000000 !important;
+  background-image: none !important;
 }
 
 .shadowdark.sheet.sdx-character-sheet-tweaks .SD-nav a {
   margin: 0;
   padding: 7px;
+  background: #000000 !important;
+  background-image: none !important;
   color: #999999;
 }
 
@@ -207,7 +210,7 @@
   color: #000000;
   text-decoration: none;
   border-top: 2px solid #848484;
-  background-color: #e8e3cc;
+  background: #e8e3cc !important;
 }
 
 .shadowdark.sheet.sdx-character-sheet-tweaks img.portrait {

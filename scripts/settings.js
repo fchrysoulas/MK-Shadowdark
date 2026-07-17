@@ -429,8 +429,8 @@
     /* -------------------- */
 
     registerSetting("deathTimerEnabled", {
-      name: "Death Timer | Enable Sheet Button",
-      hint: "Injects a skull button into the Shadowdark actor sheet header.",
+      name: "Death Timer | Enable Death Timer",
+      hint: "Shows the DT control in the Summary Bar when a player character is at 0 HP.",
       scope: "world",
       config: true,
       type: Boolean,
@@ -454,7 +454,7 @@
 
     registerSetting("deathTimerTooltip", {
       name: "Death Timer | Tooltip Text",
-      hint: "Tooltip shown when hovering the Death Timer sheet button.",
+      hint: "Tooltip shown when hovering the DT Summary Bar control.",
       scope: "world",
       config: true,
       type: String,
@@ -464,7 +464,7 @@
 
     registerSetting("deathTimerIcon", {
       name: "Death Timer | Icon Class",
-      hint: "Font Awesome icon class for the sheet button. Example: fa-solid fa-skull.",
+      hint: "Font Awesome icon class for the DT Summary Bar control. Example: fa-solid fa-skull.",
       scope: "world",
       config: true,
       type: String,
@@ -562,11 +562,11 @@
 
     registerSetting("characterSheetTweaksBarElements", {
       name: "Summary Bar | Elements",
-      hint: "Comma-separated list of bar elements, in display order. Available: LVL, HP, AC, XP, LUCK, SLOTS, STR, DEX, CON, INT, WIS, CHA. Use | to add a vertical divider.",
+      hint: "Comma-separated list of bar elements, in display order. Available: LVL, HP, DT, AC, XP, LUCK, SLOTS, STR, DEX, CON, INT, WIS, CHA. DT is the Death Timer and appears only at 0 HP. Use | to add a vertical divider.",
       scope: "world",
       config: true,
       type: String,
-      default: "HP, LUCK,|,STR,DEX,CON,INT,WIS,CHA, SLOTS",
+      default: "HP, DT, LUCK,|,STR,DEX,CON,INT,WIS,CHA, SLOTS",
       onChange: refreshOpenActorSheets
     });
 
@@ -641,6 +641,15 @@
     registerSetting("sheetStyleEditorExpandedControls", {
       name: "Character Sheet | Expanded Style Controls Migration Complete",
       hint: "Internal migration state for the color, background image, margin, and style-source controls.",
+      scope: "world",
+      config: false,
+      type: Boolean,
+      default: false
+    });
+
+    registerSetting("sheetStyleEditorSolidNavigationBackground", {
+      name: "Character Sheet | Solid Navigation Background Migration Complete",
+      hint: "Internal migration state for replacing the navigation gradient with a solid background.",
       scope: "world",
       config: false,
       type: Boolean,

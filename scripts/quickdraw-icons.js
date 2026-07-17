@@ -469,6 +469,8 @@
     const rows = getInventoryRows(html);
     if (!rows?.length) return;
 
+    rows.closest("ol.SD-list.item-list, ul.SD-list.item-list").removeClass("sdx-has-quickdraw-column");
+
     for (const rowEl of rows) {
       const row = $(rowEl);
       const item = getItemFromRow(app, row);
@@ -507,6 +509,7 @@
       });
 
       insertQuickdrawButton(controls, $btn);
+      row.closest("ol.SD-list.item-list, ul.SD-list.item-list").addClass("sdx-has-quickdraw-column");
     }
 
     autoSortQuickdraw(html, app);

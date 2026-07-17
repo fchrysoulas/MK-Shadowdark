@@ -59,6 +59,13 @@
   min-width: 76px;
 }
 
+/* Keep Qty and Slots headers aligned with rows whose Actions column grows
+   to accommodate the Quickdraw control. */
+.shadowdark.sheet.player .SD-list.item-list.sdx-has-quickdraw-column > li.header .actions {
+  flex: 0 0 76px;
+  min-width: 76px;
+}
+
 .shadowdark.sheet.player .item .sdx-quickdraw-bolt {
   display: block;
   width: 14px;

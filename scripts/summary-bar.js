@@ -18,8 +18,8 @@ import { reportLuckChange } from "./chat-reporting.js";
     DEBUG: "summaryBarDebug"
   });
 
-  const DEFAULT_ELEMENTS = ["HP", "LUCK", "|", "STR", "DEX", "CON", "INT", "WIS", "CHA", "SLOTS"];
-  const VALID_ELEMENTS = new Set(["LVL", "HP", "AC", "XP", "LUCK", "SLOTS", "STR", "DEX", "CON", "INT", "WIS", "CHA", "|"]);
+  const DEFAULT_ELEMENTS = ["HP", "DT", "LUCK", "|", "STR", "DEX", "CON", "INT", "WIS", "CHA", "SLOTS"];
+  const VALID_ELEMENTS = new Set(["LVL", "HP", "AC", "XP", "LUCK", "DT", "SLOTS", "STR", "DEX", "CON", "INT", "WIS", "CHA", "|"]);
   const ABILITY_ELEMENTS = new Set(["STR", "DEX", "CON", "INT", "WIS", "CHA"]);
   const ACTOR_SHEET_RENDER_HOOKS = [
     "renderActorSheet",
@@ -178,6 +178,9 @@ import { reportLuckChange } from "./chat-reporting.js";
     bar.querySelectorAll('[data-sdx-action="toggle-luck"]').forEach(element => {
       element.addEventListener("click", event => onToggleLuck(event, actor));
     });
+    bar.querySelectorAll('[data-sdx-action="death-timer"]').forEach(element => {
+      element.addEventListener("click", event => onDeathTimer(event, actor));
+    });
   }
 
   function insertSummaryBar(root, bar) {
@@ -194,9 +197,16 @@ import { reportLuckChange } from "./chat-reporting.js";
   }
 
   function buildSummaryChips(actor, data) {
-    return getSelectedElements()
+    const elements = getSelectedElements();
+    if (isAtZeroHp(actor) && !elements.includes("DT")) {
+      const hpIndex = elements.indexOf("HP");
+      elements.splice(hpIndex >= 0 ? hpIndex + 1 : 0, 0, "DT");
+    }
+
+    return elements
       .map(element => buildBarChip(element, actor, data))
-      .filter(chip => chip && chip.value !== undefined && chip.value !== null && chip.value !== "");
+      .filter(Boolean)
+      .map(chip => chip.divider ? chip : { ...chip, value: chip.value ?? "-" });
   }
 
   function getSelectedElements() {
@@ -205,7 +215,7 @@ import { reportLuckChange } from "./chat-reporting.js";
 
     const selected = [];
     const seen = new Set();
-    const tokens = raw.toUpperCase().match(/LUCK|SLOTS|STR|DEX|CON|INT|WIS|CHA|LVL|HP|AC|XP|\|/g) ?? [];
+    const tokens = raw.toUpperCase().match(/LUCK|SLOTS|STR|DEX|CON|INT|WIS|CHA|LVL|HP|DT|AC|XP|\|/g) ?? [];
 
     for (const key of tokens) {
       if (!VALID_ELEMENTS.has(key) || (key !== "|" && seen.has(key))) continue;
@@ -222,8 +232,28 @@ import { reportLuckChange } from "./chat-reporting.js";
         return { divider: true, value: "divider" };
       case "LVL":
         return { label: "LVL", value: getNumber(actor, "system.level.value") };
-      case "HP":
+      case "HP": {
+        if (isAtZeroHp(actor) && getSetting("deathTimerEnabled", true)) return null;
         return { label: "HP", value: formatPair(getNumber(actor, "system.attributes.hp.value"), getHpMax(actor)) };
+      }
+      case "DT": {
+        if (!isAtZeroHp(actor) || !getSetting("deathTimerEnabled", true)) return null;
+        const timer = globalThis.MKShadowdarkDeathTimer;
+        const state = timer?.getState?.(actor) ?? { dead: false, turns: timer?.getTurns?.(actor) };
+        const turns = state.turns;
+        const hasTurns = turns !== null && turns !== undefined && turns !== "" && Number.isFinite(Number(turns));
+        const display = state.dead ? "Dead" : (hasTurns ? String(turns) : "-");
+        const icon = escapeHtml(getSetting("deathTimerIcon", "fa-solid fa-skull") || "fa-solid fa-skull");
+        const tooltip = getSetting("deathTimerTooltip", "Death Timer") || "Death Timer";
+        return {
+          label: "DT",
+          value: hasTurns ? String(turns) : "-",
+          html: `<i class="${icon} sdx-death-timer-icon" aria-hidden="true"></i><em>${display}</em>`,
+          action: state.dead ? null : "death-timer",
+          className: "sdx-death-timer-chip",
+          title: state.dead ? "Dead" : (hasTurns ? `${tooltip}: ${turns} turn(s) remaining` : tooltip)
+        };
+      }
       case "AC":
         return { label: "AC", value: getValue(actor, "system.attributes.ac.value") };
       case "XP": {
@@ -265,6 +295,18 @@ import { reportLuckChange } from "./chat-reporting.js";
     const bonus = getNumber(actor, "system.attributes.hp.bonus");
     if (!Number.isFinite(base) && !Number.isFinite(bonus)) return null;
     return (Number.isFinite(base) ? base : 0) + (Number.isFinite(bonus) ? bonus : 0);
+  }
+
+  function isAtZeroHp(actor) {
+    const paths = [
+      "system.attributes.hp.value",
+      "system.attributes.hp.current",
+      "system.hp.value",
+      "system.hp.current",
+      "system.hp"
+    ];
+    const hp = paths.map(path => getNumber(actor, path)).find(Number.isFinite);
+    return Number.isFinite(hp) && hp <= 0;
   }
 
   function getLuckState(actor) {
@@ -413,6 +455,24 @@ import { reportLuckChange } from "./chat-reporting.js";
     } catch (err) {
       console.error(`${MODULE_ID} v${getModuleVersion()} | ${SUBMODULE} | luck toggle error`, err);
       ui.notifications?.error("MK-Shadowdark | Could not update Luck.");
+    }
+  }
+
+  async function onDeathTimer(event, actor) {
+    event.preventDefault();
+    event.stopPropagation();
+
+    const activate = globalThis.MKShadowdarkDeathTimer?.activate;
+    if (typeof activate !== "function") {
+      ui.notifications?.warn("MK-Shadowdark | Death Timer is unavailable.");
+      return;
+    }
+
+    try {
+      await activate(actor);
+    } catch (err) {
+      console.error(`${MODULE_ID} v${getModuleVersion()} | ${SUBMODULE} | death timer error`, err);
+      ui.notifications?.error("MK-Shadowdark | Could not update the Death Timer.");
     }
   }
 

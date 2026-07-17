@@ -137,6 +137,26 @@ button.sdx-sheet-chip:focus-visible {
   color: #e04242;
 }
 
+.sdx-death-timer-chip span {
+  display: flex !important;
+  align-items: center;
+  justify-content: center !important;
+  min-height: 1em;
+}
+
+.sdx-death-timer-icon {
+  color: #e04242;
+  filter: drop-shadow(0 1px 1px rgba(0, 0, 0, 0.75));
+}
+
+.sdx-death-timer-chip em {
+  margin-left: 0.2rem;
+  font-size: 0.9em;
+  font-style: normal;
+  font-weight: 700;
+}
+
+
 .sdx-bar-divider {
   display: inline-block;
   flex: 0 0 auto;

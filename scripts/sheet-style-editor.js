@@ -8,6 +8,7 @@
   const SUMMARY_CSS_SPLIT_SETTING = "sheetStyleEditorSummaryCssSplit";
   const QUICKDRAW_CSS_FIXED_SETTING = "sheetStyleEditorQuickdrawStylesExtracted";
   const EXPANDED_CONTROLS_SETTING = "sheetStyleEditorExpandedControls";
+  const SOLID_NAVIGATION_SETTING = "sheetStyleEditorSolidNavigationBackground";
   const HIDE_LOGO_SETTING = "characterSheetTweaksHideLogo";
   const HEADER_BACKGROUND_SETTING = "characterSheetTweaksHeaderBackgroundImage";
   const STYLE_ELEMENT_ID = "mk-shadowdark-global-sheet-styles";
@@ -51,6 +52,7 @@
     await runInitializationStep("Summary Bar CSS split migration", migrateSummaryBarCssSplit);
     await runInitializationStep("fixed Quickdraw CSS migration", migrateQuickdrawCssToFixedStylesheet);
     await runInitializationStep("expanded style controls migration", migrateExpandedStyleControls);
+    await runInitializationStep("solid navigation background migration", migrateSolidNavigationBackground);
     await runInitializationStep("editable default CSS seed", seedEditableDefaultCss);
     await runInitializationStep("legacy typography migration", migrateLegacyTypographySettings);
     await runInitializationStep("managed setting CSS sync", syncCharacterSheetSettings);
@@ -665,6 +667,19 @@
     ));
     await game.settings.set(MODULE_ID, DEFAULTS_SEEDED_SETTING, true);
     await game.settings.set(MODULE_ID, EXPANDED_CONTROLS_SETTING, true);
+  }
+
+  async function migrateSolidNavigationBackground() {
+    if (getSetting(SOLID_NAVIGATION_SETTING, false)) return;
+
+    const defaultCss = await loadEditableDefaultCss();
+    await updateGlobalCss(currentCss => upsertManagedBlockAtStart(
+      currentCss,
+      "editable-character-sheet-defaults",
+      defaultCss
+    ));
+    await game.settings.set(MODULE_ID, DEFAULTS_SEEDED_SETTING, true);
+    await game.settings.set(MODULE_ID, SOLID_NAVIGATION_SETTING, true);
   }
 
   async function loadEditableDefaultCss() {

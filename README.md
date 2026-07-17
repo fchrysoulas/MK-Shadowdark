@@ -6,6 +6,7 @@ Quality-of-life extras and small expansions for the Shadowdark RPG system in Fou
 
 - Foundry VTT v12 through v14
 - Shadowdark RPG system 3.5.0+ (verified with 4.0.6)
+- Encounter Engine Phase 1 was checked against the public Shadowdark `release-3.5.0` source
 - Foundry VTT v14 requires a v14-compatible Shadowdark release (4.0.0+)
 
 ## Features

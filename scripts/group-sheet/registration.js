@@ -6,8 +6,6 @@ import {
   GROUP_SHEET_SOCKET_PLAYER_TRAVEL_ROLL,
   GROUP_SHEET_SOCKET_PROMPT_TRAVEL,
   GROUP_SHEET_SOCKET_UPDATE_TRAVEL,
-  LEGACY_MODULE_ID,
-  LEGACY_SHEET_ID,
   MODULE_ID,
   SHEET_ID,
 } from "./constants.js";
@@ -15,8 +13,6 @@ import {
   canUserControlActor,
   ensureGroupActorHpDefaults,
   getGroupInventoryMaxSlots,
-  getRawFlag,
-  getSheetClassFlag,
   isGroupActor,
   resolveActorFromUuid,
 } from "./actors.js";
@@ -336,73 +332,6 @@ function handleTravelPromptChatMessage(message) {
 let groupSheetRegistered = false;
 
 
-async function migrateLegacyGroupActors() {
-  if (!game.user?.isGM) return;
-
-  let migrated = 0;
-  let failed = 0;
-
-  for (const actor of game.actors ?? []) {
-    const hasLegacyGroup = Boolean(getRawFlag(actor, LEGACY_MODULE_ID, "isGroup"));
-    const oldSheetClass = getSheetClassFlag(actor) === LEGACY_SHEET_ID;
-
-    if (!hasLegacyGroup && !oldSheetClass) continue;
-
-    const update = {
-      "flags.core.sheetClass": SHEET_ID,
-      [`flags.${MODULE_ID}.isGroup`]: true,
-      [`flags.${MODULE_ID}.groupInventoryMaxSlots`]: getGroupInventoryMaxSlots(actor),
-      [`flags.${MODULE_ID}.group`]: getGroupData(actor),
-    };
-
-    if (actor._source?.flags?.[LEGACY_MODULE_ID]) {
-      update[`flags.-=${LEGACY_MODULE_ID}`] = null;
-    }
-
-    try {
-      await actor.update(update);
-      migrated += 1;
-    } catch (error) {
-      // Some worlds/modules are strict about deleting old flag scopes.
-      // If deletion fails, still copy the data into the new scope.
-      if (update[`flags.-=${LEGACY_MODULE_ID}`] === null) {
-        delete update[`flags.-=${LEGACY_MODULE_ID}`];
-
-        try {
-          await actor.update(update);
-          migrated += 1;
-          console.warn(
-            `${MODULE_ID} | GroupSheet | Migrated legacy group actor "${actor.name}", but could not remove old ${LEGACY_MODULE_ID} flags.`,
-            error
-          );
-          continue;
-        } catch (retryError) {
-          failed += 1;
-          console.error(
-            `${MODULE_ID} | GroupSheet | Failed to migrate legacy group actor "${actor.name}".`,
-            retryError
-          );
-          continue;
-        }
-      }
-
-      failed += 1;
-      console.error(
-        `${MODULE_ID} | GroupSheet | Failed to migrate legacy group actor "${actor.name}".`,
-        error
-      );
-    }
-  }
-
-  if (migrated > 0) {
-    sdxGroupLog(`Migrated ${migrated} legacy group actor(s).`);
-  }
-
-  if (failed > 0) {
-    ui.notifications.warn(`${MODULE_ID}: ${failed} legacy group actor migration(s) failed. Check the console.`);
-  }
-}
-
 async function ensureExistingGroupActorHpDefaults() {
   if (!game.user?.isGM) return;
 
@@ -430,7 +359,6 @@ async function ensureExistingGroupActorHpDefaults() {
 }
 
 async function onReadyGroupSheetMaintenance() {
-  await migrateLegacyGroupActors();
   await ensureExistingGroupActorHpDefaults();
 }
 
@@ -451,11 +379,6 @@ function registerGroupSheet() {
     makeDefault: false,
     label: "MK-Shadowdark: Group Sheet",
   });
-
-  // Do not register the sheet under LEGACY_MODULE_ID.
-  // The ready migration below moves old sheetClass values from
-  // shadowdark-extras.SDXGroupSheet to mk-shadowdark.SDXGroupSheet.
-  // Keeping both registrations can confuse libWrapper-based modules such as Item Piles.
 
   patchActorCreateDialog();
   Hooks.on("updateActor", rerenderOpenGroupSheets);

@@ -7,6 +7,14 @@
 - Changed blank Character Sheet font settings to preserve the original Shadowdark font declarations and apply overrides only when configured.
 - Added optional Character Sheet font-size settings for character names, banners, section headings, and navigation; blank values preserve Shadowdark's original sizes.
 - Fixed Quickdraw controls in Foundry v13/v14 by targeting the inventory content instead of its navigation tab, using a version-independent inline bolt icon, and reserving adequate action-column space.
+- Reorganized module settings into one compact entry per feature, with each feature opening its own configuration window, including compatible image pickers for Character Sheet, Time Passes, and Corpse Token settings.
+- Moved the Highlight Quickdraw Items option into the Quickdraw feature settings window.
+- Split the Summary Bar into an independent settings group and JavaScript module, separate from Character Sheet Tweaks.
+- Ensured the separate Summary Bar module loads through the existing core entry point as well as the module manifest.
+- Added a GM-only sheet style edit mode with a right-click context menu for font family, font size, weight, and padding; its world-level CSS is visible in Character Sheet Tweaks and synchronizes to all clients.
+- Removed the legacy Character Sheet typography controls now covered by the style editor; existing overrides migrate into the global CSS, while Hide Logo and Header Background also write visible managed CSS blocks.
+- Moved Quickdraw-row highlighting behavior out of Character Sheet Tweaks and into the Quickdraw module.
+- Removed obsolete legacy module-ID compatibility paths; all flags and sheets now use only the current module scope.
 
 ## 1.0.7
 
@@ -83,7 +91,6 @@
 - Fixed Group Sheet template/CSS mismatch for travel cards, party treasure, inventory empty state, and notes.
 - Fixed malformed `.sdx-member-main` CSS block.
 - Added safer Group Sheet window sizing, tab visibility rules, and responsive member row layout.
-- Added legacy `shadowdark-extras` group actor migration for actors created before the module rename.
 
 ## 1.0.0
 

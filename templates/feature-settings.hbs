@@ -1,0 +1,50 @@
+<form class="sdx-feature-settings-form" autocomplete="off">
+  <p class="sdx-settings-note">{{hint}}</p>
+
+  <div class="sdx-settings-grid">
+    {{#each settings}}
+      <div class="sdx-setting-row">
+        <label for="sdx-setting-{{key}}">{{name}}</label>
+
+        <div class="sdx-setting-control">
+          {{#if isBoolean}}
+            <input id="sdx-setting-{{key}}" type="checkbox" name="{{key}}" {{#if value}}checked{{/if}} data-dtype="Boolean">
+          {{else}}
+            {{#if isSelect}}
+              <select id="sdx-setting-{{key}}" name="{{key}}" data-dtype="{{dataType}}">
+                {{#each options}}
+                  <option value="{{value}}" {{#if selected}}selected{{/if}}>{{label}}</option>
+                {{/each}}
+              </select>
+            {{else}}
+              {{#if isRange}}
+                <div class="sdx-range-control">
+                  <input id="sdx-setting-{{key}}" type="range" name="{{key}}" value="{{value}}" min="{{range.min}}" max="{{range.max}}" step="{{range.step}}" data-dtype="Number">
+                  <span class="range-value">{{value}}</span>
+                </div>
+              {{else}}
+                {{#if isTextarea}}
+                  <textarea id="sdx-setting-{{key}}" name="{{key}}" data-dtype="String">{{value}}</textarea>
+                {{else}}
+                  {{#if isFilePicker}}
+                    <file-picker id="sdx-setting-{{key}}" name="{{key}}" type="{{filePickerType}}" value="{{value}}"></file-picker>
+                  {{else}}
+                    <input id="sdx-setting-{{key}}" type="{{inputType}}" name="{{key}}" value="{{value}}" data-dtype="{{dataType}}">
+                  {{/if}}
+                {{/if}}
+              {{/if}}
+            {{/if}}
+          {{/if}}
+        </div>
+
+        <p class="notes">{{hint}}</p>
+      </div>
+    {{/each}}
+  </div>
+
+  <footer class="sheet-footer flexrow">
+    <button type="submit">
+      <i class="fas fa-floppy-disk"></i> Save Settings
+    </button>
+  </footer>
+</form>

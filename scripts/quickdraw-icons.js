@@ -106,6 +106,30 @@
     }
   }
 
+  function isQuickdrawIconEnabled() {
+    try {
+      return !!game.settings.get(MODULE_ID, "quickdrawIconEnabled");
+    } catch (_err) {
+      return true;
+    }
+  }
+
+  function isHighlightEnabled() {
+    try {
+      return !!game.settings.get(MODULE_ID, "characterSheetTweaksHighlightEquipped");
+    } catch (_err) {
+      return true;
+    }
+  }
+
+  function applyHighlightScope(html) {
+    const scopes = html
+      .add(html.find("form.shadowdark.sheet.player, .shadowdark.sheet.player"))
+      .add(html.closest(".window-app, .app"));
+
+    scopes.toggleClass("sdx-highlight-equipped", isHighlightEnabled());
+  }
+
   /**
    * Update without re-rendering the sheet to avoid flicker.
    */
@@ -463,15 +487,36 @@
     });
   }
 
+  function refreshQuickdrawRowState(app, html) {
+    const rows = getInventoryRows(html);
+    if (!rows?.length) return;
+
+    for (const rowEl of rows) {
+      const row = $(rowEl);
+      const item = getItemFromRow(app, row);
+      if (!item) continue;
+
+      const active = isQuickdraw(item);
+      row.toggleClass("sdx-quickdraw-item", active);
+      row.toggleClass("sdx-quickdraw-active", active);
+      row.attr("data-sdx-quickdraw", active ? "true" : "false");
+    }
+  }
+
+  function processSheet(app, html) {
+    applyHighlightScope(html);
+    refreshQuickdrawRowState(app, html);
+    if (isQuickdrawIconEnabled()) injectQuickdrawToggles(app, html);
+  }
+
   function onRender(app, html) {
-    if (!game.settings.get(MODULE_ID, "quickdrawIconEnabled")) return;
     if (!app?.actor) return;
     if (game.system?.id !== "shadowdark") return;
 
     const $html = asJQuery(html);
     if (!$html?.length) return;
 
-    injectQuickdrawToggles(app, $html);
+    processSheet(app, $html);
     scheduleRenderRetries(app, $html);
   }
 
@@ -480,13 +525,11 @@
     existingTimers.forEach(timer => window.clearTimeout(timer));
 
     const timers = [50, 250].map(delay => window.setTimeout(() => {
-      if (!game.settings.get(MODULE_ID, "quickdrawIconEnabled")) return;
-
       const currentHtml = asJQuery(app?.element);
       const $html = currentHtml?.length ? currentHtml : fallbackHtml;
       if (!$html?.length) return;
 
-      injectQuickdrawToggles(app, $html);
+      processSheet(app, $html);
     }, delay));
 
     renderRetryTimers.set(app, timers);

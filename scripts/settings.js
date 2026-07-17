@@ -1,6 +1,106 @@
 (() => {
   const MODULE_ID = "mk-shadowdark";
   const SUBMODULE = "Settings";
+  const FEATURE_SETTINGS_TEMPLATE = `modules/${MODULE_ID}/templates/feature-settings.hbs`;
+
+  const FEATURE_SETTINGS = [
+    {
+      key: "autoDamage",
+      title: "Auto Damage",
+      hint: "Configure automatic damage application, timing, dice, and token feedback.",
+      icon: "fas fa-heart-crack",
+      settings: ["autoDamageEnabled", "autoDamageGMOnly", "autoDamageShowDice3D", "autoDamageShakeTokens", "autoDamageDelayMs"]
+    },
+    {
+      key: "tokenShadows",
+      title: "Token Shadows",
+      hint: "Configure token shadow dimensions, position, opacity, and blur.",
+      icon: "fas fa-circle-half-stroke",
+      settings: ["tokenShadowsEnabled", "tokenShadowWidthFactor", "tokenShadowHeightGridFactor", "tokenShadowOffsetYFactor", "tokenShadowAlpha", "tokenShadowBlur", "tokenShadowBlurQuality"]
+    },
+    {
+      key: "deathTimer",
+      title: "Death Timer",
+      hint: "Configure the character-sheet death timer button and its effect.",
+      icon: "fas fa-hourglass-half",
+      settings: ["deathTimerEnabled", "deathTimerMinTurns", "deathTimerTooltip", "deathTimerIcon"]
+    },
+    {
+      key: "editableQuantity",
+      title: "Editable Quantity",
+      hint: "Configure direct inventory quantity editing.",
+      icon: "fas fa-pen-to-square",
+      settings: ["editableQtyEnabled"]
+    },
+    {
+      key: "quickdraw",
+      title: "Quickdraw",
+      hint: "Configure Quickdraw toggles, sorting, limits, and diagnostics.",
+      icon: "fas fa-bolt",
+      settings: ["quickdrawIconEnabled", "quickdrawAutoSort", "quickdrawLimit", "characterSheetTweaksHighlightEquipped", "debug"]
+    },
+    {
+      key: "characterSheet",
+      title: "Character Sheet Tweaks",
+      hint: "Configure global sheet styling, imagery, visual tweaks, and diagnostics.",
+      icon: "fas fa-address-card",
+      settings: [
+        "characterSheetTweaksEnabled", "sheetStyleEditorEnabled", "sheetStyleEditorCss",
+        "characterSheetTweaksHideLogo", "characterSheetTweaksHeaderBackgroundImage", "characterSheetTweaksDebug"
+      ]
+    },
+    {
+      key: "summaryBar",
+      title: "Summary Bar",
+      hint: "Configure the independent character summary bar, its contents, appearance, position, and diagnostics.",
+      icon: "fas fa-chart-simple",
+      settings: [
+        "characterSheetTweaksSummaryBar", "characterSheetTweaksBarElements", "characterSheetTweaksFontScale",
+        "characterSheetTweaksBarValueFontSize", "characterSheetTweaksBarButtonRadius", "characterSheetTweaksBarButtonScale",
+        "characterSheetTweaksBarPositionX", "characterSheetTweaksBarPositionY", "summaryBarDebug"
+      ]
+    },
+    {
+      key: "equipmentHands",
+      title: "Equipment Hands",
+      hint: "Configure equipped-hand rules, limits, dual wielding, and diagnostics.",
+      icon: "fas fa-hand",
+      settings: ["equipmentHandsEnabled", "equipmentHandsMode", "equipmentHandsMaxHands", "equipmentHandsAllowDualWield", "equipmentHandsIgnoreStashed", "equipmentHandsDebug"]
+    },
+    {
+      key: "timePasses",
+      title: "Time Passes",
+      hint: "Configure the Time Passes splash, encounter presentation, and roll.",
+      icon: "fas fa-clock",
+      settings: [
+        "timePassesEnabled", "timePassesPreText", "timePassesEncounterText", "timePassesPreDurationMs",
+        "timePassesEncounterDurationMs", "timePassesPreShowProgress", "timePassesRollFormula", "timePassesRollFlavor",
+        "timePassesFontFamily", "timePassesTitleFontSizePx", "timePassesEncounterShowSkull", "timePassesSkullIconPath",
+        "timePassesSkullSizePx"
+      ]
+    },
+    {
+      key: "groupSheet",
+      title: "Group Sheet",
+      hint: "Configure Group actors, member presentation, camping supplies, and travel progress.",
+      icon: "fas fa-users",
+      settings: [
+        "enableGroupActors", "groupSheetAssignedTokenSize", "groupSheetMemberPortraitSize", "groupSheetCampingFoodKeywords",
+        "groupSheetCampingTorchKeywords", "groupSheetCampingWaterKeywords", "groupSheetTravelProgressDurationMs"
+      ]
+    },
+    {
+      key: "corpseToken",
+      title: "Corpse Token",
+      hint: "Configure automatic corpse images, placement, timing, restoration, and scene scanning.",
+      icon: "fas fa-skull",
+      settings: [
+        "corpseTokenEnabled", "corpseTokenImage", "corpseTokenOnlyNpcs", "corpseTokenWidth", "corpseTokenHeight",
+        "corpseTokenScale", "corpseTokenAlignVisualBottom", "corpseTokenYOffset", "corpseTokenApplyDelayMs",
+        "corpseTokenPostChatMessage", "corpseTokenScanOnCanvasReady", "corpseTokenAutoRestoreWhenHealed"
+      ]
+    }
+  ];
 
   function getModuleVersion() {
     const mod = game.modules.get(MODULE_ID);
@@ -21,7 +121,118 @@
       return;
     }
 
-    game.settings.register(MODULE_ID, key, data);
+    game.settings.register(MODULE_ID, key, { ...data, config: false });
+  }
+
+  function localize(value) {
+    return game.i18n?.localize?.(value) ?? String(value ?? "");
+  }
+
+  function settingLabel(setting) {
+    const name = localize(setting.name);
+    return name.replace(/^.*?(?:\s\|\s|:\s*)/, "");
+  }
+
+  function settingDescriptor(key) {
+    const setting = game.settings.settings.get(`${MODULE_ID}.${key}`);
+    if (!setting) return null;
+
+    const value = game.settings.get(MODULE_ID, key);
+    const choices = typeof setting.choices === "function" ? setting.choices() : setting.choices;
+    const isBoolean = setting.type === Boolean;
+    const isNumber = setting.type === Number;
+    const isSelect = Boolean(choices && Object.keys(choices).length);
+    const options = isSelect
+      ? Object.entries(choices).map(([optionValue, optionLabel]) => ({
+          value: optionValue,
+          label: localize(optionLabel),
+          selected: String(optionValue) === String(value)
+        }))
+      : [];
+
+    return {
+      key,
+      name: settingLabel(setting),
+      hint: localize(setting.hint),
+      value,
+      isBoolean,
+      isNumber,
+      isSelect,
+      isRange: isNumber && Boolean(setting.range),
+      isFilePicker: Boolean(setting.filePicker),
+      isTextarea: key === "sheetStyleEditorCss",
+      filePickerType: setting.filePicker,
+      inputType: isNumber ? "number" : "text",
+      dataType: isNumber ? "Number" : "String",
+      range: setting.range ?? {},
+      options
+    };
+  }
+
+  const FormApplicationBase = globalThis.foundry?.appv1?.api?.FormApplication ?? globalThis.FormApplication;
+
+  class FeatureSettingsForm extends FormApplicationBase {
+    static feature = null;
+
+    static get defaultOptions() {
+      return foundry.utils.mergeObject(super.defaultOptions, {
+        id: `${MODULE_ID}-${this.feature.key}-settings`,
+        title: `${MODULE_ID} | ${this.feature.title}`,
+        template: FEATURE_SETTINGS_TEMPLATE,
+        width: 600,
+        height: "auto",
+        resizable: true,
+        closeOnSubmit: true
+      });
+    }
+
+    getData() {
+      const feature = this.constructor.feature;
+      return {
+        title: feature.title,
+        hint: feature.hint,
+        settings: feature.settings.map(settingDescriptor).filter(Boolean)
+      };
+    }
+
+    activateListeners(html) {
+      super.activateListeners(html);
+      html.find('input[type="range"]').on("input", event => {
+        event.currentTarget.closest(".sdx-range-control")?.querySelector(".range-value")?.replaceChildren(event.currentTarget.value);
+      });
+    }
+
+    async _updateObject(_event, formData) {
+      const feature = this.constructor.feature;
+
+      for (const key of feature.settings) {
+        const setting = game.settings.settings.get(`${MODULE_ID}.${key}`);
+        if (!setting) continue;
+
+        let value = formData[key];
+        if (setting.type === Boolean) value = value === true || value === "true" || value === "on" || value === 1;
+        else if (setting.type === Number) value = Number(value);
+        else value = String(value ?? "");
+
+        await game.settings.set(MODULE_ID, key, value);
+      }
+    }
+  }
+
+  function registerFeatureMenus() {
+    for (const feature of FEATURE_SETTINGS) {
+      class FeatureMenu extends FeatureSettingsForm {}
+      FeatureMenu.feature = feature;
+
+      game.settings.registerMenu(MODULE_ID, `${feature.key}Settings`, {
+        name: feature.title,
+        label: "Configure",
+        hint: feature.hint,
+        icon: feature.icon,
+        type: FeatureMenu,
+        restricted: true
+      });
+    }
   }
 
   function refreshTokenShadowsNow() {
@@ -50,13 +261,6 @@
     } catch (err) {
       console.error(`${MODULE_ID} v${getModuleVersion()} | ${SUBMODULE} | refreshOpenActorSheets error`, err);
     }
-  }
-
-  function getRootElement(html) {
-    if (!html) return null;
-    if (html instanceof HTMLElement) return html;
-    if (html[0] instanceof HTMLElement) return html[0];
-    return null;
   }
 
   Hooks.once("init", () => {
@@ -347,8 +551,8 @@
     });
 
     registerSetting("characterSheetTweaksSummaryBar", {
-      name: "Character Sheet | Summary Bar",
-      hint: "Adds a compact floating summary bar to the Shadowdark player sheet.",
+      name: "Summary Bar | Enabled",
+      hint: "Adds an independent compact summary bar to the Shadowdark player sheet.",
       scope: "world",
       config: true,
       type: Boolean,
@@ -357,7 +561,7 @@
     });
 
     registerSetting("characterSheetTweaksBarElements", {
-      name: "Character Sheet | Bar Elements",
+      name: "Summary Bar | Elements",
       hint: "Comma-separated list of bar elements, in display order. Available: LVL, HP, AC, XP, LUCK, SLOTS, STR, DEX, CON, INT, WIS, CHA. Use | to add a vertical divider.",
       scope: "world",
       config: true,
@@ -367,7 +571,7 @@
     });
 
     registerSetting("characterSheetTweaksHighlightEquipped", {
-      name: "Character Sheet | Highlight Quickdraw Items",
+      name: "Quickdraw | Highlight Items",
       hint: "Highlights Quickdraw rows in Shadowdark inventory lists. Equipped items are not highlighted unless they are also Quickdraw.",
       scope: "world",
       config: true,
@@ -376,69 +580,40 @@
       onChange: refreshOpenActorSheets
     });
 
-    registerSetting("characterSheetTweaksDisplayFontFamily", {
-      name: "Character Sheet | Display Font Family",
-      hint: "Optional CSS font-family stack for the character name, box and banner labels, and sheet navigation. Leave blank to use the original Shadowdark sheet fonts.",
+    registerSetting("sheetStyleEditorEnabled", {
+      name: "Character Sheet | GM Style Editor",
+      hint: "Adds a GM-only Edit Style mode. While enabled, right-click a sheet element to change its font, size, weight, and padding globally.",
       scope: "world",
       config: true,
-      type: String,
-      default: "",
+      type: Boolean,
+      default: true,
       onChange: refreshOpenActorSheets
     });
 
-    registerSetting("characterSheetTweaksSectionFontFamily", {
-      name: "Character Sheet | Section Font Family",
-      hint: "Optional CSS font-family stack for section headings. Leave blank to use the original Shadowdark sheet fonts.",
+    registerSetting("sheetStyleEditorCss", {
+      name: "Character Sheet | Global Style CSS",
+      hint: "World-level CSS generated by Edit Style mode. You can also edit it directly here. Saving synchronizes the stylesheet to all connected clients.",
       scope: "world",
       config: true,
       type: String,
       default: "",
-      onChange: refreshOpenActorSheets
+      onChange: value => {
+        globalThis.MKShadowdarkSheetStyleEditor?.applyCss?.(value);
+      }
     });
 
-    registerSetting("characterSheetTweaksNameFontSize", {
-      name: "Character Sheet | Character Name Font Size",
-      hint: "Optional CSS font size for the character name, such as 3.2rem or 48px. Leave blank to use the original Shadowdark size.",
+    registerSetting("sheetStyleEditorTypographyMigrated", {
+      name: "Character Sheet | Typography Migration Complete",
+      hint: "Internal migration state for legacy typography settings.",
       scope: "world",
-      config: true,
-      type: String,
-      default: "",
-      onChange: refreshOpenActorSheets
-    });
-
-    registerSetting("characterSheetTweaksBannerFontSize", {
-      name: "Character Sheet | Banner Font Size",
-      hint: "Optional CSS font size for box-header labels and banners, such as 22px. Leave blank to use the original Shadowdark size.",
-      scope: "world",
-      config: true,
-      type: String,
-      default: "",
-      onChange: refreshOpenActorSheets
-    });
-
-    registerSetting("characterSheetTweaksSectionFontSize", {
-      name: "Character Sheet | Section Font Size",
-      hint: "Optional CSS font size for section headings, such as 18px. Leave blank to use the original Shadowdark size.",
-      scope: "world",
-      config: true,
-      type: String,
-      default: "",
-      onChange: refreshOpenActorSheets
-    });
-
-    registerSetting("characterSheetTweaksNavigationFontSize", {
-      name: "Character Sheet | Navigation Font Size",
-      hint: "Optional CSS font size for sheet navigation links, such as 18px. Leave blank to use the original Shadowdark size.",
-      scope: "world",
-      config: true,
-      type: String,
-      default: "",
-      onChange: refreshOpenActorSheets
+      config: false,
+      type: Boolean,
+      default: false
     });
 
     registerSetting("characterSheetTweaksFontScale", {
-      name: "Character Sheet | Extra UI Font Scale",
-      hint: "Adjusts only the MK-Shadowdark summary bar font size.",
+      name: "Summary Bar | Font Scale",
+      hint: "Adjusts the Summary Bar font size.",
       scope: "world",
       config: true,
       type: Number,
@@ -452,8 +627,8 @@
     });
 
     registerSetting("characterSheetTweaksBarValueFontSize", {
-      name: "Character Sheet | Bar Value Font Size",
-      hint: "Font size in pixels for the value line inside each character sheet bar element.",
+      name: "Summary Bar | Value Font Size",
+      hint: "Font size in pixels for the value line inside each Summary Bar element.",
       scope: "world",
       config: true,
       type: Number,
@@ -467,7 +642,7 @@
     });
 
     registerSetting("characterSheetTweaksBarButtonRadius", {
-      name: "Character Sheet | Bar Button Radius",
+      name: "Summary Bar | Button Radius",
       hint: "Corner radius in pixels for each bar element. Use 0 for square, 6-12 for rounded boxes, or 999 for pill/circle style.",
       scope: "world",
       config: true,
@@ -482,7 +657,7 @@
     });
 
     registerSetting("characterSheetTweaksBarButtonScale", {
-      name: "Character Sheet | Bar Button Scale",
+      name: "Summary Bar | Button Scale",
       hint: "Scales only the pushable buttons in the floating bar, such as Luck and ability checks.",
       scope: "world",
       config: true,
@@ -497,8 +672,8 @@
     });
 
     registerSetting("characterSheetTweaksBarPositionX", {
-      name: "Character Sheet | Bar Position X",
-      hint: "Horizontal offset in pixels for the floating character sheet bar. Negative moves left, positive moves right.",
+      name: "Summary Bar | Position X",
+      hint: "Horizontal offset in pixels for the Summary Bar. Negative moves left, positive moves right.",
       scope: "world",
       config: true,
       type: Number,
@@ -512,8 +687,8 @@
     });
 
     registerSetting("characterSheetTweaksBarPositionY", {
-      name: "Character Sheet | Bar Position Y",
-      hint: "Vertical offset in pixels for the floating character sheet bar. Negative moves up, positive moves down.",
+      name: "Summary Bar | Position Y",
+      hint: "Vertical offset in pixels for the Summary Bar. Negative moves up, positive moves down.",
       scope: "world",
       config: true,
       type: Number,
@@ -526,25 +701,40 @@
       onChange: refreshOpenActorSheets
     });
 
+    registerSetting("summaryBarDebug", {
+      name: "Summary Bar | Debug Mode",
+      hint: "Logs Summary Bar diagnostics to the browser console.",
+      scope: "world",
+      config: true,
+      type: Boolean,
+      default: false
+    });
+
     registerSetting("characterSheetTweaksHideLogo", {
       name: "Character Sheet | Hide Shadowdark Logo",
-      hint: "Removes the Shadowdark logo text from the top of player character sheets.",
+      hint: "Removes the Shadowdark logo from player sheets through a managed rule in Global Style CSS.",
       scope: "world",
       config: true,
       type: Boolean,
       default: true,
-      onChange: refreshOpenActorSheets
+      onChange: () => {
+        globalThis.MKShadowdarkSheetStyleEditor?.syncCharacterSheetSettings?.();
+        refreshOpenActorSheets();
+      }
     });
 
     registerSetting("characterSheetTweaksHeaderBackgroundImage", {
       name: "Character Sheet | Header Background Image",
-      hint: "Optional image path for the player sheet header background. File picker paths under images/ are read from the Foundry host root; bare filenames are read from modules/mk-shadowdark/assets/.",
+      hint: "Sets the player-sheet header image through a managed rule in Global Style CSS. File picker paths under images/ use the Foundry host root; bare filenames use modules/mk-shadowdark/assets/.",
       scope: "world",
       config: true,
       type: String,
       default: "",
       filePicker: "image",
-      onChange: refreshOpenActorSheets
+      onChange: () => {
+        globalThis.MKShadowdarkSheetStyleEditor?.syncCharacterSheetSettings?.();
+        refreshOpenActorSheets();
+      }
     });
 
     registerSetting("characterSheetTweaksDebug", {
@@ -851,52 +1041,7 @@
         step: 500
       }
     });
+
+    registerFeatureMenus();
   });
-
-  /* -------------------------------------------- */
-  /* Settings Page Headers                        */
-  /* -------------------------------------------- */
-
-  Hooks.on("renderSettingsConfig", (_app, html) => {
-    try {
-      injectSettingHeaders(html);
-    } catch (err) {
-      console.error(`${MODULE_ID} v${getModuleVersion()} | ${SUBMODULE} | settings header inject error`, err);
-    }
-  });
-
-  function injectSettingHeaders(html) {
-    const root = getRootElement(html);
-    if (!root?.querySelector) return;
-    if (root.querySelector(".sdx-setting-header")) return;
-
-    const groups = [
-      { title: "Auto Damage", firstKey: "autoDamageEnabled" },
-      { title: "Token Shadows", firstKey: "tokenShadowsEnabled" },
-      { title: "Death Timer", firstKey: "deathTimerEnabled" },
-      { title: "Editable Quantity", firstKey: "editableQtyEnabled" },
-      { title: "Quickdraw", firstKey: "quickdrawIconEnabled" },
-      { title: "Character Sheet", firstKey: "characterSheetTweaksEnabled" },
-      { title: "Equipment Hands", firstKey: "equipmentHandsEnabled" },
-      { title: "Time Passes", firstKey: "timePassesEnabled" },
-      { title: "Group Sheet", firstKey: "enableGroupActors" }
-    ];
-
-    for (const group of groups) {
-      const settingGroup = findSettingFormGroup(root, group.firstKey);
-      if (!settingGroup) continue;
-
-      settingGroup.insertAdjacentHTML("beforebegin", `<h3 class="sdx-setting-header">${group.title}</h3>`);
-    }
-  }
-
-  function findSettingFormGroup(root, key) {
-    let el = root.querySelector(`[name="${MODULE_ID}.${key}"]`);
-    if (el) return el.closest(".form-group");
-
-    el = root.querySelector(`.form-group[data-setting-id="${MODULE_ID}.${key}"]`);
-    if (el) return el;
-
-    return null;
-  }
 })();

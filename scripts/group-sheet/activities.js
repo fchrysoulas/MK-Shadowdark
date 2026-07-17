@@ -7,7 +7,7 @@ import {
   TRAVEL_ACTIVITIES,
   TRAVEL_DEFAULT_ACTIVITY_KEY,
 } from "./constants.js";
-import { canUserControlActor, getFlagWithLegacy, resolveActorFromUuid } from "./actors.js";
+import { canUserControlActor, getModuleFlag, resolveActorFromUuid } from "./actors.js";
 import { getActorClassName } from "./inventory.js";
 import { getTravelProgressDurationMs } from "./group-settings.js";
 import { clampNumber, hasOwn } from "./utils.js";
@@ -343,7 +343,7 @@ async function buildTravelPromptPayload(groupActor, groupData) {
 
 function getGroupData(actor) {
   const existing = foundry.utils.deepClone(
-    getFlagWithLegacy(actor, "group", {}) ?? {}
+    getModuleFlag(actor, "group", {}) ?? {}
   );
 
   existing.members ??= [];

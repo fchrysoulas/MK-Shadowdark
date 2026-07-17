@@ -200,8 +200,61 @@ button.sdx-icon-button:disabled {
 .sdx-setting-row input[type="text"],
 .sdx-setting-row input[type="number"],
 .sdx-setting-row select,
-.sdx-setting-row textarea {
+.sdx-setting-row textarea,
+.sdx-setting-row file-picker {
   width: 100%;
+}
+
+.sdx-feature-settings-form {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  padding: 0 0.25rem 0.25rem;
+}
+
+.sdx-feature-settings-form .sdx-settings-grid {
+  max-height: min(65vh, 650px);
+  overflow-y: auto;
+  padding-right: 0.35rem;
+}
+
+.sdx-feature-settings-form .sdx-setting-control {
+  min-width: 0;
+}
+
+#sdx-setting-sheetStyleEditorCss {
+  min-height: 260px;
+  resize: vertical;
+  font-family: monospace;
+  font-size: 12px;
+  line-height: 1.35;
+  white-space: pre;
+}
+
+.sdx-feature-settings-form .sdx-range-control {
+  display: grid;
+  grid-template-columns: minmax(120px, 1fr) 3.5rem;
+  gap: 0.5rem;
+  align-items: center;
+}
+
+.sdx-feature-settings-form .range-value {
+  text-align: center;
+  font-variant-numeric: tabular-nums;
+}
+
+.sdx-feature-settings-form .sheet-footer {
+  margin-top: 0.35rem;
+}
+
+@media (max-width: 520px) {
+  .sdx-feature-settings-form .sdx-setting-row {
+    grid-template-columns: 1fr;
+  }
+
+  .sdx-feature-settings-form .sdx-setting-row .notes {
+    grid-column: 1;
+  }
 }
 
 .sdx-app-section {

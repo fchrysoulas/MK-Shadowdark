@@ -96,6 +96,30 @@
       ]
     },
     {
+      key: "encounterEngine",
+      title: "Encounter Engine",
+      hint: "Configure encounter resolution, table selection, Time Passes integration, and GM presentation.",
+      icon: "fas fa-dice-d20",
+      settings: [
+        "encounterEngineEnabled", "encounterEngineAutoTimePasses", "encounterEngineDefaultProfile",
+        "encounterEngineDefaultTableUuid", "encounterEngineWhisperToGm", "encounterEngineShowDice3d"
+      ],
+      sections: [
+        {
+          title: "General",
+          settings: ["encounterEngineEnabled", "encounterEngineAutoTimePasses"]
+        },
+        {
+          title: "Table Selection",
+          settings: ["encounterEngineDefaultProfile", "encounterEngineDefaultTableUuid"]
+        },
+        {
+          title: "Presentation",
+          settings: ["encounterEngineWhisperToGm", "encounterEngineShowDice3d"]
+        }
+      ]
+    },
+    {
       key: "groupSheet",
       title: "Group Sheet",
       hint: "Configure Group actors, member presentation, camping supplies, and travel progress.",

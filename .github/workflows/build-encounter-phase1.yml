@@ -1,0 +1,49 @@
+name: Build Encounter Phase 1
+
+on:
+  push:
+    branches:
+      - agent/encounter-engine-phase-1
+  pull_request:
+    branches:
+      - main
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  package:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Validate module
+        run: |
+          node --check scripts/encounter-engine.js
+          python -m json.tool module.json > /dev/null
+
+      - name: Validate Shadowdark 3.5.0 compatibility declaration
+        run: |
+          python - <<'PY'
+          import json
+          manifest = json.load(open('module.json', encoding='utf-8'))
+          system = manifest['relationships']['systems'][0]
+          assert system['id'] == 'shadowdark'
+          assert system['compatibility']['minimum'] == '3.5.0'
+          PY
+
+      - name: Build full module ZIP
+        run: |
+          mkdir -p dist
+          zip -r dist/mk-shadowdark-1.1.0.zip . \
+            -x '.git/*' '.github/*' 'dist/*'
+
+      - name: Upload module artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: mk-shadowdark-1.1.0
+          path: dist/mk-shadowdark-1.1.0.zip
+          if-no-files-found: error
+          retention-days: 7

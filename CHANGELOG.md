@@ -1,9 +1,15 @@
 # Changelog
 
 ## Unreleased
+- Added Encounter Engine Phase 1 with terrain and time-of-day-aware RollTable selection.
+- Added complete encounter procedure resolution for number appearing, distance, activity, reaction, intent, surprise, disposition, and morale.
+- Added interactive GM chat cards with field rerolls, full rerolls, number rerolls, and a player-safe reveal action.
+- Added reusable Encounter Profiles, scene-specific encounter context flags, world and compendium RollTable support, and a public module API.
+- Integrated successful Time Passes encounter rolls with the Encounter Engine.
+- Added support for direct Actor table results, text results such as `2d6 Goblins (Night)`, and optional encounter metadata stored in `flags.mk-shadowdark.encounter`.
+- Validated the feature design against the public Shadowdark system `release-3.5.0` source without using the uploaded system archive.
 
 ## 1.1.0
-
 - Reorganized settings into compact per-feature screens and expanded Character Sheet styling with typography, color, imagery, spacing, border/navigation states, source detection, and saved-change validation.
 - Split Summary Bar and Luck reporting into independent features with fixed styles, and integrated Death Timer display states into the Summary Bar.
 - Improved Quickdraw behavior and Foundry v13/v14 presentation, including control targeting, inventory alignment, active-state isolation, and fixed stylesheet ownership.

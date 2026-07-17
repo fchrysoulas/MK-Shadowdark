@@ -1,5 +1,7 @@
-/* styles/quickdraw-icons.css */
-/* MK-Shadowdark - Quickdraw Icons */
+/* MK-Shadowdark editable Quickdraw CSS defaults.
+ * This file is not loaded as a fixed module stylesheet. Its text is copied once
+ * into the world-level Global Style CSS setting, where GMs can edit it.
+ */
 
 /* -------------------------------------------- */
 /* Inventory quickdraw bolt                     */

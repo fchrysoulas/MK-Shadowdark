@@ -44,9 +44,7 @@
   "styles": [
     "styles/mk-shadowdark.css",
     "styles/auto-apply-damage.css",
-    "styles/character-sheet-tweaks.css",
-    "styles/group-sheet.css",
-    "styles/quickdraw-icons.css"
+    "styles/group-sheet.css"
   ],
   "languages": [
     {

@@ -4,11 +4,17 @@
   const EDITOR_SETTING = "sheetStyleEditorEnabled";
   const CSS_SETTING = "sheetStyleEditorCss";
   const TYPOGRAPHY_MIGRATION_SETTING = "sheetStyleEditorTypographyMigrated";
+  const DEFAULTS_SEEDED_SETTING = "sheetStyleEditorDefaultsSeeded";
+  const SUMMARY_CSS_SPLIT_SETTING = "sheetStyleEditorSummaryCssSplit";
   const HIDE_LOGO_SETTING = "characterSheetTweaksHideLogo";
   const HEADER_BACKGROUND_SETTING = "characterSheetTweaksHeaderBackgroundImage";
   const STYLE_ELEMENT_ID = "mk-shadowdark-global-sheet-styles";
   const RULE_MARKER_PREFIX = "mk-shadowdark-style-editor";
   const SETTING_MARKER_PREFIX = "mk-shadowdark-setting";
+  const EDITABLE_DEFAULT_STYLESHEETS = Object.freeze([
+    `modules/${MODULE_ID}/styles/character-sheet-tweaks.css`,
+    `modules/${MODULE_ID}/styles/quickdraw-icons.css`
+  ]);
   const LEGACY_TYPOGRAPHY_SETTINGS = Object.freeze({
     displayFont: "characterSheetTweaksDisplayFontFamily",
     sectionFont: "characterSheetTweaksSectionFontFamily",
@@ -36,14 +42,13 @@
 
   Hooks.once("ready", async () => {
     applyCss(getSetting(CSS_SETTING, ""));
+    removeDirectEditableStyleLinks();
     if (!game.user?.isGM) return;
 
-    try {
-      await migrateLegacyTypographySettings();
-      await syncCharacterSheetSettings();
-    } catch (error) {
-      console.error(`${MODULE_ID} | ${SUBMODULE} | global CSS initialization error`, error);
-    }
+    await runInitializationStep("Summary Bar CSS split migration", migrateSummaryBarCssSplit);
+    await runInitializationStep("editable default CSS seed", seedEditableDefaultCss);
+    await runInitializationStep("legacy typography migration", migrateLegacyTypographySettings);
+    await runInitializationStep("managed setting CSS sync", syncCharacterSheetSettings);
   });
 
   for (const hookName of ACTOR_SHEET_RENDER_HOOKS) {
@@ -293,6 +298,59 @@
     style.textContent = String(cssText ?? "");
   }
 
+  function removeDirectEditableStyleLinks() {
+    const templateNames = EDITABLE_DEFAULT_STYLESHEETS.map(path => path.split("/").pop());
+    document.querySelectorAll('link[rel="stylesheet"][href]').forEach(link => {
+      const href = String(link.getAttribute("href") ?? "");
+      if (templateNames.some(name => href.includes(`/styles/${name}`))) link.remove();
+    });
+  }
+
+  async function runInitializationStep(label, callback) {
+    try {
+      await callback();
+    } catch (error) {
+      console.error(`${MODULE_ID} | ${SUBMODULE} | ${label} error`, error);
+    }
+  }
+
+  async function seedEditableDefaultCss() {
+    if (getSetting(DEFAULTS_SEEDED_SETTING, false)) return;
+
+    const defaultCss = await loadEditableDefaultCss();
+    await updateGlobalCss(currentCss => upsertManagedBlockAtStart(
+      currentCss,
+      "editable-character-sheet-defaults",
+      defaultCss
+    ));
+    await game.settings.set(MODULE_ID, DEFAULTS_SEEDED_SETTING, true);
+  }
+
+  async function migrateSummaryBarCssSplit() {
+    if (getSetting(SUMMARY_CSS_SPLIT_SETTING, false)) return;
+
+    const defaultCss = await loadEditableDefaultCss();
+    await updateGlobalCss(currentCss => upsertManagedBlockAtStart(
+      currentCss,
+      "editable-character-sheet-defaults",
+      defaultCss
+    ));
+    await game.settings.set(MODULE_ID, DEFAULTS_SEEDED_SETTING, true);
+    await game.settings.set(MODULE_ID, SUMMARY_CSS_SPLIT_SETTING, true);
+  }
+
+  async function loadEditableDefaultCss() {
+    const stylesheetTexts = await Promise.all(EDITABLE_DEFAULT_STYLESHEETS.map(async path => {
+      const route = toFoundryRoute(path);
+      const response = await fetch(route, { cache: "no-store" });
+      if (!response.ok) throw new Error(`Could not load ${route}: HTTP ${response.status}`);
+      return (await response.text()).trim();
+    }));
+    const defaultCss = stylesheetTexts.filter(Boolean).join("\n\n");
+    if (!defaultCss) throw new Error("Editable character-sheet default CSS is empty.");
+    return defaultCss;
+  }
+
   function syncCharacterSheetSettings() {
     return updateGlobalCss(currentCss => {
       const hideLogo = Boolean(getSetting(HIDE_LOGO_SETTING, true));
@@ -385,6 +443,15 @@
 
     const block = `/* ${SETTING_MARKER_PREFIX}:start ${key} */\n${body}\n/* ${SETTING_MARKER_PREFIX}:end ${key} */`;
     return withoutExisting ? `${withoutExisting}\n\n${block}\n` : `${block}\n`;
+  }
+
+  function upsertManagedBlockAtStart(cssText, key, content) {
+    const withoutExisting = removeManagedBlock(cssText, key).trimStart();
+    const body = String(content ?? "").trim();
+    if (!body) return withoutExisting;
+
+    const block = `/* ${SETTING_MARKER_PREFIX}:start ${key} */\n${body}\n/* ${SETTING_MARKER_PREFIX}:end ${key} */`;
+    return withoutExisting ? `${block}\n\n${withoutExisting}` : `${block}\n`;
   }
 
   function removeManagedBlock(cssText, key) {

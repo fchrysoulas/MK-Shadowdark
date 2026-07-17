@@ -13,6 +13,8 @@
 - Ensured the separate Summary Bar module loads through the existing core entry point as well as the module manifest.
 - Added a GM-only sheet style edit mode with a right-click context menu for font family, font size, weight, and padding; its world-level CSS is visible in Character Sheet Tweaks and synchronizes to all clients.
 - Removed the legacy Character Sheet typography controls now covered by the style editor; existing overrides migrate into the global CSS, while Hide Logo and Header Background also write visible managed CSS blocks.
+- Moved all fixed Character Sheet Tweaks and Quickdraw sheet CSS out of directly loaded module stylesheets and into a one-time editable Global Style CSS default block.
+- Added a standalone editable `summary-bar.css`, exposed and synchronized through the Summary Bar settings window, and migrated Summary Bar rules out of Character Sheet Global Style CSS.
 - Moved Quickdraw-row highlighting behavior out of Character Sheet Tweaks and into the Quickdraw module.
 - Removed obsolete legacy module-ID compatibility paths; all flags and sheets now use only the current module scope.
 

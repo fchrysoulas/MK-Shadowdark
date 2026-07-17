@@ -1,6 +1,10 @@
 (() => {
   const MODULE_ID = "mk-shadowdark";
   const SUBMODULE = "Summary Bar";
+  const CSS_SETTING = "summaryBarCss";
+  const CSS_SEEDED_SETTING = "summaryBarCssSeeded";
+  const STYLE_ELEMENT_ID = "mk-shadowdark-summary-bar-styles";
+  const CSS_TEMPLATE = `modules/${MODULE_ID}/styles/summary-bar.css`;
 
   const SETTINGS = Object.freeze({
     ENABLED: "characterSheetTweaksSummaryBar",
@@ -24,7 +28,19 @@
     "renderActorSheetShadowdark"
   ];
 
+  globalThis.MKShadowdarkSummaryBar = { applyCss };
+
   Hooks.once("init", () => log("initialized"));
+  Hooks.once("ready", async () => {
+    applyCss(getSetting(CSS_SETTING, ""));
+    if (!game.user?.isGM) return;
+
+    try {
+      await seedEditableCss();
+    } catch (error) {
+      console.error(`${MODULE_ID} | ${SUBMODULE} | editable CSS seed error`, error);
+    }
+  });
 
   for (const hookName of ACTOR_SHEET_RENDER_HOOKS) {
     Hooks.on(hookName, (app, html, data) => {
@@ -34,6 +50,37 @@
         console.error(`${MODULE_ID} v${getModuleVersion()} | ${SUBMODULE} | render error`, err);
       }
     });
+  }
+
+  function applyCss(cssText) {
+    let style = document.getElementById(STYLE_ELEMENT_ID);
+    if (!style) {
+      style = document.createElement("style");
+      style.id = STYLE_ELEMENT_ID;
+      document.head.append(style);
+    }
+    style.textContent = String(cssText ?? "");
+  }
+
+  async function seedEditableCss() {
+    if (getSetting(CSS_SEEDED_SETTING, false)) return;
+
+    const existingCss = String(getSetting(CSS_SETTING, "") ?? "");
+    if (existingCss.trim()) {
+      applyCss(existingCss);
+      await game.settings.set(MODULE_ID, CSS_SEEDED_SETTING, true);
+      return;
+    }
+
+    const route = toFoundryRoute(CSS_TEMPLATE);
+    const response = await fetch(route, { cache: "no-store" });
+    if (!response.ok) throw new Error(`Could not load ${route}: HTTP ${response.status}`);
+
+    const cssText = (await response.text()).trim();
+    if (!cssText) throw new Error("Editable Summary Bar CSS is empty.");
+    await game.settings.set(MODULE_ID, CSS_SETTING, `${cssText}\n`);
+    applyCss(cssText);
+    await game.settings.set(MODULE_ID, CSS_SEEDED_SETTING, true);
   }
 
   function onRenderActorSheet(app, html, data) {
@@ -111,7 +158,7 @@
 
   function applySummaryBarScope(form, windowEl) {
     for (const element of uniqueElements([form, windowEl])) {
-      element.classList.add("sdx-character-sheet-tweaks", "sdx-summary-bar-in-header");
+      element.classList.add("sdx-summary-bar-in-header");
       applySummaryBarVariables(element);
     }
   }
@@ -449,6 +496,16 @@
     } catch (_err) {
       return fallback;
     }
+  }
+
+  function toFoundryRoute(path) {
+    const clean = String(path ?? "").replace(/^\/+/, "");
+    try {
+      if (foundry.utils.getRoute) return foundry.utils.getRoute(clean);
+    } catch (_error) {
+      // Use the host-root fallback.
+    }
+    return `/${clean}`;
   }
 
   function getValue(document, path) {

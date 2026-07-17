@@ -222,7 +222,8 @@ button.sdx-icon-button:disabled {
   min-width: 0;
 }
 
-#sdx-setting-sheetStyleEditorCss {
+#sdx-setting-sheetStyleEditorCss,
+#sdx-setting-summaryBarCss {
   min-height: 260px;
   resize: vertical;
   font-family: monospace;

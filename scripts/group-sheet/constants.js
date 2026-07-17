@@ -1,7 +1,6 @@
 export const MODULE_ID = "mk-shadowdark";
-export const LEGACY_MODULE_ID = "shadowdark-extras";
+export const SUBMODULE = "Group Sheet";
 export const SHEET_ID = `${MODULE_ID}.SDXGroupSheet`;
-export const LEGACY_SHEET_ID = `${LEGACY_MODULE_ID}.SDXGroupSheet`;
 export const GROUP_HP_DEFAULT = 1;
 export const GROUP_HP_VALUE_PATH = "system.attributes.hp.value";
 export const GROUP_HP_MAX_PATH = "system.attributes.hp.max";
@@ -29,8 +28,8 @@ export const GROUP_SHEET_CHAT_FLAG_TRAVEL_PROMPT = "groupSheetTravelPrompt";
 export const ACTIVITY_KIND_TRAVEL = "travel";
 export const ACTIVITY_KIND_CAMPING = "camping";
 export const ACTIVITY_KINDS = [ACTIVITY_KIND_TRAVEL, ACTIVITY_KIND_CAMPING];
-export const TRAVEL_PROMPT_ELEMENT_ID = "sdx-travel-roll-prompt";
-export const TRAVEL_PROMPT_BODY_CLASS = "sdx-travel-prompt-open";
+export const TRAVEL_PROMPT_ELEMENT_ID = "mk-travel-roll-prompt";
+export const TRAVEL_PROMPT_BODY_CLASS = "mk-travel-prompt-open";
 export const TRAVEL_ROLL_RESULT_TIMEOUT_MS = 30000;
 export const TRAVEL_DEFAULT_ACTIVITY_KEY = "lookout";
 

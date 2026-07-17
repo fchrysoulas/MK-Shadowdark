@@ -1,7 +1,7 @@
 (() => {
   const MODULE_ID = "mk-shadowdark";
-  const SUBMODULE = "DeathTimer";
-  const DEATH_TIMER_STATUS_ID = "sdx-death-timer";
+  const SUBMODULE = "Death Timer";
+  const DEATH_TIMER_STATUS_ID = "mk-death-timer";
   const DEATH_TIMER_CHAT_ICON = "modules/mk-shadowdark/assets/icons/blood-drop-red.png";
 
   function getModuleVersion() {
@@ -102,47 +102,13 @@
   }
 
   function ensureStylesOnce() {
-    const id = "sdx-death-timer-style";
+    const id = "mk-death-timer-style";
     if (document.getElementById(id)) return;
 
     const style = document.createElement("style");
     style.id = id;
     style.textContent = `
-      .SD-header { position: relative; }
-
-      .sdx-death-timer-wrap{
-        position:absolute;
-        top:6px;
-        right:6px;
-        padding:0;
-        background: transparent;
-        border: 0;
-        z-index: 50;
-        pointer-events: auto;
-      }
-
-      .sdx-death-timer-btn{
-        display:inline-flex;
-        align-items:center;
-        justify-content:center;
-        padding:4px 6px;
-        border:1px solid var(--color-border-light-primary, rgba(0,0,0,0.35));
-        border-radius:6px;
-        background:#ffffff !important;
-        color:#000000 !important;
-        cursor:pointer;
-        font-size:12px;
-        line-height:1;
-        white-space:nowrap;
-        box-shadow:none;
-        min-width:26px;
-        min-height:22px;
-      }
-
-      .sdx-death-timer-btn i { margin: 0; color: inherit !important; }
-      .sdx-death-timer-btn:hover{ filter: brightness(0.97); }
-
-      .sdx-death-timer-chat-line {
+      .mk-death-timer-chat-line {
         display: grid;
         grid-template-columns: 34px minmax(0, 1fr);
         align-items: center;
@@ -150,7 +116,7 @@
         margin: 0.1rem 0;
       }
 
-      .sdx-death-timer-chat-icon {
+      .mk-death-timer-chat-icon {
         width: 34px;
         height: 34px;
         object-fit: contain;
@@ -158,18 +124,12 @@
         border: 0;
       }
 
-      .sdx-death-timer-chat-text {
+      .mk-death-timer-chat-text {
         min-width: 0;
         line-height: 1.25;
       }
     `;
     document.head.appendChild(style);
-  }
-
-  function asJQ(html) {
-    if (!html) return null;
-    if (html.jquery) return html;
-    try { return $(html); } catch { return null; }
   }
 
   function escapeHTML(value) {
@@ -187,14 +147,14 @@
 
     const safeSrc = escapeAttribute(src);
     const safeLabel = escapeAttribute(label);
-    return `<img class="sdx-death-timer-chat-icon" src="${safeSrc}" alt="${safeLabel}" title="${safeLabel}">`;
+    return `<img class="mk-death-timer-chat-icon" src="${safeSrc}" alt="${safeLabel}" title="${safeLabel}">`;
   }
 
   function renderChatLine(src, label, content) {
     return `
-      <div class="sdx-death-timer-chat-line">
+      <div class="mk-death-timer-chat-line">
         ${renderChatIcon(src, label)}
-        <div class="sdx-death-timer-chat-text">${content}</div>
+        <div class="mk-death-timer-chat-text">${content}</div>
       </div>
     `;
   }
@@ -570,65 +530,10 @@
     await tickDeathTimer(actor, existingTurns);
   }
 
-  function handler(app, html) {
-    try {
-      if (!game.settings.get(MODULE_ID, "deathTimerEnabled")) return;
-      if (game.system?.id !== "shadowdark") return;
-
-      ensureStylesOnce();
-
-      const actor = app?.actor;
-      if (!actor) return;
-
-      const $root = asJQ(html);
-      if (!$root) return;
-
-      const $header =
-        $root.find(".SD-header").first().length ? $root.find(".SD-header").first()
-        : $root.find("header.SD-header").first().length ? $root.find("header.SD-header").first()
-        : $root.find("header.sheet-header, .sheet-header").first();
-
-      if (!$header?.length) return;
-
-      if ($root.find(".sdx-death-timer-wrap").length) return;
-
-      const icon = game.settings.get(MODULE_ID, "deathTimerIcon") || "fa-solid fa-skull";
-      const tooltip = game.settings.get(MODULE_ID, "deathTimerTooltip") || "Death Timer";
-      const safeTooltip = escapeAttribute(tooltip);
-
-      const $wrap = $(`
-        <div class="sdx-death-timer-wrap">
-          <button
-            type="button"
-            class="sdx-death-timer-btn"
-            data-action="sdx-death-timer"
-            title="${safeTooltip}"
-            data-tooltip="${safeTooltip}"
-            aria-label="${safeTooltip}"
-          >
-            <i class="${icon}"></i>
-          </button>
-        </div>
-      `);
-
-      $header.append($wrap);
-
-      const $btn = $wrap.find('[data-action="sdx-death-timer"]');
-      $btn.off("click.sdxDeathTimer");
-      $btn.on("click.sdxDeathTimer", async (ev) => {
-        ev.preventDefault();
-        await onSkullClick(actor);
-      });
-
-    } catch (err) {
-      console.error(`${MODULE_ID} | ${SUBMODULE} render error`, err);
-    }
-  }
-
   // Track HP changes so any healing clears Death Timer / Dead
   Hooks.on("preUpdateActor", (actor, change, options) => {
     if (game.system?.id !== "shadowdark") return;
-    options._sdxPrevHp = getHpPathAndValue(actor).value;
+    options._mkPrevHp = getHpPathAndValue(actor).value;
   });
 
   Hooks.on("updateActor", async (actor, change, options) => {
@@ -642,7 +547,7 @@
 
       if (!hasDeathState) return;
 
-      const prevHp = numOrNull(options?._sdxPrevHp);
+      const prevHp = numOrNull(options?._mkPrevHp);
       const newHp = getHpPathAndValue(actor).value;
       const changedHp = getHpValueFromSource(change);
 
@@ -664,8 +569,12 @@
     }
   });
 
-  Hooks.on("renderActorSheet", handler);
-  Hooks.on("renderShadowdarkActorSheet", handler);
-  Hooks.on("renderShadowdarkActorSheetV2", handler);
-  Hooks.on("renderActorSheetShadowdark", handler);
+  globalThis.MKShadowdarkDeathTimer = Object.freeze({
+    activate: onSkullClick,
+    getState: actor => ({
+      dead: Boolean(findDeadEffect(actor)),
+      turns: getDeathTimerTurns(actor)
+    }),
+    getTurns: getDeathTimerTurns
+  });
 })();

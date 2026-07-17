@@ -1,0 +1,59 @@
+<form class="mk-feature-settings-form" autocomplete="off">
+  <p class="mk-settings-note">{{hint}}</p>
+
+  <div class="mk-settings-grid">
+    {{#each sections}}
+      <section class="mk-settings-section{{#if title}} is-grouped{{/if}}">
+        {{#if title}}
+          <h2>{{title}}</h2>
+        {{/if}}
+
+        {{#each settings}}
+          <div class="mk-setting-row{{#if isBoolean}} is-boolean{{/if}}{{#if isTextarea}} is-textarea{{/if}}">
+            <div class="mk-setting-copy">
+              <label for="mk-setting-{{key}}">{{name}}</label>
+              <p class="notes">{{hint}}</p>
+            </div>
+
+            <div class="mk-setting-control">
+              {{#if isBoolean}}
+                <input id="mk-setting-{{key}}" type="checkbox" name="{{key}}" {{#if value}}checked{{/if}} data-dtype="Boolean">
+              {{else}}
+                {{#if isSelect}}
+                  <select id="mk-setting-{{key}}" name="{{key}}" data-dtype="{{dataType}}">
+                    {{#each options}}
+                      <option value="{{value}}" {{#if selected}}selected{{/if}}>{{label}}</option>
+                    {{/each}}
+                  </select>
+                {{else}}
+                  {{#if isRange}}
+                    <div class="mk-range-control">
+                      <input id="mk-setting-{{key}}" type="range" name="{{key}}" value="{{value}}" min="{{range.min}}" max="{{range.max}}" step="{{range.step}}" data-dtype="Number">
+                      <span class="range-value">{{value}}</span>
+                    </div>
+                  {{else}}
+                    {{#if isTextarea}}
+                      <textarea id="mk-setting-{{key}}" name="{{key}}" data-dtype="String">{{value}}</textarea>
+                    {{else}}
+                      {{#if isFilePicker}}
+                        <file-picker id="mk-setting-{{key}}" name="{{key}}" type="{{filePickerType}}" value="{{value}}"></file-picker>
+                      {{else}}
+                        <input id="mk-setting-{{key}}" type="{{inputType}}" name="{{key}}" value="{{value}}" data-dtype="{{dataType}}">
+                      {{/if}}
+                    {{/if}}
+                  {{/if}}
+                {{/if}}
+              {{/if}}
+            </div>
+          </div>
+        {{/each}}
+      </section>
+    {{/each}}
+  </div>
+
+  <footer class="sheet-footer flexrow">
+    <button type="submit">
+      <i class="fas fa-floppy-disk"></i> Save Settings
+    </button>
+  </footer>
+</form>

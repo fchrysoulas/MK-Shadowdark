@@ -1,6 +1,6 @@
 (() => {
   const MODULE_ID = "mk-shadowdark";
-  const SUBMODULE = "AutoDamage";
+  const SUBMODULE = "Auto Damage";
 
   function getModuleVersion() {
     const mod = game.modules.get(MODULE_ID);

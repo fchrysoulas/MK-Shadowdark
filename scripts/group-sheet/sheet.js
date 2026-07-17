@@ -105,23 +105,23 @@ async function createGroupActor({ name = "New Group", folder = null } = {}) {
 class SDXGroupSheet extends ActorSheetBase {
   static get defaultOptions() {
     return foundry.utils.mergeObject(super.defaultOptions, {
-      classes: ["shadowdark", "sheet", "actor", "sdx-group-sheet-window"],
+      classes: ["shadowdark", "sheet", "actor", "mk-group-sheet-window"],
       template: `modules/${MODULE_ID}/templates/group-sheet.hbs`,
       width: 980,
       height: 720,
       resizable: true,
-      scrollY: [".sdx-group-tab-body"],
+      scrollY: [".mk-group-tab-body"],
       tabs: [
         {
-          navSelector: ".sdx-group-nav",
-          contentSelector: ".sdx-group-content",
+          navSelector: ".mk-group-nav",
+          contentSelector: ".mk-group-content",
           initial: "members",
         },
       ],
       dragDrop: [
         {
           dragSelector: null,
-          dropSelector: ".sdx-group-sheet",
+          dropSelector: ".mk-group-sheet",
         },
       ],
     });
@@ -141,10 +141,10 @@ class SDXGroupSheet extends ActorSheetBase {
     if (!element?.querySelectorAll) return;
 
     const selectors = [
-      ".sdx-travel-roll[data-has-assigned='true']",
-      ".sdx-camping-roster-member[data-can-assign='true']",
-      ".sdx-travel-member-toggle[data-can-assign='true']",
-      ".sdx-camping-assigned-chip",
+      ".mk-travel-roll[data-has-assigned='true']",
+      ".mk-camping-roster-member[data-can-assign='true']",
+      ".mk-travel-member-toggle[data-can-assign='true']",
+      ".mk-camping-assigned-chip",
     ];
 
     element.querySelectorAll(selectors.join(",")).forEach(control => {
@@ -185,7 +185,7 @@ class SDXGroupSheet extends ActorSheetBase {
       }
     );
 
-    context.sdx = {
+    context.mk = {
       isGroup: true,
       sheetStyle: buildGroupSheetStyle(),
       summary: buildHeaderSummary(members),
@@ -299,7 +299,7 @@ class SDXGroupSheet extends ActorSheetBase {
       this._onCampingMemberDragEnd(event);
     });
 
-    html[0]?.querySelectorAll(".sdx-travel-card[data-travel-activity-key]").forEach(card => {
+    html[0]?.querySelectorAll(".mk-travel-card[data-travel-activity-key]").forEach(card => {
       card.addEventListener("dragenter", event => this._onCampingActivityDragEnter(event), true);
       card.addEventListener("dragover", event => this._onCampingActivityDragOver(event), true);
       card.addEventListener("dragleave", event => this._onCampingActivityDragLeave(event), true);
@@ -341,13 +341,13 @@ class SDXGroupSheet extends ActorSheetBase {
         ? "Reset Travel Assignments"
         : "Reset Camping Assignments";
 
-      resetButton.classList.add("sdx-camping-reset");
+      resetButton.classList.add("mk-camping-reset");
       resetButton.setAttribute("data-tooltip", label);
       resetButton.removeAttribute("title");
       resetButton.setAttribute("aria-label", label);
       resetButton.innerHTML = '<i class="fas fa-undo"></i>';
 
-      const roster = resetButton.closest(".sdx-camping-roster");
+      const roster = resetButton.closest(".mk-camping-roster");
       if (roster && !roster.contains(resetButton)) {
         roster.appendChild(resetButton);
       }
@@ -761,10 +761,10 @@ class SDXGroupSheet extends ActorSheetBase {
     const card = event.currentTarget.closest("[data-travel-activity-key]");
     if (!card) return;
 
-    const tab = card.closest(".sdx-group-tab");
+    const tab = card.closest(".mk-group-tab");
     const wasOpen = card.classList.contains("is-picking");
 
-    tab?.querySelectorAll(".sdx-travel-card.is-picking").forEach(existing => {
+    tab?.querySelectorAll(".mk-travel-card.is-picking").forEach(existing => {
       existing.classList.remove("is-picking");
     });
 
@@ -800,7 +800,7 @@ class SDXGroupSheet extends ActorSheetBase {
   _onCampingMemberDragEnd(event) {
     this._campingDragActorUuid = "";
     event.currentTarget?.classList.remove("is-dragging");
-    this.element?.find?.(".sdx-travel-card.is-drag-over")?.removeClass("is-drag-over");
+    this.element?.find?.(".mk-travel-card.is-drag-over")?.removeClass("is-drag-over");
   }
 
   _onCampingActivityDragEnter(event) {
@@ -1133,7 +1133,7 @@ class SDXGroupSheet extends ActorSheetBase {
     if (game.user.isGM) {
       buttons.unshift({
         label: "Add Tokens",
-        class: "sdx-add-controlled-tokens",
+        class: "mk-add-controlled-tokens",
         icon: "fas fa-user-plus",
         onclick: () => this._addControlledTokens(),
       });

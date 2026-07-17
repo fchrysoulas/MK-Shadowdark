@@ -6,17 +6,14 @@ import {
   GROUP_SHEET_SOCKET_PLAYER_TRAVEL_ROLL,
   GROUP_SHEET_SOCKET_PROMPT_TRAVEL,
   GROUP_SHEET_SOCKET_UPDATE_TRAVEL,
-  LEGACY_MODULE_ID,
-  LEGACY_SHEET_ID,
   MODULE_ID,
   SHEET_ID,
+  SUBMODULE,
 } from "./constants.js";
 import {
   canUserControlActor,
   ensureGroupActorHpDefaults,
   getGroupInventoryMaxSlots,
-  getRawFlag,
-  getSheetClassFlag,
   isGroupActor,
   resolveActorFromUuid,
 } from "./actors.js";
@@ -32,7 +29,7 @@ import { handleTravelRollChatMessage } from "./rolls.js";
 import { createGroupActor, SDXGroupSheet } from "./sheet.js";
 import { travelPromptChatMessagesSeen } from "./state.js";
 import { applyTravelPlayerRollResult, handleTravelPromptTransport } from "./travel-prompt.js";
-import { sdxGroupLog } from "./utils.js";
+import { mkGroupLog } from "./utils.js";
 import { getGameUserById, isPrimaryActiveGm } from "./users.js";
 
 const GROUP_ACTOR_DIALOG_TYPE = "Group";
@@ -87,6 +84,16 @@ function getActorTypeLabel(type) {
   const typeKey = `TYPES.Actor.${type}`;
   const localized = game.i18n.localize(typeKey);
   return localized === typeKey ? type : localized;
+}
+
+function getDefaultActorName(type) {
+  if (type === GROUP_ACTOR_DIALOG_TYPE) return "New Group";
+
+  const typeLabel = getActorTypeLabel(type || "Actor") || "Actor";
+  const localized = game.i18n.format("DOCUMENT.New", { type: typeLabel });
+  return localized && localized !== "DOCUMENT.New"
+    ? localized
+    : `New ${typeLabel}`;
 }
 
 function getActorCreationFormData(html) {
@@ -164,15 +171,20 @@ function buildActorCreateDialogContent(data = {}) {
 
 async function handleActorCreateDialog(actorClass, data, html) {
   const formData = getActorCreationFormData(html);
+  const actorType = formData.type || data.type || "Actor";
+  const actorName = String(formData.name ?? "").trim()
+    || String(data.name ?? "").trim()
+    || getDefaultActorName(actorType);
 
-  if (formData.type === GROUP_ACTOR_DIALOG_TYPE) {
+  if (actorType === GROUP_ACTOR_DIALOG_TYPE) {
     return createGroupActor({
-      name: formData.name || data.name || "New Group",
+      name: actorName,
       folder: formData.folder || getFolderId(data.folder),
     });
   }
 
   const createData = foundry.utils.mergeObject(foundry.utils.deepClone(data), formData);
+  createData.name = actorName;
   if (!createData.folder) delete createData.folder;
 
   return actorClass.create(createData, { renderSheet: true });
@@ -277,13 +289,13 @@ function registerGroupSheetSocket() {
 
     if (data.action === GROUP_SHEET_SOCKET_ASSIGN_TRAVEL) {
       handleTravelAssignmentSocketRequest(data).catch(error => {
-        console.error(`${MODULE_ID} | GroupSheet | Travel assignment socket error`, error);
+        console.error(`${MODULE_ID} | ${SUBMODULE} | Travel assignment socket error`, error);
       });
     }
 
     if (data.action === GROUP_SHEET_SOCKET_PLAYER_TRAVEL_ROLL) {
       handleTravelPlayerRollSocketRequest(data).catch(error => {
-        console.error(`${MODULE_ID} | GroupSheet | Travel player roll socket error`, error);
+        console.error(`${MODULE_ID} | ${SUBMODULE} | Travel player roll socket error`, error);
       });
     }
 
@@ -314,79 +326,12 @@ function handleTravelPromptChatMessage(message) {
 
     handleTravelPromptTransport(data);
   } catch (error) {
-    console.error(`${MODULE_ID} | GroupSheet | Travel prompt chat flag error`, error);
+    console.error(`${MODULE_ID} | ${SUBMODULE} | Travel prompt chat flag error`, error);
   }
 }
 
 let groupSheetRegistered = false;
 
-
-async function migrateLegacyGroupActors() {
-  if (!game.user?.isGM) return;
-
-  let migrated = 0;
-  let failed = 0;
-
-  for (const actor of game.actors ?? []) {
-    const hasLegacyGroup = Boolean(getRawFlag(actor, LEGACY_MODULE_ID, "isGroup"));
-    const oldSheetClass = getSheetClassFlag(actor) === LEGACY_SHEET_ID;
-
-    if (!hasLegacyGroup && !oldSheetClass) continue;
-
-    const update = {
-      "flags.core.sheetClass": SHEET_ID,
-      [`flags.${MODULE_ID}.isGroup`]: true,
-      [`flags.${MODULE_ID}.groupInventoryMaxSlots`]: getGroupInventoryMaxSlots(actor),
-      [`flags.${MODULE_ID}.group`]: getGroupData(actor),
-    };
-
-    if (actor._source?.flags?.[LEGACY_MODULE_ID]) {
-      update[`flags.-=${LEGACY_MODULE_ID}`] = null;
-    }
-
-    try {
-      await actor.update(update);
-      migrated += 1;
-    } catch (error) {
-      // Some worlds/modules are strict about deleting old flag scopes.
-      // If deletion fails, still copy the data into the new scope.
-      if (update[`flags.-=${LEGACY_MODULE_ID}`] === null) {
-        delete update[`flags.-=${LEGACY_MODULE_ID}`];
-
-        try {
-          await actor.update(update);
-          migrated += 1;
-          console.warn(
-            `${MODULE_ID} | GroupSheet | Migrated legacy group actor "${actor.name}", but could not remove old ${LEGACY_MODULE_ID} flags.`,
-            error
-          );
-          continue;
-        } catch (retryError) {
-          failed += 1;
-          console.error(
-            `${MODULE_ID} | GroupSheet | Failed to migrate legacy group actor "${actor.name}".`,
-            retryError
-          );
-          continue;
-        }
-      }
-
-      failed += 1;
-      console.error(
-        `${MODULE_ID} | GroupSheet | Failed to migrate legacy group actor "${actor.name}".`,
-        error
-      );
-    }
-  }
-
-  if (migrated > 0) {
-    sdxGroupLog(`Migrated ${migrated} legacy group actor(s).`);
-  }
-
-  if (failed > 0) {
-    ui.notifications.warn(`${MODULE_ID}: ${failed} legacy group actor migration(s) failed. Check the console.`);
-  }
-}
 
 async function ensureExistingGroupActorHpDefaults() {
   if (!game.user?.isGM) return;
@@ -401,12 +346,12 @@ async function ensureExistingGroupActorHpDefaults() {
       if (await ensureGroupActorHpDefaults(actor)) updated += 1;
     } catch (error) {
       failed += 1;
-      console.error(`${MODULE_ID} | GroupSheet | Failed to set HP defaults for group actor "${actor.name}".`, error);
+      console.error(`${MODULE_ID} | ${SUBMODULE} | Failed to set HP defaults for group actor "${actor.name}".`, error);
     }
   }
 
   if (updated > 0) {
-    sdxGroupLog(`Set HP defaults on ${updated} group actor(s).`);
+    mkGroupLog(`Set HP defaults on ${updated} group actor(s).`);
   }
 
   if (failed > 0) {
@@ -415,7 +360,6 @@ async function ensureExistingGroupActorHpDefaults() {
 }
 
 async function onReadyGroupSheetMaintenance() {
-  await migrateLegacyGroupActors();
   await ensureExistingGroupActorHpDefaults();
 }
 
@@ -428,7 +372,7 @@ function registerGroupSheet() {
     globalThis.foundry?.documents?.collections?.Actors ?? globalThis.Actors;
 
   if (!ActorsCollection?.registerSheet) {
-    throw new Error(`${MODULE_ID} | GroupSheet | Foundry Actor sheet registration API is unavailable.`);
+    throw new Error(`${MODULE_ID} | ${SUBMODULE} | Foundry Actor sheet registration API is unavailable.`);
   }
 
   ActorsCollection.registerSheet(MODULE_ID, SDXGroupSheet, {
@@ -436,11 +380,6 @@ function registerGroupSheet() {
     makeDefault: false,
     label: "MK-Shadowdark: Group Sheet",
   });
-
-  // Do not register the sheet under LEGACY_MODULE_ID.
-  // The ready migration below moves old sheetClass values from
-  // shadowdark-extras.SDXGroupSheet to mk-shadowdark.SDXGroupSheet.
-  // Keeping both registrations can confuse libWrapper-based modules such as Item Piles.
 
   patchActorCreateDialog();
   Hooks.on("updateActor", rerenderOpenGroupSheets);
@@ -472,7 +411,7 @@ function registerGroupSheet() {
   // Compatibility alias for worlds/macros that used the old global API name.
   game.shadowdarkExtras ??= game.mkShadowdark;
 
-  sdxGroupLog("Registered group sheet.");
+  mkGroupLog("Registered group sheet.");
 }
 
 export { registerGroupSheet };

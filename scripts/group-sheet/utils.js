@@ -1,6 +1,6 @@
-import { MODULE_ID } from "./constants.js";
-function sdxGroupLog(...args) {
-  console.log(`${MODULE_ID} | GroupSheet |`, ...args);
+import { MODULE_ID, SUBMODULE } from "./constants.js";
+function mkGroupLog(...args) {
+  console.log(`${MODULE_ID} | ${SUBMODULE} |`, ...args);
 }
 
 function signed(value) {
@@ -57,7 +57,7 @@ function getDialogFieldValue(html, selector) {
   return root?.querySelector?.(selector)?.value;
 }
 export {
-  sdxGroupLog,
+  mkGroupLog,
   signed,
   clampPercent,
   hasOwn,

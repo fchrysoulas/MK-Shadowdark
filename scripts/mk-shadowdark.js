@@ -1,3 +1,6 @@
+import "./summary-bar.js";
+import "./sheet-style-editor.js";
+
 (() => {
   const MODULE_ID = "mk-shadowdark";
   const SUBMODULE = "Core";

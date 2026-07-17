@@ -1,6 +1,6 @@
 (() => {
   const MODULE_ID = "mk-shadowdark";
-  const FEATURE = "EditableQty";
+  const SUBMODULE = "Editable Quantity";
 
   const SETTING_ENABLED = "editableQtyEnabled";
 
@@ -10,7 +10,7 @@
   }
 
   function log(...args) {
-    console.log(`${MODULE_ID} | ${FEATURE} v${getModuleVersion()} |`, ...args);
+    console.log(`${MODULE_ID} v${getModuleVersion()} | ${SUBMODULE} |`, ...args);
   }
 
   function getPropertySafe(object, path) {
@@ -179,7 +179,7 @@
   }
 
   function setQtyControlsDisabled(input, disabled) {
-    const wrapper = input.closest(".sdx-qty-wrapper");
+    const wrapper = input.closest(".mk-qty-wrapper");
     if (!wrapper) {
       input.disabled = disabled;
       return;
@@ -196,7 +196,7 @@
     return Dialog.confirm({
       title: "Delete Item?",
       content: `
-        <div class="sdx-delete-zero-dialog">
+        <div class="mk-delete-zero-dialog">
           <p><strong>${itemName}</strong> has reached quantity 0.</p>
           <p>Do you want to delete this item from the character sheet?</p>
         </div>
@@ -230,17 +230,17 @@
       ui.notifications?.info(`${item.name} deleted.`);
       log(`Deleted ${item.name} because quantity reached 0.`);
     } catch (err) {
-      console.error(`${MODULE_ID} | ${FEATURE} | Failed to delete item`, err);
+      console.error(`${MODULE_ID} v${getModuleVersion()} | ${SUBMODULE} | Failed to delete item`, err);
       ui.notifications?.error(`Could not delete ${item.name}.`);
     }
   }
 
   async function commitQtyValue(item, actor, qtyPath, input, nextValue) {
     if (!item || !qtyPath || !input) return;
-    if (input.dataset.sdxCommitting === "true") return;
+    if (input.dataset.mkCommitting === "true") return;
 
     const currentValue = toInt(
-      input.dataset.sdxCurrentQty ?? getPropertySafe(item, qtyPath),
+      input.dataset.mkCurrentQty ?? getPropertySafe(item, qtyPath),
       1
     );
 
@@ -252,13 +252,13 @@
       return;
     }
 
-    input.dataset.sdxCommitting = "true";
+    input.dataset.mkCommitting = "true";
     setQtyControlsDisabled(input, true);
 
     try {
       await item.update({ [qtyPath]: nextValue });
 
-      input.dataset.sdxCurrentQty = String(nextValue);
+      input.dataset.mkCurrentQty = String(nextValue);
       input.value = nextValue;
 
       log(`Updated ${item.name} qty from ${currentValue} to ${nextValue}`);
@@ -267,13 +267,13 @@
         await maybeDeleteAtZero(item, actor);
       }
     } catch (err) {
-      console.error(`${MODULE_ID} | ${FEATURE} | Failed to update quantity`, err);
+      console.error(`${MODULE_ID} v${getModuleVersion()} | ${SUBMODULE} | Failed to update quantity`, err);
       ui.notifications?.error(`Could not update quantity for ${item.name}.`);
 
       input.value = currentValue;
-      input.dataset.sdxCurrentQty = String(currentValue);
+      input.dataset.mkCurrentQty = String(currentValue);
     } finally {
-      input.dataset.sdxCommitting = "false";
+      input.dataset.mkCommitting = "false";
       setQtyControlsDisabled(input, false);
     }
   }
@@ -281,7 +281,7 @@
   function buildQtyButton(label, title) {
     const button = document.createElement("button");
     button.type = "button";
-    button.classList.add("sdx-qty-button");
+    button.classList.add("mk-qty-button");
     button.textContent = label;
     button.title = title;
     return button;
@@ -291,20 +291,20 @@
     const currentQty = getQtyValue(item, qtyPath);
 
     const wrapper = document.createElement("div");
-    wrapper.classList.add("sdx-qty-wrapper");
+    wrapper.classList.add("mk-qty-wrapper");
 
     const minusButton = buildQtyButton("-", "Decrease quantity");
 
     const input = document.createElement("input");
-    input.classList.add("sdx-qty-input");
+    input.classList.add("mk-qty-input");
     input.type = "number";
     input.min = "0";
     input.step = "1";
     input.value = currentQty;
     input.title = "Edit quantity";
-    input.dataset.sdxEditableQty = "true";
-    input.dataset.sdxCurrentQty = String(currentQty);
-    input.dataset.sdxCommitting = "false";
+    input.dataset.mkEditableQty = "true";
+    input.dataset.mkCurrentQty = String(currentQty);
+    input.dataset.mkCommitting = "false";
 
     const plusButton = buildQtyButton("+", "Increase quantity");
 
@@ -350,7 +350,7 @@
 
       if (event.key === "Escape") {
         event.preventDefault();
-        input.value = input.dataset.sdxCurrentQty ?? "1";
+        input.value = input.dataset.mkCurrentQty ?? "1";
         input.blur();
       }
     });
@@ -370,12 +370,12 @@
   }
 
   function injectStyles() {
-    if (document.getElementById("sdx-editable-qty-styles")) return;
+    if (document.getElementById("mk-editable-qty-styles")) return;
 
     const style = document.createElement("style");
-    style.id = "sdx-editable-qty-styles";
+    style.id = "mk-editable-qty-styles";
     style.textContent = `
-      .sdx-qty-wrapper {
+      .mk-qty-wrapper {
         display: flex;
         align-items: center;
         justify-content: center;
@@ -383,7 +383,7 @@
         width: 100%;
       }
 
-      .sdx-qty-button {
+      .mk-qty-button {
         width: 1.15rem;
         min-width: 1.15rem;
         height: 1.15rem;
@@ -401,11 +401,11 @@
         cursor: pointer;
       }
 
-      .sdx-qty-button:hover {
+      .mk-qty-button:hover {
         background: rgba(255, 255, 255, 0.32);
       }
 
-      .sdx-qty-input {
+      .mk-qty-input {
         width: 2.15rem;
         min-width: 2.15rem;
         max-width: 2.15rem;
@@ -420,23 +420,23 @@
         border-radius: 3px;
       }
 
-      .sdx-qty-input:focus {
+      .mk-qty-input:focus {
         outline: 1px solid rgba(0, 0, 0, 0.65);
         background: rgba(255, 255, 255, 0.35);
       }
 
-      .sdx-qty-button:disabled,
-      .sdx-qty-input:disabled {
+      .mk-qty-button:disabled,
+      .mk-qty-input:disabled {
         opacity: 0.6;
         cursor: default;
       }
 
-      .sdx-qty-input::-webkit-inner-spin-button,
-      .sdx-qty-input::-webkit-outer-spin-button {
+      .mk-qty-input::-webkit-inner-spin-button,
+      .mk-qty-input::-webkit-outer-spin-button {
         opacity: 0.5;
       }
 
-      .sdx-delete-zero-dialog p {
+      .mk-delete-zero-dialog p {
         margin: 0.35rem 0;
       }
     `;
@@ -483,7 +483,7 @@
       const qtyCell = findQtyCell(row);
       if (!qtyCell) continue;
 
-      if (qtyCell.querySelector("[data-sdx-editable-qty='true']")) continue;
+      if (qtyCell.querySelector("[data-mk-editable-qty='true']")) continue;
 
       qtyCell.innerHTML = "";
       qtyCell.appendChild(buildQtyInput(item, qtyPath, actor));

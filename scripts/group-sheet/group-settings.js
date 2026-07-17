@@ -51,10 +51,10 @@ function buildGroupSheetStyle() {
   const memberCardMinWidth = Math.max(160, memberPortraitSize + 24);
 
   return [
-    `--sdx-member-portrait-size: ${memberPortraitSize}px`,
-    `--sdx-member-card-min-width: ${memberCardMinWidth}px`,
-    `--sdx-camping-assigned-token-size: ${tokenSize}px`,
-    `--sdx-camping-assigned-portrait-size: ${portraitSize}px`,
+    `--mk-member-portrait-size: ${memberPortraitSize}px`,
+    `--mk-member-card-min-width: ${memberCardMinWidth}px`,
+    `--mk-camping-assigned-token-size: ${tokenSize}px`,
+    `--mk-camping-assigned-portrait-size: ${portraitSize}px`,
   ].join("; ");
 }
 export {

@@ -5,9 +5,9 @@
 /* Chat damage cards                            */
 /* -------------------------------------------- */
 
-.chat-message .sdx-auto-damage,
-.chat-message .sdx-auto-apply-damage,
-.chat-message .sdx-auto-damage-card {
+.chat-message .mk-auto-damage,
+.chat-message .mk-auto-apply-damage,
+.chat-message .mk-auto-damage-card {
   margin-top: 0.45rem;
   padding: 0.5rem;
   border: 1px solid rgba(115, 72, 32, 0.35);
@@ -16,8 +16,8 @@
   color: #241811;
 }
 
-.chat-message .sdx-auto-damage-header,
-.chat-message .sdx-auto-damage-title {
+.chat-message .mk-auto-damage-header,
+.chat-message .mk-auto-damage-title {
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -28,12 +28,12 @@
   font-weight: 800;
 }
 
-.chat-message .sdx-auto-damage-header i,
-.chat-message .sdx-auto-damage-title i {
+.chat-message .mk-auto-damage-header i,
+.chat-message .mk-auto-damage-title i {
   color: #8d2f22;
 }
 
-.chat-message .sdx-auto-damage-summary {
+.chat-message .mk-auto-damage-summary {
   display: grid;
   grid-template-columns: 1fr auto;
   gap: 0.25rem 0.5rem;
@@ -42,13 +42,13 @@
   font-size: 0.86rem;
 }
 
-.chat-message .sdx-auto-damage-summary strong {
+.chat-message .mk-auto-damage-summary strong {
   font-weight: 800;
 }
 
-.chat-message .sdx-auto-damage-value,
-.chat-message .sdx-damage-value,
-.chat-message .sdx-healing-value {
+.chat-message .mk-auto-damage-value,
+.chat-message .mk-damage-value,
+.chat-message .mk-healing-value {
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -62,11 +62,11 @@
   line-height: 1;
 }
 
-.chat-message .sdx-damage-value {
+.chat-message .mk-damage-value {
   color: #8d2f22;
 }
 
-.chat-message .sdx-healing-value {
+.chat-message .mk-healing-value {
   color: #2f7142;
 }
 
@@ -74,16 +74,16 @@
 /* Target rows                                  */
 /* -------------------------------------------- */
 
-.chat-message .sdx-auto-damage-targets,
-.chat-message .sdx-target-list {
+.chat-message .mk-auto-damage-targets,
+.chat-message .mk-target-list {
   display: flex;
   flex-direction: column;
   gap: 0.25rem;
   margin: 0.35rem 0;
 }
 
-.chat-message .sdx-auto-damage-target,
-.chat-message .sdx-target-row {
+.chat-message .mk-auto-damage-target,
+.chat-message .mk-target-row {
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto auto;
   gap: 0.35rem;
@@ -94,24 +94,24 @@
   background: rgba(255, 255, 255, 0.18);
 }
 
-.chat-message .sdx-target-row.sdx-applied,
-.chat-message .sdx-auto-damage-target.sdx-applied {
+.chat-message .mk-target-row.mk-applied,
+.chat-message .mk-auto-damage-target.mk-applied {
   border-color: rgba(62, 123, 77, 0.45);
   background: rgba(62, 123, 77, 0.14);
 }
 
-.chat-message .sdx-target-row.sdx-skipped,
-.chat-message .sdx-auto-damage-target.sdx-skipped {
+.chat-message .mk-target-row.mk-skipped,
+.chat-message .mk-auto-damage-target.mk-skipped {
   opacity: 0.72;
 }
 
-.chat-message .sdx-target-row.sdx-error,
-.chat-message .sdx-auto-damage-target.sdx-error {
+.chat-message .mk-target-row.mk-error,
+.chat-message .mk-auto-damage-target.mk-error {
   border-color: rgba(141, 47, 34, 0.55);
   background: rgba(141, 47, 34, 0.14);
 }
 
-.chat-message .sdx-target-name {
+.chat-message .mk-target-name {
   overflow: hidden;
   min-width: 0;
   text-overflow: ellipsis;
@@ -119,21 +119,21 @@
   font-weight: 700;
 }
 
-.chat-message .sdx-target-hp,
-.chat-message .sdx-target-change,
-.chat-message .sdx-hp-change {
+.chat-message .mk-target-hp,
+.chat-message .mk-target-change,
+.chat-message .mk-hp-change {
   font-size: 0.78rem;
   font-weight: 800;
   white-space: nowrap;
 }
 
-.chat-message .sdx-target-change.damage,
-.chat-message .sdx-hp-change.damage {
+.chat-message .mk-target-change.damage,
+.chat-message .mk-hp-change.damage {
   color: #8d2f22;
 }
 
-.chat-message .sdx-target-change.healing,
-.chat-message .sdx-hp-change.healing {
+.chat-message .mk-target-change.healing,
+.chat-message .mk-hp-change.healing {
   color: #2f7142;
 }
 
@@ -141,9 +141,9 @@
 /* Controls                                     */
 /* -------------------------------------------- */
 
-.chat-message .sdx-auto-damage-controls,
-.chat-message .sdx-damage-buttons,
-.chat-message .sdx-damage-control-row {
+.chat-message .mk-auto-damage-controls,
+.chat-message .mk-damage-buttons,
+.chat-message .mk-damage-control-row {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
@@ -152,10 +152,10 @@
   margin-top: 0.4rem;
 }
 
-.chat-message button.sdx-auto-damage-button,
-.chat-message a.sdx-auto-damage-button,
-.chat-message .sdx-damage-buttons button,
-.chat-message .sdx-damage-buttons a {
+.chat-message button.mk-auto-damage-button,
+.chat-message a.mk-auto-damage-button,
+.chat-message .mk-damage-buttons button,
+.chat-message .mk-damage-buttons a {
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -173,30 +173,30 @@
   cursor: pointer;
 }
 
-.chat-message button.sdx-auto-damage-button:hover,
-.chat-message a.sdx-auto-damage-button:hover,
-.chat-message .sdx-damage-buttons button:hover,
-.chat-message .sdx-damage-buttons a:hover {
+.chat-message button.mk-auto-damage-button:hover,
+.chat-message a.mk-auto-damage-button:hover,
+.chat-message .mk-damage-buttons button:hover,
+.chat-message .mk-damage-buttons a:hover {
   border-color: rgba(141, 47, 34, 0.55);
   background: rgba(201, 162, 95, 0.25);
   color: #8d2f22;
   text-shadow: none;
 }
 
-.chat-message button.sdx-auto-damage-button:disabled,
-.chat-message .sdx-damage-buttons button:disabled {
+.chat-message button.mk-auto-damage-button:disabled,
+.chat-message .mk-damage-buttons button:disabled {
   opacity: 0.48;
   cursor: default;
 }
 
-.chat-message .sdx-auto-damage-button.sdx-primary,
-.chat-message .sdx-damage-buttons .sdx-primary {
+.chat-message .mk-auto-damage-button.mk-primary,
+.chat-message .mk-damage-buttons .mk-primary {
   border-color: rgba(141, 47, 34, 0.55);
   background: rgba(141, 47, 34, 0.14);
 }
 
-.chat-message .sdx-auto-damage-button.sdx-healing,
-.chat-message .sdx-damage-buttons .sdx-healing {
+.chat-message .mk-auto-damage-button.mk-healing,
+.chat-message .mk-damage-buttons .mk-healing {
   border-color: rgba(62, 123, 77, 0.5);
   background: rgba(62, 123, 77, 0.14);
 }
@@ -205,9 +205,9 @@
 /* Damage reduction and adjustment rows         */
 /* -------------------------------------------- */
 
-.chat-message .sdx-damage-reduction,
-.chat-message .sdx-damage-reduction-row,
-.chat-message .sdx-damage-adjustment-row {
+.chat-message .mk-damage-reduction,
+.chat-message .mk-damage-reduction-row,
+.chat-message .mk-damage-adjustment-row {
   display: grid;
   grid-template-columns: 1fr auto;
   gap: 0.35rem;
@@ -220,15 +220,15 @@
   font-size: 0.82rem;
 }
 
-.chat-message .sdx-damage-reduction input,
-.chat-message .sdx-damage-reduction-row input,
-.chat-message .sdx-damage-adjustment-row input {
+.chat-message .mk-damage-reduction input,
+.chat-message .mk-damage-reduction-row input,
+.chat-message .mk-damage-adjustment-row input {
   width: 4rem;
   height: 1.6rem;
   text-align: center;
 }
 
-.chat-message .sdx-damage-mode-row {
+.chat-message .mk-damage-mode-row {
   display: flex;
   flex-wrap: wrap;
   gap: 0.35rem;
@@ -237,7 +237,7 @@
   font-size: 0.82rem;
 }
 
-.chat-message .sdx-damage-mode-row label {
+.chat-message .mk-damage-mode-row label {
   display: inline-flex;
   align-items: center;
   gap: 0.2rem;
@@ -249,8 +249,8 @@
 /* Notices                                      */
 /* -------------------------------------------- */
 
-.chat-message .sdx-auto-damage-notice,
-.chat-message .sdx-auto-damage-error {
+.chat-message .mk-auto-damage-notice,
+.chat-message .mk-auto-damage-error {
   margin: 0.35rem 0;
   padding: 0.35rem 0.45rem;
   border-radius: 4px;
@@ -258,24 +258,24 @@
   line-height: 1.25;
 }
 
-.chat-message .sdx-auto-damage-notice {
+.chat-message .mk-auto-damage-notice {
   border: 1px solid rgba(115, 72, 32, 0.28);
   background: rgba(255, 255, 255, 0.18);
 }
 
-.chat-message .sdx-auto-damage-error {
+.chat-message .mk-auto-damage-error {
   border: 1px solid rgba(141, 47, 34, 0.48);
   background: rgba(141, 47, 34, 0.14);
   font-weight: 700;
 }
 
 @media (max-width: 620px) {
-  .chat-message .sdx-auto-damage-target,
-  .chat-message .sdx-target-row {
+  .chat-message .mk-auto-damage-target,
+  .chat-message .mk-target-row {
     grid-template-columns: minmax(0, 1fr) auto;
   }
 
-  .chat-message .sdx-target-hp {
+  .chat-message .mk-target-hp {
     grid-column: 1 / -1;
   }
 }

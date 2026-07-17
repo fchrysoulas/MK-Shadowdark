@@ -29,12 +29,15 @@
     "scripts/settings.js",
     "scripts/auto-apply-damage.js",
     "scripts/character-sheet-tweaks.js",
+    "scripts/chat-reporting.js",
+    "scripts/summary-bar.js",
     "scripts/corpse-token.js",
     "scripts/death-timer.js",
     "scripts/editable-qty.js",
     "scripts/equipment-hands.js",
     "scripts/group-sheet.js",
     "scripts/quickdraw-icons.js",
+    "scripts/sheet-style-editor.js",
     "scripts/time-passes-splash.js",
     "scripts/token-shadows.js",
     "scripts/encounter-engine.js",
@@ -42,11 +45,14 @@
   ],
   "styles": [
     "styles/mk-shadowdark.css",
+    "styles/sheet-style-editor.css",
+    "styles/attack-weapon-properties.css",
     "styles/auto-apply-damage.css",
-    "styles/character-sheet-tweaks.css",
+    "styles/chat-reporting.css",
     "styles/group-sheet.css",
     "styles/quickdraw-icons.css",
     "styles/encounter-engine.css"
+    "styles/summary-bar.css"
   ],
   "languages": [
     {

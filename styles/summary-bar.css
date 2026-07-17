@@ -1,0 +1,259 @@
+/* styles/summary-bar.css */
+/* Fixed Summary Bar styles. Appearance changes are applied through the
+ * dedicated Summary Bar settings and their CSS custom properties.
+ */
+
+.shadowdark.sheet.player.mk-summary-bar-in-header,
+.window-app.mk-summary-bar-in-header,
+.app.mk-summary-bar-in-header {
+  --mk-sheet-font-scale: 1.2;
+  --mk-bar-value-font-size: 13px;
+  --mk-bar-button-radius: 8px;
+  --mk-bar-button-scale: 1;
+  --mk-bar-position-x: 20px;
+  --mk-bar-position-y: 8px;
+  --mk-sheet-bar-background: rgba(0, 0, 0, 0.08);
+  --mk-sheet-bar-border: rgba(0, 0, 0, 0.28);
+  --mk-sheet-chip-background: rgba(0, 0, 0, 0.10);
+  --mk-sheet-chip-border: rgba(0, 0, 0, 0.26);
+  --mk-sheet-chip-label: inherit;
+  --mk-sheet-chip-text: inherit;
+}
+
+.mk-character-sheet-bar {
+  flex: 0 0 auto !important;
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  margin: 3px 8px 2px;
+  padding: calc(0.22rem * var(--mk-sheet-font-scale)) calc(0.35rem * var(--mk-sheet-font-scale));
+  border: 1px solid var(--mk-sheet-bar-border);
+  border-radius: 5px;
+  background: var(--mk-sheet-bar-background);
+  color: inherit;
+  font-size: calc(11px * var(--mk-sheet-font-scale));
+  line-height: 1;
+  box-shadow: none;
+}
+
+.mk-character-sheet-bar + .SD-nav {
+  margin-top: 3px;
+}
+
+.mk-character-sheet-bar__main,
+.mk-character-sheet-bar__chips {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.mk-character-sheet-bar__main {
+  gap: 0.35rem;
+  flex-wrap: wrap;
+  min-height: 1.35rem;
+}
+
+.mk-character-sheet-bar__chips {
+  flex-direction: row !important;
+  flex-wrap: nowrap;
+  gap: 0.25rem;
+}
+
+.mk-sheet-chip {
+  display: inline-flex !important;
+  flex: 0 0 auto !important;
+  flex-direction: column !important;
+  align-items: center !important;
+  justify-content: center !important;
+  gap: 0.08rem !important;
+  min-width: 2.35rem !important;
+  min-height: 1.85rem !important;
+  padding: 0.16rem 0.34rem;
+  border: none !important;
+  border-radius: var(--mk-bar-button-radius, 8px) !important;
+  background: var(--mk-sheet-chip-background);
+  color: var(--mk-sheet-chip-text);
+  text-align: center !important;
+  white-space: nowrap;
+}
+
+button.mk-sheet-chip {
+  border: 1px solid var(--mk-sheet-chip-border) !important;
+  font-family: inherit;
+  font-size: inherit;
+  line-height: inherit;
+  cursor: pointer;
+  transform: scale(var(--mk-bar-button-scale, 1));
+  transform-origin: center;
+}
+
+button.mk-sheet-chip:hover,
+button.mk-sheet-chip:focus-visible {
+  border-color: rgba(255, 255, 255, 0.55) !important;
+  background: rgba(255, 255, 255, 0.12);
+  outline: none;
+}
+
+.mk-sheet-chip strong,
+.mk-sheet-chip span {
+  display: block !important;
+  width: 100% !important;
+  text-align: center !important;
+  line-height: 1 !important;
+}
+
+.mk-sheet-chip strong {
+  color: var(--mk-sheet-chip-label);
+  font-size: 0.68em !important;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.mk-sheet-chip span {
+  font-size: var(--mk-bar-value-font-size, 13px) !important;
+}
+
+.mk-stat-chip span {
+  font-weight: 700;
+}
+
+.mk-luck-chip span {
+  display: flex !important;
+  align-items: center;
+  justify-content: center !important;
+}
+
+.mk-luck-icon {
+  font-size: 0.95em;
+  line-height: 1;
+  filter: drop-shadow(0 1px 1px rgba(0, 0, 0, 0.75));
+}
+
+.mk-luck-ready .mk-luck-icon {
+  color: #57d66d;
+}
+
+.mk-luck-spent .mk-luck-icon {
+  color: #e04242;
+}
+
+.mk-death-timer-chip span {
+  display: flex !important;
+  align-items: center;
+  justify-content: center !important;
+  min-height: 1em;
+}
+
+.mk-death-timer-icon {
+  color: #e04242;
+  filter: drop-shadow(0 1px 1px rgba(0, 0, 0, 0.75));
+}
+
+.mk-death-timer-chip em {
+  margin-left: 0.2rem;
+  font-size: 0.9em;
+  font-style: normal;
+  font-weight: 700;
+}
+
+
+.mk-bar-divider {
+  display: inline-block;
+  flex: 0 0 auto;
+  width: 1px;
+  height: 1.75rem;
+  margin: 0 0.18rem;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.38);
+}
+
+.shadowdark.sheet.player.mk-summary-bar-in-header .SD-header {
+  position: relative !important;
+  min-height: 132px;
+  overflow: hidden;
+  padding-bottom: 0;
+}
+
+.shadowdark.sheet.player.mk-summary-bar-in-header .SD-header .mk-character-sheet-bar.mk-in-header {
+  position: absolute;
+  left: clamp(92px, 16%, 128px);
+  right: 38px;
+  bottom: 16px;
+  z-index: 5;
+  width: auto;
+  max-width: calc(100% - 44px);
+  margin: 0;
+  padding: calc(0.14rem * var(--mk-sheet-font-scale)) calc(0.30rem * var(--mk-sheet-font-scale));
+  border-color: rgba(255, 255, 255, 0.28);
+  background: rgba(0, 0, 0, 0.52);
+  color: #f4efe3;
+  box-shadow: 0 1px 5px rgba(0, 0, 0, 0.38);
+  pointer-events: auto;
+  overflow: hidden;
+  transform: translate(var(--mk-bar-position-x), var(--mk-bar-position-y));
+}
+
+.shadowdark.sheet.player.mk-summary-bar-in-header .SD-header .mk-character-sheet-bar__main {
+  min-width: 0;
+  width: 100%;
+}
+
+.shadowdark.sheet.player.mk-summary-bar-in-header .SD-header .mk-character-sheet-bar__chips {
+  width: 100%;
+  min-width: 0;
+  overflow-x: auto;
+  overflow-y: hidden;
+  white-space: nowrap;
+  scrollbar-width: none;
+}
+
+.shadowdark.sheet.player.mk-summary-bar-in-header .SD-header .mk-character-sheet-bar__chips::-webkit-scrollbar {
+  display: none;
+}
+
+.shadowdark.sheet.player.mk-summary-bar-in-header .SD-header .mk-sheet-chip {
+  width: auto !important;
+  max-width: none !important;
+  height: auto !important;
+  margin: 0 !important;
+  padding: 0.14rem 0.28rem !important;
+  background: rgba(0, 0, 0, 0.32);
+  color: #f4efe3;
+}
+
+.shadowdark.sheet.player.mk-summary-bar-in-header .SD-header button.mk-sheet-chip {
+  border-color: rgba(255, 255, 255, 0.28) !important;
+}
+
+.shadowdark.sheet.player.mk-summary-bar-in-header .SD-header .mk-sheet-chip strong,
+.shadowdark.sheet.player.mk-summary-bar-in-header .SD-header .mk-sheet-chip span {
+  width: auto !important;
+  min-width: 0 !important;
+  white-space: nowrap !important;
+}
+
+.shadowdark.sheet.player.mk-summary-bar-in-header .SD-header .mk-sheet-chip strong {
+  color: #d8cba8;
+}
+
+.shadowdark.sheet.player.mk-summary-bar-in-header .SD-header .mk-stat-chip {
+  padding-left: 0.22rem !important;
+  padding-right: 0.22rem !important;
+}
+
+.shadowdark.sheet.player.mk-summary-bar-in-header .SD-header .mk-stat-chip strong {
+  font-size: 0.72em !important;
+}
+
+.shadowdark.sheet.player.mk-summary-bar-in-header .SD-header .mk-bar-divider {
+  height: 1.7rem;
+  background: rgba(255, 255, 255, 0.42);
+}
+
+@media (max-width: 760px) {
+  .shadowdark.sheet.player.mk-summary-bar-in-header .SD-header .mk-character-sheet-bar.mk-in-header {
+    left: 6px;
+    right: 6px;
+    bottom: 6px;
+  }
+}

@@ -6,6 +6,7 @@ import {
   GROUP_SHEET_SOCKET_PROMPT_TRAVEL,
   GROUP_SHEET_SOCKET_UPDATE_TRAVEL,
   MODULE_ID,
+  SUBMODULE,
   TRAVEL_ACTIVITIES,
   TRAVEL_PROMPT_BODY_CLASS,
   TRAVEL_PROMPT_ELEMENT_ID,
@@ -56,14 +57,14 @@ function renderTravelProgressSteps(progress) {
 
   return `
     <div
-      class="sdx-travel-progress"
+      class="mk-travel-progress"
       data-prompt-id="${escapeHtml(progress?.promptId ?? "")}"
       data-travel-duration-ms="${escapeHtml(durationMs)}"
       data-travel-progress-started-at="${escapeHtml(progressStartedAt)}"
-      style="--sdx-travel-progress-fill: ${escapeHtml(percent)}%;"
+      style="--mk-travel-progress-fill: ${escapeHtml(percent)}%;"
     >
-      <span class="sdx-travel-progress-track" aria-hidden="true">
-        <span class="sdx-travel-progress-fill" data-travel-progress-fill></span>
+      <span class="mk-travel-progress-track" aria-hidden="true">
+        <span class="mk-travel-progress-fill" data-travel-progress-fill></span>
       </span>
       ${TRAVEL_ACTIVITIES.map(activity => {
         const step = progress?.steps?.find(existing => existing.key === activity.key) ?? {
@@ -76,7 +77,7 @@ function renderTravelProgressSteps(progress) {
         };
 
         const classes = [
-          "sdx-travel-progress-step",
+          "mk-travel-progress-step",
           step.complete ? "is-complete" : "",
           step.failed ? "is-failed" : "",
           step.successOutcome ? "is-success-result" : "",
@@ -88,15 +89,15 @@ function renderTravelProgressSteps(progress) {
 
         return `
           <div class="${classes}" data-travel-progress-step="${escapeHtml(activity.key)}">
-            <span class="sdx-travel-progress-node">
+            <span class="mk-travel-progress-node">
               <img src="${escapeHtml(activity.icon)}" alt="">
             </span>
-            <span class="sdx-travel-progress-label">${escapeHtml(activity.name)}</span>
-            <span class="sdx-travel-progress-count">
+            <span class="mk-travel-progress-label">${escapeHtml(activity.name)}</span>
+            <span class="mk-travel-progress-count">
               <span data-progress-completed>${escapeHtml(step.completedCount ?? 0)}</span>/<span data-progress-assigned>${escapeHtml(step.assignedCount ?? 0)}</span>
             </span>
-            <span class="sdx-travel-progress-status" data-progress-status>${escapeHtml(step.statusLabel ?? "Waiting")}</span>
-            <span class="sdx-travel-progress-results" data-progress-results>${renderTravelResultMarks(step)}</span>
+            <span class="mk-travel-progress-status" data-progress-status>${escapeHtml(step.statusLabel ?? "Waiting")}</span>
+            <span class="mk-travel-progress-results" data-progress-results>${renderTravelResultMarks(step)}</span>
           </div>
         `;
       }).join("")}
@@ -109,7 +110,7 @@ function renderTravelPromptAssignment(assignment, options = {}) {
   const canRoll = Boolean(options.canRoll) && !complete;
   const ability = Array.isArray(assignment.abilities) ? assignment.abilities[0] : "";
   const classes = [
-    "sdx-travel-prompt-assignment",
+    "mk-travel-prompt-assignment",
     complete ? "is-complete" : "",
     assignment.implicit ? "is-default" : "",
   ].filter(Boolean).join(" ");
@@ -124,27 +125,27 @@ function renderTravelPromptAssignment(assignment, options = {}) {
       data-dc="${escapeHtml(assignment.dc)}"
       data-implicit="${assignment.implicit ? "true" : "false"}"
     >
-      <img class="sdx-travel-prompt-token" src="${escapeHtml(assignment.actorImg)}" alt="${escapeHtml(assignment.actorName)}">
-      <div class="sdx-travel-prompt-assignment-main">
+      <img class="mk-travel-prompt-token" src="${escapeHtml(assignment.actorImg)}" alt="${escapeHtml(assignment.actorName)}">
+      <div class="mk-travel-prompt-assignment-main">
         <strong>${escapeHtml(assignment.actorName)}</strong>
         <span>
           ${escapeHtml(assignment.activityName)} <b>${escapeHtml(assignment.abilityLabel)}</b> DC ${escapeHtml(assignment.dc)}
-          ${assignment.implicit ? `<em class="sdx-travel-prompt-default">Default</em>` : ""}
+          ${assignment.implicit ? `<em class="mk-travel-prompt-default">Default</em>` : ""}
         </span>
       </div>
-      <div class="sdx-travel-prompt-assignment-controls">
+      <div class="mk-travel-prompt-assignment-controls">
         ${canRoll
-          ? `<button type="button" class="sdx-travel-prompt-roll" data-action="travel-prompt-player-roll">Roll ${escapeHtml(assignment.abilityLabel)}</button>`
-          : `<span class="sdx-travel-prompt-waiting">${complete ? "Resolved" : "Waiting"}</span>`}
+          ? `<button type="button" class="mk-travel-prompt-roll" data-action="travel-prompt-player-roll">Roll ${escapeHtml(assignment.abilityLabel)}</button>`
+          : `<span class="mk-travel-prompt-waiting">${complete ? "Resolved" : "Waiting"}</span>`}
       </div>
     </article>
   `;
 }
 
 function clearTravelPromptClientTimers(wrap) {
-  if (wrap?._sdxTravelProgressStartTimer) {
-    clearTimeout(wrap._sdxTravelProgressStartTimer);
-    wrap._sdxTravelProgressStartTimer = null;
+  if (wrap?._mkTravelProgressStartTimer) {
+    clearTimeout(wrap._mkTravelProgressStartTimer);
+    wrap._mkTravelProgressStartTimer = null;
   }
 }
 
@@ -174,7 +175,7 @@ function disableTravelPromptRollControls(wrap) {
 }
 
 function startTravelProgressAnimation(wrap, progress = {}) {
-  const progressEl = wrap?.querySelector?.(".sdx-travel-progress");
+  const progressEl = wrap?.querySelector?.(".mk-travel-progress");
   const fill = progressEl?.querySelector?.("[data-travel-progress-fill]");
   if (!progressEl || !fill) return;
 
@@ -187,7 +188,7 @@ function startTravelProgressAnimation(wrap, progress = {}) {
     clearTravelPromptClientTimers(wrap);
     fill.style.transition = "none";
     fill.style.width = `${progress.complete ? 100 : resolvedPercent}%`;
-    progressEl.style.setProperty("--sdx-travel-progress-fill", `${progress.complete ? 100 : resolvedPercent}%`);
+    progressEl.style.setProperty("--mk-travel-progress-fill", `${progress.complete ? 100 : resolvedPercent}%`);
     return;
   }
 
@@ -195,10 +196,10 @@ function startTravelProgressAnimation(wrap, progress = {}) {
   if (remainingStartMs > 0) {
     fill.style.transition = "none";
     fill.style.width = "0%";
-    progressEl.style.setProperty("--sdx-travel-progress-fill", "0%");
-    if (!wrap._sdxTravelProgressStartTimer) {
-      wrap._sdxTravelProgressStartTimer = setTimeout(() => {
-        wrap._sdxTravelProgressStartTimer = null;
+    progressEl.style.setProperty("--mk-travel-progress-fill", "0%");
+    if (!wrap._mkTravelProgressStartTimer) {
+      wrap._mkTravelProgressStartTimer = setTimeout(() => {
+        wrap._mkTravelProgressStartTimer = null;
         startTravelProgressAnimation(wrap, progress);
       }, remainingStartMs);
     }
@@ -211,13 +212,13 @@ function startTravelProgressAnimation(wrap, progress = {}) {
 
   fill.style.transition = "none";
   fill.style.width = `${currentPercent}%`;
-  progressEl.style.setProperty("--sdx-travel-progress-fill", `${currentPercent}%`);
+  progressEl.style.setProperty("--mk-travel-progress-fill", `${currentPercent}%`);
   fill.getBoundingClientRect();
 
   requestAnimationFrame(() => {
     fill.style.transition = `width ${remainingMs}ms linear`;
     fill.style.width = "100%";
-    progressEl.style.setProperty("--sdx-travel-progress-fill", "100%");
+    progressEl.style.setProperty("--mk-travel-progress-fill", "100%");
   });
 }
 
@@ -247,21 +248,21 @@ async function showTravelRollPrompt(payload = {}) {
   wrap.dataset.promptId = payload.promptId ?? "";
   wrap.dataset.groupActorUuid = payload.groupActorUuid ?? "";
   wrap.innerHTML = `
-    <div class="sdx-travel-prompt-card">
-      <button type="button" class="sdx-travel-prompt-close" data-action="travel-prompt-close" aria-label="Close">
+    <div class="mk-travel-prompt-card">
+      <button type="button" class="mk-travel-prompt-close" data-action="travel-prompt-close" aria-label="Close">
         <i class="fas fa-times"></i>
       </button>
-      <header class="sdx-travel-prompt-header">
+      <header class="mk-travel-prompt-header">
         <h2>Travelling</h2>
         <span>${escapeHtml(payload.groupName ?? "Group")}</span>
       </header>
       ${renderTravelProgressSteps(payload.progress)}
-      <div class="sdx-travel-prompt-status">
+      <div class="mk-travel-prompt-status">
         <span data-travel-prompt-status-text>
           ${escapeHtml(statusText)}
         </span>
       </div>
-      <div class="sdx-travel-prompt-assignments">
+      <div class="mk-travel-prompt-assignments">
         ${assignmentRows.map(row => renderTravelPromptAssignment(row.assignment, { canRoll: row.canRoll })).join("")}
       </div>
     </div>
@@ -292,11 +293,11 @@ function setTravelPromptRowComplete(row) {
     control.disabled = true;
   });
 
-  const waiting = row.querySelector(".sdx-travel-prompt-waiting");
+  const waiting = row.querySelector(".mk-travel-prompt-waiting");
   if (waiting) waiting.textContent = "Resolved";
   if (!waiting) {
-    const controls = row.querySelector(".sdx-travel-prompt-assignment-controls");
-    if (controls) controls.innerHTML = `<span class="sdx-travel-prompt-waiting">Resolved</span>`;
+    const controls = row.querySelector(".mk-travel-prompt-assignment-controls");
+    if (controls) controls.innerHTML = `<span class="mk-travel-prompt-waiting">Resolved</span>`;
   }
 }
 
@@ -322,9 +323,9 @@ async function onTravelPromptPlayerRollClick(event) {
   const button = event.currentTarget;
   if (button.disabled) return;
 
-  const row = button.closest(".sdx-travel-prompt-assignment");
+  const row = button.closest(".mk-travel-prompt-assignment");
   const wrap = button.closest(`#${TRAVEL_PROMPT_ELEMENT_ID}`);
-  const progressEl = wrap?.querySelector(".sdx-travel-progress");
+  const progressEl = wrap?.querySelector(".mk-travel-progress");
   if (!row || !wrap) return;
 
   if (getTravelProgressStartTime({}, progressEl) > 0) {
@@ -369,7 +370,7 @@ async function onTravelPromptPlayerRollClick(event) {
       userId: game.user?.id,
     });
   } catch (error) {
-    console.warn(`${MODULE_ID} | GroupSheet | Could not submit travelling roll`, error);
+    console.warn(`${MODULE_ID} | ${SUBMODULE} | Could not submit travelling roll`, error);
     button.disabled = false;
     ui.notifications?.warn?.("Could not submit the travelling roll.");
   }
@@ -387,7 +388,7 @@ function applyTravelPromptUpdate(data = {}) {
 
   const completedKeys = new Set(data.completedKeys ?? []);
 
-  wrap.querySelectorAll(".sdx-travel-prompt-assignment").forEach(row => {
+  wrap.querySelectorAll(".mk-travel-prompt-assignment").forEach(row => {
     if (completedKeys.has(row.dataset.assignmentKey)) setTravelPromptRowComplete(row);
   });
 
@@ -413,7 +414,7 @@ function applyTravelPromptUpdate(data = {}) {
     if (results) results.innerHTML = renderTravelResultMarks(step);
   }
 
-  const progressEl = wrap.querySelector(".sdx-travel-progress");
+  const progressEl = wrap.querySelector(".mk-travel-progress");
   const fill = progressEl?.querySelector("[data-travel-progress-fill]");
   if (progressEl && data.progress) {
     progressEl.dataset.travelDurationMs = String(data.progress.durationMs ?? 0);
@@ -424,11 +425,11 @@ function applyTravelPromptUpdate(data = {}) {
     const percent = data.progress.complete ? 100 : clampPercent(data.progress.percent ?? 0);
     fill.style.transition = "none";
     fill.style.width = `${percent}%`;
-    progressEl.style.setProperty("--sdx-travel-progress-fill", `${percent}%`);
+    progressEl.style.setProperty("--mk-travel-progress-fill", `${percent}%`);
   }
 
   if (data.progress) {
-    const status = wrap.querySelector("[data-travel-prompt-status-text]") ?? wrap.querySelector(".sdx-travel-prompt-status");
+    const status = wrap.querySelector("[data-travel-prompt-status-text]") ?? wrap.querySelector(".mk-travel-prompt-status");
     const resolving = Boolean(data.progress.resolving)
       || (Boolean(data.progress.active) && !data.progress.complete && Number(data.progress.progressStartedAt ?? 0) > 0);
 
@@ -447,7 +448,7 @@ function applyTravelPromptUpdate(data = {}) {
 function handleTravelPromptTransport(data = {}) {
   if (data.action === GROUP_SHEET_SOCKET_PROMPT_TRAVEL) {
     showTravelRollPrompt(data.payload).catch(error => {
-      console.error(`${MODULE_ID} | GroupSheet | Travel prompt display error`, error);
+      console.error(`${MODULE_ID} | ${SUBMODULE} | Travel prompt display error`, error);
     });
   }
 
@@ -462,7 +463,7 @@ async function broadcastTravelPromptChat(action, payload = {}) {
   try {
     const messageData = {
       speaker: ChatMessage.getSpeaker(),
-      content: `<span style="display:none">sdx-travelling</span>`,
+      content: `<span style="display:none">mk-travelling</span>`,
       flags: {
         [MODULE_ID]: {
           [GROUP_SHEET_CHAT_FLAG_TRAVEL_PROMPT]: {
@@ -485,7 +486,7 @@ async function broadcastTravelPromptChat(action, payload = {}) {
 
     return message;
   } catch (error) {
-    console.warn(`${MODULE_ID} | GroupSheet | Could not broadcast travelling splash chat flag`, error);
+    console.warn(`${MODULE_ID} | ${SUBMODULE} | Could not broadcast travelling splash chat flag`, error);
     return null;
   }
 }
@@ -529,7 +530,7 @@ function scheduleTravelPromptSequence(payload = {}) {
   const timer = setTimeout(() => {
     travelPromptTimers.delete(key);
     resolveNextTravelPromptStep(payload.groupActorUuid, payload.promptId).catch(error => {
-      console.error(`${MODULE_ID} | GroupSheet | Travel prompt sequence error`, error);
+      console.error(`${MODULE_ID} | ${SUBMODULE} | Travel prompt sequence error`, error);
     });
   }, delay);
 
@@ -611,7 +612,7 @@ async function resolveNextTravelPromptStep(groupActorUuid, promptId) {
         content: `<strong>${escapeHtml(activity.name)}</strong> has no assigned character and counts as a travel failure.`,
       });
     } catch (error) {
-      console.warn(`${MODULE_ID} | GroupSheet | Could not announce empty travel step`, error);
+      console.warn(`${MODULE_ID} | ${SUBMODULE} | Could not announce empty travel step`, error);
     }
   } else {
     const assignmentKeys = assignments.map(assignment => getTravelAssignmentKey(activity.key, assignment.actorUuid));

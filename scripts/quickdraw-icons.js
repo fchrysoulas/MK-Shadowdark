@@ -1,7 +1,47 @@
 (() => {
   const MODULE_ID = "mk-shadowdark";
+  const SUBMODULE = "Quickdraw";
+  const STYLESHEET_ID = "mk-shadowdark-quickdraw-styles";
+  const STYLESHEET_PATH = `modules/${MODULE_ID}/styles/quickdraw-icons.css`;
   const FLAG_KEY = "quickdraw";
-  const QD_ICON_CLASS = "fa-bolt";
+  const ACTOR_SHEET_RENDER_HOOKS = [
+    "renderActorSheet",
+    "renderActorSheetSD",
+    "renderPlayerSheetSD",
+    "renderShadowdarkActorSheet",
+    "renderShadowdarkActorSheetV2",
+    "renderActorSheetShadowdark"
+  ];
+  const renderRetryTimers = new WeakMap();
+
+  ensureStylesheet();
+
+  function ensureStylesheet() {
+    if (document.getElementById(STYLESHEET_ID)) return;
+
+    const existing = Array.from(document.querySelectorAll('link[rel="stylesheet"][href]'))
+      .find(link => link.href.includes(`/modules/${MODULE_ID}/styles/quickdraw-icons.css`));
+    if (existing) {
+      existing.id = STYLESHEET_ID;
+      return;
+    }
+
+    const link = document.createElement("link");
+    link.id = STYLESHEET_ID;
+    link.rel = "stylesheet";
+    link.href = toFoundryRoute(STYLESHEET_PATH);
+    document.head.append(link);
+  }
+
+  function toFoundryRoute(path) {
+    const clean = String(path ?? "").replace(/^\/+/, "");
+    try {
+      if (foundry.utils.getRoute) return foundry.utils.getRoute(clean);
+    } catch (_error) {
+      // Use the host-root fallback.
+    }
+    return `/${clean}`;
+  }
 
   function isDebugEnabled() {
     try {
@@ -13,12 +53,12 @@
 
   function dlog(...args) {
     if (!isDebugEnabled()) return;
-    console.log(`${MODULE_ID} |`, ...args);
+    console.log(`${MODULE_ID} | ${SUBMODULE} |`, ...args);
   }
 
   function dwarn(...args) {
     if (!isDebugEnabled()) return;
-    console.warn(`${MODULE_ID} |`, ...args);
+    console.warn(`${MODULE_ID} | ${SUBMODULE} |`, ...args);
   }
 
   function getLimit() {
@@ -98,6 +138,30 @@
     }
   }
 
+  function isQuickdrawIconEnabled() {
+    try {
+      return !!game.settings.get(MODULE_ID, "quickdrawIconEnabled");
+    } catch (_err) {
+      return true;
+    }
+  }
+
+  function isHighlightEnabled() {
+    try {
+      return !!game.settings.get(MODULE_ID, "characterSheetTweaksHighlightEquipped");
+    } catch (_err) {
+      return true;
+    }
+  }
+
+  function applyHighlightScope(html) {
+    const scopes = html
+      .add(html.find("form.shadowdark.sheet.player, .shadowdark.sheet.player"))
+      .add(html.closest(".window-app, .app"));
+
+    scopes.toggleClass("mk-highlight-equipped", isHighlightEnabled());
+  }
+
   /**
    * Update without re-rendering the sheet to avoid flicker.
    */
@@ -139,11 +203,14 @@
 
   function buildQuickdrawButton(active) {
     return $(`
-      <a class="item-control sdex-quickdraw-toggle ${active ? "is-on" : "is-off"}"
-         data-action="sdex-quickdraw"
+      <a class="item-control mk-quickdraw-toggle ${active ? "is-on" : "is-off"}"
+         data-action="mk-quickdraw"
          role="button"
+         aria-label="${titleFor(active)}"
          title="${titleFor(active)}">
-        <i class="fa-solid ${QD_ICON_CLASS}"></i>
+        <svg class="mk-quickdraw-bolt" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+          <path d="M13.6 1.5 3.8 13.2h7.1l-1.1 9.3 10.4-12.7h-7.1l.5-8.3Z"></path>
+        </svg>
       </a>
     `);
   }
@@ -166,9 +233,11 @@
    */
   function getInventoryRoot(html) {
     const selectors = [
-      "[data-tab='tab-inventory']",
-      "[data-tab='inventory']",
-      ".tab-inventory",
+      "section.tab.tab-inventory[data-tab='tab-inventory']",
+      "section[data-tab='tab-inventory']",
+      ".tab.tab-inventory",
+      "section.tab[data-tab='inventory']",
+      "div.tab[data-tab='inventory']",
       ".tab.inventory",
       ".inventory.tab",
       ".inventory",
@@ -311,6 +380,8 @@
       .find(".item-delete, [data-action='delete'], [data-action='remove'], a.item-control.delete, button.item-control.delete")
       .first();
 
+    controls.addClass("mk-has-quickdraw-toggle");
+
     if (deleteBtn?.length) deleteBtn.before($btn);
     else controls.append($btn);
   }
@@ -398,6 +469,8 @@
     const rows = getInventoryRows(html);
     if (!rows?.length) return;
 
+    rows.closest("ol.SD-list.item-list, ul.SD-list.item-list").removeClass("mk-has-quickdraw-column");
+
     for (const rowEl of rows) {
       const row = $(rowEl);
       const item = getItemFromRow(app, row);
@@ -406,14 +479,15 @@
       const controls = findRightIconContainer(row);
       if (!controls?.length) continue;
 
-      controls.find(".sdex-quickdraw-toggle").remove();
+      controls.find(".mk-quickdraw-toggle").remove();
+      controls.removeClass("mk-has-quickdraw-toggle");
 
       if (!isEligibleForBolt(item)) continue;
 
       const active = isQuickdraw(item);
-      row.toggleClass("sdx-quickdraw-item", active);
-      row.toggleClass("sdx-quickdraw-active", active);
-      row.attr("data-sdx-quickdraw", active ? "true" : "false");
+      row.toggleClass("mk-quickdraw-item", active);
+      row.toggleClass("mk-quickdraw-active", active);
+      row.attr("data-mk-quickdraw", active ? "true" : "false");
 
       const $btn = buildQuickdrawButton(active);
 
@@ -427,14 +501,15 @@
         const nowOn = isQuickdraw(item);
         $btn.toggleClass("is-on", nowOn).toggleClass("is-off", !nowOn);
         $btn.attr("title", titleFor(nowOn));
-        row.toggleClass("sdx-quickdraw-item", nowOn);
-        row.toggleClass("sdx-quickdraw-active", nowOn);
-        row.attr("data-sdx-quickdraw", nowOn ? "true" : "false");
+        row.toggleClass("mk-quickdraw-item", nowOn);
+        row.toggleClass("mk-quickdraw-active", nowOn);
+        row.attr("data-mk-quickdraw", nowOn ? "true" : "false");
 
         autoSortQuickdraw(html, app);
       });
 
       insertQuickdrawButton(controls, $btn);
+      row.closest("ol.SD-list.item-list, ul.SD-list.item-list").addClass("mk-has-quickdraw-column");
     }
 
     autoSortQuickdraw(html, app);
@@ -447,20 +522,59 @@
     });
   }
 
+  function refreshQuickdrawRowState(app, html) {
+    const rows = getInventoryRows(html);
+    if (!rows?.length) return;
+
+    for (const rowEl of rows) {
+      const row = $(rowEl);
+      const item = getItemFromRow(app, row);
+      if (!item) continue;
+
+      const active = isQuickdraw(item);
+      row.toggleClass("mk-quickdraw-item", active);
+      row.toggleClass("mk-quickdraw-active", active);
+      row.attr("data-mk-quickdraw", active ? "true" : "false");
+    }
+  }
+
+  function processSheet(app, html) {
+    applyHighlightScope(html);
+    refreshQuickdrawRowState(app, html);
+    if (isQuickdrawIconEnabled()) injectQuickdrawToggles(app, html);
+  }
+
   function onRender(app, html) {
-    if (!game.settings.get(MODULE_ID, "quickdrawIconEnabled")) return;
     if (!app?.actor) return;
     if (game.system?.id !== "shadowdark") return;
 
     const $html = asJQuery(html);
     if (!$html?.length) return;
 
-    injectQuickdrawToggles(app, $html);
+    processSheet(app, $html);
+    scheduleRenderRetries(app, $html);
+  }
+
+  function scheduleRenderRetries(app, fallbackHtml) {
+    const existingTimers = renderRetryTimers.get(app) ?? [];
+    existingTimers.forEach(timer => window.clearTimeout(timer));
+
+    const timers = [50, 250].map(delay => window.setTimeout(() => {
+      const currentHtml = asJQuery(app?.element);
+      const $html = currentHtml?.length ? currentHtml : fallbackHtml;
+      if (!$html?.length) return;
+
+      processSheet(app, $html);
+    }, delay));
+
+    renderRetryTimers.set(app, timers);
   }
 
   Hooks.once("init", () => {
-    console.log(`${MODULE_ID} | quickdraw-icons.js loaded (settings registered in settings.js)`);
+    console.log(`${MODULE_ID} | ${SUBMODULE} | loaded (settings registered in settings.js)`);
   });
 
-  Hooks.on("renderActorSheet", onRender);
+  for (const hookName of ACTOR_SHEET_RENDER_HOOKS) {
+    Hooks.on(hookName, onRender);
+  }
 })();

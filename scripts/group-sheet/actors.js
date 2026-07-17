@@ -2,8 +2,8 @@ import {
   GROUP_HP_DEFAULT,
   GROUP_HP_MAX_PATH,
   GROUP_HP_VALUE_PATH,
-  LEGACY_MODULE_ID,
   MODULE_ID,
+  SUBMODULE,
 } from "./constants.js";
 function canUserControlActor(actor, user = game.user) {
   if (!actor || !user) return false;
@@ -46,11 +46,6 @@ function getBestActivityAbility(actor, activity) {
   }, "");
 }
 
-function getRawFlag(actor, scope, key) {
-  if (!actor || !scope || !key) return undefined;
-  return actor._source?.flags?.[scope]?.[key];
-}
-
 function getSafeFlag(actor, scope, key) {
   if (!actor?.getFlag || !scope || !key) return undefined;
 
@@ -63,32 +58,18 @@ function getSafeFlag(actor, scope, key) {
       return undefined;
     }
 
-    console.warn(`${MODULE_ID} | GroupSheet | Could not read flag ${scope}.${key}`, error);
+    console.warn(`${MODULE_ID} | ${SUBMODULE} | Could not read flag ${scope}.${key}`, error);
     return undefined;
   }
 }
 
-function getFlagWithLegacy(actor, key, fallback = undefined) {
+function getModuleFlag(actor, key, fallback = undefined) {
   const current = getSafeFlag(actor, MODULE_ID, key);
-  if (current !== undefined) return current;
-
-  // Important: never call actor.getFlag() with LEGACY_MODULE_ID.
-  // Foundry v12 throws when the old module scope is not active.
-  const legacy = getRawFlag(actor, LEGACY_MODULE_ID, key);
-  if (legacy !== undefined) return legacy;
-
-  return fallback;
-}
-
-function getSheetClassFlag(actor) {
-  const current = getSafeFlag(actor, "core", "sheetClass");
-  if (current !== undefined) return current;
-
-  return getRawFlag(actor, "core", "sheetClass");
+  return current !== undefined ? current : fallback;
 }
 
 function isGroupActor(actor) {
-  return Boolean(getFlagWithLegacy(actor, "isGroup", false));
+  return Boolean(getModuleFlag(actor, "isGroup", false));
 }
 
 function numericProperty(document, path) {
@@ -118,7 +99,7 @@ async function ensureGroupActorHpDefaults(actor) {
 }
 
 function getGroupInventoryMaxSlots(actor) {
-  return Number(getFlagWithLegacy(actor, "groupInventoryMaxSlots", 10)) || 10;
+  return Number(getModuleFlag(actor, "groupInventoryMaxSlots", 10)) || 10;
 }
 
 function getFreeCoinCarry() {
@@ -162,10 +143,8 @@ export {
   canUserControlActor,
   getActorAbilityModifier,
   getBestActivityAbility,
-  getRawFlag,
   getSafeFlag,
-  getFlagWithLegacy,
-  getSheetClassFlag,
+  getModuleFlag,
   isGroupActor,
   ensureGroupActorHpDefaults,
   getGroupInventoryMaxSlots,

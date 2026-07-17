@@ -1,0 +1,31 @@
+/* styles/chat-reporting.css */
+
+.mk-chat-reporting__luck-message {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+}
+
+.mk-chat-reporting__luck-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.1rem;
+  height: 1.1rem;
+  border-radius: 999px;
+  color: #fff;
+  font-size: 0.75rem;
+}
+
+.mk-chat-reporting__luck-icon--gain {
+  background: #2f9e44;
+}
+
+.mk-chat-reporting__luck-icon--remove {
+  background: #c92a2a;
+}
+
+.mk-chat-reporting__luck-remaining {
+  opacity: 0.75;
+  margin-left: 0.25rem;
+}

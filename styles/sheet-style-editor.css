@@ -1,0 +1,159 @@
+/* MK-Shadowdark fixed Sheet Style Editor interface styles. */
+
+.mk-style-edit-mode * {
+  cursor: context-menu;
+}
+
+.mk-style-edit-mode *:hover {
+  outline: 1px dashed rgba(225, 180, 70, 0.95);
+  outline-offset: 1px;
+}
+
+.mk-style-selected-target {
+  outline: 2px solid #e1b446 !important;
+  outline-offset: 2px !important;
+}
+
+.mk-style-context-menu {
+  position: fixed;
+  z-index: 100000;
+  display: flex;
+  flex-direction: column;
+  gap: 0.45rem;
+  width: min(390px, calc(100vw - 16px));
+  max-height: calc(100vh - 16px);
+  overflow-y: auto;
+  padding: 0.6rem;
+  border: 1px solid rgba(216, 179, 95, 0.72);
+  border-radius: 6px;
+  background: #171512;
+  color: #eee7d8;
+  box-shadow: 0 8px 28px rgba(0, 0, 0, 0.65);
+  font-family: var(--font-primary, sans-serif);
+  font-size: 13px;
+}
+
+.mk-style-context-menu > header,
+.mk-style-context-menu > footer {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+.mk-style-context-menu > header {
+  justify-content: space-between;
+  padding-bottom: 0.35rem;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.15);
+}
+
+.mk-style-context-menu > header button {
+  flex: 0 0 auto;
+  width: 26px;
+  height: 24px;
+  margin: 0;
+  padding: 0;
+}
+
+.mk-style-context-menu label {
+  display: grid;
+  grid-template-columns: 92px 1fr;
+  gap: 0.45rem;
+  align-items: center;
+}
+
+.mk-style-context-menu input,
+.mk-style-context-menu select {
+  width: 100%;
+  min-width: 0;
+  height: 28px;
+  padding: 0.2rem 0.35rem;
+  border: 1px solid rgba(255, 255, 255, 0.25);
+  border-radius: 3px;
+  background: #28241f;
+  color: #f4efe3;
+}
+
+.mk-style-context-menu .mk-style-color-control,
+.mk-style-context-menu .mk-style-image-control {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  min-width: 0;
+}
+
+.mk-style-context-menu .mk-style-color-control input[type="color"] {
+  flex: 0 0 36px;
+  width: 36px;
+  padding: 2px;
+  cursor: pointer;
+}
+
+.mk-style-context-menu .mk-style-color-control input[type="text"],
+.mk-style-context-menu .mk-style-image-control input[type="text"] {
+  flex: 1 1 auto;
+}
+
+.mk-style-context-menu .mk-style-image-control button {
+  flex: 0 0 30px;
+  width: 30px;
+  height: 28px;
+  margin: 0;
+  padding: 0;
+}
+
+.mk-style-context-menu .mk-style-status {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.3rem;
+  margin: 0;
+}
+
+.mk-style-context-menu .mk-style-status > span {
+  padding: 0.15rem 0.35rem;
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.06);
+  color: #cfc5b2;
+  font-size: 10px;
+  line-height: 1.2;
+}
+
+.mk-style-context-menu .mk-style-status .is-modified,
+.mk-style-context-menu .mk-style-status .is-dirty {
+  border-color: rgba(225, 180, 70, 0.7);
+  background: rgba(225, 180, 70, 0.16);
+  color: #f2d58b;
+}
+
+.mk-style-context-menu button:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.mk-style-context-menu .mk-style-selector {
+  overflow: hidden;
+  margin: 0;
+  color: #bfb5a0;
+  font-family: monospace;
+  font-size: 10px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.mk-style-context-menu > footer {
+  justify-content: flex-end;
+  padding-top: 0.35rem;
+  border-top: 1px solid rgba(255, 255, 255, 0.15);
+}
+
+.mk-style-context-menu > footer button {
+  flex: 0 0 auto;
+  width: auto;
+  margin: 0;
+  padding: 0.25rem 0.55rem;
+}
+
+.window-header .mk-style-editor-toggle.active {
+  color: var(--color-warm-1, #d8b35f) !important;
+  text-shadow: 0 0 6px rgba(216, 179, 95, 0.65);
+}

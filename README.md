@@ -1,6 +1,6 @@
 # MK-Shadowdark
 
-Quality-of-life extras and small expansions for the Shadowdark RPG system in Foundry VTT.
+Modular quality-of-life tools, gameplay automation, party management, and character-sheet enhancements for Shadowdark RPG on Foundry VTT.
 
 ## Compatibility
 

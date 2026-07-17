@@ -1,5 +1,5 @@
 const MODULE_ID = "mk-shadowdark";
-const FEATURE_LABEL = "MK Shadowdark Corpse Token";
+const SUBMODULE = "Corpse Token";
 const FLAG_KEY = "corpseToken";
 
 const HP_PATH = "system.attributes.hp.value";
@@ -34,12 +34,6 @@ const DEFAULTS = {
   [SETTINGS.applyDelayMs]: 750
 };
 
-const SETTINGS_UI = {
-  dividerId: "mk-shadowdark-corpse-token-settings-divider",
-  dividerClass: "mk-shadowdark-settings-divider",
-  label: "CORPSE TOKEN"
-};
-
 const NPC_TYPES = ["NPC", "npc"];
 const DEATH_POSITION_CACHE_TTL_MS = 10_000;
 
@@ -52,7 +46,7 @@ const actorProcessingTimers = new Map();
 const tokenProcessingTimers = new Map();
 
 function log(...args) {
-  console.log(`${FEATURE_LABEL} |`, ...args);
+  console.log(`${MODULE_ID} v${getModuleVersion()} | ${SUBMODULE} |`, ...args);
 }
 
 function getModuleVersion() {
@@ -61,11 +55,11 @@ function getModuleVersion() {
 }
 
 function warn(...args) {
-  console.warn(`${FEATURE_LABEL} |`, ...args);
+  console.warn(`${MODULE_ID} v${getModuleVersion()} | ${SUBMODULE} |`, ...args);
 }
 
 function error(...args) {
-  console.error(`${FEATURE_LABEL} |`, ...args);
+  console.error(`${MODULE_ID} v${getModuleVersion()} | ${SUBMODULE} |`, ...args);
 }
 
 function escapeHtml(value) {
@@ -821,10 +815,10 @@ async function debugSelectedTokenCoordinates() {
 
   const reports = selected.map((token) => tokenCoordinateReport(token));
 
-  console.group(`${FEATURE_LABEL} | Coordinate Debug`);
+  console.group(`${MODULE_ID} v${getModuleVersion()} | ${SUBMODULE} | Coordinate Debug`);
   for (const report of reports) {
-    console.log(report.name, report);
-    console.log(`${FEATURE_LABEL} | Coordinate Debug JSON | ${report.name}\n${JSON.stringify(report, null, 2)}`);
+    log(report.name, report);
+    log(`Coordinate Debug JSON | ${report.name}\n${JSON.stringify(report, null, 2)}`);
   }
   console.groupEnd();
 
@@ -1229,83 +1223,12 @@ async function checkSingleToken(tokenOrDocument) {
   }
 }
 
-function injectSettingsDividerStyle() {
-  if (document.getElementById("mk-shadowdark-corpse-token-settings-style")) return;
-
-  const style = document.createElement("style");
-  style.id = "mk-shadowdark-corpse-token-settings-style";
-  style.textContent = `
-    .mk-shadowdark-settings-divider {
-      display: flex;
-      align-items: center;
-      gap: 0.5rem;
-      margin: 0.75rem 0 0.35rem;
-      padding: 0;
-      border: 0;
-    }
-
-    .mk-shadowdark-settings-divider .mk-shadowdark-settings-divider-label {
-      flex: 0 0 auto;
-      padding: 0.25rem 0.5rem;
-      background: rgba(0, 0, 0, 0.08);
-      font-weight: 700;
-      letter-spacing: 0.05em;
-      text-transform: uppercase;
-      line-height: 1.25;
-    }
-
-    .mk-shadowdark-settings-divider .mk-shadowdark-settings-divider-line {
-      flex: 1 1 auto;
-      min-width: 2rem;
-      border-top: 1px solid rgba(0, 0, 0, 0.25);
-      border-bottom: 1px solid rgba(255, 255, 255, 0.35);
-      height: 0;
-    }
-
-  `;
-
-  document.head.appendChild(style);
-}
-
-function getSettingsConfigRoot(html) {
-  if (!html) return null;
-  if (html instanceof HTMLElement) return html;
-  if (html[0] instanceof HTMLElement) return html[0];
-  return null;
-}
-
-function getSettingsRow(element) {
-  return element?.closest?.(".form-group, .setting, li") ?? element?.parentElement ?? null;
-}
-
-function addSettingsDividerBeforeCorpseTokenSettings(html) {
-  injectSettingsDividerStyle();
-
-  const root = getSettingsConfigRoot(html);
-  if (!root?.querySelector) return;
-  if (root.querySelector(`#${SETTINGS_UI.dividerId}`)) return;
-
-  const firstSetting = root.querySelector(`[name="${MODULE_ID}.${SETTINGS.enabled}"]`);
-  const firstRow = getSettingsRow(firstSetting);
-  if (!firstRow?.parentNode) return;
-
-  const divider = document.createElement("div");
-  divider.id = SETTINGS_UI.dividerId;
-  divider.className = SETTINGS_UI.dividerClass;
-  divider.innerHTML = `
-    <span class="mk-shadowdark-settings-divider-label">${escapeHtml(SETTINGS_UI.label)}</span>
-    <span class="mk-shadowdark-settings-divider-line" aria-hidden="true"></span>
-  `;
-
-  firstRow.parentNode.insertBefore(divider, firstRow);
-}
-
 function registerSettings() {
   game.settings.register(MODULE_ID, SETTINGS.enabled, {
     name: "Corpse Token: Enabled",
     hint: "Automatically changes NPC tokens to a corpse image when their Shadowdark HP reaches 0 or lower.",
     scope: "world",
-    config: true,
+    config: false,
     type: Boolean,
     default: DEFAULTS[SETTINGS.enabled]
   });
@@ -1314,7 +1237,7 @@ function registerSettings() {
     name: "Corpse Token: Image",
     hint: "Select the image used for dead NPC tokens. No corpse token is applied until an image is selected.",
     scope: "world",
-    config: true,
+    config: false,
     type: String,
     filePicker: "image",
     default: DEFAULTS[SETTINGS.corpseImage],
@@ -1328,7 +1251,7 @@ function registerSettings() {
     name: "Corpse Token: NPCs Only",
     hint: "Only NPC actor tokens are changed. Player character tokens are ignored.",
     scope: "world",
-    config: true,
+    config: false,
     type: Boolean,
     default: DEFAULTS[SETTINGS.onlyNpcs]
   });
@@ -1337,7 +1260,7 @@ function registerSettings() {
     name: "Corpse Token: Width",
     hint: "Token width after corpse conversion.",
     scope: "world",
-    config: true,
+    config: false,
     type: Number,
     range: { min: 0.25, max: 6, step: 0.25 },
     default: DEFAULTS[SETTINGS.width]
@@ -1347,7 +1270,7 @@ function registerSettings() {
     name: "Corpse Token: Height",
     hint: "Token height after corpse conversion.",
     scope: "world",
-    config: true,
+    config: false,
     type: Number,
     range: { min: 0.25, max: 6, step: 0.25 },
     default: DEFAULTS[SETTINGS.height]
@@ -1357,7 +1280,7 @@ function registerSettings() {
     name: "Corpse Token: Texture Scale",
     hint: "Texture scale for the corpse image. 0.7 means 70% of the 1x1 token space.",
     scope: "world",
-    config: true,
+    config: false,
     type: Number,
     range: { min: 0.1, max: 2, step: 0.05 },
     default: DEFAULTS[SETTINGS.scale]
@@ -1367,7 +1290,7 @@ function registerSettings() {
     name: "Corpse Token: Align Opaque Image Bottom",
     hint: "When enabled, the actual opaque bottom of the corpse PNG is placed on the original standing/falling point. This compensates for texture scale and transparent image padding.",
     scope: "world",
-    config: true,
+    config: false,
     type: Boolean,
     default: DEFAULTS[SETTINGS.alignVisualBottom]
   });
@@ -1376,7 +1299,7 @@ function registerSettings() {
     name: "Corpse Token: Vertical Offset",
     hint: "Fine-tunes corpse placement in pixels. Positive values move the corpse down; negative values move it up. Use this if the corpse image itself has transparent padding.",
     scope: "world",
-    config: true,
+    config: false,
     type: Number,
     range: { min: -200, max: 200, step: 1 },
     default: DEFAULTS[SETTINGS.yOffset]
@@ -1386,7 +1309,7 @@ function registerSettings() {
     name: "Corpse Token: Apply Delay (ms)",
     hint: "Waits this many milliseconds after HP reaches 0 before replacing the token. This lets damage shake/return animations finish so they cannot move the corpse upward afterward.",
     scope: "world",
-    config: true,
+    config: false,
     type: Number,
     range: { min: 0, max: 5000, step: 50 },
     default: DEFAULTS[SETTINGS.applyDelayMs]
@@ -1396,7 +1319,7 @@ function registerSettings() {
     name: "Corpse Token: Post Chat Message",
     hint: "Posts a small chat message when tokens are changed to corpse images.",
     scope: "world",
-    config: true,
+    config: false,
     type: Boolean,
     default: DEFAULTS[SETTINGS.postChatMessage]
   });
@@ -1405,7 +1328,7 @@ function registerSettings() {
     name: "Corpse Token: Scan Scene On Load",
     hint: "When enabled, the GM scans the active scene for already-dead NPC tokens whenever the canvas is ready.",
     scope: "world",
-    config: true,
+    config: false,
     type: Boolean,
     default: DEFAULTS[SETTINGS.scanOnCanvasReady]
   });
@@ -1414,7 +1337,7 @@ function registerSettings() {
     name: "Corpse Token: Auto Restore When Healed",
     hint: "When enabled, a corpse token is restored if its NPC HP rises above 0. Disabled by default.",
     scope: "world",
-    config: true,
+    config: false,
     type: Boolean,
     default: DEFAULTS[SETTINGS.autoRestoreWhenHealed]
   });
@@ -1509,10 +1432,6 @@ function registerHooks() {
 
   Hooks.on("canvasReady", () => {
     if (getSetting(SETTINGS.scanOnCanvasReady)) scheduleSceneScan();
-  });
-
-  Hooks.on("renderSettingsConfig", (_app, html) => {
-    addSettingsDividerBeforeCorpseTokenSettings(html);
   });
 
   log("Automation registered.");

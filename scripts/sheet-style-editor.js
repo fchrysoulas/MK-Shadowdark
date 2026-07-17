@@ -6,14 +6,15 @@
   const TYPOGRAPHY_MIGRATION_SETTING = "sheetStyleEditorTypographyMigrated";
   const DEFAULTS_SEEDED_SETTING = "sheetStyleEditorDefaultsSeeded";
   const SUMMARY_CSS_SPLIT_SETTING = "sheetStyleEditorSummaryCssSplit";
+  const QUICKDRAW_CSS_FIXED_SETTING = "sheetStyleEditorQuickdrawStylesExtracted";
+  const EXPANDED_CONTROLS_SETTING = "sheetStyleEditorExpandedControls";
   const HIDE_LOGO_SETTING = "characterSheetTweaksHideLogo";
   const HEADER_BACKGROUND_SETTING = "characterSheetTweaksHeaderBackgroundImage";
   const STYLE_ELEMENT_ID = "mk-shadowdark-global-sheet-styles";
   const RULE_MARKER_PREFIX = "mk-shadowdark-style-editor";
   const SETTING_MARKER_PREFIX = "mk-shadowdark-setting";
   const EDITABLE_DEFAULT_STYLESHEETS = Object.freeze([
-    `modules/${MODULE_ID}/styles/character-sheet-tweaks.css`,
-    `modules/${MODULE_ID}/styles/quickdraw-icons.css`
+    `modules/${MODULE_ID}/styles/character-sheet-tweaks.css`
   ]);
   const LEGACY_TYPOGRAPHY_SETTINGS = Object.freeze({
     displayFont: "characterSheetTweaksDisplayFontFamily",
@@ -34,6 +35,7 @@
 
   let activeMenu = null;
   let cssUpdateQueue = Promise.resolve();
+  let editableTemplateCssPromise = null;
 
   globalThis.MKShadowdarkSheetStyleEditor = {
     applyCss,
@@ -46,6 +48,8 @@
     if (!game.user?.isGM) return;
 
     await runInitializationStep("Summary Bar CSS split migration", migrateSummaryBarCssSplit);
+    await runInitializationStep("fixed Quickdraw CSS migration", migrateQuickdrawCssToFixedStylesheet);
+    await runInitializationStep("expanded style controls migration", migrateExpandedStyleControls);
     await runInitializationStep("editable default CSS seed", seedEditableDefaultCss);
     await runInitializationStep("legacy typography migration", migrateLegacyTypographySettings);
     await runInitializationStep("managed setting CSS sync", syncCharacterSheetSettings);
@@ -175,10 +179,15 @@
 
     const cssText = String(getSetting(CSS_SETTING, "") ?? "");
     const existing = getGeneratedRuleStyles(cssText, selector);
+    const hasOverride = Boolean(findGeneratedRuleBlock(cssText, selector));
     const computed = getComputedStyle(target);
     const fontWeight = existing.fontWeight ?? computed.fontWeight;
     const isBold = Number.parseInt(fontWeight, 10) >= 600 || String(fontWeight).toLowerCase() === "bold";
     const padding = existing.padding ?? [computed.paddingTop, computed.paddingRight, computed.paddingBottom, computed.paddingLeft].join(" ");
+    const margin = existing.margin ?? [computed.marginTop, computed.marginRight, computed.marginBottom, computed.marginLeft].join(" ");
+    const color = existing.color ?? computed.color;
+    const backgroundColor = existing.backgroundColor ?? computed.backgroundColor;
+    const backgroundImage = extractBackgroundImageUrl(existing.backgroundImage ?? computed.backgroundImage);
 
     const menu = document.createElement("section");
     menu.className = "sdx-style-context-menu";
@@ -190,6 +199,13 @@
         <button type="button" data-action="close" title="Close"><i class="fas fa-xmark"></i></button>
       </header>
       <p class="sdx-style-selector" title="${escapeHtml(selector)}">${escapeHtml(selector)}</p>
+      <div class="sdx-style-status" aria-live="polite">
+        <span class="sdx-style-status__override ${hasOverride ? "is-modified" : ""}" data-role="override-status">
+          ${hasOverride ? "Saved override" : "No saved override"}
+        </span>
+        <span data-role="source-status">Base: checking...</span>
+        <span data-role="dirty-status">No unsaved changes</span>
+      </div>
       <label>
         <span>Font family</span>
         <input type="text" data-field="fontFamily" value="${escapeHtml(existing.fontFamily ?? computed.fontFamily)}">
@@ -206,18 +222,45 @@
         </select>
       </label>
       <label>
+        <span>Text color</span>
+        <span class="sdx-style-color-control">
+          <input type="color" data-color-picker="color" value="${escapeHtml(colorToHex(color, "#000000"))}" title="Choose text color">
+          <input type="text" data-field="color" value="${escapeHtml(color)}" placeholder="#222 or rgba(...)" spellcheck="false">
+        </span>
+      </label>
+      <label>
+        <span>Background</span>
+        <span class="sdx-style-color-control">
+          <input type="color" data-color-picker="backgroundColor" value="${escapeHtml(colorToHex(backgroundColor, "#ffffff"))}" title="Choose background color">
+          <input type="text" data-field="backgroundColor" value="${escapeHtml(backgroundColor)}" placeholder="#fff or transparent" spellcheck="false">
+        </span>
+      </label>
+      <label>
+        <span>Background image</span>
+        <span class="sdx-style-image-control">
+          <input type="text" data-field="backgroundImage" value="${escapeHtml(backgroundImage)}" placeholder="Select or enter an image path" spellcheck="false">
+          <button type="button" data-action="browse-background" title="Browse images"><i class="fas fa-file-image"></i></button>
+        </span>
+      </label>
+      <label>
         <span>Padding</span>
         <input type="text" data-field="padding" value="${escapeHtml(padding)}" placeholder="e.g. 4px 8px">
       </label>
+      <label>
+        <span>Margin</span>
+        <input type="text" data-field="margin" value="${escapeHtml(margin)}" placeholder="e.g. 4px 8px">
+      </label>
       <footer>
-        <button type="button" data-action="reset"><i class="fas fa-rotate-left"></i> Reset</button>
-        <button type="button" data-action="apply"><i class="fas fa-check"></i> Apply</button>
+        <button type="button" data-action="reset"${hasOverride ? "" : " disabled"}><i class="fas fa-rotate-left"></i> Reset override</button>
+        <button type="button" data-action="apply" disabled><i class="fas fa-check"></i> Apply</button>
       </footer>
     `;
 
     document.body.append(menu);
     activeMenu = menu;
     positionContextMenu(menu, x, y);
+    initializeMenuValidation(menu);
+    void updateStyleSourceStatus(menu, target, selector);
 
     menu.addEventListener("contextmenu", event => event.preventDefault());
     menu.querySelector('[data-action="close"]').addEventListener("click", () => {
@@ -226,6 +269,9 @@
     });
     menu.querySelector('[data-action="apply"]').addEventListener("click", async () => {
       await applyMenuChanges({ root, selector, menu });
+    });
+    menu.querySelector('[data-action="browse-background"]').addEventListener("click", async () => {
+      await browseForBackgroundImage(menu.querySelector('[data-field="backgroundImage"]'));
     });
     menu.querySelector('[data-action="reset"]').addEventListener("click", async () => {
       await resetElementRule({ root, selector });
@@ -241,11 +287,161 @@
     menu.style.top = `${Math.max(margin, Math.min(y, window.innerHeight - bounds.height - margin))}px`;
   }
 
+  function initializeMenuValidation(menu) {
+    const initialValues = JSON.stringify(getMenuValues(menu));
+    const applyButton = menu.querySelector('[data-action="apply"]');
+    const dirtyStatus = menu.querySelector('[data-role="dirty-status"]');
+
+    const updateDirtyState = () => {
+      const dirty = JSON.stringify(getMenuValues(menu)) !== initialValues;
+      menu.classList.toggle("is-dirty", dirty);
+      applyButton.disabled = !dirty;
+      dirtyStatus.textContent = dirty ? "Unsaved changes" : "No unsaved changes";
+      dirtyStatus.classList.toggle("is-dirty", dirty);
+    };
+
+    menu.querySelectorAll('[data-color-picker]').forEach(picker => {
+      const field = menu.querySelector(`[data-field="${picker.dataset.colorPicker}"]`);
+      if (!field) return;
+
+      picker.addEventListener("input", () => {
+        field.value = picker.value;
+      });
+      field.addEventListener("input", () => {
+        if (globalThis.CSS?.supports && !CSS.supports("color", field.value.trim())) return;
+        picker.value = colorToHex(field.value, picker.value);
+      });
+    });
+
+    menu.addEventListener("input", updateDirtyState);
+    menu.addEventListener("change", updateDirtyState);
+    updateDirtyState();
+  }
+
+  function getMenuValues(menu) {
+    return Object.fromEntries(Array.from(menu.querySelectorAll('[data-field]')).map(field => [
+      field.dataset.field,
+      String(field.value ?? "").trim()
+    ]));
+  }
+
+  async function updateStyleSourceStatus(menu, target, selector) {
+    const status = menu.querySelector('[data-role="source-status"]');
+    if (!status) return;
+
+    try {
+      const source = await resolveBaseStyleSource(target, selector);
+      if (!menu.isConnected) return;
+      status.textContent = `Base: ${source}`;
+      status.dataset.source = source;
+    } catch (error) {
+      if (!menu.isConnected) return;
+      status.textContent = "Base: source unavailable";
+      console.warn(`${MODULE_ID} | ${SUBMODULE} | style source detection error`, error);
+    }
+  }
+
+  async function resolveBaseStyleSource(target, selector) {
+    const templateCss = await loadEditableTemplateCss();
+    if (cssTextMatchesTarget(templateCss, target)) return "MK-Shadowdark Tweaks CSS";
+
+    const globalCssWithoutOverride = removeGeneratedRule(String(getSetting(CSS_SETTING, "") ?? ""), selector);
+    if (cssTextMatchesTarget(globalCssWithoutOverride, target)) return "custom Global Style CSS";
+
+    const moduleStyleSheets = Array.from(document.styleSheets).filter(sheet =>
+      String(sheet.href ?? "").includes(`/modules/${MODULE_ID}/`)
+    );
+    if (moduleStyleSheets.some(sheet => styleSheetMatchesTarget(sheet, target))) return "MK-Shadowdark module CSS";
+
+    return "Shadowdark original / inherited";
+  }
+
+  function loadEditableTemplateCss() {
+    if (!editableTemplateCssPromise) {
+      editableTemplateCssPromise = (async () => {
+        const route = toFoundryRoute(EDITABLE_DEFAULT_STYLESHEETS[0]);
+        const response = await fetch(route, { cache: "no-store" });
+        if (!response.ok) throw new Error(`Could not load ${route}: HTTP ${response.status}`);
+        return response.text();
+      })().catch(error => {
+        editableTemplateCssPromise = null;
+        throw error;
+      });
+    }
+    return editableTemplateCssPromise;
+  }
+
+  function cssTextMatchesTarget(cssText, target) {
+    const style = document.createElement("style");
+    style.media = "not all";
+    style.textContent = String(cssText ?? "");
+    document.head.append(style);
+    try {
+      return styleSheetMatchesTarget(style.sheet, target);
+    } finally {
+      style.remove();
+    }
+  }
+
+  function styleSheetMatchesTarget(sheet, target) {
+    try {
+      return cssRulesMatchTarget(sheet?.cssRules, target);
+    } catch (_error) {
+      return false;
+    }
+  }
+
+  function cssRulesMatchTarget(rules, target) {
+    for (const rule of Array.from(rules ?? [])) {
+      if (rule.selectorText && hasEditableStyleDeclaration(rule.style)) {
+        try {
+          if (target.matches(rule.selectorText)) return true;
+        } catch (_error) {
+          // Ignore selectors unsupported by Element.matches.
+        }
+      }
+      if (rule.cssRules && cssRulesMatchTarget(rule.cssRules, target)) return true;
+    }
+    return false;
+  }
+
+  function hasEditableStyleDeclaration(style) {
+    if (!style) return false;
+    return [
+      "font-family",
+      "font-size",
+      "font-weight",
+      "color",
+      "background",
+      "background-color",
+      "background-image",
+      "padding",
+      "margin"
+    ].some(property => Boolean(style.getPropertyValue(property).trim()));
+  }
+
+  async function browseForBackgroundImage(input) {
+    const FilePickerClass = globalThis.foundry?.applications?.apps?.FilePicker?.implementation
+      ?? globalThis.foundry?.applications?.apps?.FilePicker
+      ?? globalThis.FilePicker;
+    if (!FilePickerClass) {
+      ui.notifications?.warn("The Foundry image picker is unavailable.");
+      return;
+    }
+
+    const callback = path => {
+      input.value = String(path ?? "");
+      input.dispatchEvent(new Event("input", { bubbles: true }));
+    };
+    const picker = new FilePickerClass({ type: "image", current: input.value, callback });
+    if (typeof picker.browse === "function") await picker.browse(input.value || "");
+    else await picker.render(true);
+  }
+
   async function applyMenuChanges({ root, selector, menu }) {
-    const fontFamily = menu.querySelector('[data-field="fontFamily"]').value.trim();
-    const fontSize = menu.querySelector('[data-field="fontSize"]').value.trim();
-    const fontWeight = menu.querySelector('[data-field="fontWeight"]').value;
-    const padding = menu.querySelector('[data-field="padding"]').value.trim();
+    const values = getMenuValues(menu);
+    const { fontFamily, fontSize, fontWeight, color, backgroundColor, padding, margin } = values;
+    const backgroundImage = buildBackgroundImageValue(values.backgroundImage);
 
     if (fontFamily && globalThis.CSS?.supports && !CSS.supports("font-family", fontFamily)) {
       ui.notifications?.warn(`Invalid font family: ${fontFamily}`);
@@ -259,9 +455,34 @@
       ui.notifications?.warn(`Invalid padding: ${padding}`);
       return;
     }
+    if (margin && globalThis.CSS?.supports && !CSS.supports("margin", margin)) {
+      ui.notifications?.warn(`Invalid margin: ${margin}`);
+      return;
+    }
+    if (color && globalThis.CSS?.supports && !CSS.supports("color", color)) {
+      ui.notifications?.warn(`Invalid text color: ${color}`);
+      return;
+    }
+    if (backgroundColor && globalThis.CSS?.supports && !CSS.supports("background-color", backgroundColor)) {
+      ui.notifications?.warn(`Invalid background color: ${backgroundColor}`);
+      return;
+    }
+    if (backgroundImage && globalThis.CSS?.supports && !CSS.supports("background-image", backgroundImage)) {
+      ui.notifications?.warn("Invalid background image path.");
+      return;
+    }
 
     await updateGlobalCss(currentCss => (
-      upsertGeneratedRule(currentCss, selector, { fontFamily, fontSize, fontWeight, padding })
+      upsertGeneratedRule(currentCss, selector, {
+        fontFamily,
+        fontSize,
+        fontWeight,
+        color,
+        backgroundColor,
+        backgroundImage,
+        padding,
+        margin
+      })
     ));
     clearSelectedTarget(root);
     closeContextMenu();
@@ -338,6 +559,32 @@
     ));
     await game.settings.set(MODULE_ID, DEFAULTS_SEEDED_SETTING, true);
     await game.settings.set(MODULE_ID, SUMMARY_CSS_SPLIT_SETTING, true);
+  }
+
+  async function migrateQuickdrawCssToFixedStylesheet() {
+    if (getSetting(QUICKDRAW_CSS_FIXED_SETTING, false)) return;
+
+    const defaultCss = await loadEditableDefaultCss();
+    await updateGlobalCss(currentCss => upsertManagedBlockAtStart(
+      currentCss,
+      "editable-character-sheet-defaults",
+      defaultCss
+    ));
+    await game.settings.set(MODULE_ID, DEFAULTS_SEEDED_SETTING, true);
+    await game.settings.set(MODULE_ID, QUICKDRAW_CSS_FIXED_SETTING, true);
+  }
+
+  async function migrateExpandedStyleControls() {
+    if (getSetting(EXPANDED_CONTROLS_SETTING, false)) return;
+
+    const defaultCss = await loadEditableDefaultCss();
+    await updateGlobalCss(currentCss => upsertManagedBlockAtStart(
+      currentCss,
+      "editable-character-sheet-defaults",
+      defaultCss
+    ));
+    await game.settings.set(MODULE_ID, DEFAULTS_SEEDED_SETTING, true);
+    await game.settings.set(MODULE_ID, EXPANDED_CONTROLS_SETTING, true);
   }
 
   async function loadEditableDefaultCss() {
@@ -474,7 +721,11 @@
       fontFamily: declaration.getPropertyValue("font-family").trim(),
       fontSize: declaration.getPropertyValue("font-size").trim(),
       fontWeight: declaration.getPropertyValue("font-weight").trim(),
-      padding: declaration.getPropertyValue("padding").trim()
+      color: declaration.getPropertyValue("color").trim(),
+      backgroundColor: declaration.getPropertyValue("background-color").trim(),
+      backgroundImage: declaration.getPropertyValue("background-image").trim(),
+      padding: declaration.getPropertyValue("padding").trim(),
+      margin: declaration.getPropertyValue("margin").trim()
     };
   }
 
@@ -485,7 +736,11 @@
       ["font-family", styles.fontFamily],
       ["font-size", styles.fontSize],
       ["font-weight", styles.fontWeight],
-      ["padding", styles.padding]
+      ["color", styles.color],
+      ["background-color", styles.backgroundColor],
+      ["background-image", styles.backgroundImage],
+      ["padding", styles.padding],
+      ["margin", styles.margin]
     ]
       .filter(([, value]) => String(value ?? "").trim())
       .map(([property, value]) => `  ${property}: ${String(value).trim()} !important;`)
@@ -590,6 +845,32 @@
     } catch (_error) {
       return "";
     }
+  }
+
+  function extractBackgroundImageUrl(value) {
+    const text = String(value ?? "").trim();
+    if (!text || text === "none") return "";
+    const match = text.match(/url\(\s*(["']?)(.*?)\1\s*\)/i);
+    return match?.[2] ?? "";
+  }
+
+  function buildBackgroundImageValue(path) {
+    const normalized = normalizeImagePath(path);
+    return normalized ? `url("${cssUrlEscape(normalized)}")` : "";
+  }
+
+  function colorToHex(value, fallback = "#000000") {
+    const normalized = String(value ?? "").trim();
+    const shortHex = normalized.match(/^#([\da-f])([\da-f])([\da-f])$/i);
+    if (shortHex) return `#${shortHex.slice(1).map(channel => channel + channel).join("")}`.toLowerCase();
+
+    const fullHex = normalized.match(/^#([\da-f]{6})(?:[\da-f]{2})?$/i);
+    if (fullHex) return `#${fullHex[1].toLowerCase()}`;
+
+    const rgb = normalized.match(/^rgba?\(\s*([\d.]+)[,\s]+([\d.]+)[,\s]+([\d.]+)/i);
+    if (!rgb) return fallback;
+    const channels = rgb.slice(1, 4).map(channel => Math.min(255, Math.max(0, Math.round(Number(channel) || 0))));
+    return `#${channels.map(channel => channel.toString(16).padStart(2, "0")).join("")}`;
   }
 
   function normalizeImagePath(path) {

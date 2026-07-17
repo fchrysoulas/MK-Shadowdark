@@ -1,7 +1,27 @@
-/* MK-Shadowdark editable Quickdraw CSS defaults.
- * This file is not loaded as a fixed module stylesheet. Its text is copied once
- * into the world-level Global Style CSS setting, where GMs can edit it.
- */
+/* styles/quickdraw-icons.css */
+/* Fixed Quickdraw control and row-highlight styles. */
+
+/* -------------------------------------------- */
+/* Quickdraw row highlight                      */
+/* -------------------------------------------- */
+
+.sdx-highlight-equipped {
+  --sdx-quickdraw-highlight: rgba(75, 210, 110, 0.18);
+}
+
+.shadowdark.sheet.player.sdx-highlight-equipped .SD-list.item-list > li.item.sdx-quickdraw-item,
+.shadowdark.sheet.player.sdx-highlight-equipped li.item.sdx-quickdraw-item,
+.sdx-highlight-equipped .SD-list.item-list > li.item.sdx-quickdraw-item,
+.sdx-highlight-equipped li.item.sdx-quickdraw-item {
+  background: linear-gradient(90deg, var(--sdx-quickdraw-highlight), transparent 75%) !important;
+  box-shadow: inset 3px 0 0 rgba(75, 210, 110, 0.85);
+}
+
+/* Apply the subtle tint only to normal row content, not context menus. */
+.shadowdark.sheet.player.sdx-highlight-equipped li.item.sdx-quickdraw-item > *:not(#context-menu):not(.context-menu),
+.sdx-highlight-equipped li.item.sdx-quickdraw-item > *:not(#context-menu):not(.context-menu) {
+  background-color: rgba(75, 210, 110, 0.08) !important;
+}
 
 /* -------------------------------------------- */
 /* Inventory quickdraw bolt                     */

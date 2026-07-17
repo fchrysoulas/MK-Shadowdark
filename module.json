@@ -47,6 +47,7 @@
     "styles/auto-apply-damage.css",
     "styles/chat-reporting.css",
     "styles/group-sheet.css",
+    "styles/quickdraw-icons.css",
     "styles/summary-bar.css"
   ],
   "languages": [

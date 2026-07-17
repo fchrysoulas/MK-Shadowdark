@@ -613,7 +613,7 @@
 
     registerSetting("sheetStyleEditorDefaultsSeeded", {
       name: "Character Sheet | Editable Defaults Seeded",
-      hint: "Internal migration state for the editable character-sheet and Quickdraw default CSS.",
+      hint: "Internal migration state for the editable character-sheet default CSS.",
       scope: "world",
       config: false,
       type: Boolean,
@@ -623,6 +623,24 @@
     registerSetting("sheetStyleEditorSummaryCssSplit", {
       name: "Character Sheet | Summary Bar CSS Split Complete",
       hint: "Internal migration state for separating Summary Bar CSS from Character Sheet CSS.",
+      scope: "world",
+      config: false,
+      type: Boolean,
+      default: false
+    });
+
+    registerSetting("sheetStyleEditorQuickdrawStylesExtracted", {
+      name: "Character Sheet | Quickdraw Styles Extraction Complete",
+      hint: "Internal migration state for moving all Quickdraw styling out of editable Global Style CSS.",
+      scope: "world",
+      config: false,
+      type: Boolean,
+      default: false
+    });
+
+    registerSetting("sheetStyleEditorExpandedControls", {
+      name: "Character Sheet | Expanded Style Controls Migration Complete",
+      hint: "Internal migration state for the color, background image, margin, and style-source controls.",
       scope: "world",
       config: false,
       type: Boolean,

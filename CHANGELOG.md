@@ -8,14 +8,17 @@
 - Changed blank Character Sheet font settings to preserve the original Shadowdark font declarations and apply overrides only when configured.
 - Added optional Character Sheet font-size settings for character names, banners, section headings, and navigation; blank values preserve Shadowdark's original sizes.
 - Fixed Quickdraw controls in Foundry v13/v14 by targeting the inventory content instead of its navigation tab, using a version-independent inline bolt icon, and reserving adequate action-column space.
+- Fixed active Quickdraw rows turning the neighboring Equipped and Stashed controls black by scoping active color to the Quickdraw control itself.
 - Reorganized module settings into one compact entry per feature, with each feature opening its own configuration window, including compatible image pickers for Character Sheet, Time Passes, and Corpse Token settings.
 - Moved the Highlight Quickdraw Items option into the Quickdraw feature settings window.
 - Split the Summary Bar into an independent settings group and JavaScript module, separate from Character Sheet Tweaks.
 - Split Luck chat messages into the standalone Chat Reporting feature with a fixed, non-editable stylesheet.
 - Ensured the separate Summary Bar module loads through the existing core entry point as well as the module manifest.
 - Added a GM-only sheet style edit mode with a right-click context menu for font family, font size, weight, and padding; its world-level CSS is visible in Character Sheet Tweaks and synchronizes to all clients.
+- Expanded the sheet style editor with text/background color pickers, background images, margin control, saved/unsaved validation, and base-style source detection.
 - Removed the legacy Character Sheet typography controls now covered by the style editor; existing overrides migrate into the global CSS, while Hide Logo and Header Background also write visible managed CSS blocks.
-- Moved all fixed Character Sheet Tweaks and Quickdraw sheet CSS out of directly loaded module stylesheets and into a one-time editable Global Style CSS default block.
+- Moved Character Sheet Tweaks CSS into a one-time editable Global Style CSS default block.
+- Kept `quickdraw-icons.css` as a fixed module stylesheet and migrated previously seeded Quickdraw rules out of editable Global Style CSS.
 - Added a standalone fixed `summary-bar.css`, with appearance controlled only through the dedicated Summary Bar settings, and migrated Summary Bar rules out of Character Sheet Global Style CSS.
 - Moved Quickdraw-row highlighting behavior out of Character Sheet Tweaks and into the Quickdraw module.
 - Removed obsolete legacy module-ID compatibility paths; all flags and sheets now use only the current module scope.

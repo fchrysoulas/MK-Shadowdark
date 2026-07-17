@@ -1,6 +1,8 @@
 (() => {
   const MODULE_ID = "mk-shadowdark";
   const SUBMODULE = "Quickdraw";
+  const STYLESHEET_ID = "mk-shadowdark-quickdraw-styles";
+  const STYLESHEET_PATH = `modules/${MODULE_ID}/styles/quickdraw-icons.css`;
   const FLAG_KEY = "quickdraw";
   const ACTOR_SHEET_RENDER_HOOKS = [
     "renderActorSheet",
@@ -11,6 +13,35 @@
     "renderActorSheetShadowdark"
   ];
   const renderRetryTimers = new WeakMap();
+
+  ensureStylesheet();
+
+  function ensureStylesheet() {
+    if (document.getElementById(STYLESHEET_ID)) return;
+
+    const existing = Array.from(document.querySelectorAll('link[rel="stylesheet"][href]'))
+      .find(link => link.href.includes(`/modules/${MODULE_ID}/styles/quickdraw-icons.css`));
+    if (existing) {
+      existing.id = STYLESHEET_ID;
+      return;
+    }
+
+    const link = document.createElement("link");
+    link.id = STYLESHEET_ID;
+    link.rel = "stylesheet";
+    link.href = toFoundryRoute(STYLESHEET_PATH);
+    document.head.append(link);
+  }
+
+  function toFoundryRoute(path) {
+    const clean = String(path ?? "").replace(/^\/+/, "");
+    try {
+      if (foundry.utils.getRoute) return foundry.utils.getRoute(clean);
+    } catch (_error) {
+      // Use the host-root fallback.
+    }
+    return `/${clean}`;
+  }
 
   function isDebugEnabled() {
     try {

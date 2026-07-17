@@ -159,7 +159,7 @@
       .add(html.find("form.shadowdark.sheet.player, .shadowdark.sheet.player"))
       .add(html.closest(".window-app, .app"));
 
-    scopes.toggleClass("sdx-highlight-equipped", isHighlightEnabled());
+    scopes.toggleClass("mk-highlight-equipped", isHighlightEnabled());
   }
 
   /**
@@ -203,12 +203,12 @@
 
   function buildQuickdrawButton(active) {
     return $(`
-      <a class="item-control sdx-quickdraw-toggle sdex-quickdraw-toggle ${active ? "is-on" : "is-off"}"
-         data-action="sdex-quickdraw"
+      <a class="item-control mk-quickdraw-toggle ${active ? "is-on" : "is-off"}"
+         data-action="mk-quickdraw"
          role="button"
          aria-label="${titleFor(active)}"
          title="${titleFor(active)}">
-        <svg class="sdx-quickdraw-bolt" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+        <svg class="mk-quickdraw-bolt" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
           <path d="M13.6 1.5 3.8 13.2h7.1l-1.1 9.3 10.4-12.7h-7.1l.5-8.3Z"></path>
         </svg>
       </a>
@@ -380,7 +380,7 @@
       .find(".item-delete, [data-action='delete'], [data-action='remove'], a.item-control.delete, button.item-control.delete")
       .first();
 
-    controls.addClass("sdx-has-quickdraw-toggle");
+    controls.addClass("mk-has-quickdraw-toggle");
 
     if (deleteBtn?.length) deleteBtn.before($btn);
     else controls.append($btn);
@@ -469,7 +469,7 @@
     const rows = getInventoryRows(html);
     if (!rows?.length) return;
 
-    rows.closest("ol.SD-list.item-list, ul.SD-list.item-list").removeClass("sdx-has-quickdraw-column");
+    rows.closest("ol.SD-list.item-list, ul.SD-list.item-list").removeClass("mk-has-quickdraw-column");
 
     for (const rowEl of rows) {
       const row = $(rowEl);
@@ -479,15 +479,15 @@
       const controls = findRightIconContainer(row);
       if (!controls?.length) continue;
 
-      controls.find(".sdx-quickdraw-toggle, .sdex-quickdraw-toggle").remove();
-      controls.removeClass("sdx-has-quickdraw-toggle");
+      controls.find(".mk-quickdraw-toggle").remove();
+      controls.removeClass("mk-has-quickdraw-toggle");
 
       if (!isEligibleForBolt(item)) continue;
 
       const active = isQuickdraw(item);
-      row.toggleClass("sdx-quickdraw-item", active);
-      row.toggleClass("sdx-quickdraw-active", active);
-      row.attr("data-sdx-quickdraw", active ? "true" : "false");
+      row.toggleClass("mk-quickdraw-item", active);
+      row.toggleClass("mk-quickdraw-active", active);
+      row.attr("data-mk-quickdraw", active ? "true" : "false");
 
       const $btn = buildQuickdrawButton(active);
 
@@ -501,15 +501,15 @@
         const nowOn = isQuickdraw(item);
         $btn.toggleClass("is-on", nowOn).toggleClass("is-off", !nowOn);
         $btn.attr("title", titleFor(nowOn));
-        row.toggleClass("sdx-quickdraw-item", nowOn);
-        row.toggleClass("sdx-quickdraw-active", nowOn);
-        row.attr("data-sdx-quickdraw", nowOn ? "true" : "false");
+        row.toggleClass("mk-quickdraw-item", nowOn);
+        row.toggleClass("mk-quickdraw-active", nowOn);
+        row.attr("data-mk-quickdraw", nowOn ? "true" : "false");
 
         autoSortQuickdraw(html, app);
       });
 
       insertQuickdrawButton(controls, $btn);
-      row.closest("ol.SD-list.item-list, ul.SD-list.item-list").addClass("sdx-has-quickdraw-column");
+      row.closest("ol.SD-list.item-list, ul.SD-list.item-list").addClass("mk-has-quickdraw-column");
     }
 
     autoSortQuickdraw(html, app);
@@ -532,9 +532,9 @@
       if (!item) continue;
 
       const active = isQuickdraw(item);
-      row.toggleClass("sdx-quickdraw-item", active);
-      row.toggleClass("sdx-quickdraw-active", active);
-      row.attr("data-sdx-quickdraw", active ? "true" : "false");
+      row.toggleClass("mk-quickdraw-item", active);
+      row.toggleClass("mk-quickdraw-active", active);
+      row.attr("data-mk-quickdraw", active ? "true" : "false");
     }
   }
 

@@ -4,11 +4,15 @@
   const EDITOR_SETTING = "sheetStyleEditorEnabled";
   const CSS_SETTING = "sheetStyleEditorCss";
   const TYPOGRAPHY_MIGRATION_SETTING = "sheetStyleEditorTypographyMigrated";
+  const MK_PREFIX_MIGRATION_SETTING = "sheetStyleEditorMkPrefixMigrated";
   const DEFAULTS_SEEDED_SETTING = "sheetStyleEditorDefaultsSeeded";
   const SUMMARY_CSS_SPLIT_SETTING = "sheetStyleEditorSummaryCssSplit";
   const QUICKDRAW_CSS_FIXED_SETTING = "sheetStyleEditorQuickdrawStylesExtracted";
   const EXPANDED_CONTROLS_SETTING = "sheetStyleEditorExpandedControls";
   const SOLID_NAVIGATION_SETTING = "sheetStyleEditorSolidNavigationBackground";
+  const FIXED_EDITOR_CSS_SETTING = "sheetStyleEditorUiStylesExtracted";
+  const FIXED_CONTEXT_MENU_CSS_SETTING = "sheetStyleEditorContextMenuStylesExtracted";
+  const FIXED_ATTACK_PROPERTIES_CSS_SETTING = "sheetStyleEditorAttackPropertiesStylesExtracted";
   const HIDE_LOGO_SETTING = "characterSheetTweaksHideLogo";
   const HEADER_BACKGROUND_SETTING = "characterSheetTweaksHeaderBackgroundImage";
   const STYLE_ELEMENT_ID = "mk-shadowdark-global-sheet-styles";
@@ -49,10 +53,14 @@
     removeDirectEditableStyleLinks();
     if (!game.user?.isGM) return;
 
+    await runInitializationStep("mk CSS prefix migration", migrateCssPrefixToMk);
     await runInitializationStep("Summary Bar CSS split migration", migrateSummaryBarCssSplit);
     await runInitializationStep("fixed Quickdraw CSS migration", migrateQuickdrawCssToFixedStylesheet);
     await runInitializationStep("expanded style controls migration", migrateExpandedStyleControls);
     await runInitializationStep("solid navigation background migration", migrateSolidNavigationBackground);
+    await runInitializationStep("fixed Style Editor CSS migration", migrateStyleEditorCssToFixedStylesheet);
+    await runInitializationStep("fixed context menu CSS migration", migrateContextMenuCssToFixedStylesheet);
+    await runInitializationStep("fixed attack properties CSS migration", migrateAttackPropertiesCssToFixedStylesheet);
     await runInitializationStep("editable default CSS seed", seedEditableDefaultCss);
     await runInitializationStep("legacy typography migration", migrateLegacyTypographySettings);
     await runInitializationStep("managed setting CSS sync", syncCharacterSheetSettings);
@@ -85,15 +93,15 @@
     if (!root?.querySelector || !isShadowdarkPlayerSheet(app, root)) return;
 
     const windowElement = getWindowElement(app, root);
-    root.querySelector(".sdx-style-editor-toolbar")?.remove();
-    root.querySelectorAll(".sdx-has-style-editor-toolbar").forEach(element => {
-      element.classList.remove("sdx-has-style-editor-toolbar");
+    root.querySelector(".mk-style-editor-toolbar")?.remove();
+    root.querySelectorAll(".mk-has-style-editor-toolbar").forEach(element => {
+      element.classList.remove("mk-has-style-editor-toolbar");
     });
-    root.classList.remove("sdx-style-edit-mode");
+    root.classList.remove("mk-style-edit-mode");
     renderedSheetRoots.set(app, root);
 
     if (!game.user?.isGM || !getSetting(EDITOR_SETTING, true)) {
-      windowElement?.querySelectorAll?.(".sdx-style-editor-toggle").forEach(element => element.remove());
+      windowElement?.querySelectorAll?.(".mk-style-editor-toggle").forEach(element => element.remove());
       return;
     }
 
@@ -143,11 +151,11 @@
   function addStyleEditorHeaderButton(app, buttons) {
     if (!game.user?.isGM || !getSetting(EDITOR_SETTING, true)) return;
     if (!isShadowdarkPlayerApplication(app) || !Array.isArray(buttons)) return;
-    if (buttons.some(button => String(button?.class ?? "").split(/\s+/).includes("sdx-style-editor-toggle"))) return;
+    if (buttons.some(button => String(button?.class ?? "").split(/\s+/).includes("mk-style-editor-toggle"))) return;
 
     const button = {
       label: "Edit Style",
-      class: "sdx-style-editor-toggle",
+      class: "mk-style-editor-toggle",
       icon: "fas fa-paintbrush",
       onclick: () => toggleStyleEditing(app)
     };
@@ -155,7 +163,7 @@
   }
 
   function ensureStyleEditorHeaderButton(app, windowElement) {
-    const existing = windowElement?.querySelector?.(".sdx-style-editor-toggle");
+    const existing = windowElement?.querySelector?.(".mk-style-editor-toggle");
     if (existing) return existing;
 
     const header = windowElement?.querySelector?.(".window-header");
@@ -169,7 +177,7 @@
 
     const nativeClasses = ["header-button", "control", "window-header-button"]
       .filter(className => reference.classList.contains(className));
-    toggle.className = [...nativeClasses, "sdx-style-editor-toggle"].join(" ");
+    toggle.className = [...nativeClasses, "mk-style-editor-toggle"].join(" ");
     toggle.innerHTML = '<i class="fas fa-paintbrush" aria-hidden="true"></i> <span>Edit Style</span>';
     toggle.addEventListener("click", event => {
       event.preventDefault();
@@ -187,9 +195,9 @@
       return;
     }
 
-    const toggle = getWindowElement(app, root)?.querySelector?.(".sdx-style-editor-toggle");
-    const enabled = !root.classList.contains("sdx-style-edit-mode");
-    root.classList.toggle("sdx-style-edit-mode", enabled);
+    const toggle = getWindowElement(app, root)?.querySelector?.(".mk-style-editor-toggle");
+    const enabled = !root.classList.contains("mk-style-edit-mode");
+    root.classList.toggle("mk-style-edit-mode", enabled);
     toggle?.classList.toggle("active", enabled);
     setHeaderButtonLabel(toggle, enabled ? "Finish Editing" : "Edit Style");
     if (toggle) {
@@ -229,10 +237,10 @@
   }
 
   function bindStyleEditorContextMenu(root) {
-    if (root.dataset.sdxStyleEditorContextBound === "true") return;
-    root.dataset.sdxStyleEditorContextBound = "true";
+    if (root.dataset.mkStyleEditorContextBound === "true") return;
+    root.dataset.mkStyleEditorContextBound = "true";
     root.addEventListener("contextmenu", event => {
-      if (!root.classList.contains("sdx-style-edit-mode")) return;
+      if (!root.classList.contains("mk-style-edit-mode")) return;
 
       const target = getEditableTarget(event.target, root);
       if (!target) return;
@@ -245,16 +253,18 @@
 
   function getEditableTarget(candidate, root) {
     if (!(candidate instanceof HTMLElement)) return null;
-    if (candidate.closest(".sdx-style-context-menu")) return null;
-    if (candidate.closest(".sdx-character-sheet-bar")) return null;
+    if (candidate.closest(".mk-style-context-menu")) return null;
+    if (candidate.closest(".mk-character-sheet-bar")) return null;
     if (candidate === root) return null;
+    const navigationLink = candidate.closest(".SD-nav a");
+    if (navigationLink && root.contains(navigationLink)) return navigationLink;
     return candidate;
   }
 
   function openContextMenu({ root, target, x, y }) {
     closeContextMenu();
     clearSelectedTarget(root);
-    target.classList.add("sdx-style-selected-target");
+    target.classList.add("mk-style-selected-target");
 
     const selector = buildStableSelector(target, root);
     if (!selector) return;
@@ -270,9 +280,11 @@
     const color = existing.color ?? computed.color;
     const backgroundColor = existing.backgroundColor ?? computed.backgroundColor;
     const backgroundImage = extractBackgroundImageUrl(existing.backgroundImage ?? computed.backgroundImage);
+    const border = existing.border ?? computed.border;
+    const navigationState = getNavigationState(target);
 
     const menu = document.createElement("section");
-    menu.className = "sdx-style-context-menu";
+    menu.className = "mk-style-context-menu";
     menu.setAttribute("role", "dialog");
     menu.setAttribute("aria-label", "Edit element style");
     menu.innerHTML = `
@@ -280,9 +292,10 @@
         <strong>Element Style</strong>
         <button type="button" data-action="close" title="Close"><i class="fas fa-xmark"></i></button>
       </header>
-      <p class="sdx-style-selector" title="${escapeHtml(selector)}">${escapeHtml(selector)}</p>
-      <div class="sdx-style-status" aria-live="polite">
-        <span class="sdx-style-status__override ${hasOverride ? "is-modified" : ""}" data-role="override-status">
+      <p class="mk-style-selector" title="${escapeHtml(selector)}">${escapeHtml(selector)}</p>
+      <div class="mk-style-status" aria-live="polite">
+        ${navigationState ? `<span>Navigation: ${escapeHtml(navigationState)}</span>` : ""}
+        <span class="mk-style-status__override ${hasOverride ? "is-modified" : ""}" data-role="override-status">
           ${hasOverride ? "Saved override" : "No saved override"}
         </span>
         <span data-role="source-status">Base: checking...</span>
@@ -305,24 +318,28 @@
       </label>
       <label>
         <span>Text color</span>
-        <span class="sdx-style-color-control">
+        <span class="mk-style-color-control">
           <input type="color" data-color-picker="color" value="${escapeHtml(colorToHex(color, "#000000"))}" title="Choose text color">
           <input type="text" data-field="color" value="${escapeHtml(color)}" placeholder="#222 or rgba(...)" spellcheck="false">
         </span>
       </label>
       <label>
         <span>Background</span>
-        <span class="sdx-style-color-control">
+        <span class="mk-style-color-control">
           <input type="color" data-color-picker="backgroundColor" value="${escapeHtml(colorToHex(backgroundColor, "#ffffff"))}" title="Choose background color">
           <input type="text" data-field="backgroundColor" value="${escapeHtml(backgroundColor)}" placeholder="#fff or transparent" spellcheck="false">
         </span>
       </label>
       <label>
         <span>Background image</span>
-        <span class="sdx-style-image-control">
+        <span class="mk-style-image-control">
           <input type="text" data-field="backgroundImage" value="${escapeHtml(backgroundImage)}" placeholder="Select or enter an image path" spellcheck="false">
           <button type="button" data-action="browse-background" title="Browse images"><i class="fas fa-file-image"></i></button>
         </span>
+      </label>
+      <label>
+        <span>Border</span>
+        <input type="text" data-field="border" value="${escapeHtml(border)}" placeholder="e.g. 1px solid #888" spellcheck="false">
       </label>
       <label>
         <span>Padding</span>
@@ -497,6 +514,7 @@
       "background",
       "background-color",
       "background-image",
+      "border",
       "padding",
       "margin"
     ].some(property => Boolean(style.getPropertyValue(property).trim()));
@@ -522,7 +540,7 @@
 
   async function applyMenuChanges({ root, selector, menu }) {
     const values = getMenuValues(menu);
-    const { fontFamily, fontSize, fontWeight, color, backgroundColor, padding, margin } = values;
+    const { fontFamily, fontSize, fontWeight, color, backgroundColor, border, padding, margin } = values;
     const backgroundImage = buildBackgroundImageValue(values.backgroundImage);
 
     if (fontFamily && globalThis.CSS?.supports && !CSS.supports("font-family", fontFamily)) {
@@ -553,6 +571,10 @@
       ui.notifications?.warn("Invalid background image path.");
       return;
     }
+    if (border && globalThis.CSS?.supports && !CSS.supports("border", border)) {
+      ui.notifications?.warn(`Invalid border: ${border}`);
+      return;
+    }
 
     await updateGlobalCss(currentCss => (
       upsertGeneratedRule(currentCss, selector, {
@@ -562,6 +584,7 @@
         color,
         backgroundColor,
         backgroundImage,
+        border,
         padding,
         margin
       })
@@ -616,6 +639,13 @@
     } catch (error) {
       console.error(`${MODULE_ID} | ${SUBMODULE} | ${label} error`, error);
     }
+  }
+
+  async function migrateCssPrefixToMk() {
+    if (getSetting(MK_PREFIX_MIGRATION_SETTING, false)) return;
+
+    await updateGlobalCss(currentCss => String(currentCss ?? "").replaceAll("sdx-", "mk-"));
+    await game.settings.set(MODULE_ID, MK_PREFIX_MIGRATION_SETTING, true);
   }
 
   async function seedEditableDefaultCss() {
@@ -682,6 +712,45 @@
     await game.settings.set(MODULE_ID, SOLID_NAVIGATION_SETTING, true);
   }
 
+  async function migrateStyleEditorCssToFixedStylesheet() {
+    if (getSetting(FIXED_EDITOR_CSS_SETTING, false)) return;
+
+    const defaultCss = await loadEditableDefaultCss();
+    await updateGlobalCss(currentCss => upsertManagedBlockAtStart(
+      currentCss,
+      "editable-character-sheet-defaults",
+      defaultCss
+    ));
+    await game.settings.set(MODULE_ID, DEFAULTS_SEEDED_SETTING, true);
+    await game.settings.set(MODULE_ID, FIXED_EDITOR_CSS_SETTING, true);
+  }
+
+  async function migrateContextMenuCssToFixedStylesheet() {
+    if (getSetting(FIXED_CONTEXT_MENU_CSS_SETTING, false)) return;
+
+    const defaultCss = await loadEditableDefaultCss();
+    await updateGlobalCss(currentCss => upsertManagedBlockAtStart(
+      currentCss,
+      "editable-character-sheet-defaults",
+      defaultCss
+    ));
+    await game.settings.set(MODULE_ID, DEFAULTS_SEEDED_SETTING, true);
+    await game.settings.set(MODULE_ID, FIXED_CONTEXT_MENU_CSS_SETTING, true);
+  }
+
+  async function migrateAttackPropertiesCssToFixedStylesheet() {
+    if (getSetting(FIXED_ATTACK_PROPERTIES_CSS_SETTING, false)) return;
+
+    const defaultCss = await loadEditableDefaultCss();
+    await updateGlobalCss(currentCss => upsertManagedBlockAtStart(
+      currentCss,
+      "editable-character-sheet-defaults",
+      defaultCss
+    ));
+    await game.settings.set(MODULE_ID, DEFAULTS_SEEDED_SETTING, true);
+    await game.settings.set(MODULE_ID, FIXED_ATTACK_PROPERTIES_CSS_SETTING, true);
+  }
+
   async function loadEditableDefaultCss() {
     const stylesheetTexts = await Promise.all(EDITABLE_DEFAULT_STYLESHEETS.map(async path => {
       const route = toFoundryRoute(path);
@@ -722,16 +791,27 @@
   }
 
   function buildHideLogoCss() {
-    return `.shadowdark.sheet.player.sdx-character-sheet-tweaks .SD-header .shadowdark-logo {
+    return `.shadowdark.sheet.player.mk-character-sheet-tweaks .SD-header .shadowdark-logo {
   display: none !important;
 }`;
   }
 
   function buildHeaderBackgroundCss(imagePath) {
-    return `.shadowdark.sheet.player.sdx-character-sheet-tweaks .SD-header {
+    return `.shadowdark.sheet.player.mk-character-sheet-tweaks .SD-header {
   background-image:
-    linear-gradient(90deg, rgba(0, 0, 0, 0.42), rgba(0, 0, 0, 0.12) 38%, rgba(0, 0, 0, 0.48)),
-    linear-gradient(180deg, rgba(0, 0, 0, 0.20), rgba(0, 0, 0, 0.35)),
+    linear-gradient(
+      180deg,
+      transparent 65%,
+      rgba(0, 0, 0, 0.35) 70%,
+      rgba(0, 0, 0, 0.75) 88%,
+      #000 100%
+    ),
+    linear-gradient(
+      90deg,
+      rgba(0, 0, 0, 0.42),
+      rgba(0, 0, 0, 0.12) 38%,
+      rgba(0, 0, 0, 0.48)
+    ),
     url("${cssUrlEscape(imagePath)}") !important;
   background-position: center center !important;
   background-repeat: no-repeat !important;
@@ -819,6 +899,7 @@
       color: declaration.getPropertyValue("color").trim(),
       backgroundColor: declaration.getPropertyValue("background-color").trim(),
       backgroundImage: declaration.getPropertyValue("background-image").trim(),
+      border: declaration.getPropertyValue("border").trim(),
       padding: declaration.getPropertyValue("padding").trim(),
       margin: declaration.getPropertyValue("margin").trim()
     };
@@ -834,6 +915,7 @@
       ["color", styles.color],
       ["background-color", styles.backgroundColor],
       ["background-image", styles.backgroundImage],
+      ["border", styles.border],
       ["padding", styles.padding],
       ["margin", styles.margin]
     ]
@@ -868,6 +950,9 @@
   }
 
   function buildStableSelector(target, root) {
+    const navigationStateSelector = buildNavigationStateSelector(target);
+    if (navigationStateSelector) return navigationStateSelector;
+
     const parts = [];
     let element = target;
 
@@ -878,6 +963,18 @@
     }
 
     return parts.join(" > ");
+  }
+
+  function buildNavigationStateSelector(target) {
+    if (!target.matches?.(".SD-nav a")) return "";
+    return target.classList.contains("active")
+      ? "nav.SD-nav a.active"
+      : "nav.SD-nav a:not(.active)";
+  }
+
+  function getNavigationState(target) {
+    if (!target.matches?.(".SD-nav a")) return "";
+    return target.classList.contains("active") ? "Active" : "Inactive";
   }
 
   function selectorPart(element) {
@@ -899,7 +996,7 @@
   }
 
   function isTransientClass(className) {
-    return /^(active|hover|selected|focus|is-|sdx-style-|ui-|window-|flex)/i.test(className);
+    return /^(active|hover|selected|focus|is-|mk-style-|ui-|window-|flex)/i.test(className);
   }
 
   function cssEscape(value) {
@@ -912,16 +1009,16 @@
   }
 
   function clearSelectedTarget(root) {
-    root?.querySelectorAll?.(".sdx-style-selected-target")?.forEach(element => {
-      element.classList.remove("sdx-style-selected-target");
+    root?.querySelectorAll?.(".mk-style-selected-target")?.forEach(element => {
+      element.classList.remove("mk-style-selected-target");
     });
   }
 
   function closeContextMenu() {
     activeMenu?.remove();
     activeMenu = null;
-    document.querySelectorAll(".sdx-style-selected-target").forEach(element => {
-      element.classList.remove("sdx-style-selected-target");
+    document.querySelectorAll(".mk-style-selected-target").forEach(element => {
+      element.classList.remove("mk-style-selected-target");
     });
   }
 

@@ -1,20 +1,20 @@
-<form class="sdx-group-sheet {{cssClass}}" autocomplete="off" style="{{sdx.sheetStyle}}">
-  <header class="sdx-group-header">
-    <img class="sdx-group-image" src="{{actor.img}}" data-edit="img" title="{{actor.name}}" alt="{{actor.name}}">
+<form class="mk-group-sheet {{cssClass}}" autocomplete="off" style="{{mk.sheetStyle}}">
+  <header class="mk-group-header">
+    <img class="mk-group-image" src="{{actor.img}}" data-edit="img" title="{{actor.name}}" alt="{{actor.name}}">
 
-    <div class="sdx-group-title-block">
-      <input class="sdx-group-name" name="name" type="text" value="{{actor.name}}" placeholder="Group Name">
+    <div class="mk-group-title-block">
+      <input class="mk-group-name" name="name" type="text" value="{{actor.name}}" placeholder="Group Name">
 
-      <div class="sdx-group-stats">
-        <span><i class="fas fa-users"></i> Members <strong>{{sdx.summary.count}}</strong></span>
-        <span><i class="fas fa-heart"></i> HP <strong>{{sdx.summary.hp.value}}/{{sdx.summary.hp.max}}</strong></span>
-        <span><i class="fas fa-shield-alt"></i> Avg AC <strong>{{sdx.summary.ac}}</strong></span>
-        <span><i class="fas fa-arrow-up"></i> Avg LVL <strong>{{sdx.summary.level}}</strong></span>
+      <div class="mk-group-stats">
+        <span><i class="fas fa-users"></i> Members <strong>{{mk.summary.count}}</strong></span>
+        <span><i class="fas fa-heart"></i> HP <strong>{{mk.summary.hp.value}}/{{mk.summary.hp.max}}</strong></span>
+        <span><i class="fas fa-shield-alt"></i> Avg AC <strong>{{mk.summary.ac}}</strong></span>
+        <span><i class="fas fa-arrow-up"></i> Avg LVL <strong>{{mk.summary.level}}</strong></span>
       </div>
     </div>
   </header>
 
-  <nav class="sdx-group-nav tabs" data-group="primary">
+  <nav class="mk-group-nav tabs" data-group="primary">
     <a class="item active" data-tab="members"><i class="fas fa-users"></i> Members</a>
     <a class="item" data-tab="traveling"><i class="fas fa-route"></i> Traveling</a>
     <a class="item" data-tab="camping"><i class="fas fa-campground"></i> Camping</a>
@@ -22,40 +22,40 @@
     <a class="item" data-tab="notes"><i class="fas fa-scroll"></i> Notes</a>
   </nav>
 
-  <section class="sdx-group-content">
-    <div class="tab sdx-group-tab sdx-group-tab-body active" data-group="primary" data-tab="members">
-      {{#if sdx.canEditGroup}}
-      <div class="sdx-group-dropzone">
+  <section class="mk-group-content">
+    <div class="tab mk-group-tab mk-group-tab-body active" data-group="primary" data-tab="members">
+      {{#if mk.canEditGroup}}
+      <div class="mk-group-dropzone">
         <i class="fas fa-hand-pointer"></i>
         Drop actors here, or use the sheet header button to add controlled tokens.
       </div>
       {{/if}}
 
-      {{#if sdx.hasMembers}}
-      <div class="sdx-group-members">
-        {{#each sdx.members}}
-        <article class="sdx-group-member" data-member-uuid="{{uuid}}">
-          {{#if ../sdx.canEditGroup}}
-          <button type="button" class="sdx-member-remove" data-action="remove-member" title="Remove member"><i class="fas fa-times"></i></button>
+      {{#if mk.hasMembers}}
+      <div class="mk-group-members">
+        {{#each mk.members}}
+        <article class="mk-group-member" data-member-uuid="{{uuid}}">
+          {{#if ../mk.canEditGroup}}
+          <button type="button" class="mk-member-remove" data-action="remove-member" title="Remove member"><i class="fas fa-times"></i></button>
           {{/if}}
 
-          <img class="sdx-member-image" src="{{img}}" alt="{{name}}" data-action="open-member">
+          <img class="mk-member-image" src="{{img}}" alt="{{name}}" data-action="open-member">
 
-          <div class="sdx-member-main">
-            <div class="sdx-member-name-row">
-              <button type="button" class="sdx-member-name" data-action="open-member">{{name}}</button>
-              <span class="sdx-member-class">{{className}}</span>
+          <div class="mk-member-main">
+            <div class="mk-member-name-row">
+              <button type="button" class="mk-member-name" data-action="open-member">{{name}}</button>
+              <span class="mk-member-class">{{className}}</span>
             </div>
 
-            <div class="sdx-member-hp-row">
-              <span class="sdx-small-label">HP</span>
-              <span class="sdx-hp-text">{{hp.value}}/{{hp.max}}</span>
-              <div class="sdx-hp-bar"><div class="sdx-hp-fill" style="width: {{hp.pct}}%;"></div></div>
+            <div class="mk-member-hp-row">
+              <span class="mk-small-label">HP</span>
+              <span class="mk-hp-text">{{hp.value}}/{{hp.max}}</span>
+              <div class="mk-hp-bar"><div class="mk-hp-fill" style="width: {{hp.pct}}%;"></div></div>
             </div>
 
-            <div class="sdx-member-abilities">
+            <div class="mk-member-abilities">
               {{#each abilities}}
-              <button type="button" class="sdx-ability-button" data-action="roll-ability" data-ability="{{key}}" title="Roll {{label}}">
+              <button type="button" class="mk-ability-button" data-action="roll-ability" data-ability="{{key}}" title="Roll {{label}}">
                 <span>{{label}}</span>
                 <strong>{{mod}}</strong>
               </button>
@@ -63,68 +63,68 @@
             </div>
           </div>
 
-          <div class="sdx-member-side-stats">
-            <span class="sdx-side-stat">AC <strong>{{ac}}</strong></span>
-            <span class="sdx-side-stat">LVL <strong>{{level}}</strong></span>
-            <span class="sdx-side-stat sdx-xp-stat">
+          <div class="mk-member-side-stats">
+            <span class="mk-side-stat">AC <strong>{{ac}}</strong></span>
+            <span class="mk-side-stat">LVL <strong>{{level}}</strong></span>
+            <span class="mk-side-stat mk-xp-stat">
               XP <strong>{{xp.value}}/{{xp.next}}</strong>
-              {{#if ../sdx.canEditGroup}}
+              {{#if ../mk.canEditGroup}}
               <button type="button" data-action="xp-decrement" title="Decrease XP"><i class="fas fa-minus"></i></button>
               <button type="button" data-action="xp-increment" title="Increase XP"><i class="fas fa-plus"></i></button>
               {{/if}}
             </span>
-            <span class="sdx-side-stat {{#if slots.over}}sdx-danger{{/if}}">Slots <strong>{{slots.total}}/{{slots.max}}</strong></span>
+            <span class="mk-side-stat {{#if slots.over}}mk-danger{{/if}}">Slots <strong>{{slots.total}}/{{slots.max}}</strong></span>
           </div>
         </article>
         {{/each}}
       </div>
       {{else}}
-      <div class="sdx-empty-group">{{#if sdx.canEditGroup}}No members yet. Drop player actors or tokens onto this sheet.{{else}}No members yet. Ask the GM to add party members.{{/if}}</div>
+      <div class="mk-empty-group">{{#if mk.canEditGroup}}No members yet. Drop player actors or tokens onto this sheet.{{else}}No members yet. Ask the GM to add party members.{{/if}}</div>
       {{/if}}
     </div>
 
-    <div class="tab sdx-group-tab sdx-group-tab-body" data-group="primary" data-tab="traveling">
-      <div class="sdx-travel-toolbar">
-        <button type="button" data-action="cycle-weather"><i class="fas fa-cloud-sun-rain"></i> Weather: {{sdx.travel.weatherLabel}}</button>
+    <div class="tab mk-group-tab mk-group-tab-body" data-group="primary" data-tab="traveling">
+      <div class="mk-travel-toolbar">
+        <button type="button" data-action="cycle-weather"><i class="fas fa-cloud-sun-rain"></i> Weather: {{mk.travel.weatherLabel}}</button>
 
-        <label class="sdx-speed-control">Speed
+        <label class="mk-speed-control">Speed
           <select data-action="change-speed">
-            {{#each sdx.travel.speedOptions}}
+            {{#each mk.travel.speedOptions}}
             <option value="{{value}}" {{#if selected}}selected{{/if}}>{{label}}</option>
             {{/each}}
           </select>
         </label>
 
-        <label class="sdx-travel-number-control">MPH
-          <input type="number" data-action="change-miles-per-hour" value="{{sdx.travel.milesPerHour}}" min="0" max="100" step="0.1">
+        <label class="mk-travel-number-control">MPH
+          <input type="number" data-action="change-miles-per-hour" value="{{mk.travel.milesPerHour}}" min="0" max="100" step="0.1">
         </label>
 
-        <label class="sdx-travel-number-control">Hexes
-          <input type="number" data-action="change-hexes-to-explore" value="{{sdx.travel.hexesToExplore}}" min="0" max="999" step="1">
+        <label class="mk-travel-number-control">Hexes
+          <input type="number" data-action="change-hexes-to-explore" value="{{mk.travel.hexesToExplore}}" min="0" max="999" step="1">
         </label>
 
-        {{#if sdx.canEditGroup}}
-        <button type="button" data-action="start-travel-rolls" {{#unless sdx.travel.hasAssigned}}disabled{{/unless}}>
+        {{#if mk.canEditGroup}}
+        <button type="button" data-action="start-travel-rolls" {{#unless mk.travel.hasAssigned}}disabled{{/unless}}>
           <i class="fas fa-bullhorn"></i> Prompt Travelling
         </button>
         {{/if}}
       </div>
 
-      <div class="sdx-travel-progress" data-prompt-id="{{sdx.travel.progress.promptId}}" data-travel-duration-ms="{{sdx.travel.progress.durationMs}}" style="--sdx-travel-progress-fill: {{sdx.travel.progress.percent}}%;">
-        <span class="sdx-travel-progress-track" aria-hidden="true">
-          <span class="sdx-travel-progress-fill" data-travel-progress-fill></span>
+      <div class="mk-travel-progress" data-prompt-id="{{mk.travel.progress.promptId}}" data-travel-duration-ms="{{mk.travel.progress.durationMs}}" style="--mk-travel-progress-fill: {{mk.travel.progress.percent}}%;">
+        <span class="mk-travel-progress-track" aria-hidden="true">
+          <span class="mk-travel-progress-fill" data-travel-progress-fill></span>
         </span>
-        {{#each sdx.travel.progress.steps}}
-        <div class="sdx-travel-progress-step {{#if complete}}is-complete{{/if}} {{#if failed}}is-failed{{/if}} {{#if successOutcome}}is-success-result{{/if}} {{#if failureOutcome}}is-failure-result{{/if}} {{#if active}}is-active{{/if}} {{#if pending}}is-pending{{/if}} {{#if empty}}is-empty{{/if}}" data-travel-progress-step="{{key}}">
-          <span class="sdx-travel-progress-node">
+        {{#each mk.travel.progress.steps}}
+        <div class="mk-travel-progress-step {{#if complete}}is-complete{{/if}} {{#if failed}}is-failed{{/if}} {{#if successOutcome}}is-success-result{{/if}} {{#if failureOutcome}}is-failure-result{{/if}} {{#if active}}is-active{{/if}} {{#if pending}}is-pending{{/if}} {{#if empty}}is-empty{{/if}}" data-travel-progress-step="{{key}}">
+          <span class="mk-travel-progress-node">
             <img src="{{icon}}" alt="">
           </span>
-          <span class="sdx-travel-progress-label">{{name}}</span>
-          <span class="sdx-travel-progress-count">
+          <span class="mk-travel-progress-label">{{name}}</span>
+          <span class="mk-travel-progress-count">
             <span data-progress-completed>{{completedCount}}</span>/<span data-progress-assigned>{{assignedCount}}</span>
           </span>
-          <span class="sdx-travel-progress-status" data-progress-status>{{statusLabel}}</span>
-          <span class="sdx-travel-progress-results" data-progress-results>
+          <span class="mk-travel-progress-status" data-progress-status>{{statusLabel}}</span>
+          <span class="mk-travel-progress-results" data-progress-results>
             {{#each resultMarks}}
             <span data-travel-result="{{type}}" title="{{label}}">{{symbol}}</span>
             {{/each}}
@@ -133,12 +133,12 @@
         {{/each}}
       </div>
 
-      {{#if sdx.travel.hasMembers}}
-      <div class="sdx-camping-roster sdx-travel-roster">
-        {{#each sdx.travel.members}}
+      {{#if mk.travel.hasMembers}}
+      <div class="mk-camping-roster mk-travel-roster">
+        {{#each mk.travel.members}}
         <button
           type="button"
-          class="sdx-camping-roster-member {{#if assigned}}is-assigned{{/if}} {{#unless canAssign}}is-unavailable{{/unless}}"
+          class="mk-camping-roster-member {{#if assigned}}is-assigned{{/if}} {{#unless canAssign}}is-unavailable{{/unless}}"
           data-action="open-member"
           data-camping-member-drag="true"
           data-activity-kind="travel"
@@ -147,67 +147,67 @@
           draggable="{{#if canAssign}}true{{else}}false{{/if}}"
           title="{{#unless canAssign}}{{name}} is controlled by another user{{else}}{{#if assignedActivityName}}{{name}}: {{assignedActivityName}}{{else}}{{name}} is unassigned{{/if}}{{/unless}}"
         >
-          <span class="sdx-camping-portrait"><img src="{{img}}" alt="{{name}}"></span>
+          <span class="mk-camping-portrait"><img src="{{img}}" alt="{{name}}"></span>
           <span>{{name}}</span>
           {{#if assignedActivityName}}<small>{{assignedActivityName}}</small>{{else}}<small>Free</small>{{/if}}
         </button>
         {{/each}}
-        {{#if sdx.canEditGroup}}
-        <button type="button" class="sdx-camping-reset" data-action="reset-travel" data-activity-kind="travel" data-tooltip="Reset Travel Assignments" aria-label="Reset Travel Assignments">
+        {{#if mk.canEditGroup}}
+        <button type="button" class="mk-camping-reset" data-action="reset-travel" data-activity-kind="travel" data-tooltip="Reset Travel Assignments" aria-label="Reset Travel Assignments">
           <i class="fas fa-undo"></i>
         </button>
         {{/if}}
       </div>
       {{else}}
-      <div class="sdx-camping-roster-empty">Add members to the group to assign travel tasks.</div>
+      <div class="mk-camping-roster-empty">Add members to the group to assign travel tasks.</div>
       {{/if}}
 
-      <div class="sdx-travel-grid">
-        {{#each sdx.travel.activities}}
-        <article class="sdx-travel-card" data-activity-kind="travel" data-travel-activity-key="{{key}}">
-          <header class="sdx-travel-card-header">
-            <span class="sdx-travel-activity-icon" aria-hidden="true">
+      <div class="mk-travel-grid">
+        {{#each mk.travel.activities}}
+        <article class="mk-travel-card" data-activity-kind="travel" data-travel-activity-key="{{key}}">
+          <header class="mk-travel-card-header">
+            <span class="mk-travel-activity-icon" aria-hidden="true">
               <img src="{{icon}}" alt="">
             </span>
 
-            <div class="sdx-travel-title" data-tooltip="{{description}}" aria-label="{{description}}" tabindex="0">
-              <strong class="sdx-travel-name">{{name}}</strong>
-              <span class="sdx-travel-meta">{{abilityLabel}} <b>DC {{dc}}</b></span>
+            <div class="mk-travel-title" data-tooltip="{{description}}" aria-label="{{description}}" tabindex="0">
+              <strong class="mk-travel-name">{{name}}</strong>
+              <span class="mk-travel-meta">{{abilityLabel}} <b>DC {{dc}}</b></span>
             </div>
 
-            <button type="button" class="sdx-travel-roll" data-action="roll-travel-activity" data-has-assigned="{{#if hasAssigned}}true{{else}}false{{/if}}" title="{{#if hasAssigned}}Roll {{name}}{{else}}Assign a character to roll {{name}}{{/if}}" {{#unless hasAssigned}}disabled{{/unless}}>
+            <button type="button" class="mk-travel-roll" data-action="roll-travel-activity" data-has-assigned="{{#if hasAssigned}}true{{else}}false{{/if}}" title="{{#if hasAssigned}}Roll {{name}}{{else}}Assign a character to roll {{name}}{{/if}}" {{#unless hasAssigned}}disabled{{/unless}}>
               <i class="fas fa-dice-d20"></i>
             </button>
           </header>
 
-          <div class="sdx-camping-assignment-row" data-action="toggle-travel-picker" title="Choose assigned members">
-            <div class="sdx-camping-assignment-summary" title="{{assignmentLabel}}">
+          <div class="mk-camping-assignment-row" data-action="toggle-travel-picker" title="Choose assigned members">
+            <div class="mk-camping-assignment-summary" title="{{assignmentLabel}}">
               {{#if hasAssigned}}
               {{#each assigned}}
-              <button type="button" class="sdx-camping-assigned-chip" data-action="open-member" data-assigned-actor-uuid="{{uuid}}" title="{{name}}">
-                <span class="sdx-camping-portrait"><img src="{{img}}" alt="{{name}}"></span>
+              <button type="button" class="mk-camping-assigned-chip" data-action="open-member" data-assigned-actor-uuid="{{uuid}}" title="{{name}}">
+                <span class="mk-camping-portrait"><img src="{{img}}" alt="{{name}}"></span>
               </button>
               {{/each}}
               {{else}}
-              <span class="sdx-camping-unassigned">Unassigned</span>
+              <span class="mk-camping-unassigned">Unassigned</span>
               {{/if}}
             </div>
           </div>
 
           {{#if hasMemberOptions}}
-          <div class="sdx-camping-picker-panel">
-            <div class="sdx-travel-member-picker">
+          <div class="mk-camping-picker-panel">
+            <div class="mk-travel-member-picker">
               {{#each memberOptions}}
               <button
                 type="button"
-                class="sdx-travel-member-toggle {{#if assigned}}is-assigned{{/if}} {{#if assignedElsewhere}}is-assigned-elsewhere{{/if}}"
+                class="mk-travel-member-toggle {{#if assigned}}is-assigned{{/if}} {{#if assignedElsewhere}}is-assigned-elsewhere{{/if}}"
                 data-action="toggle-travel-participant"
                 data-member-uuid="{{uuid}}"
                 data-can-assign="{{#if canAssign}}true{{else}}false{{/if}}"
                 title="{{title}}"
                 {{#unless canAssign}}disabled{{/unless}}
               >
-                <span class="sdx-camping-portrait"><img src="{{img}}" alt="{{name}}"></span>
+                <span class="mk-camping-portrait"><img src="{{img}}" alt="{{name}}"></span>
                 <span>{{name}}</span>
                 {{#if assignedActivityName}}<small>{{assignedActivityName}}</small>{{/if}}
               </button>
@@ -220,9 +220,9 @@
       </div>
     </div>
 
-    <div class="tab sdx-group-tab sdx-group-tab-body" data-group="primary" data-tab="camping">
-      <section class="sdx-camping-info">
-        <div class="sdx-camping-procedure">
+    <div class="tab mk-group-tab mk-group-tab-body" data-group="primary" data-tab="camping">
+      <section class="mk-camping-info">
+        <div class="mk-camping-procedure">
           <ol>
             <strong>PROCEDURE</strong>
             <li>The PCs make task checks in any order they choose.</li>
@@ -230,32 +230,32 @@
           </ol>
         </div>
 
-        <div class="sdx-campfire-note">
+        <div class="mk-campfire-note">
           <strong>Campfire</strong>
           <p>The PCs can make a campfire using 3 torches; it lasts 8 hours while a PC remains near to it and casts light out to a near distance.</p>
-          <div class="sdx-campfire-resources">
+          <div class="mk-campfire-resources">
             <span title="Total food and rations carried by members plus shared group inventory">
               <i class="fas fa-utensils"></i>
-              <strong>{{sdx.campingResources.food.total}}</strong>
+              <strong>{{mk.campingResources.food.total}}</strong>
             </span>
             <span title="Total torches carried by members plus shared group inventory">
               <i class="fas fa-fire"></i>
-              <strong>{{sdx.campingResources.torches.total}}</strong>
+              <strong>{{mk.campingResources.torches.total}}</strong>
             </span>
             <span title="Total water carried by members plus shared group inventory">
               <i class="fas fa-tint"></i>
-              <strong>{{sdx.campingResources.water.total}}</strong>
+              <strong>{{mk.campingResources.water.total}}</strong>
             </span>
           </div>
         </div>
       </section>
 
-      {{#if sdx.camping.hasMembers}}
-      <div class="sdx-camping-roster">
-        {{#each sdx.camping.members}}
+      {{#if mk.camping.hasMembers}}
+      <div class="mk-camping-roster">
+        {{#each mk.camping.members}}
         <button
           type="button"
-          class="sdx-camping-roster-member {{#if assigned}}is-assigned{{/if}} {{#unless canAssign}}is-unavailable{{/unless}}"
+          class="mk-camping-roster-member {{#if assigned}}is-assigned{{/if}} {{#unless canAssign}}is-unavailable{{/unless}}"
           data-action="open-member"
           data-camping-member-drag="true"
           data-activity-kind="camping"
@@ -264,67 +264,67 @@
           draggable="{{#if canAssign}}true{{else}}false{{/if}}"
           title="{{#unless canAssign}}{{name}} is controlled by another user{{else}}{{#if assignedActivityName}}{{name}}: {{assignedActivityName}}{{else}}{{name}} is unassigned{{/if}}{{/unless}}"
         >
-          <span class="sdx-camping-portrait"><img src="{{img}}" alt="{{name}}"></span>
+          <span class="mk-camping-portrait"><img src="{{img}}" alt="{{name}}"></span>
           <span>{{name}}</span>
           {{#if assignedActivityName}}<small>{{assignedActivityName}}</small>{{else}}<small>Free</small>{{/if}}
         </button>
         {{/each}}
-        {{#if sdx.canEditGroup}}
-        <button type="button" class="sdx-camping-reset" data-action="reset-travel" data-activity-kind="camping" data-tooltip="Reset Camping Assignments" aria-label="Reset Camping Assignments">
+        {{#if mk.canEditGroup}}
+        <button type="button" class="mk-camping-reset" data-action="reset-travel" data-activity-kind="camping" data-tooltip="Reset Camping Assignments" aria-label="Reset Camping Assignments">
           <i class="fas fa-undo"></i>
         </button>
         {{/if}}
       </div>
       {{else}}
-      <div class="sdx-camping-roster-empty">Add members to the group to assign camping tasks.</div>
+      <div class="mk-camping-roster-empty">Add members to the group to assign camping tasks.</div>
       {{/if}}
 
-      <div class="sdx-travel-grid">
-        {{#each sdx.camping.activities}}
-        <article class="sdx-travel-card" data-activity-kind="camping" data-travel-activity-key="{{key}}">
-          <header class="sdx-travel-card-header">
-            <span class="sdx-travel-activity-icon" aria-hidden="true">
+      <div class="mk-travel-grid">
+        {{#each mk.camping.activities}}
+        <article class="mk-travel-card" data-activity-kind="camping" data-travel-activity-key="{{key}}">
+          <header class="mk-travel-card-header">
+            <span class="mk-travel-activity-icon" aria-hidden="true">
               <img src="{{icon}}" alt="">
             </span>
 
-            <div class="sdx-travel-title" data-tooltip="{{description}}" aria-label="{{description}}" tabindex="0">
-              <strong class="sdx-travel-name">{{name}}</strong>
-              <span class="sdx-travel-meta">{{abilityLabel}} <b>DC {{dc}}</b></span>
+            <div class="mk-travel-title" data-tooltip="{{description}}" aria-label="{{description}}" tabindex="0">
+              <strong class="mk-travel-name">{{name}}</strong>
+              <span class="mk-travel-meta">{{abilityLabel}} <b>DC {{dc}}</b></span>
             </div>
 
-            <button type="button" class="sdx-travel-roll" data-action="roll-travel-activity" data-has-assigned="{{#if hasAssigned}}true{{else}}false{{/if}}" title="{{#if hasAssigned}}Roll {{name}}{{else}}Assign a character to roll {{name}}{{/if}}" {{#unless hasAssigned}}disabled{{/unless}}>
+            <button type="button" class="mk-travel-roll" data-action="roll-travel-activity" data-has-assigned="{{#if hasAssigned}}true{{else}}false{{/if}}" title="{{#if hasAssigned}}Roll {{name}}{{else}}Assign a character to roll {{name}}{{/if}}" {{#unless hasAssigned}}disabled{{/unless}}>
               <i class="fas fa-dice-d20"></i>
             </button>
           </header>
 
-          <div class="sdx-camping-assignment-row" data-action="toggle-travel-picker" title="Choose assigned members">
-            <div class="sdx-camping-assignment-summary" title="{{assignmentLabel}}">
+          <div class="mk-camping-assignment-row" data-action="toggle-travel-picker" title="Choose assigned members">
+            <div class="mk-camping-assignment-summary" title="{{assignmentLabel}}">
               {{#if hasAssigned}}
               {{#each assigned}}
-              <button type="button" class="sdx-camping-assigned-chip" data-action="open-member" data-assigned-actor-uuid="{{uuid}}" title="{{name}}">
-                <span class="sdx-camping-portrait"><img src="{{img}}" alt="{{name}}"></span>
+              <button type="button" class="mk-camping-assigned-chip" data-action="open-member" data-assigned-actor-uuid="{{uuid}}" title="{{name}}">
+                <span class="mk-camping-portrait"><img src="{{img}}" alt="{{name}}"></span>
               </button>
               {{/each}}
               {{else}}
-              <span class="sdx-camping-unassigned">Unassigned</span>
+              <span class="mk-camping-unassigned">Unassigned</span>
               {{/if}}
             </div>
           </div>
 
           {{#if hasMemberOptions}}
-          <div class="sdx-camping-picker-panel">
-            <div class="sdx-travel-member-picker">
+          <div class="mk-camping-picker-panel">
+            <div class="mk-travel-member-picker">
               {{#each memberOptions}}
               <button
                 type="button"
-                class="sdx-travel-member-toggle {{#if assigned}}is-assigned{{/if}} {{#if assignedElsewhere}}is-assigned-elsewhere{{/if}}"
+                class="mk-travel-member-toggle {{#if assigned}}is-assigned{{/if}} {{#if assignedElsewhere}}is-assigned-elsewhere{{/if}}"
                 data-action="toggle-travel-participant"
                 data-member-uuid="{{uuid}}"
                 data-can-assign="{{#if canAssign}}true{{else}}false{{/if}}"
                 title="{{title}}"
                 {{#unless canAssign}}disabled{{/unless}}
               >
-                <span class="sdx-camping-portrait"><img src="{{img}}" alt="{{name}}"></span>
+                <span class="mk-camping-portrait"><img src="{{img}}" alt="{{name}}"></span>
                 <span>{{name}}</span>
                 {{#if assignedActivityName}}<small>{{assignedActivityName}}</small>{{/if}}
               </button>
@@ -337,64 +337,64 @@
       </div>
     </div>
 
-    <div class="tab sdx-group-tab sdx-group-tab-body" data-group="primary" data-tab="inventory">
-      <div class="sdx-inventory-layout">
-        <section class="sdx-shared-items-panel">
-          <header class="sdx-inventory-panel-header">
-            <button type="button" class="sdx-panel-add-button" data-action="create-group-item" title="Add gear"><i class="fas fa-plus"></i></button>
+    <div class="tab mk-group-tab mk-group-tab-body" data-group="primary" data-tab="inventory">
+      <div class="mk-inventory-layout">
+        <section class="mk-shared-items-panel">
+          <header class="mk-inventory-panel-header">
+            <button type="button" class="mk-panel-add-button" data-action="create-group-item" title="Add gear"><i class="fas fa-plus"></i></button>
             <h2>Shared Items</h2>
-            <span class="sdx-inventory-slots {{#if sdx.inventory.slots.over}}sdx-danger{{/if}}"><i class="fas fa-weight-hanging"></i> <strong>{{sdx.inventory.slots.total}}/{{sdx.inventory.slots.max}}</strong></span>
+            <span class="mk-inventory-slots {{#if mk.inventory.slots.over}}mk-danger{{/if}}"><i class="fas fa-weight-hanging"></i> <strong>{{mk.inventory.slots.total}}/{{mk.inventory.slots.max}}</strong></span>
           </header>
 
-          <div class="sdx-shared-items-table">
-            <div class="sdx-shared-items-table-header">
+          <div class="mk-shared-items-table">
+            <div class="mk-shared-items-table-header">
               <span>Item</span>
               <span>Qty</span>
               <span>Slots</span>
             </div>
 
-            <div class="sdx-shared-items-table-body">
-              {{#if sdx.inventory.hasItems}}
-              {{#each sdx.inventory.items}}
-              <div class="sdx-shared-item-row" data-item-id="{{id}}">
-                <div class="sdx-shared-item-name-cell">
+            <div class="mk-shared-items-table-body">
+              {{#if mk.inventory.hasItems}}
+              {{#each mk.inventory.items}}
+              <div class="mk-shared-item-row" data-item-id="{{id}}">
+                <div class="mk-shared-item-name-cell">
                   <img src="{{img}}" alt="{{name}}" data-action="open-item">
-                  <button type="button" class="sdx-inventory-name" data-action="open-item">{{name}}</button>
+                  <button type="button" class="mk-inventory-name" data-action="open-item">{{name}}</button>
                 </div>
 
-                <div class="sdx-shared-item-qty-cell">
+                <div class="mk-shared-item-qty-cell">
                   <button type="button" data-action="item-decrement" title="Decrease quantity"><i class="fas fa-minus"></i></button>
                   <strong>{{quantity}}</strong>
                   <button type="button" data-action="item-increment" title="Increase quantity"><i class="fas fa-plus"></i></button>
                 </div>
 
-                <div class="sdx-shared-item-slots-cell">{{slots}}</div>
+                <div class="mk-shared-item-slots-cell">{{slots}}</div>
               </div>
               {{/each}}
               {{else}}
-              <div class="sdx-shared-items-empty">No shared items. Drop gear here or press +.</div>
+              <div class="mk-shared-items-empty">No shared items. Drop gear here or press +.</div>
               {{/if}}
             </div>
           </div>
         </section>
 
-        <aside class="sdx-party-treasure-panel">
+        <aside class="mk-party-treasure-panel">
           <h2>Party Treasure</h2>
 
-          <label class="sdx-coin-row"><span>GP</span><input type="number" value="{{sdx.inventory.coins.gp}}" min="0" data-action="change-group-coin" data-coin="gp"></label>
-          <label class="sdx-coin-row"><span>SP</span><input type="number" value="{{sdx.inventory.coins.sp}}" min="0" data-action="change-group-coin" data-coin="sp"></label>
-          <label class="sdx-coin-row"><span>CP</span><input type="number" value="{{sdx.inventory.coins.cp}}" min="0" data-action="change-group-coin" data-coin="cp"></label>
+          <label class="mk-coin-row"><span>GP</span><input type="number" value="{{mk.inventory.coins.gp}}" min="0" data-action="change-group-coin" data-coin="gp"></label>
+          <label class="mk-coin-row"><span>SP</span><input type="number" value="{{mk.inventory.coins.sp}}" min="0" data-action="change-group-coin" data-coin="sp"></label>
+          <label class="mk-coin-row"><span>CP</span><input type="number" value="{{mk.inventory.coins.cp}}" min="0" data-action="change-group-coin" data-coin="cp"></label>
 
-          <p class="sdx-coin-slots"><i class="fas fa-weight-hanging"></i> Coin slots <strong>{{sdx.inventory.coinSlots}}</strong></p>
+          <p class="mk-coin-slots"><i class="fas fa-weight-hanging"></i> Coin slots <strong>{{mk.inventory.coinSlots}}</strong></p>
 
-          <button type="button" class="sdx-divide-coins-button" data-action="divide-coins"><i class="fas fa-coins"></i> Divide Coins</button>
+          <button type="button" class="mk-divide-coins-button" data-action="divide-coins"><i class="fas fa-coins"></i> Divide Coins</button>
         </aside>
       </div>
     </div>
 
-    <div class="tab sdx-group-tab sdx-group-tab-body" data-group="primary" data-tab="notes">
-      <div class="sdx-group-notes">
-        <textarea class="sdx-group-notes-text" name="system.notes" rows="18" placeholder="Group notes, travel log, debts, rumors, shared goals...">{{actor.system.notes}}</textarea>
+    <div class="tab mk-group-tab mk-group-tab-body" data-group="primary" data-tab="notes">
+      <div class="mk-group-notes">
+        <textarea class="mk-group-notes-text" name="system.notes" rows="18" placeholder="Group notes, travel log, debts, rumors, shared goals...">{{actor.system.notes}}</textarea>
       </div>
     </div>
   </section>

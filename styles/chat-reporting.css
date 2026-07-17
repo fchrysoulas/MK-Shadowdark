@@ -1,12 +1,12 @@
 /* styles/chat-reporting.css */
 
-.sdx-chat-reporting__luck-message {
+.mk-chat-reporting__luck-message {
   display: flex;
   align-items: center;
   gap: 0.35rem;
 }
 
-.sdx-chat-reporting__luck-icon {
+.mk-chat-reporting__luck-icon {
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -17,15 +17,15 @@
   font-size: 0.75rem;
 }
 
-.sdx-chat-reporting__luck-icon--gain {
+.mk-chat-reporting__luck-icon--gain {
   background: #2f9e44;
 }
 
-.sdx-chat-reporting__luck-icon--remove {
+.mk-chat-reporting__luck-icon--remove {
   background: #c92a2a;
 }
 
-.sdx-chat-reporting__luck-remaining {
+.mk-chat-reporting__luck-remaining {
   opacity: 0.75;
   margin-left: 0.25rem;
 }

@@ -44,9 +44,25 @@
       title: "Character Sheet Tweaks",
       hint: "Configure global sheet styling, imagery, visual tweaks, and diagnostics.",
       icon: "fas fa-address-card",
+      width: 850,
+      height: 720,
       settings: [
-        "characterSheetTweaksEnabled", "sheetStyleEditorEnabled", "sheetStyleEditorCss",
+        "characterSheetTweaksEnabled", "attackWeaponPropertiesEnabled", "sheetStyleEditorEnabled", "sheetStyleEditorCss",
         "characterSheetTweaksHideLogo", "characterSheetTweaksHeaderBackgroundImage", "characterSheetTweaksDebug"
+      ],
+      sections: [
+        {
+          title: "General",
+          settings: ["characterSheetTweaksEnabled", "attackWeaponPropertiesEnabled", "sheetStyleEditorEnabled"]
+        },
+        {
+          title: "Appearance",
+          settings: ["characterSheetTweaksHideLogo", "characterSheetTweaksHeaderBackgroundImage"]
+        },
+        {
+          title: "Advanced",
+          settings: ["sheetStyleEditorCss", "characterSheetTweaksDebug"]
+        }
       ]
     },
     {
@@ -169,6 +185,17 @@
     };
   }
 
+  function featureSections(feature) {
+    const sections = Array.isArray(feature.sections) && feature.sections.length
+      ? feature.sections
+      : [{ title: "", settings: feature.settings }];
+
+    return sections.map(section => ({
+      title: section.title ?? "",
+      settings: section.settings.map(settingDescriptor).filter(Boolean)
+    }));
+  }
+
   const FormApplicationBase = globalThis.foundry?.appv1?.api?.FormApplication ?? globalThis.FormApplication;
 
   class FeatureSettingsForm extends FormApplicationBase {
@@ -179,8 +206,8 @@
         id: `${MODULE_ID}-${this.feature.key}-settings`,
         title: `${MODULE_ID} | ${this.feature.title}`,
         template: FEATURE_SETTINGS_TEMPLATE,
-        width: 600,
-        height: "auto",
+        width: this.feature.width ?? 680,
+        height: this.feature.height ?? "auto",
         resizable: true,
         closeOnSubmit: true
       });
@@ -191,14 +218,14 @@
       return {
         title: feature.title,
         hint: feature.hint,
-        settings: feature.settings.map(settingDescriptor).filter(Boolean)
+        sections: featureSections(feature)
       };
     }
 
     activateListeners(html) {
       super.activateListeners(html);
       html.find('input[type="range"]').on("input", event => {
-        event.currentTarget.closest(".sdx-range-control")?.querySelector(".range-value")?.replaceChildren(event.currentTarget.value);
+        event.currentTarget.closest(".mk-range-control")?.querySelector(".range-value")?.replaceChildren(event.currentTarget.value);
       });
     }
 
@@ -550,6 +577,16 @@
       onChange: refreshOpenActorSheets
     });
 
+    registerSetting("attackWeaponPropertiesEnabled", {
+      name: "Character Sheet | Weapon Properties on New Line",
+      hint: "Displays weapon properties on a separate line beneath each attack on the Abilities tab.",
+      scope: "world",
+      config: true,
+      type: Boolean,
+      default: true,
+      onChange: refreshOpenActorSheets
+    });
+
     registerSetting("characterSheetTweaksSummaryBar", {
       name: "Summary Bar | Enabled",
       hint: "Adds an independent compact summary bar to the Shadowdark player sheet.",
@@ -611,6 +648,15 @@
       default: false
     });
 
+    registerSetting("sheetStyleEditorMkPrefixMigrated", {
+      name: "Character Sheet | MK CSS Prefix Migration Complete",
+      hint: "Internal migration state for renaming legacy module CSS identifiers to mk.",
+      scope: "world",
+      config: false,
+      type: Boolean,
+      default: false
+    });
+
     registerSetting("sheetStyleEditorDefaultsSeeded", {
       name: "Character Sheet | Editable Defaults Seeded",
       hint: "Internal migration state for the editable character-sheet default CSS.",
@@ -650,6 +696,33 @@
     registerSetting("sheetStyleEditorSolidNavigationBackground", {
       name: "Character Sheet | Solid Navigation Background Migration Complete",
       hint: "Internal migration state for replacing the navigation gradient with a solid background.",
+      scope: "world",
+      config: false,
+      type: Boolean,
+      default: false
+    });
+
+    registerSetting("sheetStyleEditorUiStylesExtracted", {
+      name: "Character Sheet | Fixed Style Editor CSS Migration Complete",
+      hint: "Internal migration state for moving the Style Editor interface out of editable character-sheet CSS.",
+      scope: "world",
+      config: false,
+      type: Boolean,
+      default: false
+    });
+
+    registerSetting("sheetStyleEditorContextMenuStylesExtracted", {
+      name: "Character Sheet | Fixed Context Menu CSS Migration Complete",
+      hint: "Internal migration state for replacing the editable context-menu override with the fixed Quickdraw fallback.",
+      scope: "world",
+      config: false,
+      type: Boolean,
+      default: false
+    });
+
+    registerSetting("sheetStyleEditorAttackPropertiesStylesExtracted", {
+      name: "Character Sheet | Fixed Attack Properties CSS Migration Complete",
+      hint: "Internal migration state for moving weapon attack property styles out of editable character-sheet CSS.",
       scope: "world",
       config: false,
       type: Boolean,

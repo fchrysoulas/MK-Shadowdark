@@ -2,8 +2,8 @@
   const MODULE_ID = "mk-shadowdark";
   const SUBMODULE = "Time Passes Splash";
   const FLAG_KEY = "timePassesSplash";
-  const HOOK_FLAG = "__sdxTimePassesSplashHookInstalled";
-  const SEEN_FLAG = "__sdxTimePassesSplashSeenIds";
+  const HOOK_FLAG = "__mkTimePassesSplashHookInstalled";
+  const SEEN_FLAG = "__mkTimePassesSplashSeenIds";
 
   function log(...args) {
     console.log(`${MODULE_ID} | ${SUBMODULE} |`, ...args);
@@ -32,11 +32,11 @@
     const skullSizePx = Number(payload.skullSizePx ?? setting("timePassesSkullSizePx", 34)) || 34;
 
     // Remove existing splash
-    const old = document.getElementById("sdx-time-passes-splash");
+    const old = document.getElementById("mk-time-passes-splash");
     if (old) old.remove();
 
     const wrap = document.createElement("div");
-    wrap.id = "sdx-time-passes-splash";
+    wrap.id = "mk-time-passes-splash";
     wrap.style.cssText = `
       position: fixed; inset: 0;
       display: flex; align-items: center; justify-content: center;
@@ -167,7 +167,7 @@
     const msg = await ChatMessage.create({
       speaker: ChatMessage.getSpeaker(),
       style: CONST.CHAT_MESSAGE_STYLES.OTHER,
-      content: `<span style="display:none">sdx-time-passes</span>`,
+      content: `<span style="display:none">mk-time-passes</span>`,
       flags: { [MODULE_ID]: { [FLAG_KEY]: payload } }
     });
 

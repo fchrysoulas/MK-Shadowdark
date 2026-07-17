@@ -1,7 +1,7 @@
 (() => {
   const MODULE_ID = "mk-shadowdark";
   const SUBMODULE = "Death Timer";
-  const DEATH_TIMER_STATUS_ID = "sdx-death-timer";
+  const DEATH_TIMER_STATUS_ID = "mk-death-timer";
   const DEATH_TIMER_CHAT_ICON = "modules/mk-shadowdark/assets/icons/blood-drop-red.png";
 
   function getModuleVersion() {
@@ -102,13 +102,13 @@
   }
 
   function ensureStylesOnce() {
-    const id = "sdx-death-timer-style";
+    const id = "mk-death-timer-style";
     if (document.getElementById(id)) return;
 
     const style = document.createElement("style");
     style.id = id;
     style.textContent = `
-      .sdx-death-timer-chat-line {
+      .mk-death-timer-chat-line {
         display: grid;
         grid-template-columns: 34px minmax(0, 1fr);
         align-items: center;
@@ -116,7 +116,7 @@
         margin: 0.1rem 0;
       }
 
-      .sdx-death-timer-chat-icon {
+      .mk-death-timer-chat-icon {
         width: 34px;
         height: 34px;
         object-fit: contain;
@@ -124,7 +124,7 @@
         border: 0;
       }
 
-      .sdx-death-timer-chat-text {
+      .mk-death-timer-chat-text {
         min-width: 0;
         line-height: 1.25;
       }
@@ -147,14 +147,14 @@
 
     const safeSrc = escapeAttribute(src);
     const safeLabel = escapeAttribute(label);
-    return `<img class="sdx-death-timer-chat-icon" src="${safeSrc}" alt="${safeLabel}" title="${safeLabel}">`;
+    return `<img class="mk-death-timer-chat-icon" src="${safeSrc}" alt="${safeLabel}" title="${safeLabel}">`;
   }
 
   function renderChatLine(src, label, content) {
     return `
-      <div class="sdx-death-timer-chat-line">
+      <div class="mk-death-timer-chat-line">
         ${renderChatIcon(src, label)}
-        <div class="sdx-death-timer-chat-text">${content}</div>
+        <div class="mk-death-timer-chat-text">${content}</div>
       </div>
     `;
   }
@@ -533,7 +533,7 @@
   // Track HP changes so any healing clears Death Timer / Dead
   Hooks.on("preUpdateActor", (actor, change, options) => {
     if (game.system?.id !== "shadowdark") return;
-    options._sdxPrevHp = getHpPathAndValue(actor).value;
+    options._mkPrevHp = getHpPathAndValue(actor).value;
   });
 
   Hooks.on("updateActor", async (actor, change, options) => {
@@ -547,7 +547,7 @@
 
       if (!hasDeathState) return;
 
-      const prevHp = numOrNull(options?._sdxPrevHp);
+      const prevHp = numOrNull(options?._mkPrevHp);
       const newHp = getHpPathAndValue(actor).value;
       const changedHp = getHpValueFromSource(change);
 

@@ -29,7 +29,7 @@ import { handleTravelRollChatMessage } from "./rolls.js";
 import { createGroupActor, SDXGroupSheet } from "./sheet.js";
 import { travelPromptChatMessagesSeen } from "./state.js";
 import { applyTravelPlayerRollResult, handleTravelPromptTransport } from "./travel-prompt.js";
-import { sdxGroupLog } from "./utils.js";
+import { mkGroupLog } from "./utils.js";
 import { getGameUserById, isPrimaryActiveGm } from "./users.js";
 
 const GROUP_ACTOR_DIALOG_TYPE = "Group";
@@ -351,7 +351,7 @@ async function ensureExistingGroupActorHpDefaults() {
   }
 
   if (updated > 0) {
-    sdxGroupLog(`Set HP defaults on ${updated} group actor(s).`);
+    mkGroupLog(`Set HP defaults on ${updated} group actor(s).`);
   }
 
   if (failed > 0) {
@@ -411,7 +411,7 @@ function registerGroupSheet() {
   // Compatibility alias for worlds/macros that used the old global API name.
   game.shadowdarkExtras ??= game.mkShadowdark;
 
-  sdxGroupLog("Registered group sheet.");
+  mkGroupLog("Registered group sheet.");
 }
 
 export { registerGroupSheet };

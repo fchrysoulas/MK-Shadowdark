@@ -36,14 +36,14 @@ function attachNativeLuckWatchers(actor, root) {
   if (!actor || !root?.querySelectorAll) return;
 
   root.querySelectorAll('input[name="system.luck.available"]').forEach(input => {
-    if (input.dataset?.sdxLuckChatWatcher === "true") return;
-    input.dataset.sdxLuckChatWatcher = "true";
+    if (input.dataset?.mkLuckChatWatcher === "true") return;
+    input.dataset.mkLuckChatWatcher = "true";
     input.addEventListener("change", event => onNativeLuckAvailableChange(event, actor));
   });
 
   root.querySelectorAll('input[name="system.luck.remaining"]').forEach(input => {
-    if (input.dataset?.sdxLuckChatWatcher === "true") return;
-    input.dataset.sdxLuckChatWatcher = "true";
+    if (input.dataset?.mkLuckChatWatcher === "true") return;
+    input.dataset.mkLuckChatWatcher = "true";
     input.addEventListener("change", event => onNativeLuckRemainingChange(event, actor));
   });
 }
@@ -70,15 +70,15 @@ async function onNativeLuckRemainingChange(event, actor) {
 
 export async function reportLuckChange(actor, gainedLuck, remaining, pulpMode = isPulpMode()) {
   const icon = gainedLuck
-    ? '<i class="fa-solid fa-check sdx-chat-reporting__luck-icon sdx-chat-reporting__luck-icon--gain"></i>'
-    : '<i class="fa-solid fa-xmark sdx-chat-reporting__luck-icon sdx-chat-reporting__luck-icon--remove"></i>';
+    ? '<i class="fa-solid fa-check mk-chat-reporting__luck-icon mk-chat-reporting__luck-icon--gain"></i>'
+    : '<i class="fa-solid fa-xmark mk-chat-reporting__luck-icon mk-chat-reporting__luck-icon--remove"></i>';
   const remainingText = pulpMode
-    ? ` <span class="sdx-chat-reporting__luck-remaining">Remaining: ${escapeHtml(remaining)}</span>`
+    ? ` <span class="mk-chat-reporting__luck-remaining">Remaining: ${escapeHtml(remaining)}</span>`
     : "";
 
   await ChatMessage.create({
     speaker: ChatMessage.getSpeaker({ actor }),
-    content: `<div class="sdx-chat-reporting__luck-message">${icon}<strong>${escapeHtml(actor?.name ?? "Character")}</strong> ${gainedLuck ? "gained Luck" : "removed Luck"}.${remainingText}</div>`
+    content: `<div class="mk-chat-reporting__luck-message">${icon}<strong>${escapeHtml(actor?.name ?? "Character")}</strong> ${gainedLuck ? "gained Luck" : "removed Luck"}.${remainingText}</div>`
   });
 }
 

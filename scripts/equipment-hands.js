@@ -10,8 +10,8 @@
   const MODE_WARN = "warn";
   const MODE_BLOCK = "block";
 
-  const LAST_WARNING_KEY = "__sdxEquipmentHandsLastWarning";
-  const CHECK_TIMEOUT_KEY = "__sdxEquipmentHandsTimeout";
+  const LAST_WARNING_KEY = "__mkEquipmentHandsLastWarning";
+  const CHECK_TIMEOUT_KEY = "__mkEquipmentHandsTimeout";
 
   function log(...args) {
     if (!isDebugEnabled()) return;

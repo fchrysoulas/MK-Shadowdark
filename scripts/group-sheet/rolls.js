@@ -111,9 +111,9 @@ function buildAbilityRollFlavor(actor, label, target, outcomeLabel, outcome) {
 
   const outcomeClass = outcome.success ? "is-success" : "is-failure";
   return `
-    <div class="sdx-travel-roll-flavor">
+    <div class="mk-travel-roll-flavor">
       <span>${base} vs DC ${escapeHtml(target)}</span>
-      <strong class="sdx-travel-roll-outcome ${outcomeClass}">${escapeHtml(outcomeLabel)}</strong>
+      <strong class="mk-travel-roll-outcome ${outcomeClass}">${escapeHtml(outcomeLabel)}</strong>
     </div>
   `;
 }

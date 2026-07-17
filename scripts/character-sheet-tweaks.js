@@ -4,6 +4,7 @@
 
   const SETTINGS = Object.freeze({
     ENABLED: "characterSheetTweaksEnabled",
+    ATTACK_PROPERTIES: "attackWeaponPropertiesEnabled",
     DEBUG: "characterSheetTweaksDebug"
   });
 
@@ -54,7 +55,9 @@
     if (!getSetting(SETTINGS.ENABLED, true)) return;
 
     applySheetClasses(windowEl, form);
-    formatWeaponAttackProperties(app, form ?? root);
+    if (getSetting(SETTINGS.ATTACK_PROPERTIES, true)) {
+      formatWeaponAttackProperties(app, form ?? root);
+    }
     log("applied", app.actor?.name ?? app.object?.name ?? "unknown actor");
   }
 
@@ -107,13 +110,13 @@
 
   function cleanupSheet(windowEl, form) {
     for (const el of uniqueElements([windowEl, form])) {
-      el.classList.remove("sdx-character-sheet-tweaks");
+      el.classList.remove("mk-character-sheet-tweaks");
     }
   }
 
   function applySheetClasses(windowEl, form) {
     for (const el of uniqueElements([windowEl, form])) {
-      el.classList.add("sdx-character-sheet-tweaks");
+      el.classList.add("mk-character-sheet-tweaks");
     }
   }
 
@@ -124,7 +127,7 @@
     const links = root.querySelectorAll('.tab-abilities .attack a.rollable[data-action="item-attack"][data-item-id]');
 
     for (const link of links) {
-      if (link.classList.contains("sdx-attack-formatted")) continue;
+      if (link.classList.contains("mk-attack-formatted")) continue;
 
       const itemId = link.dataset.itemId;
       const item = actor.items.get(itemId) ?? actor.items.find?.(candidate => candidate.id === itemId);
@@ -132,7 +135,7 @@
 
       Promise.resolve(getWeaponPropertiesText(item)).then(properties => {
         const propertiesText = normalizeInlineText(properties);
-        if (!propertiesText || !link.isConnected || link.classList.contains("sdx-attack-formatted")) return;
+        if (!propertiesText || !link.isConnected || link.classList.contains("mk-attack-formatted")) return;
 
         const currentText = normalizeInlineText(link.textContent);
         const mainText = stripTrailingProperties(currentText, propertiesText);
@@ -141,12 +144,12 @@
 
         link.innerHTML = `
           ${iconHtml}
-          <span class="sdx-attack-lines">
-            <span class="sdx-attack-main-line">${renderAttackMainLine(mainText, weaponName)}</span>
-            <span class="sdx-attack-properties-line">${escapeHtml(propertiesText)}</span>
+          <span class="mk-attack-lines">
+            <span class="mk-attack-main-line">${renderAttackMainLine(mainText, weaponName)}</span>
+            <span class="mk-attack-properties-line">${escapeHtml(propertiesText)}</span>
           </span>
         `;
-        link.classList.add("sdx-attack-formatted");
+        link.classList.add("mk-attack-formatted");
       }).catch(err => {
         console.warn(`${MODULE_ID} v${getModuleVersion()} | ${SUBMODULE} | attack property format error`, err);
       });

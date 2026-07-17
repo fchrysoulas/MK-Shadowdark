@@ -117,23 +117,23 @@ import { reportLuckChange } from "./chat-reporting.js";
 
   function cleanupSummaryBar(root, form, windowEl) {
     for (const scope of uniqueElements([root, form, windowEl])) {
-      scope.querySelectorAll?.(".sdx-character-sheet-bar")?.forEach(element => element.remove());
+      scope.querySelectorAll?.(".mk-character-sheet-bar")?.forEach(element => element.remove());
     }
 
     for (const element of uniqueElements([form, windowEl])) {
-      element.classList.remove("sdx-summary-bar-in-header");
-      element.style.removeProperty("--sdx-sheet-font-scale");
-      element.style.removeProperty("--sdx-bar-value-font-size");
-      element.style.removeProperty("--sdx-bar-button-radius");
-      element.style.removeProperty("--sdx-bar-button-scale");
-      element.style.removeProperty("--sdx-bar-position-x");
-      element.style.removeProperty("--sdx-bar-position-y");
+      element.classList.remove("mk-summary-bar-in-header");
+      element.style.removeProperty("--mk-sheet-font-scale");
+      element.style.removeProperty("--mk-bar-value-font-size");
+      element.style.removeProperty("--mk-bar-button-radius");
+      element.style.removeProperty("--mk-bar-button-scale");
+      element.style.removeProperty("--mk-bar-position-x");
+      element.style.removeProperty("--mk-bar-position-y");
     }
   }
 
   function applySummaryBarScope(form, windowEl) {
     for (const element of uniqueElements([form, windowEl])) {
-      element.classList.add("sdx-summary-bar-in-header");
+      element.classList.add("mk-summary-bar-in-header");
       applySummaryBarVariables(element);
     }
   }
@@ -146,12 +146,12 @@ import { reportLuckChange } from "./chat-reporting.js";
     const positionX = clampNumber(Number(getSetting(SETTINGS.POSITION_X, 20)) || 0, -250, 250);
     const positionY = clampNumber(Number(getSetting(SETTINGS.POSITION_Y, 8)) || 0, -150, 150);
 
-    element.style.setProperty("--sdx-sheet-font-scale", String(fontScale / 100));
-    element.style.setProperty("--sdx-bar-value-font-size", `${valueFontSize}px`);
-    element.style.setProperty("--sdx-bar-button-radius", `${buttonRadius}px`);
-    element.style.setProperty("--sdx-bar-button-scale", String(buttonScale / 100));
-    element.style.setProperty("--sdx-bar-position-x", `${positionX}px`);
-    element.style.setProperty("--sdx-bar-position-y", `${positionY}px`);
+    element.style.setProperty("--mk-sheet-font-scale", String(fontScale / 100));
+    element.style.setProperty("--mk-bar-value-font-size", `${valueFontSize}px`);
+    element.style.setProperty("--mk-bar-button-radius", `${buttonRadius}px`);
+    element.style.setProperty("--mk-bar-button-scale", String(buttonScale / 100));
+    element.style.setProperty("--mk-bar-position-x", `${positionX}px`);
+    element.style.setProperty("--mk-bar-position-y", `${positionY}px`);
   }
 
   function injectSummaryBar(app, root, data) {
@@ -159,12 +159,12 @@ import { reportLuckChange } from "./chat-reporting.js";
     if (!actor) return;
 
     const bar = document.createElement("div");
-    bar.className = "sdx-character-sheet-bar flex0";
+    bar.className = "mk-character-sheet-bar flex0";
     bar.dataset.actorId = actor.id ?? "";
     applySummaryBarVariables(bar);
     bar.innerHTML = `
-      <div class="sdx-character-sheet-bar__main">
-        <div class="sdx-character-sheet-bar__chips">
+      <div class="mk-character-sheet-bar__main">
+        <div class="mk-character-sheet-bar__chips">
           ${buildSummaryChips(actor, data).map(renderChip).join("")}
         </div>
       </div>
@@ -172,13 +172,13 @@ import { reportLuckChange } from "./chat-reporting.js";
 
     insertSummaryBar(root, bar);
 
-    bar.querySelectorAll('[data-sdx-action="roll-ability"]').forEach(element => {
+    bar.querySelectorAll('[data-mk-action="roll-ability"]').forEach(element => {
       element.addEventListener("click", event => onRollAbilityCheck(event, actor));
     });
-    bar.querySelectorAll('[data-sdx-action="toggle-luck"]').forEach(element => {
+    bar.querySelectorAll('[data-mk-action="toggle-luck"]').forEach(element => {
       element.addEventListener("click", event => onToggleLuck(event, actor));
     });
-    bar.querySelectorAll('[data-sdx-action="death-timer"]').forEach(element => {
+    bar.querySelectorAll('[data-mk-action="death-timer"]').forEach(element => {
       element.addEventListener("click", event => onDeathTimer(event, actor));
     });
   }
@@ -186,7 +186,7 @@ import { reportLuckChange } from "./chat-reporting.js";
   function insertSummaryBar(root, bar) {
     const header = root.querySelector?.("header.SD-header");
     if (header) {
-      bar.classList.add("sdx-in-header");
+      bar.classList.add("mk-in-header");
       header.append(bar);
       return;
     }
@@ -248,9 +248,9 @@ import { reportLuckChange } from "./chat-reporting.js";
         return {
           label: "DT",
           value: hasTurns ? String(turns) : "-",
-          html: `<i class="${icon} sdx-death-timer-icon" aria-hidden="true"></i><em>${display}</em>`,
+          html: `<i class="${icon} mk-death-timer-icon" aria-hidden="true"></i><em>${display}</em>`,
           action: state.dead ? null : "death-timer",
-          className: "sdx-death-timer-chip",
+          className: "mk-death-timer-chip",
           title: state.dead ? "Dead" : (hasTurns ? `${tooltip}: ${turns} turn(s) remaining` : tooltip)
         };
       }
@@ -267,7 +267,7 @@ import { reportLuckChange } from "./chat-reporting.js";
           value: luck.available ? "Ready" : "Spent",
           html: renderLuckIcon(luck.available),
           action: "toggle-luck",
-          className: luck.available ? "sdx-luck-chip sdx-luck-ready" : "sdx-luck-chip sdx-luck-spent",
+          className: luck.available ? "mk-luck-chip mk-luck-ready" : "mk-luck-chip mk-luck-spent",
           title: luck.available ? "Luck Ready - click to remove" : "Luck Spent - click to add"
         };
       }
@@ -280,7 +280,7 @@ import { reportLuckChange } from "./chat-reporting.js";
           value: formatModifier(getAbilityModifier(actor, element.toLowerCase())),
           action: "roll-ability",
           ability: element.toLowerCase(),
-          className: "sdx-stat-chip",
+          className: "mk-stat-chip",
           title: `Roll ${element} check`
         };
       }
@@ -370,20 +370,20 @@ import { reportLuckChange } from "./chat-reporting.js";
   }
 
   function renderLuckIcon(available) {
-    return `<i class="fa-solid ${available ? "fa-check" : "fa-xmark"} sdx-luck-icon" aria-hidden="true"></i>`;
+    return `<i class="fa-solid ${available ? "fa-check" : "fa-xmark"} mk-luck-icon" aria-hidden="true"></i>`;
   }
 
   function renderChip(chip) {
-    if (chip.divider) return '<span class="sdx-bar-divider" aria-hidden="true"></span>';
+    if (chip.divider) return '<span class="mk-bar-divider" aria-hidden="true"></span>';
 
-    const className = ["sdx-sheet-chip", chip.className].filter(Boolean).join(" ");
+    const className = ["mk-sheet-chip", chip.className].filter(Boolean).join(" ");
     const title = chip.title ? ` title="${escapeHtml(chip.title)}"` : "";
     const value = chip.html ?? escapeHtml(chip.value);
 
     if (chip.action) {
-      const ability = chip.ability ? ` data-sdx-ability="${escapeHtml(chip.ability)}"` : "";
+      const ability = chip.ability ? ` data-mk-ability="${escapeHtml(chip.ability)}"` : "";
       return `
-        <button type="button" class="${escapeHtml(className)}" data-sdx-action="${escapeHtml(chip.action)}"${ability}${title}>
+        <button type="button" class="${escapeHtml(className)}" data-mk-action="${escapeHtml(chip.action)}"${ability}${title}>
           <strong>${escapeHtml(chip.label)}</strong><span>${value}</span>
         </button>
       `;
@@ -396,7 +396,7 @@ import { reportLuckChange } from "./chat-reporting.js";
     event.preventDefault();
     event.stopPropagation();
 
-    const ability = String(event.currentTarget?.dataset?.sdxAbility ?? "").toLowerCase();
+    const ability = String(event.currentTarget?.dataset?.mkAbility ?? "").toLowerCase();
     if (!ability || !actor) return;
 
     try {

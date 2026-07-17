@@ -8,6 +8,7 @@ import {
   GROUP_SHEET_SOCKET_UPDATE_TRAVEL,
   MODULE_ID,
   SHEET_ID,
+  SUBMODULE,
 } from "./constants.js";
 import {
   canUserControlActor,
@@ -288,13 +289,13 @@ function registerGroupSheetSocket() {
 
     if (data.action === GROUP_SHEET_SOCKET_ASSIGN_TRAVEL) {
       handleTravelAssignmentSocketRequest(data).catch(error => {
-        console.error(`${MODULE_ID} | GroupSheet | Travel assignment socket error`, error);
+        console.error(`${MODULE_ID} | ${SUBMODULE} | Travel assignment socket error`, error);
       });
     }
 
     if (data.action === GROUP_SHEET_SOCKET_PLAYER_TRAVEL_ROLL) {
       handleTravelPlayerRollSocketRequest(data).catch(error => {
-        console.error(`${MODULE_ID} | GroupSheet | Travel player roll socket error`, error);
+        console.error(`${MODULE_ID} | ${SUBMODULE} | Travel player roll socket error`, error);
       });
     }
 
@@ -325,7 +326,7 @@ function handleTravelPromptChatMessage(message) {
 
     handleTravelPromptTransport(data);
   } catch (error) {
-    console.error(`${MODULE_ID} | GroupSheet | Travel prompt chat flag error`, error);
+    console.error(`${MODULE_ID} | ${SUBMODULE} | Travel prompt chat flag error`, error);
   }
 }
 
@@ -345,7 +346,7 @@ async function ensureExistingGroupActorHpDefaults() {
       if (await ensureGroupActorHpDefaults(actor)) updated += 1;
     } catch (error) {
       failed += 1;
-      console.error(`${MODULE_ID} | GroupSheet | Failed to set HP defaults for group actor "${actor.name}".`, error);
+      console.error(`${MODULE_ID} | ${SUBMODULE} | Failed to set HP defaults for group actor "${actor.name}".`, error);
     }
   }
 
@@ -371,7 +372,7 @@ function registerGroupSheet() {
     globalThis.foundry?.documents?.collections?.Actors ?? globalThis.Actors;
 
   if (!ActorsCollection?.registerSheet) {
-    throw new Error(`${MODULE_ID} | GroupSheet | Foundry Actor sheet registration API is unavailable.`);
+    throw new Error(`${MODULE_ID} | ${SUBMODULE} | Foundry Actor sheet registration API is unavailable.`);
   }
 
   ActorsCollection.registerSheet(MODULE_ID, SDXGroupSheet, {

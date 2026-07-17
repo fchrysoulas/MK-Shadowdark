@@ -1,6 +1,6 @@
-import { MODULE_ID } from "./constants.js";
+import { MODULE_ID, SUBMODULE } from "./constants.js";
 function sdxGroupLog(...args) {
-  console.log(`${MODULE_ID} | GroupSheet |`, ...args);
+  console.log(`${MODULE_ID} | ${SUBMODULE} |`, ...args);
 }
 
 function signed(value) {

@@ -29,6 +29,7 @@
     "scripts/settings.js",
     "scripts/auto-apply-damage.js",
     "scripts/character-sheet-tweaks.js",
+    "scripts/chat-reporting.js",
     "scripts/summary-bar.js",
     "scripts/corpse-token.js",
     "scripts/death-timer.js",
@@ -44,7 +45,9 @@
   "styles": [
     "styles/mk-shadowdark.css",
     "styles/auto-apply-damage.css",
-    "styles/group-sheet.css"
+    "styles/chat-reporting.css",
+    "styles/group-sheet.css",
+    "styles/summary-bar.css"
   ],
   "languages": [
     {

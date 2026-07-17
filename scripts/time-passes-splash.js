@@ -1,11 +1,12 @@
 (() => {
   const MODULE_ID = "mk-shadowdark";
+  const SUBMODULE = "Time Passes Splash";
   const FLAG_KEY = "timePassesSplash";
   const HOOK_FLAG = "__sdxTimePassesSplashHookInstalled";
   const SEEN_FLAG = "__sdxTimePassesSplashSeenIds";
 
   function log(...args) {
-    console.log(`${MODULE_ID} | TimePassesSplash |`, ...args);
+    console.log(`${MODULE_ID} | ${SUBMODULE} |`, ...args);
   }
 
   function setting(key, fallback) {
@@ -154,7 +155,7 @@
 
         showSplash(payload);
       } catch (e) {
-        console.error(`${MODULE_ID} | TimePassesSplash | handler error:`, e);
+        console.error(`${MODULE_ID} | ${SUBMODULE} | handler error:`, e);
       }
     });
 

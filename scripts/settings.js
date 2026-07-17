@@ -55,7 +55,7 @@
       hint: "Configure the independent character summary bar, its contents, appearance, position, and diagnostics.",
       icon: "fas fa-chart-simple",
       settings: [
-        "characterSheetTweaksSummaryBar", "summaryBarCss", "characterSheetTweaksBarElements", "characterSheetTweaksFontScale",
+        "characterSheetTweaksSummaryBar", "characterSheetTweaksBarElements", "characterSheetTweaksFontScale",
         "characterSheetTweaksBarValueFontSize", "characterSheetTweaksBarButtonRadius", "characterSheetTweaksBarButtonScale",
         "characterSheetTweaksBarPositionX", "characterSheetTweaksBarPositionY", "summaryBarDebug"
       ]
@@ -160,7 +160,7 @@
       isSelect,
       isRange: isNumber && Boolean(setting.range),
       isFilePicker: Boolean(setting.filePicker),
-      isTextarea: ["sheetStyleEditorCss", "summaryBarCss"].includes(key),
+      isTextarea: key === "sheetStyleEditorCss",
       filePickerType: setting.filePicker,
       inputType: isNumber ? "number" : "text",
       dataType: isNumber ? "Number" : "String",
@@ -578,27 +578,6 @@
       type: Boolean,
       default: true,
       onChange: refreshOpenActorSheets
-    });
-
-    registerSetting("summaryBarCss", {
-      name: "Summary Bar | CSS",
-      hint: "Standalone editable world-level stylesheet for the Summary Bar. Saving synchronizes it to all connected clients.",
-      scope: "world",
-      config: true,
-      type: String,
-      default: "",
-      onChange: value => {
-        globalThis.MKShadowdarkSummaryBar?.applyCss?.(value);
-      }
-    });
-
-    registerSetting("summaryBarCssSeeded", {
-      name: "Summary Bar | Editable CSS Seeded",
-      hint: "Internal migration state for the editable Summary Bar CSS.",
-      scope: "world",
-      config: false,
-      type: Boolean,
-      default: false
     });
 
     registerSetting("sheetStyleEditorEnabled", {

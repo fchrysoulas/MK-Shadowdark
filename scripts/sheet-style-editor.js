@@ -160,6 +160,7 @@
   function getEditableTarget(candidate, root) {
     if (!(candidate instanceof HTMLElement)) return null;
     if (candidate.closest(".sdx-style-editor-toolbar, .sdx-style-context-menu")) return null;
+    if (candidate.closest(".sdx-character-sheet-bar")) return null;
     if (candidate === root) return null;
     return candidate;
   }

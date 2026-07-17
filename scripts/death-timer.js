@@ -1,6 +1,6 @@
 (() => {
   const MODULE_ID = "mk-shadowdark";
-  const SUBMODULE = "DeathTimer";
+  const SUBMODULE = "Death Timer";
   const DEATH_TIMER_STATUS_ID = "sdx-death-timer";
   const DEATH_TIMER_CHAT_ICON = "modules/mk-shadowdark/assets/icons/blood-drop-red.png";
 

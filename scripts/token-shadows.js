@@ -1,6 +1,6 @@
 (() => {
   const MODULE_ID = "mk-shadowdark";
-  const SUBMODULE = "TokenShadows";
+  const SUBMODULE = "Token Shadows";
 
   const SHADOW_PROP = "_sdeTokenShadow";
   const SHADOW_FILTER_PROP = "_sdeTokenShadowBlurFilter";

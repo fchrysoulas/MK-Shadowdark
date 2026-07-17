@@ -1,5 +1,6 @@
 (() => {
   const MODULE_ID = "mk-shadowdark";
+  const SUBMODULE = "Quickdraw";
   const FLAG_KEY = "quickdraw";
   const ACTOR_SHEET_RENDER_HOOKS = [
     "renderActorSheet",
@@ -21,12 +22,12 @@
 
   function dlog(...args) {
     if (!isDebugEnabled()) return;
-    console.log(`${MODULE_ID} |`, ...args);
+    console.log(`${MODULE_ID} | ${SUBMODULE} |`, ...args);
   }
 
   function dwarn(...args) {
     if (!isDebugEnabled()) return;
-    console.warn(`${MODULE_ID} |`, ...args);
+    console.warn(`${MODULE_ID} | ${SUBMODULE} |`, ...args);
   }
 
   function getLimit() {
@@ -536,7 +537,7 @@
   }
 
   Hooks.once("init", () => {
-    console.log(`${MODULE_ID} | quickdraw-icons.js loaded (settings registered in settings.js)`);
+    console.log(`${MODULE_ID} | ${SUBMODULE} | loaded (settings registered in settings.js)`);
   });
 
   for (const hookName of ACTOR_SHEET_RENDER_HOOKS) {

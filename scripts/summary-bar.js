@@ -1,10 +1,10 @@
+import { reportLuckChange } from "./chat-reporting.js";
+
 (() => {
   const MODULE_ID = "mk-shadowdark";
   const SUBMODULE = "Summary Bar";
-  const CSS_SETTING = "summaryBarCss";
-  const CSS_SEEDED_SETTING = "summaryBarCssSeeded";
-  const STYLE_ELEMENT_ID = "mk-shadowdark-summary-bar-styles";
-  const CSS_TEMPLATE = `modules/${MODULE_ID}/styles/summary-bar.css`;
+  const STYLESHEET_ID = "mk-shadowdark-summary-bar-styles";
+  const STYLESHEET_PATH = `modules/${MODULE_ID}/styles/summary-bar.css`;
 
   const SETTINGS = Object.freeze({
     ENABLED: "characterSheetTweaksSummaryBar",
@@ -28,19 +28,9 @@
     "renderActorSheetShadowdark"
   ];
 
-  globalThis.MKShadowdarkSummaryBar = { applyCss };
+  ensureStylesheet();
 
   Hooks.once("init", () => log("initialized"));
-  Hooks.once("ready", async () => {
-    applyCss(getSetting(CSS_SETTING, ""));
-    if (!game.user?.isGM) return;
-
-    try {
-      await seedEditableCss();
-    } catch (error) {
-      console.error(`${MODULE_ID} | ${SUBMODULE} | editable CSS seed error`, error);
-    }
-  });
 
   for (const hookName of ACTOR_SHEET_RENDER_HOOKS) {
     Hooks.on(hookName, (app, html, data) => {
@@ -52,35 +42,21 @@
     });
   }
 
-  function applyCss(cssText) {
-    let style = document.getElementById(STYLE_ELEMENT_ID);
-    if (!style) {
-      style = document.createElement("style");
-      style.id = STYLE_ELEMENT_ID;
-      document.head.append(style);
-    }
-    style.textContent = String(cssText ?? "");
-  }
+  function ensureStylesheet() {
+    if (document.getElementById(STYLESHEET_ID)) return;
 
-  async function seedEditableCss() {
-    if (getSetting(CSS_SEEDED_SETTING, false)) return;
-
-    const existingCss = String(getSetting(CSS_SETTING, "") ?? "");
-    if (existingCss.trim()) {
-      applyCss(existingCss);
-      await game.settings.set(MODULE_ID, CSS_SEEDED_SETTING, true);
+    const existing = Array.from(document.querySelectorAll('link[rel="stylesheet"][href]'))
+      .find(link => link.href.includes(`/modules/${MODULE_ID}/styles/summary-bar.css`));
+    if (existing) {
+      existing.id = STYLESHEET_ID;
       return;
     }
 
-    const route = toFoundryRoute(CSS_TEMPLATE);
-    const response = await fetch(route, { cache: "no-store" });
-    if (!response.ok) throw new Error(`Could not load ${route}: HTTP ${response.status}`);
-
-    const cssText = (await response.text()).trim();
-    if (!cssText) throw new Error("Editable Summary Bar CSS is empty.");
-    await game.settings.set(MODULE_ID, CSS_SETTING, `${cssText}\n`);
-    applyCss(cssText);
-    await game.settings.set(MODULE_ID, CSS_SEEDED_SETTING, true);
+    const link = document.createElement("link");
+    link.id = STYLESHEET_ID;
+    link.rel = "stylesheet";
+    link.href = toFoundryRoute(STYLESHEET_PATH);
+    document.head.append(link);
   }
 
   function onRenderActorSheet(app, html, data) {
@@ -95,7 +71,6 @@
 
     applySummaryBarScope(form, windowEl);
     injectSummaryBar(app, form ?? root, data);
-    attachNativeLuckWatcher(app, form ?? root);
     log("applied", app.actor?.name ?? app.object?.name ?? "unknown actor");
   }
 
@@ -416,43 +391,6 @@
     return { called: false, result: undefined };
   }
 
-  function attachNativeLuckWatcher(app, root) {
-    const actor = app.actor ?? app.object;
-    if (!actor || !root?.querySelectorAll) return;
-
-    root.querySelectorAll('input[name="system.luck.available"]').forEach(input => {
-      if (input.dataset?.sdxLuckChatWatcher === "true") return;
-      input.dataset.sdxLuckChatWatcher = "true";
-      input.addEventListener("change", event => onNativeLuckAvailableChange(event, actor));
-    });
-
-    root.querySelectorAll('input[name="system.luck.remaining"]').forEach(input => {
-      if (input.dataset?.sdxLuckChatWatcher === "true") return;
-      input.dataset.sdxLuckChatWatcher = "true";
-      input.addEventListener("change", event => onNativeLuckRemainingChange(event, actor));
-    });
-  }
-
-  async function onNativeLuckAvailableChange(event, actor) {
-    try {
-      const available = Boolean(event.currentTarget?.checked);
-      await createLuckChatMessage(actor, available, available ? 1 : 0, isPulpMode());
-    } catch (err) {
-      console.error(`${MODULE_ID} v${getModuleVersion()} | ${SUBMODULE} | native luck chat error`, err);
-    }
-  }
-
-  async function onNativeLuckRemainingChange(event, actor) {
-    try {
-      const oldRemaining = Number(getLuckState(actor).remaining ?? 0);
-      const newRemaining = Number(event.currentTarget?.value ?? 0);
-      if (!Number.isFinite(newRemaining) || newRemaining === oldRemaining) return;
-      await createLuckChatMessage(actor, newRemaining > oldRemaining, newRemaining, true);
-    } catch (err) {
-      console.error(`${MODULE_ID} v${getModuleVersion()} | ${SUBMODULE} | native pulp luck chat error`, err);
-    }
-  }
-
   async function onToggleLuck(event, actor) {
     event.preventDefault();
     event.stopPropagation();
@@ -471,23 +409,11 @@
         "system.luck.available": nextAvailable,
         "system.luck.remaining": nextRemaining
       });
-      await createLuckChatMessage(actor, nextAvailable, nextRemaining, pulpMode);
+      await reportLuckChange(actor, nextAvailable, nextRemaining, pulpMode);
     } catch (err) {
       console.error(`${MODULE_ID} v${getModuleVersion()} | ${SUBMODULE} | luck toggle error`, err);
       ui.notifications?.error("MK-Shadowdark | Could not update Luck.");
     }
-  }
-
-  async function createLuckChatMessage(actor, gainedLuck, remaining, pulpMode) {
-    const icon = gainedLuck
-      ? '<i class="fa-solid fa-check sdx-luck-chat-icon sdx-luck-chat-gain"></i>'
-      : '<i class="fa-solid fa-xmark sdx-luck-chat-icon sdx-luck-chat-remove"></i>';
-    const remainingText = pulpMode ? ` <span class="sdx-luck-chat-remaining">Remaining: ${escapeHtml(remaining)}</span>` : "";
-
-    await ChatMessage.create({
-      speaker: ChatMessage.getSpeaker({ actor }),
-      content: `<div class="sdx-luck-chat-message">${icon}<strong>${escapeHtml(actor?.name ?? "Character")}</strong> ${gainedLuck ? "gained Luck" : "removed Luck"}.${remainingText}</div>`
-    });
   }
 
   function getSetting(key, fallback = undefined) {

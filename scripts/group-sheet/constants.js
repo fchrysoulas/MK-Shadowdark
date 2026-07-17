@@ -1,4 +1,5 @@
 export const MODULE_ID = "mk-shadowdark";
+export const SUBMODULE = "Group Sheet";
 export const SHEET_ID = `${MODULE_ID}.SDXGroupSheet`;
 export const GROUP_HP_DEFAULT = 1;
 export const GROUP_HP_VALUE_PATH = "system.attributes.hp.value";

@@ -1,5 +1,5 @@
 const MODULE_ID = "mk-shadowdark";
-const FEATURE_LABEL = "MK Shadowdark Corpse Token";
+const SUBMODULE = "Corpse Token";
 const FLAG_KEY = "corpseToken";
 
 const HP_PATH = "system.attributes.hp.value";
@@ -46,7 +46,7 @@ const actorProcessingTimers = new Map();
 const tokenProcessingTimers = new Map();
 
 function log(...args) {
-  console.log(`${FEATURE_LABEL} |`, ...args);
+  console.log(`${MODULE_ID} v${getModuleVersion()} | ${SUBMODULE} |`, ...args);
 }
 
 function getModuleVersion() {
@@ -55,11 +55,11 @@ function getModuleVersion() {
 }
 
 function warn(...args) {
-  console.warn(`${FEATURE_LABEL} |`, ...args);
+  console.warn(`${MODULE_ID} v${getModuleVersion()} | ${SUBMODULE} |`, ...args);
 }
 
 function error(...args) {
-  console.error(`${FEATURE_LABEL} |`, ...args);
+  console.error(`${MODULE_ID} v${getModuleVersion()} | ${SUBMODULE} |`, ...args);
 }
 
 function escapeHtml(value) {
@@ -815,10 +815,10 @@ async function debugSelectedTokenCoordinates() {
 
   const reports = selected.map((token) => tokenCoordinateReport(token));
 
-  console.group(`${FEATURE_LABEL} | Coordinate Debug`);
+  console.group(`${MODULE_ID} v${getModuleVersion()} | ${SUBMODULE} | Coordinate Debug`);
   for (const report of reports) {
-    console.log(report.name, report);
-    console.log(`${FEATURE_LABEL} | Coordinate Debug JSON | ${report.name}\n${JSON.stringify(report, null, 2)}`);
+    log(report.name, report);
+    log(`Coordinate Debug JSON | ${report.name}\n${JSON.stringify(report, null, 2)}`);
   }
   console.groupEnd();
 

@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- Standardized feature logging labels on the `SUBMODULE` parameter across all JavaScript submodules.
 - Fixed Actor creation failing validation when the custom creation dialog is submitted with a blank name.
 - Added Character Sheet settings for all custom display and section font families instead of hardcoding them in the stylesheet.
 - Changed blank Character Sheet font settings to preserve the original Shadowdark font declarations and apply overrides only when configured.
@@ -10,11 +11,12 @@
 - Reorganized module settings into one compact entry per feature, with each feature opening its own configuration window, including compatible image pickers for Character Sheet, Time Passes, and Corpse Token settings.
 - Moved the Highlight Quickdraw Items option into the Quickdraw feature settings window.
 - Split the Summary Bar into an independent settings group and JavaScript module, separate from Character Sheet Tweaks.
+- Split Luck chat messages into the standalone Chat Reporting feature with a fixed, non-editable stylesheet.
 - Ensured the separate Summary Bar module loads through the existing core entry point as well as the module manifest.
 - Added a GM-only sheet style edit mode with a right-click context menu for font family, font size, weight, and padding; its world-level CSS is visible in Character Sheet Tweaks and synchronizes to all clients.
 - Removed the legacy Character Sheet typography controls now covered by the style editor; existing overrides migrate into the global CSS, while Hide Logo and Header Background also write visible managed CSS blocks.
 - Moved all fixed Character Sheet Tweaks and Quickdraw sheet CSS out of directly loaded module stylesheets and into a one-time editable Global Style CSS default block.
-- Added a standalone editable `summary-bar.css`, exposed and synchronized through the Summary Bar settings window, and migrated Summary Bar rules out of Character Sheet Global Style CSS.
+- Added a standalone fixed `summary-bar.css`, with appearance controlled only through the dedicated Summary Bar settings, and migrated Summary Bar rules out of Character Sheet Global Style CSS.
 - Moved Quickdraw-row highlighting behavior out of Character Sheet Tweaks and into the Quickdraw module.
 - Removed obsolete legacy module-ID compatibility paths; all flags and sheets now use only the current module scope.
 

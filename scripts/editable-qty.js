@@ -1,6 +1,6 @@
 (() => {
   const MODULE_ID = "mk-shadowdark";
-  const FEATURE = "EditableQty";
+  const SUBMODULE = "Editable Quantity";
 
   const SETTING_ENABLED = "editableQtyEnabled";
 
@@ -10,7 +10,7 @@
   }
 
   function log(...args) {
-    console.log(`${MODULE_ID} | ${FEATURE} v${getModuleVersion()} |`, ...args);
+    console.log(`${MODULE_ID} v${getModuleVersion()} | ${SUBMODULE} |`, ...args);
   }
 
   function getPropertySafe(object, path) {
@@ -230,7 +230,7 @@
       ui.notifications?.info(`${item.name} deleted.`);
       log(`Deleted ${item.name} because quantity reached 0.`);
     } catch (err) {
-      console.error(`${MODULE_ID} | ${FEATURE} | Failed to delete item`, err);
+      console.error(`${MODULE_ID} v${getModuleVersion()} | ${SUBMODULE} | Failed to delete item`, err);
       ui.notifications?.error(`Could not delete ${item.name}.`);
     }
   }
@@ -267,7 +267,7 @@
         await maybeDeleteAtZero(item, actor);
       }
     } catch (err) {
-      console.error(`${MODULE_ID} | ${FEATURE} | Failed to update quantity`, err);
+      console.error(`${MODULE_ID} v${getModuleVersion()} | ${SUBMODULE} | Failed to update quantity`, err);
       ui.notifications?.error(`Could not update quantity for ${item.name}.`);
 
       input.value = currentValue;

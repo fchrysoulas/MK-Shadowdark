@@ -6,6 +6,7 @@ import {
   GROUP_SHEET_SOCKET_PROMPT_TRAVEL,
   GROUP_SHEET_SOCKET_UPDATE_TRAVEL,
   MODULE_ID,
+  SUBMODULE,
   TRAVEL_ACTIVITIES,
   TRAVEL_PROMPT_BODY_CLASS,
   TRAVEL_PROMPT_ELEMENT_ID,
@@ -369,7 +370,7 @@ async function onTravelPromptPlayerRollClick(event) {
       userId: game.user?.id,
     });
   } catch (error) {
-    console.warn(`${MODULE_ID} | GroupSheet | Could not submit travelling roll`, error);
+    console.warn(`${MODULE_ID} | ${SUBMODULE} | Could not submit travelling roll`, error);
     button.disabled = false;
     ui.notifications?.warn?.("Could not submit the travelling roll.");
   }
@@ -447,7 +448,7 @@ function applyTravelPromptUpdate(data = {}) {
 function handleTravelPromptTransport(data = {}) {
   if (data.action === GROUP_SHEET_SOCKET_PROMPT_TRAVEL) {
     showTravelRollPrompt(data.payload).catch(error => {
-      console.error(`${MODULE_ID} | GroupSheet | Travel prompt display error`, error);
+      console.error(`${MODULE_ID} | ${SUBMODULE} | Travel prompt display error`, error);
     });
   }
 
@@ -485,7 +486,7 @@ async function broadcastTravelPromptChat(action, payload = {}) {
 
     return message;
   } catch (error) {
-    console.warn(`${MODULE_ID} | GroupSheet | Could not broadcast travelling splash chat flag`, error);
+    console.warn(`${MODULE_ID} | ${SUBMODULE} | Could not broadcast travelling splash chat flag`, error);
     return null;
   }
 }
@@ -529,7 +530,7 @@ function scheduleTravelPromptSequence(payload = {}) {
   const timer = setTimeout(() => {
     travelPromptTimers.delete(key);
     resolveNextTravelPromptStep(payload.groupActorUuid, payload.promptId).catch(error => {
-      console.error(`${MODULE_ID} | GroupSheet | Travel prompt sequence error`, error);
+      console.error(`${MODULE_ID} | ${SUBMODULE} | Travel prompt sequence error`, error);
     });
   }, delay);
 
@@ -611,7 +612,7 @@ async function resolveNextTravelPromptStep(groupActorUuid, promptId) {
         content: `<strong>${escapeHtml(activity.name)}</strong> has no assigned character and counts as a travel failure.`,
       });
     } catch (error) {
-      console.warn(`${MODULE_ID} | GroupSheet | Could not announce empty travel step`, error);
+      console.warn(`${MODULE_ID} | ${SUBMODULE} | Could not announce empty travel step`, error);
     }
   } else {
     const assignmentKeys = assignments.map(assignment => getTravelAssignmentKey(activity.key, assignment.actorUuid));

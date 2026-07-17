@@ -3,6 +3,7 @@ import {
   GROUP_HP_MAX_PATH,
   GROUP_HP_VALUE_PATH,
   MODULE_ID,
+  SUBMODULE,
 } from "./constants.js";
 function canUserControlActor(actor, user = game.user) {
   if (!actor || !user) return false;
@@ -57,7 +58,7 @@ function getSafeFlag(actor, scope, key) {
       return undefined;
     }
 
-    console.warn(`${MODULE_ID} | GroupSheet | Could not read flag ${scope}.${key}`, error);
+    console.warn(`${MODULE_ID} | ${SUBMODULE} | Could not read flag ${scope}.${key}`, error);
     return undefined;
   }
 }

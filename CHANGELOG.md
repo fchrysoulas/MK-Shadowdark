@@ -2,6 +2,12 @@
 
 ## Unreleased
 
+- Fixed Actor creation failing validation when the custom creation dialog is submitted with a blank name.
+- Added Character Sheet settings for all custom display and section font families instead of hardcoding them in the stylesheet.
+- Changed blank Character Sheet font settings to preserve the original Shadowdark font declarations and apply overrides only when configured.
+- Added optional Character Sheet font-size settings for character names, banners, section headings, and navigation; blank values preserve Shadowdark's original sizes.
+- Fixed Quickdraw controls in Foundry v13/v14 by targeting the inventory content instead of its navigation tab, using a version-independent inline bolt icon, and reserving adequate action-column space.
+
 ## 1.0.7
 
 - Added Foundry VTT v14 compatibility and verified Shadowdark RPG 4.0.6 support.

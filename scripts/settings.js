@@ -376,6 +376,66 @@
       onChange: refreshOpenActorSheets
     });
 
+    registerSetting("characterSheetTweaksDisplayFontFamily", {
+      name: "Character Sheet | Display Font Family",
+      hint: "Optional CSS font-family stack for the character name, box and banner labels, and sheet navigation. Leave blank to use the original Shadowdark sheet fonts.",
+      scope: "world",
+      config: true,
+      type: String,
+      default: "",
+      onChange: refreshOpenActorSheets
+    });
+
+    registerSetting("characterSheetTweaksSectionFontFamily", {
+      name: "Character Sheet | Section Font Family",
+      hint: "Optional CSS font-family stack for section headings. Leave blank to use the original Shadowdark sheet fonts.",
+      scope: "world",
+      config: true,
+      type: String,
+      default: "",
+      onChange: refreshOpenActorSheets
+    });
+
+    registerSetting("characterSheetTweaksNameFontSize", {
+      name: "Character Sheet | Character Name Font Size",
+      hint: "Optional CSS font size for the character name, such as 3.2rem or 48px. Leave blank to use the original Shadowdark size.",
+      scope: "world",
+      config: true,
+      type: String,
+      default: "",
+      onChange: refreshOpenActorSheets
+    });
+
+    registerSetting("characterSheetTweaksBannerFontSize", {
+      name: "Character Sheet | Banner Font Size",
+      hint: "Optional CSS font size for box-header labels and banners, such as 22px. Leave blank to use the original Shadowdark size.",
+      scope: "world",
+      config: true,
+      type: String,
+      default: "",
+      onChange: refreshOpenActorSheets
+    });
+
+    registerSetting("characterSheetTweaksSectionFontSize", {
+      name: "Character Sheet | Section Font Size",
+      hint: "Optional CSS font size for section headings, such as 18px. Leave blank to use the original Shadowdark size.",
+      scope: "world",
+      config: true,
+      type: String,
+      default: "",
+      onChange: refreshOpenActorSheets
+    });
+
+    registerSetting("characterSheetTweaksNavigationFontSize", {
+      name: "Character Sheet | Navigation Font Size",
+      hint: "Optional CSS font size for sheet navigation links, such as 18px. Leave blank to use the original Shadowdark size.",
+      scope: "world",
+      config: true,
+      type: String,
+      default: "",
+      onChange: refreshOpenActorSheets
+    });
+
     registerSetting("characterSheetTweaksFontScale", {
       name: "Character Sheet | Extra UI Font Scale",
       hint: "Adjusts only the MK-Shadowdark summary bar font size.",

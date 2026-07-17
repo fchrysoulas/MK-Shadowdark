@@ -89,6 +89,16 @@ function getActorTypeLabel(type) {
   return localized === typeKey ? type : localized;
 }
 
+function getDefaultActorName(type) {
+  if (type === GROUP_ACTOR_DIALOG_TYPE) return "New Group";
+
+  const typeLabel = getActorTypeLabel(type || "Actor") || "Actor";
+  const localized = game.i18n.format("DOCUMENT.New", { type: typeLabel });
+  return localized && localized !== "DOCUMENT.New"
+    ? localized
+    : `New ${typeLabel}`;
+}
+
 function getActorCreationFormData(html) {
   const root = html?.[0] ?? html;
   const form = root?.querySelector?.("form");
@@ -164,15 +174,20 @@ function buildActorCreateDialogContent(data = {}) {
 
 async function handleActorCreateDialog(actorClass, data, html) {
   const formData = getActorCreationFormData(html);
+  const actorType = formData.type || data.type || "Actor";
+  const actorName = String(formData.name ?? "").trim()
+    || String(data.name ?? "").trim()
+    || getDefaultActorName(actorType);
 
-  if (formData.type === GROUP_ACTOR_DIALOG_TYPE) {
+  if (actorType === GROUP_ACTOR_DIALOG_TYPE) {
     return createGroupActor({
-      name: formData.name || data.name || "New Group",
+      name: actorName,
       folder: formData.folder || getFolderId(data.folder),
     });
   }
 
   const createData = foundry.utils.mergeObject(foundry.utils.deepClone(data), formData);
+  createData.name = actorName;
   if (!createData.folder) delete createData.folder;
 
   return actorClass.create(createData, { renderSheet: true });

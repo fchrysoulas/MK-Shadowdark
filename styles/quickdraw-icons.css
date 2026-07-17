@@ -7,10 +7,10 @@
 
 /*
  * Important:
- * The injected control class is sdex-quickdraw-toggle.
- * Older/alternate class names are kept for compatibility.
+ * The injected control uses the current sdx-quickdraw-toggle class and the
+ * legacy sdex-quickdraw-toggle alias.
  * Inactive/OFF buttons use var(--inactive-control).
- * The bolt font size is not overridden here.
+ * The bolt is inline SVG so it does not depend on the Foundry Font Awesome version.
  */
 .shadowdark.sheet.player .item .sdex-quickdraw-toggle,
 .shadowdark.sheet.player .item .sdx-quickdraw-toggle,
@@ -28,6 +28,24 @@
   line-height: 1;
   text-align: center;
   cursor: pointer;
+  opacity: 1;
+  visibility: visible;
+}
+
+.shadowdark.sheet.player .SD-list > li .actions.sdx-has-quickdraw-toggle {
+  flex-basis: 76px;
+  min-width: 76px;
+}
+
+.shadowdark.sheet.player .item .sdx-quickdraw-bolt {
+  display: block;
+  width: 14px;
+  height: 14px;
+  margin: 0;
+  overflow: visible;
+  fill: currentColor;
+  stroke: none;
+  pointer-events: none;
 }
 
 /* Inactive/OFF Quickdraw uses the system inactive-control color.
@@ -74,10 +92,15 @@
 }
 
 .shadowdark.sheet.player .item .sdex-quickdraw-toggle i,
+.shadowdark.sheet.player .item .sdex-quickdraw-toggle svg,
 .shadowdark.sheet.player .item .sdx-quickdraw-toggle i,
+.shadowdark.sheet.player .item .sdx-quickdraw-toggle svg,
 .shadowdark.sheet.player .item .sdx-quickdraw-icon i,
+.shadowdark.sheet.player .item .sdx-quickdraw-icon svg,
 .shadowdark.sheet.player .item .sdx-quickdraw-button i,
-.shadowdark.sheet.player .item .quickdraw-icon i {
+.shadowdark.sheet.player .item .sdx-quickdraw-button svg,
+.shadowdark.sheet.player .item .quickdraw-icon i,
+.shadowdark.sheet.player .item .quickdraw-icon svg {
   margin: 0;
   pointer-events: none;
 }

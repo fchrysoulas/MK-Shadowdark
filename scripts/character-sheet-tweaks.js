@@ -13,6 +13,12 @@
     SUMMARY_BAR: "characterSheetTweaksSummaryBar",
     BAR_ELEMENTS: "characterSheetTweaksBarElements",
     HIGHLIGHT_EQUIPPED: "characterSheetTweaksHighlightEquipped",
+    DISPLAY_FONT_FAMILY: "characterSheetTweaksDisplayFontFamily",
+    SECTION_FONT_FAMILY: "characterSheetTweaksSectionFontFamily",
+    NAME_FONT_SIZE: "characterSheetTweaksNameFontSize",
+    BANNER_FONT_SIZE: "characterSheetTweaksBannerFontSize",
+    SECTION_FONT_SIZE: "characterSheetTweaksSectionFontSize",
+    NAVIGATION_FONT_SIZE: "characterSheetTweaksNavigationFontSize",
     FONT_SCALE: "characterSheetTweaksFontScale",
     BAR_VALUE_FONT_SIZE: "characterSheetTweaksBarValueFontSize",
     BAR_BUTTON_RADIUS: "characterSheetTweaksBarButtonRadius",
@@ -230,11 +236,23 @@
         "sdx-highlight-equipped",
         "sdx-hide-shadowdark-logo",
         "sdx-has-header-background",
+        "sdx-has-display-font-override",
+        "sdx-has-section-font-override",
+        "sdx-has-name-font-size-override",
+        "sdx-has-banner-font-size-override",
+        "sdx-has-section-font-size-override",
+        "sdx-has-navigation-font-size-override",
         "sdx-summary-bar-in-header"
       );
 
       el.style.removeProperty("--sdx-sheet-font-scale");
       el.style.removeProperty("--sdx-bar-value-font-size");
+      el.style.removeProperty("--sdx-display-font");
+      el.style.removeProperty("--sdx-section-font");
+      el.style.removeProperty("--sdx-name-font-size");
+      el.style.removeProperty("--sdx-banner-font-size");
+      el.style.removeProperty("--sdx-section-font-size");
+      el.style.removeProperty("--sdx-navigation-font-size");
       el.style.removeProperty("--sdx-bar-button-radius");
       el.style.removeProperty("--sdx-bar-button-scale");
       el.style.removeProperty("--sdx-bar-position-x");
@@ -245,6 +263,12 @@
 
   function applySheetClasses(windowEl, form, { highlightEquipped = false, hideLogo = false, summaryBar = false } = {}) {
     const headerBackground = normalizeImagePath(getSetting(SETTINGS.HEADER_BG, ""));
+    const displayFont = String(getSetting(SETTINGS.DISPLAY_FONT_FAMILY, "") ?? "").trim();
+    const sectionFont = String(getSetting(SETTINGS.SECTION_FONT_FAMILY, "") ?? "").trim();
+    const nameFontSize = normalizeCssFontSize(getSetting(SETTINGS.NAME_FONT_SIZE, ""));
+    const bannerFontSize = normalizeCssFontSize(getSetting(SETTINGS.BANNER_FONT_SIZE, ""));
+    const sectionFontSize = normalizeCssFontSize(getSetting(SETTINGS.SECTION_FONT_SIZE, ""));
+    const navigationFontSize = normalizeCssFontSize(getSetting(SETTINGS.NAVIGATION_FONT_SIZE, ""));
     const fontScale = clampNumber(Number(getSetting(SETTINGS.FONT_SCALE, 120)) || 120, 80, 130);
     const valueFontSize = clampNumber(Number(getSetting(SETTINGS.BAR_VALUE_FONT_SIZE, 13)) || 13, 8, 24);
     const barButtonRadius = clampNumber(Number(getSetting(SETTINGS.BAR_BUTTON_RADIUS, 8)) || 0, 0, 999);
@@ -264,6 +288,36 @@
       if (hideLogo) el.classList.add("sdx-hide-shadowdark-logo");
       if (highlightEquipped) el.classList.add("sdx-highlight-equipped");
       if (summaryBar) el.classList.add("sdx-summary-bar-in-header");
+
+      if (displayFont) {
+        el.classList.add("sdx-has-display-font-override");
+        el.style.setProperty("--sdx-display-font", displayFont);
+      }
+
+      if (sectionFont) {
+        el.classList.add("sdx-has-section-font-override");
+        el.style.setProperty("--sdx-section-font", sectionFont);
+      }
+
+      if (nameFontSize) {
+        el.classList.add("sdx-has-name-font-size-override");
+        el.style.setProperty("--sdx-name-font-size", nameFontSize);
+      }
+
+      if (bannerFontSize) {
+        el.classList.add("sdx-has-banner-font-size-override");
+        el.style.setProperty("--sdx-banner-font-size", bannerFontSize);
+      }
+
+      if (sectionFontSize) {
+        el.classList.add("sdx-has-section-font-size-override");
+        el.style.setProperty("--sdx-section-font-size", sectionFontSize);
+      }
+
+      if (navigationFontSize) {
+        el.classList.add("sdx-has-navigation-font-size-override");
+        el.style.setProperty("--sdx-navigation-font-size", navigationFontSize);
+      }
 
       if (headerBackground) {
         el.classList.add("sdx-has-header-background");
@@ -1064,6 +1118,13 @@
     if (value === undefined || value === null || value === "") return null;
     const number = Number(value);
     return Number.isFinite(number) ? number : null;
+  }
+
+  function normalizeCssFontSize(value) {
+    const normalized = String(value ?? "").trim();
+    if (!normalized) return "";
+    if (globalThis.CSS?.supports && !globalThis.CSS.supports("font-size", normalized)) return "";
+    return normalized;
   }
 
   function formatPair(value, max) {

@@ -24,6 +24,16 @@ jobs:
           node --check scripts/encounter-engine.js
           python -m json.tool module.json > /dev/null
 
+      - name: Validate Shadowdark 3.5.0 compatibility declaration
+        run: |
+          python - <<'PY'
+          import json
+          manifest = json.load(open('module.json', encoding='utf-8'))
+          system = manifest['relationships']['systems'][0]
+          assert system['id'] == 'shadowdark'
+          assert system['compatibility']['minimum'] == '3.5.0'
+          PY
+
       - name: Build full module ZIP
         run: |
           mkdir -p dist

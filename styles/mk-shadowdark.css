@@ -133,6 +133,12 @@ button.sdx-icon-button:disabled {
   background: var(--sdx-green-soft);
 }
 
+/* GM sheet style editor window control */
+.window-header .sdx-style-editor-toggle.active {
+  color: var(--color-warm-1, #d8b35f) !important;
+  text-shadow: 0 0 6px rgba(216, 179, 95, 0.65);
+}
+
 /* -------------------------------------------- */
 /* Settings and configuration apps              */
 /* -------------------------------------------- */

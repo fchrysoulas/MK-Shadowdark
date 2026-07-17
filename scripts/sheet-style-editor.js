@@ -36,6 +36,7 @@
   let activeMenu = null;
   let cssUpdateQueue = Promise.resolve();
   let editableTemplateCssPromise = null;
+  const renderedSheetRoots = new WeakMap();
 
   globalThis.MKShadowdarkSheetStyleEditor = {
     applyCss,
@@ -54,6 +55,10 @@
     await runInitializationStep("legacy typography migration", migrateLegacyTypographySettings);
     await runInitializationStep("managed setting CSS sync", syncCharacterSheetSettings);
   });
+
+  for (const hookName of ["getApplicationHeaderButtons", "getApplicationV1HeaderButtons"]) {
+    Hooks.on(hookName, addStyleEditorHeaderButton);
+  }
 
   for (const hookName of ACTOR_SHEET_RENDER_HOOKS) {
     Hooks.on(hookName, (app, html) => {
@@ -77,17 +82,34 @@
     const root = getRootElement(html);
     if (!root?.querySelector || !isShadowdarkPlayerSheet(app, root)) return;
 
+    const windowElement = getWindowElement(app, root);
     root.querySelector(".sdx-style-editor-toolbar")?.remove();
     root.querySelectorAll(".sdx-has-style-editor-toolbar").forEach(element => {
       element.classList.remove("sdx-has-style-editor-toolbar");
     });
     root.classList.remove("sdx-style-edit-mode");
-    if (!game.user?.isGM || !getSetting(EDITOR_SETTING, true)) return;
+    renderedSheetRoots.set(app, root);
 
-    injectEditModeButton(root);
+    if (!game.user?.isGM || !getSetting(EDITOR_SETTING, true)) {
+      windowElement?.querySelectorAll?.(".sdx-style-editor-toggle").forEach(element => element.remove());
+      return;
+    }
+
+    resetHeaderButton(ensureStyleEditorHeaderButton(app, windowElement));
+    bindStyleEditorContextMenu(root);
   }
 
   function isShadowdarkPlayerSheet(app, root) {
+    if (!isShadowdarkPlayerApplication(app)) return false;
+
+    return Boolean(
+      root.matches?.(".shadowdark.sheet")
+      || root.querySelector?.(".shadowdark.sheet")
+      || root.querySelector?.("header.SD-header")
+    );
+  }
+
+  function isShadowdarkPlayerApplication(app) {
     if (game.system?.id !== "shadowdark") return false;
 
     const actor = app?.actor ?? app?.object;
@@ -95,13 +117,7 @@
 
     const type = String(actor.type ?? "").toLowerCase();
     const classes = Array.from(app?.options?.classes ?? []).join(" ").toLowerCase();
-    if (type !== "player" && !classes.includes("player")) return false;
-
-    return Boolean(
-      root.matches?.(".shadowdark.sheet")
-      || root.querySelector?.(".shadowdark.sheet")
-      || root.querySelector?.("header.SD-header")
-    );
+    return type === "player" || classes.includes("player");
   }
 
   function isGroupActor(actor) {
@@ -116,39 +132,103 @@
     return html?.[0] ?? html;
   }
 
-  function injectEditModeButton(root) {
-    const toolbar = document.createElement("div");
-    toolbar.className = "sdx-style-editor-toolbar";
-    toolbar.innerHTML = `
-      <button type="button" class="sdx-style-editor-toggle" title="Enable style editing">
-        <i class="fas fa-paintbrush" aria-hidden="true"></i>
-        <span>Edit Style</span>
-      </button>
-    `;
+  function getWindowElement(app, root) {
+    const appElement = getRootElement(app?.element);
+    if (appElement?.querySelector?.(".window-header")) return appElement;
+    return root.closest?.(".window-app, .application, .app") ?? root;
+  }
 
-    const header = root.querySelector("header.SD-header") ?? root;
-    header.classList.add("sdx-has-style-editor-toolbar");
-    header.append(toolbar);
+  function addStyleEditorHeaderButton(app, buttons) {
+    if (!game.user?.isGM || !getSetting(EDITOR_SETTING, true)) return;
+    if (!isShadowdarkPlayerApplication(app) || !Array.isArray(buttons)) return;
+    if (buttons.some(button => String(button?.class ?? "").split(/\s+/).includes("sdx-style-editor-toggle"))) return;
 
-    const toggle = toolbar.querySelector(".sdx-style-editor-toggle");
+    const button = {
+      label: "Edit Style",
+      class: "sdx-style-editor-toggle",
+      icon: "fas fa-paintbrush",
+      onclick: () => toggleStyleEditing(app)
+    };
+    buttons.unshift(button);
+  }
+
+  function ensureStyleEditorHeaderButton(app, windowElement) {
+    const existing = windowElement?.querySelector?.(".sdx-style-editor-toggle");
+    if (existing) return existing;
+
+    const header = windowElement?.querySelector?.(".window-header");
+    const reference = header?.querySelector?.(".header-button, .window-header-button");
+    if (!header || !reference) return null;
+
+    const tagName = reference.tagName === "BUTTON" ? "button" : "a";
+    const toggle = document.createElement(tagName);
+    if (tagName === "BUTTON") toggle.type = "button";
+    else toggle.href = "#";
+
+    const nativeClasses = ["header-button", "control", "window-header-button"]
+      .filter(className => reference.classList.contains(className));
+    toggle.className = [...nativeClasses, "sdx-style-editor-toggle"].join(" ");
+    toggle.innerHTML = '<i class="fas fa-paintbrush" aria-hidden="true"></i> <span>Edit Style</span>';
     toggle.addEventListener("click", event => {
       event.preventDefault();
       event.stopPropagation();
-
-      const enabled = !root.classList.contains("sdx-style-edit-mode");
-      root.classList.toggle("sdx-style-edit-mode", enabled);
-      toggle.classList.toggle("active", enabled);
-      toggle.querySelector("span").textContent = enabled ? "Finish Editing" : "Edit Style";
-      toggle.title = enabled ? "Disable style editing" : "Enable style editing";
-
-      if (!enabled) {
-        clearSelectedTarget(root);
-        closeContextMenu();
-      } else {
-        ui.notifications?.info("Style edit mode enabled. Right-click a sheet element to edit it.");
-      }
+      toggleStyleEditing(app);
     });
+    reference.before(toggle);
+    return toggle;
+  }
 
+  function toggleStyleEditing(app) {
+    const root = renderedSheetRoots.get(app);
+    if (!root?.isConnected) {
+      ui.notifications?.warn("The character sheet is not ready for style editing.");
+      return;
+    }
+
+    const toggle = getWindowElement(app, root)?.querySelector?.(".sdx-style-editor-toggle");
+    const enabled = !root.classList.contains("sdx-style-edit-mode");
+    root.classList.toggle("sdx-style-edit-mode", enabled);
+    toggle?.classList.toggle("active", enabled);
+    setHeaderButtonLabel(toggle, enabled ? "Finish Editing" : "Edit Style");
+    if (toggle) {
+      toggle.title = enabled ? "Disable style editing" : "Enable style editing";
+      toggle.setAttribute("aria-label", toggle.title);
+      toggle.setAttribute("aria-pressed", String(enabled));
+    }
+
+    if (!enabled) {
+      clearSelectedTarget(root);
+      closeContextMenu();
+    } else {
+      ui.notifications?.info("Style edit mode enabled. Right-click a sheet element to edit it.");
+    }
+  }
+
+  function resetHeaderButton(toggle) {
+    if (!toggle) return;
+    toggle.classList.remove("active");
+    setHeaderButtonLabel(toggle, "Edit Style");
+    toggle.title = "Enable style editing";
+    toggle.setAttribute("aria-label", toggle.title);
+    toggle.setAttribute("aria-pressed", "false");
+  }
+
+  function setHeaderButtonLabel(toggle, text) {
+    if (!toggle) return;
+    const label = toggle.querySelector("span");
+    if (label) {
+      label.textContent = text;
+      return;
+    }
+
+    const textNode = Array.from(toggle.childNodes).find(node => node.nodeType === Node.TEXT_NODE);
+    if (textNode) textNode.textContent = ` ${text}`;
+    else toggle.append(document.createTextNode(` ${text}`));
+  }
+
+  function bindStyleEditorContextMenu(root) {
+    if (root.dataset.sdxStyleEditorContextBound === "true") return;
+    root.dataset.sdxStyleEditorContextBound = "true";
     root.addEventListener("contextmenu", event => {
       if (!root.classList.contains("sdx-style-edit-mode")) return;
 
@@ -163,7 +243,7 @@
 
   function getEditableTarget(candidate, root) {
     if (!(candidate instanceof HTMLElement)) return null;
-    if (candidate.closest(".sdx-style-editor-toolbar, .sdx-style-context-menu")) return null;
+    if (candidate.closest(".sdx-style-context-menu")) return null;
     if (candidate.closest(".sdx-character-sheet-bar")) return null;
     if (candidate === root) return null;
     return candidate;

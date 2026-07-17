@@ -22,49 +22,11 @@
 /* Base Sheet Layer                             */
 /* -------------------------------------------- */
 
-.SD-header.sdx-has-style-editor-toolbar {
-  position: relative;
-}
-
-.sdx-style-editor-toolbar {
-  position: absolute;
-  top: 6px;
-  right: 8px;
-  z-index: 30;
-}
-
-.sdx-style-editor-toolbar .sdx-style-editor-toggle {
-  display: inline-flex !important;
-  align-items: center;
-  justify-content: center;
-  gap: 0.3rem;
-  width: auto !important;
-  min-width: 0 !important;
-  height: 28px !important;
-  margin: 0 !important;
-  padding: 0.25rem 0.45rem !important;
-  border: 1px solid rgba(255, 255, 255, 0.35) !important;
-  border-radius: 4px !important;
-  background: rgba(0, 0, 0, 0.68) !important;
-  color: #f4efe3 !important;
-  font-family: inherit !important;
-  font-size: 12px !important;
-  line-height: 1 !important;
-  white-space: nowrap;
-  cursor: pointer;
-}
-
-.sdx-style-editor-toolbar .sdx-style-editor-toggle.active {
-  border-color: #d8b35f !important;
-  background: rgba(105, 68, 18, 0.92) !important;
-  box-shadow: 0 0 0 2px rgba(216, 179, 95, 0.22);
-}
-
-.sdx-style-edit-mode *:not(.sdx-style-editor-toolbar):not(.sdx-style-editor-toolbar *) {
+.sdx-style-edit-mode * {
   cursor: context-menu;
 }
 
-.sdx-style-edit-mode *:not(.sdx-style-editor-toolbar):not(.sdx-style-editor-toolbar *):hover {
+.sdx-style-edit-mode *:hover {
   outline: 1px dashed rgba(225, 180, 70, 0.95);
   outline-offset: 1px;
 }

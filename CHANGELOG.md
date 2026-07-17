@@ -10,6 +10,7 @@
 - Added reusable Encounter Profiles, scene-specific encounter context flags, world and compendium RollTable support, and a public module API.
 - Integrated successful Time Passes encounter rolls with the Encounter Engine.
 - Added support for direct Actor table results, text results such as `2d6 Goblins (Night)`, and optional encounter metadata stored in `flags.mk-shadowdark.encounter`.
+- Validated the feature design against the public Shadowdark system `release-3.5.0` source without using the uploaded system archive.
 
 ## 1.0.7
 
@@ -72,7 +73,7 @@
 
 - Added Foundry VTT v13 compatibility while retaining v12 support.
 - Updated the Group Sheet travel tab into a Camping tab with camping procedure text, campfire rules, and revised camping task names/descriptions.
-- Added a compact Camping task board with local Game-icons.net activity icons, Foundry tooltips, and drag-and-drop member assignment from the roster.
+- Added a compact Camping task board with local Game-icons.net activity icons, Foundry tooltips, icons, and drag-and-drop member assignment from the roster.
 - Enforced one Camping task assignment per member and added assignment reset support.
 - Reworked Group Sheet member cards into a side-by-side layout with larger borderless portraits and compact six-stat rows.
 - Set Group actors to use a safe `1/1` HP default to avoid Health Estimate errors.

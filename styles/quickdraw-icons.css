@@ -111,6 +111,33 @@
 }
 
 /* -------------------------------------------- */
+/* Native inventory sidebar summary             */
+/* -------------------------------------------- */
+
+/* The card deliberately reuses Shadowdark's SD-box, header, content,
+   value-grid, and SD-grid primitives so it follows system styling across
+   Foundry v12-v14. Only Quickdraw-specific alignment is defined here. */
+.shadowdark.sheet.player .mk-quickdraw-card .mk-quickdraw-card-values {
+  font-variant-numeric: tabular-nums;
+}
+
+.shadowdark.sheet.player .mk-quickdraw-card .mk-quickdraw-card-values .mk-warning,
+.shadowdark.sheet.player .mk-quickdraw-card.mk-warning .mk-quickdraw-card-values {
+  color: #b00000;
+}
+
+.shadowdark.sheet.player .mk-quickdraw-card .mk-quickdraw-source-value {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+.shadowdark.sheet.player .mk-quickdraw-card .mk-quickdraw-source-label {
+  min-width: 0;
+  overflow-wrap: anywhere;
+  line-height: 1.15;
+}
+
+/* -------------------------------------------- */
 /* Summary line under inventory names           */
 /* -------------------------------------------- */
 

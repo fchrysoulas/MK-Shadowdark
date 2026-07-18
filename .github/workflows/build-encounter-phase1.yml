@@ -1,4 +1,4 @@
-name: Build Encounter Engine
+name: Build Module
 
 on:
   push:
@@ -19,20 +19,27 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Validate Encounter Engine JavaScript
+      - name: Validate module JavaScript
         run: |
-          for file in scripts/encounter-engine/*.js scripts/time-passes-splash.js; do
+          for file in scripts/*.js scripts/encounter-engine/*.js scripts/group-sheet/*.js; do
             node --check "$file"
           done
+
+      - name: Read module version
+        id: module
+        run: |
+          VERSION=$(node -p "require('./module.json').version")
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
 
       - name: Validate module manifest
         run: |
           python - <<'PY'
           import json
+          import re
           from pathlib import Path
 
           manifest = json.loads(Path('module.json').read_text(encoding='utf-8'))
-          assert manifest['version'] == '1.1.1'
+          assert re.fullmatch(r'\d+\.\d+\.\d+', manifest['version'])
           system = manifest['relationships']['systems'][0]
           assert system['id'] == 'shadowdark'
           assert system['compatibility']['minimum'] == '3.5.0'
@@ -43,13 +50,13 @@ jobs:
       - name: Build full module ZIP
         run: |
           mkdir -p dist
-          zip -r dist/mk-shadowdark-1.1.1.zip . \
+          zip -r "dist/mk-shadowdark-${{ steps.module.outputs.version }}.zip" . \
             -x '.git/*' '.github/*' 'dist/*'
 
       - name: Upload module artifact
         uses: actions/upload-artifact@v4
         with:
-          name: mk-shadowdark-1.1.1
-          path: dist/mk-shadowdark-1.1.1.zip
+          name: mk-shadowdark-${{ steps.module.outputs.version }}
+          path: dist/mk-shadowdark-${{ steps.module.outputs.version }}.zip
           if-no-files-found: error
           retention-days: 7

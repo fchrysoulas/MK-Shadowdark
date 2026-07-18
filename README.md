@@ -15,12 +15,12 @@ Modular quality-of-life tools, gameplay automation, party management, and charac
 - **Character Sheet Tweaks**: adds a configurable compact summary bar to player sheets, optional header styling, Shadowdark logo hiding, and quick access to common stats.
 - **Death Timer**: adds a configurable sheet button for starting and managing Shadowdark death timers.
 - **Editable Quantity**: lets item quantities be edited directly from actor inventory rows.
-- **Encounter Engine - Phase 1**: selects terrain and time-aware encounter tables, resolves number appearing, distance, activity, surprise, reaction, intent, disposition, and morale, then creates an interactive GM chat card with reroll and reveal controls.
+- **Encounter Engine - Phase 1**: follows the Shadowdark random encounter procedure for danger checks, number appearing, distance, activity, awareness, reaction, treasure, and morale guidance, then creates an interactive GM chat card.
 - **Equipment Hands**: checks equipped weapons, shields, and hand-occupying gear against available hand slots, either warning or blocking invalid loadouts.
 - **Group Sheet**: adds a party/group actor sheet for members, shared inventory, notes, and Camping task assignment.
 - **Camping Tasks**: provides Bed Down, Cook, Craft, Entertain, Scavenge, Hunt, Keep Watch, and Predict tasks with DCs, tooltips, icons, and drag-and-drop member assignment.
 - **Quickdraw**: marks eligible inventory items as quickdraw, sorts each inventory group with Quickdraw items first, and supports fixed or actor-based limit expressions such as `3`, `max(1, @dex.mod)`, or `max(1, @dex.mod + gear("bandolier"))`.
-- **Time Passes**: lets the GM show a configurable time-passes splash and roll for a random encounter. Successful encounter rolls can automatically invoke the Encounter Engine.
+- **Time Passes**: lets the GM choose 1d6, 2d6, or 3d6 for a time-passes encounter check. An encounter occurs if any die shows 1, and successful checks can invoke the Encounter Engine.
 - **Token Shadows**: draws configurable soft shadows under tokens on the canvas.
 - **Corpse Token Automation**: changes dead NPC tokens to a corpse image, preserves/restores original token data, and aligns corpse placement using the token fall point.
 
@@ -44,31 +44,46 @@ max(1, @dex.mod + gear("bandolier"))
 
 Open the Encounter Engine from the Token scene controls or right-click a world RollTable and select **MK-Shadowdark: Resolve Encounter**.
 
-The complete GM card includes:
+The resolver offers two actions:
+
+- **Check Encounter** rolls the active danger level: Unsafe every 3 rounds/hours, Risky every 2, and Deadly every round/hour. Each check is 1d6, with an encounter on 1.
+- **Resolve Now** skips the occurrence check when the GM already knows an encounter happens.
+
+The Shadowdark Core GM card includes:
 
 - Encounter and number appearing
-- Terrain and time of day
-- Distance
-- Activity
-- Reaction and Foundry disposition
-- Intent
-- Surprise
-- Morale threshold
+- Terrain, danger level, and time of day
+- Starting distance: 1 Close, 2-4 Near, 5-6 Far on 1d6
+- Creature activity on the Shadowdark 2d6 table
+- Awareness determined through the fiction, hiding, and detection checks
+- Reaction on 2d6, optionally adding one interacting character's CHA modifier
+- A 50% wandering-monster treasure check
+- Morale guidance: DC 15 WIS at half strength or half HP
 
-Each procedure field can be rerolled independently. **Reveal to Players** creates a public version without morale data.
+Intent and random surprise dice remain available as optional expanded profile procedures but are disabled in the Shadowdark Core profile. Each rolled procedure field can be rerolled independently. **Reveal to Players** creates a public version without the GM-only morale information.
 
-Encounter Profiles are edited from the resolver dialog. Profiles may assign different encounter RollTable UUIDs by terrain and by day, night, or any time. Scene selections can be remembered as scene flags without changing Shadowdark system data.
+Encounter Profiles may assign different RollTable UUIDs by terrain and by day, night, or any time. Profile, terrain, danger level, time, and table override can be remembered per scene without changing Shadowdark system data. Existing Phase 1 default-profile table assignments are migrated into the revised Shadowdark Core profile.
 
 Macro and module API:
 
 ```js
 await game.modules.get("mk-shadowdark").api.encounters.openDialog();
 
+await game.modules.get("mk-shadowdark").api.encounters.check({
+  profileId: "default",
+  terrain: "Default",
+  dangerLevel: "unsafe",
+  period: "auto"
+});
+
 await game.modules.get("mk-shadowdark").api.encounters.resolve({
   profileId: "default",
   terrain: "Default",
+  dangerLevel: "unsafe",
   period: "auto",
-  tableUuid: "RollTable.YOUR_TABLE_ID"
+  tableUuid: "RollTable.YOUR_TABLE_ID",
+  awareness: "determine",
+  reactionMode: "roll"
 });
 ```
 
@@ -85,10 +100,13 @@ For direct Actor results, optional metadata can be stored in `flags.mk-shadowdar
 ```json
 {
   "numberFormula": "2d6",
-  "morale": 7,
-  "activity": "Searching the ruins",
+  "activity": "Guarding",
   "intent": "Watch the party from cover",
-  "disposition": "neutral"
+  "reactionMode": "fixed",
+  "fixedReaction": "Hostile",
+  "disposition": "hostile",
+  "treasure": false,
+  "moraleImmune": false
 }
 ```
 

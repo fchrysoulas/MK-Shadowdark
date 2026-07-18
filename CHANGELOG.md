@@ -1,21 +1,31 @@
 # Changelog
 
+## Unreleased
+
 ## 1.1.1
+
 - Refactored Quickdraw controls and per-group inventory sorting, and added safe per-character limit expressions with ability references, minimum/maximum functions, and carried gear counts.
-- Added Encounter Engine Phase 1 with terrain and time-of-day-aware RollTable selection.
-- Added complete encounter procedure resolution for number appearing, distance, activity, reaction, intent, surprise, disposition, and morale.
-- Added interactive GM chat cards with field rerolls, full rerolls, number rerolls, and a player-safe reveal action.
-- Added reusable Encounter Profiles, scene-specific encounter context flags, world and compendium RollTable support, and a public module API.
-- Integrated successful Time Passes encounter rolls with the Encounter Engine.
-- Added support for direct Actor table results, text results such as `2d6 Goblins (Night)`, and optional encounter metadata stored in `flags.mk-shadowdark.encounter`.
-- Validated the feature design against the public Shadowdark system `release-3.5.0` source without using the uploaded system archive.
+- Revised Encounter Engine Phase 1 to follow the Shadowdark random encounter procedure by default.
+- Added Unsafe, Risky, and Deadly danger levels with checks every 3, 2, or 1 crawling rounds/travel hours and encounters on 1 on 1d6.
+- Corrected starting distance to 1 Close, 2-4 Near, and 5-6 Far on 1d6.
+- Replaced the default activity table with Shadowdark's 2d6 Hunting, Eating, Building/Nesting, Socializing/Playing, Guarding, and Sleeping results.
+- Corrected reactions to the Shadowdark 2d6 attitude ranges and added optional interacting-character CHA modifiers that record the character revealing their presence and position.
+- Replaced default random surprise rolls with GM-selected awareness states based on the fiction, hiding, and detection checks.
+- Added the 50% wandering-monster treasure check.
+- Replaced generated morale scores with Shadowdark morale guidance: DC 15 WIS at half group strength or half solo HP, including morale immunity detection.
+- Made Intent and dice-based surprise optional expanded procedures, disabled in the Shadowdark Core profile.
+- Added automatic migration of the original default profile's terrain and RollTable assignments into the revised Shadowdark Core profile.
+- Retained the Time Passes prompt for 1d6, 2d6, or 3d6; an encounter occurs if any selected die shows 1.
+- Updated the Encounter Engine API to version 2 with separate `check` and `resolve` methods.
 
 ## 1.1.0
+
 - Reorganized settings into compact per-feature screens and expanded Character Sheet styling with typography, color, imagery, spacing, border/navigation states, source detection, and saved-change validation.
 - Split Summary Bar and Luck reporting into independent features with fixed styles, and integrated Death Timer display states into the Summary Bar.
 - Improved Quickdraw behavior and Foundry v13/v14 presentation, including control targeting, inventory alignment, active-state isolation, and fixed stylesheet ownership.
 - Added the optional Weapon Properties on New Line feature and moved module-managed interface rules out of editable Character Sheet CSS.
 - Consolidated migrations and compatibility fixes, standardized module-owned `mk-` identifiers and `SUBMODULE` labels, preserved native Shadowdark styles for blank settings, and fixed blank Actor creation.
+- Added Encounter Engine Phase 1 with terrain and time-of-day-aware RollTable selection, interactive GM chat cards, scene context flags, and Time Passes integration.
 
 ## 1.0.7
 

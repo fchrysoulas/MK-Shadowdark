@@ -31,7 +31,6 @@
     const skullPath = String(payload.skullPath ?? setting("timePassesSkullIconPath", "icons/svg/skull.svg"));
     const skullSizePx = Number(payload.skullSizePx ?? setting("timePassesSkullSizePx", 34)) || 34;
 
-    // Remove existing splash
     const old = document.getElementById("mk-time-passes-splash");
     if (old) old.remove();
 
@@ -59,7 +58,6 @@
       font-family: ${fontFamily};
     `;
 
-    // Title line as flex row so skull stays on the same line
     const titleRow = document.createElement("div");
     titleRow.style.cssText = `
       display: inline-flex;
@@ -97,7 +95,6 @@
 
     card.appendChild(titleRow);
 
-    // Progress bar (optional)
     let fill = null;
     if (showProgress) {
       const prog = document.createElement("div");
@@ -143,7 +140,7 @@
     window[HOOK_FLAG] = true;
     window[SEEN_FLAG] = window[SEEN_FLAG] ?? new Set();
 
-    Hooks.on("createChatMessage", (msg) => {
+    Hooks.on("createChatMessage", msg => {
       try {
         if (!msg) return;
         const payload = msg.getFlag?.(MODULE_ID, FLAG_KEY);
@@ -154,8 +151,8 @@
         seen.add(msg.id);
 
         showSplash(payload);
-      } catch (e) {
-        console.error(`${MODULE_ID} | ${SUBMODULE} | handler error:`, e);
+      } catch (handlerError) {
+        console.error(`${MODULE_ID} | ${SUBMODULE} | handler error:`, handlerError);
       }
     });
 
@@ -163,98 +160,119 @@
   }
 
   async function broadcastSplash(payload) {
-    // helper message to deliver flags to all clients
     const msg = await ChatMessage.create({
       speaker: ChatMessage.getSpeaker(),
-      style: CONST.CHAT_MESSAGE_STYLES.OTHER,
+      style: globalThis.CONST?.CHAT_MESSAGE_STYLES?.OTHER ?? globalThis.CONST?.CHAT_MESSAGE_TYPES?.OTHER ?? 0,
       content: `<span style="display:none">mk-time-passes</span>`,
-      flags: { [MODULE_ID]: { [FLAG_KEY]: payload } }
+      flags: { [MODULE_ID]: { [FLAG_KEY]: payload } },
     });
 
-    // clean up
     setTimeout(() => {
       msg?.delete?.().catch(() => {});
     }, 3000);
   }
 
-  // Encounter rule: any d6 showing 1 triggers
   function rollHasAnyDieResult(roll, faces, target) {
     try {
-      const DieTerm = foundry?.dice?.terms?.Die;
-      for (const term of (roll?.terms ?? [])) {
-        const isDie = DieTerm ? (term instanceof DieTerm) : (term?.results && Number.isFinite(term?.faces));
-        if (!isDie) continue;
+      const DieTerm = globalThis.foundry?.dice?.terms?.Die;
+      for (const term of roll?.terms ?? []) {
+        const isDie = DieTerm ? term instanceof DieTerm : term?.results && Number.isFinite(term?.faces);
+        if (!isDie || Number(term.faces) !== Number(faces)) continue;
 
-        const f = Number(term.faces);
-        if (f !== Number(faces)) continue;
-
-        for (const r of (term.results ?? [])) {
-          const val = Number(r?.result);
-          if (val === Number(target)) return true;
+        for (const result of term.results ?? []) {
+          if (Number(result?.result) === Number(target)) return true;
         }
       }
-    } catch (_e) {
-      // ignore
+    } catch (_error) {
     }
     return false;
   }
 
-  /**
-   * GM trigger. Reads settings by default, but can be overridden by opts.
-   * opts can include:
-   *  preText, encounterText, preDurationMs, encounterDurationMs, preShowProgress,
-   *  rollFormula, rollFlavor,
-   *  fontFamily, titleFontSizePx,
-   *  encounterShowSkull, skullPath, skullSizePx
-   */
+  async function promptDiceCount(defaultCount = 1) {
+    const selected = Math.min(3, Math.max(1, Number(defaultCount) || 1));
+    return Dialog.wait({
+      title: "Time Passes - Encounter Dice",
+      content: `
+        <form>
+          <p>How many d6 should be rolled for the Time Passes encounter check?</p>
+          <p class="notes">An encounter occurs if any die shows 1.</p>
+        </form>
+      `,
+      buttons: {
+        one: {
+          icon: '<i class="fas fa-dice-one"></i>',
+          label: "1d6",
+          callback: () => 1,
+        },
+        two: {
+          icon: '<i class="fas fa-dice-two"></i>',
+          label: "2d6",
+          callback: () => 2,
+        },
+        three: {
+          icon: '<i class="fas fa-dice-three"></i>',
+          label: "3d6",
+          callback: () => 3,
+        },
+        cancel: {
+          icon: '<i class="fas fa-times"></i>',
+          label: "Cancel",
+          callback: () => null,
+        },
+      },
+      default: selected === 3 ? "three" : selected === 2 ? "two" : "one",
+      close: () => null,
+    }, { width: 430 });
+  }
+
   async function timePasses(opts = {}) {
     if (!game.user.isGM) {
       ui.notifications.warn("Only the GM can trigger Time Passes.");
-      return;
+      return null;
     }
 
-    if (!setting("timePassesEnabled", true)) return;
+    if (!setting("timePassesEnabled", true)) return null;
 
     const preText = opts.preText ?? setting("timePassesPreText", "time passes...");
     const encounterText = opts.encounterText ?? setting("timePassesEncounterText", "ENCOUNTER!");
-
     const preDurationMs = Number(opts.preDurationMs ?? setting("timePassesPreDurationMs", 2000));
     const encounterDurationMs = Number(opts.encounterDurationMs ?? setting("timePassesEncounterDurationMs", 2000));
     const preShowProgress = Boolean(opts.preShowProgress ?? setting("timePassesPreShowProgress", true));
 
-    const rollFormula = String(opts.rollFormula ?? setting("timePassesRollFormula", "1d6")).trim() || "1d6";
+    let diceCount = opts.diceCount;
+    if (!opts.rollFormula && diceCount === undefined) {
+      const configured = String(setting("timePassesRollFormula", "1d6")).match(/^([123])d6$/i)?.[1] ?? 1;
+      diceCount = await promptDiceCount(configured);
+      if (!diceCount) return null;
+    }
+    diceCount = Math.min(3, Math.max(1, Number(diceCount) || 1));
+    const rollFormula = String(opts.rollFormula ?? `${diceCount}d6`).trim() || `${diceCount}d6`;
     const rollFlavor = String(opts.rollFlavor ?? setting("timePassesRollFlavor", "⏳"));
 
     const fontFamily = String(opts.fontFamily ?? setting("timePassesFontFamily", "var(--font-primary, serif)")) || "var(--font-primary, serif)";
     const titleFontSizePx = Number(opts.titleFontSizePx ?? setting("timePassesTitleFontSizePx", 44)) || 44;
-
     const encounterShowSkull = Boolean(opts.encounterShowSkull ?? setting("timePassesEncounterShowSkull", true));
     const skullPath = String(opts.skullPath ?? setting("timePassesSkullIconPath", "icons/svg/skull.svg"));
     const skullSizePx = Number(opts.skullSizePx ?? setting("timePassesSkullSizePx", 34)) || 34;
 
-    // 1) pre-splash
     await broadcastSplash({
       title: preText,
       durationMs: preDurationMs,
       showProgress: preShowProgress,
       fontFamily,
       titleFontSizePx,
-      showSkull: false
+      showSkull: false,
     });
 
-    // 2) wait for bar
-    await new Promise((resolve) => setTimeout(resolve, Math.max(0, preDurationMs)));
+    await new Promise(resolve => setTimeout(resolve, Math.max(0, preDurationMs)));
 
-    // 3) roll publicly (3D dice)
-    const roll = await (new Roll(rollFormula)).evaluate();
-
-    const PUBLIC = CONST?.DICE_ROLL_MODES?.PUBLIC ?? "publicroll";
+    const roll = await new Roll(rollFormula).evaluate();
+    const publicMode = globalThis.CONST?.DICE_ROLL_MODES?.PUBLIC ?? "publicroll";
     await roll.toMessage(
       { speaker: ChatMessage.getSpeaker(), flavor: rollFlavor },
-      { rollMode: PUBLIC }
+      { rollMode: publicMode }
     );
 
-    // 4) encounter: any d6 showing 1
     const isEncounter = rollHasAnyDieResult(roll, 6, 1);
     if (isEncounter) {
       await broadcastSplash({
@@ -265,11 +283,11 @@
         titleFontSizePx,
         showSkull: encounterShowSkull,
         skullPath,
-        skullSizePx
+        skullSizePx,
       });
     }
 
-    return { roll, isEncounter };
+    return { roll, isEncounter, diceCount };
   }
 
   Hooks.once("ready", () => {
@@ -277,11 +295,10 @@
 
     const mod = game.modules.get(MODULE_ID);
     if (mod) {
-      mod.api = mod.api ?? {};
-      mod.api.timePasses = { timePasses, showSplash, broadcastSplash };
+      mod.api ??= {};
+      mod.api.timePasses = { timePasses, showSplash, broadcastSplash, promptDiceCount };
     }
 
     log("Ready.");
   });
-
 })();

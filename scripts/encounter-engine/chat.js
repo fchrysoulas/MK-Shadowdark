@@ -2,13 +2,15 @@ import { CARD_SELECTOR, CHAT_FLAG, MODULE_ID, SETTINGS } from "./constants.js";
 import { activeGmIds, deepClone, error, escapeHtml, getProfile, getRootElement, setting } from "./helpers.js";
 import {
   buildEncounterData,
+  buildMoraleInfo,
   deriveDisposition,
   drawEncounterResult,
   evaluateRoll,
   rollMappedOutcome,
-  rollMorale,
-  rollSurprise,
+  rollOptionalSurprise,
+  rollReaction,
   rollTotal,
+  rollTreasure,
 } from "./resolver.js";
 
 function encounterDisplay(data) {
@@ -41,9 +43,16 @@ function row(label, value, field, { publicCard = false, detail = "" } = {}) {
 export function renderEncounterCard(data, { publicCard = false } = {}) {
   const periodLabel = data.period === "night" ? "Night" : "Day";
   const disposition = String(data.disposition ?? "neutral");
+  const reactionDetail = data.reaction?.actorName
+    ? `${data.reaction.actorName} ${Number(data.reaction.chaModifier ?? 0) >= 0 ? "+" : ""}${Number(data.reaction.chaModifier ?? 0)} CHA; presence revealed`
+    : data.reaction?.fixed
+      ? "Attitude already clear"
+      : data.reaction?.skipped
+        ? "GM determines attitude from the fiction"
+        : "No CHA modifier";
   const moraleDetail = data.morale?.immune
-    ? "Does not make morale checks"
-    : "2d6 equal to or below this score to hold";
+    ? data.morale.trigger
+    : `${data.morale?.trigger ?? "At half strength"}; ${Number(data.morale?.modifier ?? 0) >= 0 ? "+" : ""}${Number(data.morale?.modifier ?? 0)} ${String(data.morale?.ability ?? "wis").toUpperCase()}`;
 
   const controls = publicCard ? "" : `
     <div class="mk-sd-encounter-controls">
@@ -55,7 +64,7 @@ export function renderEncounterCard(data, { publicCard = false } = {}) {
   `;
 
   return `
-    <section class="mk-sd-encounter-card ${publicCard ? "is-public" : "is-gm"}" data-encounter-schema="${Number(data.schema ?? 1)}">
+    <section class="mk-sd-encounter-card ${publicCard ? "is-public" : "is-gm"}" data-encounter-schema="${Number(data.schema ?? 2)}">
       <header class="mk-sd-encounter-header">
         <div>
           <span class="mk-sd-encounter-kicker">Encounter</span>
@@ -66,6 +75,7 @@ export function renderEncounterCard(data, { publicCard = false } = {}) {
 
       <div class="mk-sd-encounter-context">
         <span><i class="fas fa-mountain-sun"></i> ${escapeHtml(data.terrain)}</span>
+        <span><i class="fas fa-skull-crossbones"></i> ${escapeHtml(data.dangerLabel ?? data.dangerLevel ?? "Unsafe")}</span>
         <span><i class="fas ${data.period === "night" ? "fa-moon" : "fa-sun"}"></i> ${periodLabel}</span>
         <span><i class="fas fa-table-list"></i> ${escapeHtml(data.tableName)}</span>
       </div>
@@ -73,10 +83,14 @@ export function renderEncounterCard(data, { publicCard = false } = {}) {
       <div class="mk-sd-encounter-grid">
         ${row("Distance", escapeHtml(data.distance?.label ?? "Unknown"), "distance", { publicCard })}
         ${row("Activity", escapeHtml(data.activity?.label ?? "Unknown"), "activity", { publicCard })}
-        ${row("Reaction", escapeHtml(data.reaction?.label ?? "Unknown"), "reaction", { publicCard })}
-        ${row("Intent", escapeHtml(data.intent?.label ?? "Unknown"), "intent", { publicCard })}
-        ${row("Surprise", escapeHtml(data.surprise?.label ?? "Unknown"), "surprise", { publicCard })}
-        ${publicCard ? "" : row("Morale", escapeHtml(data.morale?.label ?? "Unknown"), "morale", { publicCard, detail: moraleDetail })}
+        ${row("Awareness", escapeHtml(data.awareness?.label ?? "Determine during play"), data.awareness?.optional ? "awareness" : null, {
+          publicCard,
+          detail: data.awareness?.optional ? "Optional expanded surprise dice" : "Use the fiction, hiding and detection checks",
+        })}
+        ${row("Reaction", escapeHtml(data.reaction?.label ?? "Not determined"), "reaction", { publicCard, detail: reactionDetail })}
+        ${data.intent ? row("Intent", escapeHtml(data.intent.label ?? "Unknown"), "intent", { publicCard, detail: "Optional expanded procedure" }) : ""}
+        ${row("Treasure", escapeHtml(data.treasure?.label ?? "No treasure"), "treasure", { publicCard, detail: "50% chance for wandering encounters" })}
+        ${publicCard ? "" : row("Morale", escapeHtml(data.morale?.label ?? "DC 15 WIS"), null, { publicCard, detail: moraleDetail })}
       </div>
 
       ${controls}
@@ -94,7 +108,7 @@ export async function createEncounterMessage(data, options = {}) {
 
   return ChatMessage.create({
     speaker: ChatMessage.getSpeaker(),
-    style: CONST?.CHAT_MESSAGE_STYLES?.OTHER ?? CONST?.CHAT_MESSAGE_TYPES?.OTHER ?? 0,
+    style: globalThis.CONST?.CHAT_MESSAGE_STYLES?.OTHER ?? globalThis.CONST?.CHAT_MESSAGE_TYPES?.OTHER ?? 0,
     content: renderEncounterCard(data),
     whisper,
     flags: { [MODULE_ID]: { [CHAT_FLAG]: data } },
@@ -112,12 +126,12 @@ async function updateEncounterMessage(message, data) {
 async function revealEncounter(message, data) {
   return ChatMessage.create({
     speaker: message.speaker ?? ChatMessage.getSpeaker(),
-    style: CONST?.CHAT_MESSAGE_STYLES?.OTHER ?? CONST?.CHAT_MESSAGE_TYPES?.OTHER ?? 0,
+    style: globalThis.CONST?.CHAT_MESSAGE_STYLES?.OTHER ?? globalThis.CONST?.CHAT_MESSAGE_TYPES?.OTHER ?? 0,
     content: renderEncounterCard(data, { publicCard: true }),
     whisper: [],
     flags: {
       [MODULE_ID]: {
-        encounterEnginePublic: { sourceMessageId: message.id, schema: data.schema ?? 1 },
+        encounterEnginePublic: { sourceMessageId: message.id, schema: data.schema ?? 2 },
       },
     },
   });
@@ -129,38 +143,48 @@ export async function rerollEncounterField(message, field) {
 
   const profileRef = getProfile(data.profileId);
   const profile = profileRef.data;
+  const options = data.resolutionOptions ?? {};
 
   switch (field) {
     case "encounter": {
       const draw = await drawEncounterResult(data.tableUuid, profile, data.period);
-      data.encounter = draw.encounter;
-      data.activity = data.encounter.metadata?.activity
-        ? { label: String(data.encounter.metadata.activity), formula: "Encounter result", total: null }
-        : await rollMappedOutcome(profile, "activity");
-      data.intent = data.encounter.metadata?.intent
-        ? { label: String(data.encounter.metadata.intent), formula: "Encounter result", total: null }
-        : await rollMappedOutcome(profile, "intent");
-      data.morale = await rollMorale(profile, data.encounter);
-      break;
+      const rebuilt = await buildEncounterData({
+        profileId: profileRef.id,
+        profile,
+        terrain: data.terrain,
+        dangerLevel: data.dangerLevel,
+        requestedPeriod: data.requestedPeriod,
+        period: data.period,
+        tableUuid: data.tableUuid,
+        tableName: data.tableName,
+        draw,
+        options,
+      });
+      await updateEncounterMessage(message, rebuilt);
+      return rebuilt;
     }
     case "number": {
       const numberRoll = await evaluateRoll(data.encounter.numberFormula || "1", "Number Appearing");
       data.encounter.numberTotal = rollTotal(numberRoll, 1);
       data.encounter.count = Math.max(1, Math.floor(data.encounter.numberTotal));
+      data.morale = await buildMoraleInfo(profile, data.encounter);
       break;
     }
     case "distance":
     case "activity":
-    case "reaction":
     case "intent":
       data[field] = await rollMappedOutcome(profile, field);
-      if (field === "reaction") data.disposition = deriveDisposition(data.reaction);
       break;
-    case "surprise":
-      data.surprise = await rollSurprise(profile);
+    case "reaction":
+      data.reaction = await rollReaction(profile, data.encounter, options);
+      data.disposition = deriveDisposition(data.reaction);
       break;
-    case "morale":
-      data.morale = await rollMorale(profile, data.encounter);
+    case "treasure":
+      data.treasure = await rollTreasure(profile, data.encounter);
+      break;
+    case "awareness":
+      if (!profile.optionalProcedures?.surpriseDice) return null;
+      data.awareness = await rollOptionalSurprise(profile);
       break;
     default:
       return null;
@@ -182,11 +206,13 @@ export async function rerollEntireEncounter(message) {
     profileId: profileRef.id,
     profile,
     terrain: oldData.terrain,
+    dangerLevel: oldData.dangerLevel,
     requestedPeriod: oldData.requestedPeriod,
     period: oldData.period,
     tableUuid: oldData.tableUuid,
     tableName: oldData.tableName,
     draw,
+    options: oldData.resolutionOptions ?? {},
   });
 
   await updateEncounterMessage(message, data);

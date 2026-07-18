@@ -12,11 +12,12 @@ Modular quality-of-life tools, gameplay automation, party management, and charac
 ## Features
 
 - **Auto Damage**: automatically applies damage from attack or spell rolls to targeted tokens, with optional GM-only mode, delay, 3D dice support, and token shake feedback.
-- **Character Sheet Tweaks**: adds a configurable compact summary bar to player sheets, optional header styling, Shadowdark logo hiding, and quick access to common stats.
+- **Character Sheet Tweaks**: adds a configurable compact summary bar to player sheets, a height toggle that minimizes the sheet to that bar, optional header styling, Shadowdark logo hiding, and quick access to common stats.
 - **Death Timer**: adds a configurable sheet button for starting and managing Shadowdark death timers.
 - **Editable Quantity**: lets item quantities be edited directly from actor inventory rows.
 - **Encounter Engine - Phase 1**: follows the Shadowdark random encounter procedure for danger checks, number appearing, distance, activity, awareness, reaction, treasure, and morale guidance, then creates an interactive GM chat card.
 - **Equipment Hands**: checks equipped weapons, shields, and hand-occupying gear against available hand slots, either warning or blocking invalid loadouts.
+- **Focus Tracker**: tracks successfully cast Focus spells, enforces configurable capacity, requests maintenance checks at the caster's turn or after damage, and exposes actor-sheet and chat-card controls with a token status icon.
 - **Group Sheet**: adds a party/group actor sheet for members, shared inventory, notes, and Camping task assignment.
 - **Camping Tasks**: provides Bed Down, Cook, Craft, Entertain, Scavenge, Hunt, Keep Watch, and Predict tasks with DCs, tooltips, icons, and drag-and-drop member assignment.
 - **Quickdraw**: marks eligible inventory items as quickdraw, sorts each inventory group with Quickdraw items first, and supports fixed or actor-based limit expressions such as `3`, `max(1, @dex.mod)`, or `max(1, @dex.mod + gear("bandolier", 2))`.
@@ -39,9 +40,18 @@ max(1, @dex.mod + gear("bandolier", 2))
 - `gear("name")` counts matching carried, non-stashed item quantities using a case-insensitive partial name match.
 - `gear("name", slots)` multiplies each matching item quantity by the supplied slot value. For example, one `Bandolier` with quantity 1 makes `gear("bandolier", 2)` add 2 slots; quantity 2 adds 4 slots.
 - Multiple gear bonuses can be combined, such as `max(1, @dex.mod + gear("bandolier", 2) + gear("potion belt", 3))`.
-- The inventory sidebar includes a native-style Quickdraw card showing the character's current selections, evaluated total, and the actor/gear sources used by the expression.
+- The inventory sidebar includes a native-style Quick card showing only current/total selections; hover over or focus the card to see the actor, Base, and gear source breakdown.
 - Supported operators are `+`, `-`, `*`, `/`, `%`, and `^`. Supported functions are `min`, `max`, `floor`, `ceil`, `round`, `trunc`, `abs`, and `clamp`.
 - The result is rounded down to a whole number. `0` means unlimited. Invalid expressions fall back to `3` and write a warning to the console.
+
+## Focus Tracker
+
+Focus Tracker integrates with the native Shadowdark 3.x and 4.x spell-casting methods. A successful spell with a Focus duration starts a tracked session; failed maintenance checks end it, and a critical failure also marks the spell as lost for the day.
+
+- Start-of-turn and damage reminders are whispered to the caster's owners and active GMs.
+- Chat actions can roll the native Focus check, ignore an optional damage prompt, end Focus, or reopen the source spell.
+- Active Focus sessions appear as compact custom icons in the MK-Shadowdark summary bar and in the token's top-left conditions/effects area, with a sheet-header fallback when the summary bar is disabled.
+- The default simultaneous Focus capacity is configurable from the Focus Tracker settings screen. The module API is available at `game.modules.get("mk-shadowdark").api.focus`.
 
 ## Encounter Engine Phase 1
 

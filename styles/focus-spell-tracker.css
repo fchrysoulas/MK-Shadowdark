@@ -1,0 +1,111 @@
+.mk-focus-summary-group {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  min-width: 0;
+}
+
+.mk-focus-summary-chip {
+  align-items: center;
+  background: rgba(24, 22, 20, 0.88);
+  border: 1px solid rgba(208, 187, 139, 0.55);
+  border-radius: 7px;
+  color: var(--color-text-light-highlight, #f0f0e8);
+  cursor: pointer;
+  display: inline-flex;
+  font: inherit;
+  justify-content: center;
+  line-height: 1;
+  height: 30px;
+  min-width: 30px;
+  min-height: 30px;
+  padding: 4px;
+  width: 30px;
+}
+
+.mk-focus-summary-chip:hover,
+.mk-focus-summary-chip:focus-visible {
+  border-color: rgba(244, 214, 141, 0.95);
+  box-shadow: 0 0 0 1px rgba(244, 214, 141, 0.25);
+}
+
+.mk-focus-summary-chip.mk-focus-check-due {
+  animation: mk-focus-pulse 1.4s ease-in-out infinite;
+  border-color: #d99b45;
+}
+
+.mk-focus-summary-chip__icon {
+  border: 0;
+  display: block;
+  flex: 0 0 auto;
+  height: 20px;
+  margin: 0;
+  object-fit: contain;
+  width: 20px;
+}
+
+.mk-focus-summary-fallback {
+  display: flex;
+  gap: 0.3rem;
+  margin: 0.25rem 0.5rem;
+  min-width: 0;
+}
+
+.mk-focus-chat-card {
+  border: 1px solid rgba(112, 91, 55, 0.7);
+  border-radius: 5px;
+  overflow: hidden;
+}
+
+.mk-focus-chat-card__header {
+  align-items: center;
+  background: rgba(30, 27, 23, 0.94);
+  color: #f3ead7;
+  display: flex;
+  gap: 0.5rem;
+  padding: 0.5rem;
+}
+
+.mk-focus-chat-card__header img {
+  border: 0;
+  height: 36px;
+  object-fit: cover;
+  width: 36px;
+}
+
+.mk-focus-chat-card__header h3 {
+  border: 0;
+  margin: 0;
+}
+
+.mk-focus-chat-card__body {
+  padding: 0.55rem;
+}
+
+.mk-focus-chat-card__body p {
+  margin: 0 0 0.35rem;
+}
+
+.mk-focus-chat-card__meta {
+  opacity: 0.78;
+}
+
+.mk-focus-chat-card__actions {
+  display: grid;
+  gap: 0.35rem;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  margin-top: 0.55rem;
+}
+
+.mk-focus-chat-card__actions button {
+  align-items: center;
+  display: inline-flex;
+  gap: 0.35rem;
+  justify-content: center;
+  min-height: 30px;
+}
+
+@keyframes mk-focus-pulse {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(217, 155, 69, 0.15); }
+  50% { box-shadow: 0 0 0 3px rgba(217, 155, 69, 0.32); }
+}

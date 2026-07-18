@@ -2,7 +2,7 @@
   "id": "mk-shadowdark",
   "title": "MK-Shadowdark",
   "description": "Quality-of-life extras and expansions for the Shadowdark RPG system.",
-  "version": "1.1.2",
+  "version": "1.1.3",
   "compatibility": {
     "minimum": "12",
     "verified": "14",
@@ -31,12 +31,14 @@
     "scripts/character-sheet-tweaks.js",
     "scripts/chat-reporting.js",
     "scripts/summary-bar.js",
+    "scripts/minimize-sheet.js",
+    "scripts/focus-spell-tracker/focus-spell-tracker.js",
     "scripts/corpse-token.js",
     "scripts/death-timer.js",
     "scripts/editable-qty.js",
     "scripts/equipment-hands.js",
     "scripts/group-sheet.js",
-    "scripts/quickdraw-icons.js",
+    "scripts/quickdraw/quickdraw-icons.js",
     "scripts/sheet-style-editor.js",
     "scripts/time-passes-splash.js",
     "scripts/token-shadows.js",
@@ -52,7 +54,8 @@
     "styles/group-sheet.css",
     "styles/quickdraw-icons.css",
     "styles/encounter-engine.css",
-    "styles/summary-bar.css"
+    "styles/summary-bar.css",
+    "styles/focus-spell-tracker.css"
   ],
   "languages": [
     {

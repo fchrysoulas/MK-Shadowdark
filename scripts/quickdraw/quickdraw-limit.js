@@ -1,3 +1,4 @@
+// Evaluates Quickdraw limit expressions and reports their actor and gear sources.
 function getProperty(object, path) {
   if (!object || !path) return undefined;
 

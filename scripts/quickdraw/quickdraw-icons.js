@@ -1,5 +1,6 @@
 import { evaluateQuickdrawLimitDetails } from "./quickdraw-limit.js";
 
+// Renders and manages Quickdraw controls on Shadowdark actor sheets.
 (() => {
   const MODULE_ID = "mk-shadowdark";
   const SUBMODULE = "Quickdraw";
@@ -521,11 +522,14 @@ import { evaluateQuickdrawLimitDetails } from "./quickdraw-limit.js";
     const limit = Number(details.total);
     const overLimit = limit > 0 && current > limit;
     const totalText = limit === 0 ? "∞" : formatQuickdrawNumber(limit);
+    const analysisId = `mk-quickdraw-analysis-${String(app.appId ?? app.id ?? app.actor?.id ?? "actor").replace(/[^A-Za-z0-9_-]/g, "-")}`;
 
     const card = $("<div>", {
       class: `SD-box mk-quickdraw-card${overLimit || details.invalid ? " mk-warning" : ""}`,
       "data-mk-quickdraw-expression": details.expression,
-      "aria-label": `Quickdraw ${current} of ${limit === 0 ? "unlimited" : totalText}`
+      tabindex: 0,
+      "aria-label": `Quickdraw ${current} of ${limit === 0 ? "unlimited" : totalText}`,
+      "aria-describedby": analysisId
     });
 
     const header = $("<div>", { class: "header" })
@@ -537,6 +541,13 @@ import { evaluateQuickdrawLimitDetails } from "./quickdraw-limit.js";
       .append($("<div>").text("/"))
       .append($("<div>").text(totalText));
 
+    const analysis = $("<div>", {
+      id: analysisId,
+      class: "mk-quickdraw-card-analysis",
+      role: "tooltip"
+    });
+    analysis.append($("<div>", { class: "mk-quickdraw-analysis-title" }).text("Sources"));
+
     const sources = $("<div>", { class: "SD-grid left small mk-quickdraw-card-sources" });
     for (const source of details.sources ?? []) {
       sources
@@ -544,8 +555,9 @@ import { evaluateQuickdrawLimitDetails } from "./quickdraw-limit.js";
         .append($("<div>", { class: "mk-quickdraw-source-label" }).text(quickdrawSourceLabel(source)));
     }
 
-    content.append(values, $("<hr>"), sources);
-    card.append(header, content);
+    analysis.append(sources);
+    content.append(values);
+    card.append(header, content, analysis);
 
     const slotsCard = sidebar.children(".SD-box").first();
     if (slotsCard?.length) slotsCard.after(card);

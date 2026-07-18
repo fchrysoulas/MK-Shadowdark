@@ -21,7 +21,7 @@ jobs:
 
       - name: Validate module JavaScript
         run: |
-          for file in scripts/*.js scripts/encounter-engine/*.js scripts/group-sheet/*.js; do
+          for file in scripts/*.js scripts/encounter-engine/*.js scripts/focus-spell-tracker/*.js scripts/group-sheet/*.js scripts/quickdraw/*.js; do
             node --check "$file"
           done
 

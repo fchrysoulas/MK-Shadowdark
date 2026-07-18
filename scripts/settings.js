@@ -577,7 +577,7 @@
 
     registerSetting("quickdrawLimit", {
       name: "Quickdraw | Limit Expression",
-      hint: "Maximum Quickdraw items per character. Examples: 3; max(1, @dex.mod); max(1, @dex.mod + gear(\"bandolier\")). gear() counts matching carried, non-stashed item quantities. 0 means unlimited.",
+      hint: "Maximum Quickdraw items per character. Examples: 3; max(1, @dex.mod); max(1, @dex.mod + gear(\"bandolier\", 2)). The optional second gear() value is the slots granted per carried item quantity. 0 means unlimited.",
       scope: "world",
       config: true,
       type: String,

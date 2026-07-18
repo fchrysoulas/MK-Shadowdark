@@ -42,20 +42,32 @@ function resolveActorReference(actor, rawPath) {
   return numeric;
 }
 
-function countCarriedGear(actor, searchText) {
+function getCarriedGearMatches(actor, searchText) {
   const search = String(searchText ?? "").trim().toLocaleLowerCase();
   if (!search) throw new Error("gear() requires a non-empty item name.");
 
-  let total = 0;
+  const matches = [];
   for (const item of Array.from(actor?.items ?? [])) {
     if (item?.system?.stashed === true) continue;
     if (!String(item?.name ?? "").toLocaleLowerCase().includes(search)) continue;
 
     const quantity = Number(item?.system?.quantity);
-    total += Number.isFinite(quantity) ? Math.max(0, quantity) : 1;
+    matches.push({
+      id: item?.id ?? item?._id ?? "",
+      name: String(item?.name ?? searchText),
+      quantity: Number.isFinite(quantity) ? Math.max(0, quantity) : 1
+    });
   }
 
-  return total;
+  return {
+    search,
+    matches,
+    quantity: matches.reduce((total, match) => total + match.quantity, 0)
+  };
+}
+
+function countCarriedGear(actor, searchText) {
+  return getCarriedGearMatches(actor, searchText).quantity;
 }
 
 function tokenize(expression) {
@@ -141,14 +153,68 @@ function requireNumbers(name, args, expectedCount = null) {
   return values;
 }
 
-function callFunction(name, args, actor) {
+function formatReferenceLabel(rawPath) {
+  const path = String(rawPath ?? "").replace(/^@/, "").replace(/^system\./i, "");
+  const ability = path.match(/^(?:abilities\.)?(str|dex|con|int|wis|cha)\.mod$/i);
+  if (ability) return `${ability[1].toUpperCase()} Modifier`;
+
+  return path
+    .replace(/^abilities\./i, "")
+    .replace(/([a-z0-9])([A-Z])/g, "$1 $2")
+    .split(/[._]/)
+    .filter(Boolean)
+    .map(part => part.charAt(0).toUpperCase() + part.slice(1))
+    .join(" ") || "Actor Value";
+}
+
+function formatGearLabel(searchText) {
+  return String(searchText ?? "Gear")
+    .trim()
+    .replace(/\b\p{L}/gu, letter => letter.toLocaleUpperCase());
+}
+
+function recordEvaluationSource(context, source) {
+  if (!context?.sources) return;
+
+  const existing = context.sources.find(entry => entry.key === source.key);
+  if (!existing) {
+    context.sources.push({ ...source, occurrences: 1 });
+    return;
+  }
+
+  existing.occurrences += 1;
+  existing.value += source.value;
+  if (source.type === "gear") existing.quantity += source.quantity;
+}
+
+function callFunction(name, args, actor, context = null) {
   const normalized = String(name).toLowerCase();
 
   if (normalized === "gear") {
-    if (args.length !== 1 || typeof args[0] !== "string") {
-      throw new Error('gear() requires one quoted item name, for example gear("bandolier").');
+    if (args.length < 1 || args.length > 2 || typeof args[0] !== "string") {
+      throw new Error('gear() requires a quoted item name and an optional slot value, for example gear("bandolier", 2).');
     }
-    return countCarriedGear(actor, args[0]);
+
+    const gear = getCarriedGearMatches(actor, args[0]);
+    let slotsPerItem = 1;
+
+    if (args.length === 2) {
+      [slotsPerItem] = requireNumbers("gear", [args[1]], 1);
+      if (slotsPerItem < 0) throw new Error("gear() slot value cannot be negative.");
+    }
+
+    const value = gear.quantity * slotsPerItem;
+    recordEvaluationSource(context, {
+      type: "gear",
+      key: `gear:${gear.search}:${slotsPerItem}`,
+      label: gear.matches.length === 1 ? gear.matches[0].name : formatGearLabel(args[0]),
+      search: gear.search,
+      quantity: gear.quantity,
+      slotsPerItem,
+      matches: gear.matches,
+      value
+    });
+    return value;
   }
 
   if (normalized === "min" || normalized === "max") {
@@ -171,10 +237,11 @@ function callFunction(name, args, actor) {
 }
 
 class QuickdrawExpressionParser {
-  constructor(expression, actor) {
+  constructor(expression, actor, context = null) {
     this.tokens = tokenize(expression);
     this.position = 0;
     this.actor = actor;
+    this.context = context;
   }
 
   current() {
@@ -245,7 +312,15 @@ class QuickdrawExpressionParser {
 
     if (token?.type === "reference") {
       this.position += 1;
-      return resolveActorReference(this.actor, token.value);
+      const value = resolveActorReference(this.actor, token.value);
+      recordEvaluationSource(this.context, {
+        type: "reference",
+        key: `reference:${String(token.value).toLowerCase()}`,
+        label: formatReferenceLabel(token.value),
+        path: token.value,
+        value
+      });
+      return value;
     }
 
     if (token?.type === "identifier") {
@@ -259,7 +334,7 @@ class QuickdrawExpressionParser {
         } while (this.match(","));
         this.expect(")");
       }
-      return callFunction(name, args, this.actor);
+      return callFunction(name, args, this.actor, this.context);
     }
 
     if (this.match("(")) {
@@ -272,19 +347,51 @@ class QuickdrawExpressionParser {
   }
 }
 
-function evaluateQuickdrawLimit(expression, actor) {
+function evaluateQuickdrawLimitDetails(expression, actor) {
   const source = String(expression ?? "").trim();
   if (!source) throw new Error("Quickdraw limit expression cannot be blank.");
 
-  const result = Number(new QuickdrawExpressionParser(source, actor).parse());
+  const context = { sources: [] };
+  const result = Number(new QuickdrawExpressionParser(source, actor, context).parse());
   if (!Number.isFinite(result)) throw new Error("Quickdraw limit expression did not produce a finite number.");
 
   // Preserve the previous meaning of 0 (unlimited) and use whole item counts.
-  return Math.max(0, Math.floor(result));
+  const total = Math.max(0, Math.floor(result));
+  if (!context.sources.length) {
+    context.sources.push({
+      type: "fixed",
+      key: "fixed",
+      label: total === 0 ? "Unlimited" : "Fixed Limit",
+      value: total,
+      occurrences: 1
+    });
+  } else {
+    // Account for fixed numbers, min/max/clamp effects, multiplication, and
+    // final flooring so the sidebar source rows reconcile to the shown total.
+    const sourceTotal = context.sources.reduce((sum, entry) => sum + Number(entry.value ?? 0), 0);
+    const adjustment = total - sourceTotal;
+    if (Math.abs(adjustment) > Number.EPSILON) {
+      context.sources.push({
+        type: "adjustment",
+        key: "expression-adjustment",
+        label: "Base",
+        value: adjustment,
+        occurrences: 1
+      });
+    }
+  }
+
+  return { expression: source, total, sources: context.sources };
+}
+
+function evaluateQuickdrawLimit(expression, actor) {
+  return evaluateQuickdrawLimitDetails(expression, actor).total;
 }
 
 export {
   countCarriedGear,
   evaluateQuickdrawLimit,
+  evaluateQuickdrawLimitDetails,
+  getCarriedGearMatches,
   resolveActorReference
 };

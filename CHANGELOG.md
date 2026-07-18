@@ -2,6 +2,11 @@
 
 ## Unreleased
 
+## 1.1.2
+
+- Added an optional per-item slot value to Quickdraw `gear()` expressions, such as `gear("bandolier", 2)`.
+- Added a native-style Quickdraw inventory sidebar card showing current/total selections and the evaluated actor and gear sources.
+
 ## 1.1.1
 
 - Refactored Quickdraw controls and per-group inventory sorting, and added safe per-character limit expressions with ability references, minimum/maximum functions, and carried gear counts.

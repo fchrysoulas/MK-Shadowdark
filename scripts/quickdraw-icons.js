@@ -1,4 +1,4 @@
-import { evaluateQuickdrawLimit } from "./quickdraw-limit.js";
+import { evaluateQuickdrawLimitDetails } from "./quickdraw-limit.js";
 
 (() => {
   const MODULE_ID = "mk-shadowdark";
@@ -64,20 +64,29 @@ import { evaluateQuickdrawLimit } from "./quickdraw-limit.js";
     console.warn(`${MODULE_ID} | ${SUBMODULE} |`, ...args);
   }
 
-  function getLimit(actor) {
+  function getLimitDetails(actor) {
     let expression = "3";
 
     try {
       expression = String(game.settings.get(MODULE_ID, "quickdrawLimit") ?? "3").trim() || "3";
-      return evaluateQuickdrawLimit(expression, actor);
+      return evaluateQuickdrawLimitDetails(expression, actor);
     } catch (error) {
       const warningKey = `${actor?.id ?? "unknown"}:${expression}`;
       if (!invalidLimitExpressionsWarned.has(warningKey)) {
         invalidLimitExpressionsWarned.add(warningKey);
         console.warn(`${MODULE_ID} | ${SUBMODULE} | Invalid limit expression "${expression}"; using 3.`, error);
       }
-      return 3;
+      return {
+        expression,
+        total: 3,
+        invalid: true,
+        sources: [{ type: "fixed", key: "fallback", label: "Invalid expression fallback", value: 3 }]
+      };
     }
+  }
+
+  function getLimit(actor) {
+    return getLimitDetails(actor).total;
   }
 
   function isQuickdraw(item) {
@@ -465,6 +474,86 @@ import { evaluateQuickdrawLimit } from "./quickdraw-limit.js";
     }
   }
 
+  function findInventorySidebar(root) {
+    const inventoryGrid = root.is?.(".inventory-grid")
+      ? root
+      : root.find(".inventory-grid").first();
+    if (!inventoryGrid?.length) return null;
+
+    const columns = inventoryGrid.children("div");
+    const sidebar = columns.last().children(".grid-1-columns").first();
+    if (sidebar?.length) return sidebar;
+
+    // Fallback for compatible sheet variants which wrap the sidebar grid.
+    const nestedSidebar = columns.last().find(".grid-1-columns").first();
+    return nestedSidebar?.length ? nestedSidebar : null;
+  }
+
+  function formatQuickdrawNumber(value) {
+    const numeric = Number(value);
+    if (!Number.isFinite(numeric)) return "0";
+    return Number.isInteger(numeric) ? String(numeric) : String(Math.round(numeric * 100) / 100);
+  }
+
+  function quickdrawSourceLabel(source) {
+    return String(source?.label ?? "Limit");
+  }
+
+  function quickdrawSourceValue(source, limit) {
+    if (source?.type === "fixed" && limit === 0) return "∞";
+    return formatQuickdrawNumber(source?.value);
+  }
+
+  function renderQuickdrawSummaryCard(app, html) {
+    const root = getInventoryRoot(html);
+    if (!root?.length) return;
+
+    root.find(".mk-quickdraw-card").remove();
+
+    const sidebar = findInventorySidebar(root);
+    if (!sidebar?.length) {
+      dwarn("Could not find inventory sidebar. Quickdraw summary will not inject.");
+      return;
+    }
+
+    const details = getLimitDetails(app.actor);
+    const current = countQuickdraw(app.actor);
+    const limit = Number(details.total);
+    const overLimit = limit > 0 && current > limit;
+    const totalText = limit === 0 ? "∞" : formatQuickdrawNumber(limit);
+
+    const card = $("<div>", {
+      class: `SD-box mk-quickdraw-card${overLimit || details.invalid ? " mk-warning" : ""}`,
+      "data-mk-quickdraw-expression": details.expression,
+      "aria-label": `Quickdraw ${current} of ${limit === 0 ? "unlimited" : totalText}`
+    });
+
+    const header = $("<div>", { class: "header" })
+      .append($("<label>").text("Quick"))
+      .append($("<span>"));
+    const content = $("<div>", { class: "content" });
+    const values = $("<div>", { class: "value-grid larger mk-quickdraw-card-values" })
+      .append($("<div>", { class: overLimit ? "mk-warning" : "" }).text(current))
+      .append($("<div>").text("/"))
+      .append($("<div>").text(totalText));
+
+    const sources = $("<div>", { class: "SD-grid left small mk-quickdraw-card-sources" });
+    for (const source of details.sources ?? []) {
+      sources
+        .append($("<div>", { class: "mk-quickdraw-source-value" }).text(quickdrawSourceValue(source, limit)))
+        .append($("<div>", { class: "mk-quickdraw-source-label" }).text(quickdrawSourceLabel(source)));
+    }
+
+    content.append(values, $("<hr>"), sources);
+    card.append(header, content);
+
+    const slotsCard = sidebar.children(".SD-box").first();
+    if (slotsCard?.length) slotsCard.after(card);
+    else sidebar.prepend(card);
+
+    dlog("quickdraw card", { current, limit, sources: details.sources });
+  }
+
   function injectQuickdrawToggles(app, html) {
     const rows = getInventoryRows(html);
     if (!rows?.length) return;
@@ -505,6 +594,7 @@ import { evaluateQuickdrawLimit } from "./quickdraw-limit.js";
         row.attr("data-mk-quickdraw", nowOn ? "true" : "false");
 
         sortInventoryGroups(html, app);
+        renderQuickdrawSummaryCard(app, html);
       };
 
       $btn.on("click", activateQuickdraw);
@@ -548,6 +638,7 @@ import { evaluateQuickdrawLimit } from "./quickdraw-limit.js";
     refreshQuickdrawRowState(app, html);
     if (isQuickdrawIconEnabled()) injectQuickdrawToggles(app, html);
     else sortInventoryGroups(html, app);
+    renderQuickdrawSummaryCard(app, html);
   }
 
   function onRender(app, html) {

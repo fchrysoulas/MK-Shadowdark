@@ -2,6 +2,7 @@ import {
   DEFAULT_PROFILE_ID,
   DEFAULT_PROFILES,
   MODULE_ID,
+  PROFILE_SCHEMA,
   SCENE_FLAG,
   SETTINGS,
   SUBMODULE,
@@ -43,6 +44,7 @@ export function registerSetting(key, data) {
 }
 
 export function deepClone(value) {
+  if (value === undefined || value === null) return value;
   if (globalThis.foundry?.utils?.deepClone) return foundry.utils.deepClone(value);
   return JSON.parse(JSON.stringify(value));
 }
@@ -115,7 +117,7 @@ export function activeGmIds() {
 }
 
 export function currentScene() {
-  return canvas?.scene ?? game.scenes?.current ?? null;
+  return globalThis.canvas?.scene ?? game.scenes?.current ?? null;
 }
 
 function rawSceneFlag(scene, key) {
@@ -123,6 +125,7 @@ function rawSceneFlag(scene, key) {
 }
 
 function getSceneFlag(scene, key, fallback = undefined) {
+  if (!scene) return fallback;
   try {
     const current = scene.getFlag?.(MODULE_ID, key);
     return current === undefined ? rawSceneFlag(scene, key) ?? fallback : current;
@@ -146,10 +149,34 @@ export function normalizeProfiles(rawValue) {
 
   const normalized = {};
   const source = Object.keys(parsed).length ? parsed : DEFAULT_PROFILES;
-  for (const [profileId, profileValue] of Object.entries(source)) {
+  for (const [profileId, profileValueRaw] of Object.entries(source)) {
     const id = slug(profileId);
-    normalized[id] = mergeObject(DEFAULT_PROFILES.default, profileValue ?? {});
-    normalized[id].name = String(profileValue?.name ?? profileId ?? "Default");
+    let profileValue = profileValueRaw ?? {};
+
+    const isLegacyDefault = id === DEFAULT_PROFILE_ID
+      && Number(profileValue?.profileSchema ?? 1) < PROFILE_SCHEMA
+      && String(profileValue?.name ?? "Default") === "Default";
+
+    if (isLegacyDefault) {
+      const preservedAuxiliary = deepClone(profileValue.auxiliaryTables ?? {});
+      delete preservedAuxiliary.morale;
+      profileValue = mergeObject(DEFAULT_PROFILES.default, {
+        name: "Shadowdark Core",
+        dayStart: profileValue.dayStart ?? DEFAULT_PROFILES.default.dayStart,
+        nightStart: profileValue.nightStart ?? DEFAULT_PROFILES.default.nightStart,
+        defaultTerrain: profileValue.defaultTerrain ?? DEFAULT_PROFILES.default.defaultTerrain,
+        defaultNumberAppearing: profileValue.defaultNumberAppearing ?? DEFAULT_PROFILES.default.defaultNumberAppearing,
+        terrains: deepClone(profileValue.terrains ?? DEFAULT_PROFILES.default.terrains),
+        auxiliaryTables: preservedAuxiliary,
+        outcomes: {
+          intent: deepClone(profileValue.outcomes?.intent ?? DEFAULT_PROFILES.default.outcomes.intent),
+        },
+      });
+    }
+
+    normalized[id] = mergeObject(DEFAULT_PROFILES.default, profileValue);
+    normalized[id].profileSchema = PROFILE_SCHEMA;
+    normalized[id].name = String(profileValue?.name ?? profileId ?? "Shadowdark Core");
   }
 
   if (!Object.keys(normalized).length) normalized.default = deepClone(DEFAULT_PROFILES.default);
@@ -199,10 +226,12 @@ export function getSceneEncounterContext(scene = currentScene()) {
   const stored = getSceneFlag(scene, SCENE_FLAG, {}) ?? {};
   const profileId = profiles[slug(stored.profileId)] ? slug(stored.profileId) : fallbackProfileId;
   const profile = profiles[profileId];
+  const dangerLevel = String(stored.dangerLevel ?? profile.defaultDangerLevel ?? "unsafe");
 
   return {
     profileId,
     terrain: String(stored.terrain ?? profile.defaultTerrain ?? Object.keys(profile.terrains ?? {})[0] ?? "Default"),
+    dangerLevel: profile.dangerLevels?.[dangerLevel] ? dangerLevel : String(profile.defaultDangerLevel ?? "unsafe"),
     period: ["auto", "day", "night"].includes(stored.period) ? stored.period : "auto",
     tableUuid: String(stored.tableUuid ?? ""),
   };
@@ -213,6 +242,7 @@ export async function setSceneEncounterContext(context, scene = currentScene()) 
   const normalized = {
     profileId: slug(context.profileId),
     terrain: String(context.terrain ?? "Default"),
+    dangerLevel: String(context.dangerLevel ?? "unsafe"),
     period: ["auto", "day", "night"].includes(context.period) ? context.period : "auto",
     tableUuid: String(context.tableUuid ?? ""),
   };

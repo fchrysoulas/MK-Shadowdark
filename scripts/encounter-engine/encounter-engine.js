@@ -6,6 +6,7 @@ import {
   WRAPPED_TIME_PASSES,
 } from "./constants.js";
 import {
+  activeGmIds,
   availableRollTables,
   deepClone,
   determinePeriod,
@@ -26,7 +27,13 @@ import {
   terrainNames,
   warn,
 } from "./helpers.js";
-import { buildEncounterData, drawEncounterResult } from "./resolver.js";
+import {
+  buildEncounterData,
+  dangerDefinition,
+  drawEncounterResult,
+  evaluateRoll,
+  rollTotal,
+} from "./resolver.js";
 import {
   bindEncounterCard,
   createEncounterMessage,
@@ -35,7 +42,44 @@ import {
   rerollEntireEncounter,
 } from "./chat.js";
 
-async function openEncounterDialog(options = {}) {
+function playerActors() {
+  return Array.from(game.actors ?? [])
+    .filter(actor => actor.type === "Player")
+    .sort((a, b) => String(a.name).localeCompare(String(b.name)));
+}
+
+function selectedPlayerActorUuid(options = {}) {
+  if (options.reactionActorUuid) return String(options.reactionActorUuid);
+  const controlled = globalThis.canvas?.tokens?.controlled ?? [];
+  const actor = controlled.find(token => token.actor?.type === "Player")?.actor;
+  return actor?.uuid ?? "";
+}
+
+function awarenessOptions(profile, selected = "determine") {
+  const options = profile.awareness?.options ?? DEFAULT_PROFILES.default.awareness.options;
+  return Object.entries(options).map(([value, label]) => `
+    <option value="${escapeHtml(value)}" ${value === selected ? "selected" : ""}>${escapeHtml(label)}</option>
+  `).join("");
+}
+
+function dangerLevelOptions(profile, selected = "unsafe") {
+  return Object.entries(profile.dangerLevels ?? DEFAULT_PROFILES.default.dangerLevels).map(([id, data]) => `
+    <option value="${escapeHtml(id)}" ${id === selected ? "selected" : ""}>
+      ${escapeHtml(data.label ?? id)} - every ${Number(data.interval ?? 1)} ${Number(data.interval ?? 1) === 1 ? "round/hour" : "rounds/hours"}
+    </option>
+  `).join("");
+}
+
+function reactionActorOptions(selectedUuid = "") {
+  const empty = `<option value="" ${selectedUuid ? "" : "selected"}>No CHA modifier</option>`;
+  return empty + playerActors().map(actor => `
+    <option value="${escapeHtml(actor.uuid)}" ${actor.uuid === selectedUuid ? "selected" : ""}>
+      ${escapeHtml(actor.name)} (${Number(actor.system?.abilities?.cha?.mod ?? 0) >= 0 ? "+" : ""}${Number(actor.system?.abilities?.cha?.mod ?? 0)} CHA)
+    </option>
+  `).join("");
+}
+
+export async function openEncounterDialog(options = {}) {
   if (!game.user?.isGM) {
     ui.notifications.warn("Only a GM can resolve an encounter.");
     return null;
@@ -65,12 +109,17 @@ async function openEncounterDialog(options = {}) {
     </option>
   `).join("");
 
+  const selectedDanger = String(options.dangerLevel ?? sceneContext.dangerLevel ?? initialProfile.data.defaultDangerLevel ?? "unsafe");
   const selectedPeriod = String(options.period ?? sceneContext.period ?? "auto");
   const selectedTable = String(options.tableUuid ?? sceneContext.tableUuid ?? "");
+  const selectedAwareness = String(options.awareness ?? initialProfile.data.awareness?.default ?? "determine");
+  const selectedReactionActor = selectedPlayerActorUuid(options);
+  const selectedReactionMode = String(options.reactionMode ?? "roll");
+  const intentEnabled = Boolean(options.rollIntent ?? initialProfile.data.optionalProcedures?.intent ?? false);
 
   const content = `
     <form class="mk-sd-encounter-dialog">
-      <p class="notes">Resolve the full encounter procedure. The selected profile supplies automatic terrain and time-of-day tables.</p>
+      <p class="notes">Uses the Shadowdark random encounter procedure. Check Encounter rolls for occurrence; Resolve Now skips that check.</p>
 
       <div class="form-group">
         <label>Profile</label>
@@ -80,7 +129,12 @@ async function openEncounterDialog(options = {}) {
       <div class="form-group">
         <label>Terrain</label>
         <select name="terrain">${terrainOptions}</select>
-        <p class="hint">Terrain choices come from the selected Encounter Profile.</p>
+      </div>
+
+      <div class="form-group">
+        <label>Danger Level</label>
+        <select name="dangerLevel">${dangerLevelOptions(initialProfile.data, selectedDanger)}</select>
+        <p class="hint">Unsafe checks every 3 rounds/hours, Risky every 2, Deadly every round/hour.</p>
       </div>
 
       <div class="form-group">
@@ -95,35 +149,78 @@ async function openEncounterDialog(options = {}) {
       <div class="form-group">
         <label>Encounter Table Override</label>
         <select name="tableUuid">${renderGroupedOptions(tables, selectedTable)}</select>
-        <p class="hint">Leave automatic to use the scene profile, terrain, and current time.</p>
+        <p class="hint">Leave automatic to use the profile terrain and time table.</p>
       </div>
 
       <div class="form-group">
-        <label>Remember for this Scene</label>
+        <label>Awareness</label>
+        <select name="awareness">${awarenessOptions(initialProfile.data, selectedAwareness)}</select>
+        <p class="hint">Shadowdark surprise follows the fiction and detection checks rather than a random surprise die.</p>
+      </div>
+
+      <div class="form-group">
+        <label>Reaction</label>
+        <select name="reactionMode">
+          <option value="roll" ${selectedReactionMode === "roll" ? "selected" : ""}>Roll if attitude is unclear</option>
+          <option value="hostile" ${selectedReactionMode === "hostile" ? "selected" : ""}>Attitude already hostile</option>
+          <option value="skip" ${selectedReactionMode === "skip" ? "selected" : ""}>Do not determine reaction</option>
+        </select>
+      </div>
+
+      <div class="form-group">
+        <label>Interacting Character</label>
+        <select name="reactionActorUuid">${reactionActorOptions(selectedReactionActor)}</select>
+        <p class="hint">Selecting a character adds their CHA modifier and means they reveal their presence and position.</p>
+      </div>
+
+      <div class="form-group">
+        <label>Expanded Intent Roll</label>
+        <input type="checkbox" name="rollIntent" ${intentEnabled ? "checked" : ""}>
+        <p class="hint">Intent is optional and is not part of the core Shadowdark encounter procedure.</p>
+      </div>
+
+      <div class="form-group">
+        <label>Remember Profile, Terrain, Danger and Time for this Scene</label>
         <input type="checkbox" name="rememberScene" ${options.rememberScene === false ? "" : "checked"}>
       </div>
     </form>
   `;
 
+  const readOptions = async html => {
+    const form = readDialogForm(html);
+    const context = {
+      profileId: String(form.profileId ?? initialProfile.id),
+      terrain: String(form.terrain ?? initialTerrain),
+      dangerLevel: String(form.dangerLevel ?? selectedDanger),
+      period: String(form.period ?? selectedPeriod),
+      tableUuid: String(form.tableUuid ?? ""),
+    };
+    if (form.rememberScene) await setSceneEncounterContext(context);
+    return {
+      ...options,
+      ...context,
+      awareness: String(form.awareness ?? selectedAwareness),
+      reactionMode: String(form.reactionMode ?? "roll"),
+      reactionActorUuid: String(form.reactionActorUuid ?? ""),
+      addReactionCha: Boolean(form.reactionActorUuid),
+      rollIntent: Boolean(form.rollIntent),
+      promptIfMissing: false,
+    };
+  };
+
   return Dialog.wait({
     title: "MK-Shadowdark Encounter Engine",
     content,
     buttons: {
+      check: {
+        icon: '<i class="fas fa-dice-one"></i>',
+        label: "Check Encounter",
+        callback: async html => checkEncounter(await readOptions(html)),
+      },
       resolve: {
         icon: '<i class="fas fa-dice-d20"></i>',
-        label: "Resolve Encounter",
-        callback: async html => {
-          const form = readDialogForm(html);
-          const context = {
-            profileId: String(form.profileId ?? initialProfile.id),
-            terrain: String(form.terrain ?? initialTerrain),
-            period: String(form.period ?? selectedPeriod),
-            tableUuid: String(form.tableUuid ?? ""),
-          };
-
-          if (form.rememberScene) await setSceneEncounterContext(context);
-          return resolveEncounter({ ...options, ...context, promptIfMissing: false });
-        },
+        label: "Resolve Now",
+        callback: async html => resolveEncounter(await readOptions(html)),
       },
       profiles: {
         icon: '<i class="fas fa-sliders"></i>',
@@ -136,18 +233,18 @@ async function openEncounterDialog(options = {}) {
         callback: () => null,
       },
     },
-    default: "resolve",
+    default: "check",
     close: () => null,
-  }, { width: 620 });
+  }, { width: 680 });
 }
 
-async function configureProfiles() {
+export async function configureProfiles() {
   if (!game.user?.isGM) return null;
 
   const current = JSON.stringify(getProfiles(), null, 2);
   const content = `
     <form class="mk-sd-encounter-profiles-dialog">
-      <p class="notes">Profiles are world-level JSON. Terrain entries may point to world or compendium RollTable UUIDs for day, night, or any time.</p>
+      <p class="notes">Profiles are world-level JSON. The default profile uses the Shadowdark procedure; optional intent and surprise dice can be enabled for expanded profiles.</p>
       <textarea name="profiles" spellcheck="false">${escapeHtml(current)}</textarea>
     </form>
   `;
@@ -178,11 +275,11 @@ async function configureProfiles() {
       },
       reset: {
         icon: '<i class="fas fa-rotate-left"></i>',
-        label: "Reset Defaults",
+        label: "Reset Shadowdark Defaults",
         callback: async () => {
           const defaults = JSON.stringify(DEFAULT_PROFILES, null, 2);
           await game.settings.set(MODULE_ID, SETTINGS.profiles, defaults);
-          ui.notifications.info("Encounter Profiles reset to defaults.");
+          ui.notifications.info("Encounter Profiles reset to Shadowdark defaults.");
           return deepClone(DEFAULT_PROFILES);
         },
       },
@@ -201,7 +298,79 @@ async function configureProfiles() {
   });
 }
 
-async function resolveEncounter(options = {}) {
+async function createEncounterCheckMessage(check) {
+  const whisper = setting(SETTINGS.whisper, true) ? activeGmIds() : [];
+  const result = check.isEncounter ? "Encounter" : "No encounter";
+  const intervalLabel = `${check.interval} ${check.interval === 1 ? "round/hour" : "rounds/hours"}`;
+  const content = `
+    <section class="mk-sd-encounter-card is-gm">
+      <header class="mk-sd-encounter-header">
+        <div><span class="mk-sd-encounter-kicker">Random Encounter Check</span><h3>${escapeHtml(result)}</h3></div>
+      </header>
+      <div class="mk-sd-encounter-grid">
+        <div class="mk-sd-encounter-row">
+          <span class="mk-sd-encounter-label">Danger</span>
+          <span class="mk-sd-encounter-value">${escapeHtml(check.label)}<small>Check every ${escapeHtml(intervalLabel)}</small></span>
+        </div>
+        <div class="mk-sd-encounter-row">
+          <span class="mk-sd-encounter-label">Roll</span>
+          <span class="mk-sd-encounter-value">${escapeHtml(`${check.total} on ${check.formula}`)}<small>Encounter on ${escapeHtml(check.encounterOn.join(", "))}</small></span>
+        </div>
+      </div>
+    </section>
+  `;
+
+  return ChatMessage.create({
+    speaker: ChatMessage.getSpeaker(),
+    style: globalThis.CONST?.CHAT_MESSAGE_STYLES?.OTHER ?? globalThis.CONST?.CHAT_MESSAGE_TYPES?.OTHER ?? 0,
+    content,
+    whisper,
+  });
+}
+
+export async function checkEncounter(options = {}) {
+  if (!game.user?.isGM) {
+    ui.notifications.warn("Only a GM can check for an encounter.");
+    return null;
+  }
+
+  if (!setting(SETTINGS.enabled, true)) return null;
+
+  const profiles = getProfiles();
+  const sceneContext = getSceneEncounterContext();
+  const profileRef = getProfile(options.profileId ?? sceneContext.profileId, profiles);
+  const profile = profileRef.data;
+  const danger = dangerDefinition(
+    profile,
+    String(options.dangerLevel ?? sceneContext.dangerLevel ?? profile.defaultDangerLevel ?? "unsafe")
+  );
+  const formula = String(danger.data.formula ?? "1d6");
+  const encounterOn = Array.isArray(danger.data.encounterOn) ? danger.data.encounterOn.map(Number) : [1];
+  const roll = await evaluateRoll(formula, "Random Encounter Check");
+  const total = rollTotal(roll, 0);
+  const isEncounter = encounterOn.includes(total);
+  const check = {
+    dangerLevel: danger.id,
+    label: String(danger.data.label ?? danger.id),
+    interval: Number(danger.data.interval ?? 1),
+    formula,
+    total,
+    encounterOn,
+    isEncounter,
+  };
+
+  const message = await createEncounterCheckMessage(check);
+  if (!isEncounter) return { check, message, encounter: null };
+
+  const encounter = await resolveEncounter({
+    ...options,
+    dangerLevel: danger.id,
+    source: options.source ?? "encounterCheck",
+  });
+  return { check, message, encounter };
+}
+
+export async function resolveEncounter(options = {}) {
   if (!game.user?.isGM) {
     ui.notifications.warn("Only a GM can resolve an encounter.");
     return null;
@@ -214,6 +383,7 @@ async function resolveEncounter(options = {}) {
   const profileRef = getProfile(options.profileId ?? sceneContext.profileId, profiles);
   const profile = profileRef.data;
   const terrain = String(options.terrain ?? sceneContext.terrain ?? profile.defaultTerrain ?? "Default");
+  const dangerLevel = String(options.dangerLevel ?? sceneContext.dangerLevel ?? profile.defaultDangerLevel ?? "unsafe");
   const requestedPeriod = String(options.period ?? sceneContext.period ?? "auto");
   const period = determinePeriod(profile, requestedPeriod);
   const explicitTableUuid = String(options.tableUuid ?? sceneContext.tableUuid ?? "");
@@ -221,7 +391,7 @@ async function resolveEncounter(options = {}) {
 
   if (!tableUuid) {
     if (options.promptIfMissing !== false) {
-      return openEncounterDialog({ ...options, profileId: profileRef.id, terrain, period: requestedPeriod });
+      return openEncounterDialog({ ...options, profileId: profileRef.id, terrain, dangerLevel, period: requestedPeriod });
     }
     ui.notifications.warn("No encounter RollTable is configured for this profile, terrain, and time.");
     return null;
@@ -243,11 +413,13 @@ async function resolveEncounter(options = {}) {
     profileId: profileRef.id,
     profile,
     terrain,
+    dangerLevel,
     requestedPeriod,
     period,
     tableUuid,
     tableName: table.name,
     draw,
+    options,
   });
 
   const message = await createEncounterMessage(data, { whisper: options.whisper });
@@ -317,7 +489,7 @@ function addRollTableContextOptions(_html, options) {
 function registerSettings() {
   registerSetting(SETTINGS.enabled, {
     name: "Encounter Engine | Enabled",
-    hint: "Enables the Phase 1 encounter resolver, chat card, scene control, and API.",
+    hint: "Enables the Shadowdark encounter resolver, chat card, scene control, and API.",
     scope: "world",
     config: false,
     type: Boolean,
@@ -362,7 +534,7 @@ function registerSettings() {
 
   registerSetting(SETTINGS.showDice3d, {
     name: "Encounter Engine | Show 3D Procedure Dice",
-    hint: "Shows the encounter procedure dice to GMs when Dice So Nice is active. Disabled by default to avoid many sequential dice animations.",
+    hint: "Shows encounter procedure dice to GMs when Dice So Nice is active.",
     scope: "world",
     config: false,
     type: Boolean,
@@ -418,7 +590,8 @@ function exposeApi() {
 
   module.api ??= {};
   module.api.encounters = {
-    version: 1,
+    version: 2,
+    check: checkEncounter,
     resolve: resolveEncounter,
     openDialog: openEncounterDialog,
     configureProfiles,

@@ -37,29 +37,16 @@
 /* Inventory quickdraw bolt                     */
 /* -------------------------------------------- */
 
-/*
- * Important:
- * The injected control uses the mk-quickdraw-toggle class.
- * Inactive/OFF buttons use var(--inactive-control).
- * The bolt is inline SVG so it does not depend on the Foundry Font Awesome version.
- */
-.shadowdark.sheet.player .item .mk-quickdraw-toggle,
-.shadowdark.sheet.player .item .mk-quickdraw-icon,
-.shadowdark.sheet.player .item .mk-quickdraw-button,
-.shadowdark.sheet.player .item .quickdraw-icon {
+/* Match Shadowdark's native inventory action links. The system uses these
+   variables and the same Font Awesome family in its v12-v14 releases. */
+.shadowdark.sheet.player .item .mk-has-quickdraw-toggle .mk-quickdraw-toggle {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  flex: 0 0 18px;
-  width: 18px;
-  height: 18px;
-  margin: 0 0.2rem 0 0;
-  border-radius: 50%;
+  margin: 0 4px;
+  color: var(--inactive-control);
   line-height: 1;
-  text-align: center;
   cursor: pointer;
-  opacity: 1;
-  visibility: visible;
 }
 
 .shadowdark.sheet.player .SD-list > li .actions.mk-has-quickdraw-toggle {
@@ -74,68 +61,28 @@
   min-width: 76px;
 }
 
-.shadowdark.sheet.player .item .mk-quickdraw-bolt {
-  display: block;
-  width: 14px;
-  height: 14px;
-  margin: 0;
-  overflow: visible;
-  fill: currentColor;
-  stroke: none;
-  pointer-events: none;
+/* Preserve the existing selected state, then let the later hover/focus rule
+   win with the same primary color used by light and stash controls. */
+.shadowdark.sheet.player .item .mk-has-quickdraw-toggle .mk-quickdraw-toggle.is-on {
+  color: #000;
 }
 
-/* Inactive/OFF Quickdraw uses the system inactive-control color.
-   Do not set font-size here; let the sheet/system control icon sizing. */
-.shadowdark.sheet.player .item .mk-quickdraw-toggle.is-off,
-.shadowdark.sheet.player .item .mk-quickdraw-toggle.is-off i,
-.shadowdark.sheet.player .item .mk-quickdraw-icon.is-off,
-.shadowdark.sheet.player .item .mk-quickdraw-icon.is-off i,
-.shadowdark.sheet.player .item .quickdraw-icon.is-off,
-.shadowdark.sheet.player .item .quickdraw-icon.is-off i {
-  color: var(--inactive-control);
-  fill: var(--inactive-control);
-  stroke: var(--inactive-control);
+.shadowdark.sheet.player .item .mk-has-quickdraw-toggle .mk-quickdraw-toggle:hover,
+.shadowdark.sheet.player .item .mk-has-quickdraw-toggle .mk-quickdraw-toggle:focus-visible {
+  color: var(--primary);
 }
 
-.shadowdark.sheet.player .item .mk-quickdraw-toggle:hover,
-.shadowdark.sheet.player .item .mk-quickdraw-icon:hover,
-.shadowdark.sheet.player .item .mk-quickdraw-button:hover,
-.shadowdark.sheet.player .item .quickdraw-icon:hover {
-  text-shadow: none;
+.shadowdark.sheet.player .item .mk-has-quickdraw-toggle .mk-quickdraw-toggle:focus-visible {
+  outline: 1px solid var(--primary);
+  outline-offset: 2px;
 }
 
-/* Active/selected Quickdraw = black bolt. */
-.shadowdark.sheet.player .item .mk-quickdraw-toggle.is-on,
-.shadowdark.sheet.player .item .mk-quickdraw-toggle.is-on i,
-.shadowdark.sheet.player .item.mk-quickdraw-active .mk-quickdraw-toggle,
-.shadowdark.sheet.player .item.mk-quickdraw-active .mk-quickdraw-toggle i,
-.shadowdark.sheet.player .item.mk-quickdraw-active .mk-quickdraw-icon,
-.shadowdark.sheet.player .item.mk-quickdraw-active .mk-quickdraw-icon i,
-.shadowdark.sheet.player .item.mk-quickdraw-active .quickdraw-icon,
-.shadowdark.sheet.player .item.mk-quickdraw-active .quickdraw-icon i {
-  color: #000 !important;
-  fill: #000 !important;
-  stroke: #000 !important;
-  opacity: 1 !important;
-  filter: none !important;
-}
-
-.shadowdark.sheet.player .item .mk-quickdraw-toggle i,
-.shadowdark.sheet.player .item .mk-quickdraw-toggle svg,
-.shadowdark.sheet.player .item .mk-quickdraw-icon i,
-.shadowdark.sheet.player .item .mk-quickdraw-icon svg,
-.shadowdark.sheet.player .item .mk-quickdraw-button i,
-.shadowdark.sheet.player .item .mk-quickdraw-button svg,
-.shadowdark.sheet.player .item .quickdraw-icon i,
-.shadowdark.sheet.player .item .quickdraw-icon svg {
+.shadowdark.sheet.player .item .mk-has-quickdraw-toggle .mk-quickdraw-toggle i {
   margin: 0;
   pointer-events: none;
 }
 
-.shadowdark.sheet.player .item.mk-quickdraw-disabled .mk-quickdraw-toggle,
-.shadowdark.sheet.player .item.mk-quickdraw-disabled .mk-quickdraw-icon,
-.shadowdark.sheet.player .item.mk-quickdraw-disabled .mk-quickdraw-button {
+.shadowdark.sheet.player .item.mk-quickdraw-disabled .mk-quickdraw-toggle {
   opacity: 0.35;
   cursor: not-allowed;
 }
@@ -144,9 +91,7 @@
 /* Name row placement                           */
 /* -------------------------------------------- */
 
-.shadowdark.sheet.player .item .item-name .mk-quickdraw-toggle,
-.shadowdark.sheet.player .item .item-name .mk-quickdraw-icon,
-.shadowdark.sheet.player .item .item-name .mk-quickdraw-button {
+.shadowdark.sheet.player .item .item-name .mk-quickdraw-toggle {
   vertical-align: middle;
 }
 
@@ -272,15 +217,4 @@
   background: rgba(201, 162, 95, 0.22);
   color: #fff0b8;
   text-shadow: none;
-}
-
-@media (max-width: 620px) {
-  .shadowdark.sheet.player .item .mk-quickdraw-toggle,
-  .shadowdark.sheet.player .item .mk-quickdraw-icon,
-  .shadowdark.sheet.player .item .mk-quickdraw-button,
-  .shadowdark.sheet.player .item .quickdraw-icon {
-    width: 20px;
-    height: 20px;
-    flex-basis: 20px;
-  }
 }

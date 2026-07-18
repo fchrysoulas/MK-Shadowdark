@@ -1,6 +1,7 @@
 # Changelog
 
-## Unreleased
+## 1.1.1
+- Refactored Quickdraw controls and per-group inventory sorting, and added safe per-character limit expressions with ability references, minimum/maximum functions, and carried gear counts.
 - Added Encounter Engine Phase 1 with terrain and time-of-day-aware RollTable selection.
 - Added complete encounter procedure resolution for number appearing, distance, activity, reaction, intent, surprise, disposition, and morale.
 - Added interactive GM chat cards with field rerolls, full rerolls, number rerolls, and a player-safe reveal action.

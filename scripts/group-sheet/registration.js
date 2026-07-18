@@ -101,8 +101,12 @@ function getActorCreationFormData(html) {
   const form = root?.querySelector?.("form");
   if (!form) return {};
 
-  if (globalThis.FormDataExtended) {
-    return new FormDataExtended(form).object;
+  const FormDataExtendedClass = typeof FormDataExtended === "function"
+    ? FormDataExtended
+    : globalThis.FormDataExtended;
+
+  if (FormDataExtendedClass) {
+    return new FormDataExtendedClass(form).object;
   }
 
   return Object.fromEntries(new FormData(form).entries());
@@ -138,10 +142,9 @@ function getActorFolderOptions(selectedFolder) {
   `;
 }
 
-function shouldOfferGroupActorType(data = {}) {
+function shouldOfferGroupActorType() {
   return game.user?.isGM &&
-    getSettingValue("enableGroupActors", true) &&
-    (!data.type || data.type === GROUP_ACTOR_DIALOG_TYPE);
+    getSettingValue("enableGroupActors", true);
 }
 
 function buildActorCreateDialogContent(data = {}) {
@@ -369,7 +372,10 @@ function registerGroupSheet() {
   registerGroupSheetSocket();
 
   const ActorsCollection =
-    globalThis.foundry?.documents?.collections?.Actors ?? globalThis.Actors;
+    globalThis.foundry?.documents?.collections?.Actors
+    // Foundry v12 exposes Actors as a legacy global binding which is not
+    // guaranteed to also be a property of globalThis.
+    ?? (typeof Actors === "function" ? Actors : globalThis.Actors);
 
   if (!ActorsCollection?.registerSheet) {
     throw new Error(`${MODULE_ID} | ${SUBMODULE} | Foundry Actor sheet registration API is unavailable.`);

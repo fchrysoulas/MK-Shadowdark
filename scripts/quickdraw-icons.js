@@ -1,3 +1,5 @@
+import { evaluateQuickdrawLimit } from "./quickdraw-limit.js";
+
 (() => {
   const MODULE_ID = "mk-shadowdark";
   const SUBMODULE = "Quickdraw";
@@ -13,6 +15,7 @@
     "renderActorSheetShadowdark"
   ];
   const renderRetryTimers = new WeakMap();
+  const invalidLimitExpressionsWarned = new Set();
 
   ensureStylesheet();
 
@@ -61,9 +64,20 @@
     console.warn(`${MODULE_ID} | ${SUBMODULE} |`, ...args);
   }
 
-  function getLimit() {
-    const v = Number(game.settings.get(MODULE_ID, "quickdrawLimit"));
-    return Number.isFinite(v) ? Math.max(0, Math.floor(v)) : 3;
+  function getLimit(actor) {
+    let expression = "3";
+
+    try {
+      expression = String(game.settings.get(MODULE_ID, "quickdrawLimit") ?? "3").trim() || "3";
+      return evaluateQuickdrawLimit(expression, actor);
+    } catch (error) {
+      const warningKey = `${actor?.id ?? "unknown"}:${expression}`;
+      if (!invalidLimitExpressionsWarned.has(warningKey)) {
+        invalidLimitExpressionsWarned.add(warningKey);
+        console.warn(`${MODULE_ID} | ${SUBMODULE} | Invalid limit expression "${expression}"; using 3.`, error);
+      }
+      return 3;
+    }
   }
 
   function isQuickdraw(item) {
@@ -186,7 +200,7 @@
       return await setQuickdrawNoRender(item, false);
     }
 
-    const limit = getLimit();
+    const limit = getLimit(app.actor);
     const currentCount = countQuickdraw(app.actor);
 
     if (limit > 0 && currentCount >= limit) {
@@ -197,22 +211,40 @@
     return await setQuickdrawNoRender(item, true);
   }
 
-  function titleFor(active) {
-    return active ? "Quickdraw (ON) - click to unset" : "Quickdraw (OFF) - click to set";
+  function quickdrawControlLabel() {
+    return "Toggle Quickdraw";
   }
 
-  function buildQuickdrawButton(active) {
-    return $(`
-      <a class="item-control mk-quickdraw-toggle ${active ? "is-on" : "is-off"}"
-         data-action="mk-quickdraw"
-         role="button"
-         aria-label="${titleFor(active)}"
-         title="${titleFor(active)}">
-        <svg class="mk-quickdraw-bolt" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
-          <path d="M13.6 1.5 3.8 13.2h7.1l-1.1 9.3 10.4-12.7h-7.1l.5-8.3Z"></path>
-        </svg>
-      </a>
-    `);
+  function syncQuickdrawButtonState(button, active) {
+    const title = quickdrawControlLabel();
+
+    button
+      .toggleClass("is-on", active)
+      .toggleClass("is-off", !active)
+      .attr({
+        "aria-label": title,
+        "aria-pressed": String(active),
+        "data-tooltip": title
+      });
+  }
+
+  function buildQuickdrawButton(item, active) {
+    // Match Shadowdark's native inventory actions (equip, light, and stash):
+    // a plain action link containing a Font Awesome icon. These classes and
+    // CSS variables are stable across the supported v12-v14 system releases.
+    const button = $("<a>", {
+      class: "mk-quickdraw-toggle",
+      "data-action": "mk-quickdraw",
+      "data-item-id": item?.id ?? item?._id ?? "",
+      role: "button",
+      tabindex: 0
+    }).append($("<i>", {
+      class: "fa-solid fa-bolt",
+      "aria-hidden": "true"
+    }));
+
+    syncQuickdrawButtonState(button, active);
+    return button;
   }
 
   function asJQuery(html) {
@@ -386,47 +418,26 @@
     else controls.append($btn);
   }
 
-  function isSpecialAbilitiesGroup(parentEl) {
-    const $parent = $(parentEl);
-    if (!$parent.length) return false;
+  function compareInventoryEntries(a, b) {
+    const quickdrawOrder = Number(isQuickdraw(b.item)) - Number(isQuickdraw(a.item));
+    if (quickdrawOrder !== 0) return quickdrawOrder;
 
-    const classIdText = [
-      $parent.attr("class") || "",
-      $parent.attr("id") || "",
-      $parent.attr("data-group") || "",
-      $parent.attr("data-category") || ""
-    ]
-      .join(" ")
-      .toLowerCase();
+    const nameOrder = String(a.item?.name ?? "").localeCompare(
+      String(b.item?.name ?? ""),
+      game.i18n?.lang,
+      { sensitivity: "base", numeric: true }
+    );
 
-    if (classIdText.includes("special-abilities") || classIdText.includes("specialabilities")) {
-      return true;
-    }
-
-    const container = $parent.closest("section, article, fieldset, .tab, .panel, .group, .items-list, .inventory-group, .grid, .flexcol, .flexrow").first();
-
-    const headerText = [
-      container.attr("class") || "",
-      container.attr("id") || "",
-      container.attr("data-group") || "",
-      container.attr("data-category") || "",
-      container.find("h1, h2, h3, h4, h5, .header, .group-header, .items-header, .section-header, .title, .label")
-        .map((_, el) => $(el).text())
-        .get()
-        .join(" ")
-    ]
-      .join(" ")
-      .toLowerCase();
-
-    return headerText.includes("special abilities");
+    return nameOrder || a.index - b.index;
   }
 
   /**
-   * Auto-sort quickdraw items first within inventory lists only.
-   * It never touches spells lists because rows are sourced only from inventory root.
-   * It also skips Special Abilities groups.
+   * Sort every item inside its existing inventory group. Quickdraw items come
+   * first, followed by all other items alphabetically. Rows never move between
+   * groups, and spell lists remain untouched because rows come from the
+   * inventory root only.
    */
-  function autoSortQuickdraw(html, app) {
+  function sortInventoryGroups(html, app) {
     if (!isAutoSortEnabled()) return;
 
     const rows = getInventoryRows(html);
@@ -441,7 +452,6 @@
 
       const parent = $row.closest("ol, ul").get(0);
       if (!parent) return;
-      if (isSpecialAbilitiesGroup(parent)) return;
 
       if (!groups.has(parent)) groups.set(parent, []);
       groups.get(parent).push({ rowEl: el, item, index: idx });
@@ -449,17 +459,7 @@
 
     for (const [parent, entries] of groups.entries()) {
       const parent$ = $(parent);
-
-      const anyEligible = entries.some((e) => isEligibleForBolt(e.item));
-      if (!anyEligible) continue;
-
-      const sorted = entries.slice().sort((a, b) => {
-        const aq = isEligibleForBolt(a.item) && isQuickdraw(a.item) ? 0 : 1;
-        const bq = isEligibleForBolt(b.item) && isQuickdraw(b.item) ? 0 : 1;
-
-        if (aq !== bq) return aq - bq;
-        return a.index - b.index;
-      });
+      const sorted = entries.slice().sort(compareInventoryEntries);
 
       for (const ent of sorted) parent$.append(ent.rowEl);
     }
@@ -489,9 +489,9 @@
       row.toggleClass("mk-quickdraw-active", active);
       row.attr("data-mk-quickdraw", active ? "true" : "false");
 
-      const $btn = buildQuickdrawButton(active);
+      const $btn = buildQuickdrawButton(item, active);
 
-      $btn.on("click", async (ev) => {
+      const activateQuickdraw = async (ev) => {
         ev.preventDefault();
         ev.stopPropagation();
 
@@ -499,24 +499,29 @@
         if (!ok) return;
 
         const nowOn = isQuickdraw(item);
-        $btn.toggleClass("is-on", nowOn).toggleClass("is-off", !nowOn);
-        $btn.attr("title", titleFor(nowOn));
+        syncQuickdrawButtonState($btn, nowOn);
         row.toggleClass("mk-quickdraw-item", nowOn);
         row.toggleClass("mk-quickdraw-active", nowOn);
         row.attr("data-mk-quickdraw", nowOn ? "true" : "false");
 
-        autoSortQuickdraw(html, app);
+        sortInventoryGroups(html, app);
+      };
+
+      $btn.on("click", activateQuickdraw);
+      $btn.on("keydown", ev => {
+        if (ev.key !== "Enter" && ev.key !== " ") return;
+        activateQuickdraw(ev);
       });
 
       insertQuickdrawButton(controls, $btn);
       row.closest("ol.SD-list.item-list, ul.SD-list.item-list").addClass("mk-has-quickdraw-column");
     }
 
-    autoSortQuickdraw(html, app);
+    sortInventoryGroups(html, app);
 
     dlog("quickdraw summary", {
       actor: app.actor?.name,
-      limit: getLimit(),
+      limit: getLimit(app.actor),
       currentQuickdraw: countQuickdraw(app.actor),
       autoSort: isAutoSortEnabled()
     });
@@ -542,6 +547,7 @@
     applyHighlightScope(html);
     refreshQuickdrawRowState(app, html);
     if (isQuickdrawIconEnabled()) injectQuickdrawToggles(app, html);
+    else sortInventoryGroups(html, app);
   }
 
   function onRender(app, html) {

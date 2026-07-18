@@ -51,9 +51,13 @@ import {
 import { clampNumber, getDialogFieldValue, numberOrZero, optionLabel } from "./utils.js";
 import { getPrimaryActiveGm } from "./users.js";
 
-const ActorSheetBase = globalThis.foundry?.appv1?.sheets?.ActorSheet ?? globalThis.ActorSheet;
+const ActorSheetBase = globalThis.foundry?.appv1?.sheets?.ActorSheet
+  // Foundry v12 exposes ActorSheet as a legacy global binding which is not
+  // guaranteed to also be a property of globalThis.
+  ?? (typeof ActorSheet === "function" ? ActorSheet : globalThis.ActorSheet);
 const TextEditorImplementation =
-  globalThis.foundry?.applications?.ux?.TextEditor?.implementation ?? globalThis.TextEditor;
+  globalThis.foundry?.applications?.ux?.TextEditor?.implementation
+  ?? (typeof TextEditor !== "undefined" ? TextEditor : globalThis.TextEditor);
 
 async function createGroupActor({ name = "New Group", folder = null } = {}) {
   if (!game.user.isGM) {

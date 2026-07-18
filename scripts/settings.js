@@ -161,7 +161,13 @@
       return;
     }
 
-    game.settings.register(MODULE_ID, key, { ...data, config: false });
+    game.settings.register(MODULE_ID, key, {
+      ...data,
+      // Keep the native settings visible if no compatible submenu application
+      // class is available. This prevents a failed custom UI from hiding every
+      // module setting.
+      config: FeatureSettingsForm ? false : data.config
+    });
   }
 
   function localize(value) {
@@ -220,9 +226,12 @@
     }));
   }
 
-  const FormApplicationBase = globalThis.foundry?.appv1?.api?.FormApplication ?? globalThis.FormApplication;
+  const FormApplicationBase = globalThis.foundry?.appv1?.api?.FormApplication
+    // Foundry v12 exposes FormApplication as a legacy global binding which is
+    // not guaranteed to also be a property of globalThis.
+    ?? (typeof FormApplication === "function" ? FormApplication : globalThis.FormApplication);
 
-  class FeatureSettingsForm extends FormApplicationBase {
+  const FeatureSettingsForm = FormApplicationBase ? class extends FormApplicationBase {
     static feature = null;
 
     static get defaultOptions() {
@@ -268,9 +277,14 @@
         await game.settings.set(MODULE_ID, key, value);
       }
     }
-  }
+  } : null;
 
   function registerFeatureMenus() {
+    if (!FeatureSettingsForm) {
+      console.warn(`${MODULE_ID} v${getModuleVersion()} | ${SUBMODULE} | FormApplication unavailable; using native settings controls.`);
+      return;
+    }
+
     for (const feature of FEATURE_SETTINGS) {
       class FeatureMenu extends FeatureSettingsForm {}
       FeatureMenu.feature = feature;
@@ -553,7 +567,7 @@
 
     registerSetting("quickdrawAutoSort", {
       name: "Quickdraw | Auto-sort Items",
-      hint: "Moves quickdraw-marked items to the top of inventory lists only.",
+      hint: "Sorts every inventory group with Quickdraw items first, followed by all remaining items alphabetically.",
       scope: "world",
       config: true,
       type: Boolean,
@@ -562,17 +576,12 @@
     });
 
     registerSetting("quickdrawLimit", {
-      name: "Quickdraw | Limit",
-      hint: "Maximum number of items a character may mark as Quickdraw.",
+      name: "Quickdraw | Limit Expression",
+      hint: "Maximum Quickdraw items per character. Examples: 3; max(1, @dex.mod); max(1, @dex.mod + gear(\"bandolier\")). gear() counts matching carried, non-stashed item quantities. 0 means unlimited.",
       scope: "world",
       config: true,
-      type: Number,
-      default: 3,
-      range: {
-        min: 0,
-        max: 20,
-        step: 1
-      },
+      type: String,
+      default: "3",
       onChange: refreshOpenActorSheets
     });
 

@@ -19,10 +19,26 @@ Modular quality-of-life tools, gameplay automation, party management, and charac
 - **Equipment Hands**: checks equipped weapons, shields, and hand-occupying gear against available hand slots, either warning or blocking invalid loadouts.
 - **Group Sheet**: adds a party/group actor sheet for members, shared inventory, notes, and Camping task assignment.
 - **Camping Tasks**: provides Bed Down, Cook, Craft, Entertain, Scavenge, Hunt, Keep Watch, and Predict tasks with DCs, tooltips, icons, and drag-and-drop member assignment.
-- **Quickdraw**: marks eligible inventory items as quickdraw, optionally auto-sorting them to the top of inventory lists.
+- **Quickdraw**: marks eligible inventory items as quickdraw, sorts each inventory group with Quickdraw items first, and supports fixed or actor-based limit expressions such as `3`, `max(1, @dex.mod)`, or `max(1, @dex.mod + gear("bandolier"))`.
 - **Time Passes**: lets the GM show a configurable time-passes splash and roll for a random encounter. Successful encounter rolls can automatically invoke the Encounter Engine.
 - **Token Shadows**: draws configurable soft shadows under tokens on the canvas.
 - **Corpse Token Automation**: changes dead NPC tokens to a corpse image, preserves/restores original token data, and aligns corpse placement using the token fall point.
+
+## Quickdraw Limit Expressions
+
+The Quickdraw limit is evaluated separately for each character. Supported examples:
+
+```text
+3
+max(1, @dex.mod)
+max(1, @dex.mod + gear("bandolier"))
+3 + gear("bandolier") * 2
+```
+
+- `@dex.mod` is shorthand for the character's DEX modifier. Other numeric roll-data paths such as `@abilities.str.mod` and full actor paths such as `@system.level.value` are also supported.
+- `gear("name")` counts matching carried, non-stashed item quantities using a case-insensitive partial name match.
+- Supported operators are `+`, `-`, `*`, `/`, `%`, and `^`. Supported functions are `min`, `max`, `floor`, `ceil`, `round`, `trunc`, `abs`, and `clamp`.
+- The result is rounded down to a whole number. `0` means unlimited. Invalid expressions fall back to `3` and write a warning to the console.
 
 ## Encounter Engine Phase 1
 

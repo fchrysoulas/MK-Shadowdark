@@ -16,15 +16,18 @@ export const SETTINGS = Object.freeze({
 });
 
 export const DEFAULT_PROFILE_ID = "default";
+export const PROFILE_SCHEMA = 2;
 
 export const DEFAULT_PROFILES = Object.freeze({
   default: {
-    name: "Default",
+    profileSchema: PROFILE_SCHEMA,
+    rulesMode: "shadowdark",
+    name: "Shadowdark Core",
     dayStart: 6,
     nightStart: 18,
     defaultTerrain: "Default",
+    defaultDangerLevel: "unsafe",
     defaultNumberAppearing: "1",
-    defaultMorale: 7,
     terrains: {
       Default: {
         any: "",
@@ -32,49 +35,51 @@ export const DEFAULT_PROFILES = Object.freeze({
         night: "",
       },
     },
+    dangerLevels: {
+      unsafe: { label: "Unsafe", interval: 3, formula: "1d6", encounterOn: [1] },
+      risky: { label: "Risky", interval: 2, formula: "1d6", encounterOn: [1] },
+      deadly: { label: "Deadly", interval: 1, formula: "1d6", encounterOn: [1] },
+    },
+    optionalProcedures: {
+      intent: false,
+      surpriseDice: false,
+    },
     auxiliaryTables: {
       distance: "",
       activity: "",
       reaction: "",
       intent: "",
-      morale: "",
+      treasure: "",
       surprise: "",
     },
     outcomes: {
       distance: {
         formula: "1d6",
         results: [
-          { min: 1, max: 2, label: "Close" },
-          { min: 3, max: 5, label: "Near" },
-          { min: 6, max: 6, label: "Far" },
+          { min: 1, max: 1, label: "Close" },
+          { min: 2, max: 4, label: "Near" },
+          { min: 5, max: 6, label: "Far" },
         ],
       },
       activity: {
-        formula: "1d12",
+        formula: "2d6",
         results: [
-          { min: 1, max: 1, label: "Resting or recovering" },
-          { min: 2, max: 2, label: "Searching the area" },
-          { min: 3, max: 3, label: "Hunting or tracking prey" },
-          { min: 4, max: 4, label: "Guarding territory" },
-          { min: 5, max: 5, label: "Traveling with purpose" },
-          { min: 6, max: 6, label: "Foraging or scavenging" },
-          { min: 7, max: 7, label: "Investigating a disturbance" },
-          { min: 8, max: 8, label: "Hiding from another threat" },
-          { min: 9, max: 9, label: "Arguing or reorganizing" },
-          { min: 10, max: 10, label: "Preparing an ambush" },
-          { min: 11, max: 11, label: "Carrying loot or a captive" },
-          { min: 12, max: 12, label: "Wounded and seeking safety" },
+          { min: 2, max: 4, label: "Hunting" },
+          { min: 5, max: 6, label: "Eating" },
+          { min: 7, max: 8, label: "Building or nesting" },
+          { min: 9, max: 10, label: "Socializing or playing" },
+          { min: 11, max: 11, label: "Guarding" },
+          { min: 12, max: 12, label: "Sleeping" },
         ],
       },
       reaction: {
         formula: "2d6",
         results: [
-          { min: 2, max: 2, label: "Attacks immediately", disposition: "hostile" },
-          { min: 3, max: 5, label: "Hostile", disposition: "hostile" },
-          { min: 6, max: 8, label: "Suspicious", disposition: "neutral" },
+          { min: -99, max: 6, label: "Hostile", disposition: "hostile" },
+          { min: 7, max: 8, label: "Suspicious", disposition: "neutral" },
           { min: 9, max: 9, label: "Neutral", disposition: "neutral" },
           { min: 10, max: 11, label: "Curious", disposition: "neutral" },
-          { min: 12, max: 12, label: "Friendly", disposition: "friendly" },
+          { min: 12, max: 99, label: "Friendly", disposition: "friendly" },
         ],
       },
       intent: {
@@ -90,14 +95,31 @@ export const DEFAULT_PROFILES = Object.freeze({
           { min: 8, max: 8, label: "Exploit the party's distraction" },
         ],
       },
-      morale: {
-        formula: "1d4+5",
-        results: [],
+      treasure: {
+        formula: "1d6",
+        results: [
+          { min: 1, max: 3, label: "No treasure", present: false },
+          { min: 4, max: 6, label: "Treasure present", present: true },
+        ],
+      },
+    },
+    awareness: {
+      default: "determine",
+      options: {
+        determine: "Determine during play",
+        bothAware: "Both sides aware",
+        partyUndetected: "Party undetected",
+        creaturesUndetected: "Creatures undetected",
+        neitherAware: "Neither side aware",
       },
     },
     surprise: {
       formula: "1d6",
       surprisedOn: [1],
+    },
+    morale: {
+      dc: 15,
+      ability: "wis",
     },
   },
 });

@@ -29,7 +29,7 @@ export function rollTotal(roll, fallback = 0) {
   return Number.isFinite(total) ? total : fallback;
 }
 
-function mappingForTotal(results, total) {
+export function mappingForTotal(results, total) {
   const result = Array.isArray(results)
     ? results.find(entry => total >= Number(entry.min) && total <= Number(entry.max))
     : null;
@@ -238,10 +238,11 @@ export async function rollMappedOutcome(profile, field) {
     total,
     formula,
     disposition: mapped?.disposition ?? "",
+    present: mapped?.present,
   };
 }
 
-export async function rollSurprise(profile) {
+export async function rollOptionalSurprise(profile) {
   const tableUuid = String(profile.auxiliaryTables?.surprise ?? "");
   if (tableUuid) {
     const draw = await drawTableText(tableUuid);
@@ -251,6 +252,7 @@ export async function rollSurprise(profile) {
       total: rollTotal(draw.roll, null),
       tableUuid,
       tableName: draw.tableName,
+      optional: true,
     };
   }
 
@@ -276,6 +278,17 @@ export async function rollSurprise(profile) {
     creatureTotal: rollTotal(creatureRoll, 0),
     partySurprised,
     creaturesSurprised,
+    optional: true,
+  };
+}
+
+export function awarenessResult(profile, requested = "determine") {
+  const options = profile.awareness?.options ?? DEFAULT_PROFILES.default.awareness.options;
+  const key = options[requested] ? requested : String(profile.awareness?.default ?? "determine");
+  return {
+    key,
+    label: String(options[key] ?? "Determine during play"),
+    formula: "Fiction and detection checks",
   };
 }
 
@@ -295,42 +308,148 @@ function actorText(actor) {
   return candidates.filter(Boolean).map(stripHtml).join(" ").toLowerCase();
 }
 
-export async function rollMorale(profile, encounter) {
-  const actor = encounter.actorUuid ? await resolveUuid(encounter.actorUuid) : null;
+export async function rollReaction(profile, encounter, options = {}) {
   const metadata = encounter.metadata ?? {};
+  const fixedReaction = String(metadata.reaction ?? metadata.fixedReaction ?? "").trim();
+  const reactionMode = String(metadata.reactionMode ?? options.reactionMode ?? "roll").toLowerCase();
 
-  if (metadata.moraleImmune === true || actorText(actor).includes("immune to morale")) {
-    return { label: "Immune", immune: true, threshold: null, formula: "" };
+  if (reactionMode === "skip" || reactionMode === "none") {
+    return {
+      label: "Not determined",
+      skipped: true,
+      disposition: String(metadata.disposition ?? "neutral"),
+      formula: "",
+    };
   }
 
-  if (metadata.morale !== undefined && metadata.morale !== null && metadata.morale !== "") {
-    const threshold = Number(metadata.morale);
-    if (Number.isFinite(threshold)) {
-      return { label: String(threshold), immune: false, threshold, formula: "Fixed" };
+  if (reactionMode === "hostile" || reactionMode === "fixed" || fixedReaction) {
+    const label = fixedReaction || "Hostile";
+    const normalized = label.toLowerCase();
+    return {
+      label,
+      fixed: true,
+      formula: "Fixed attitude",
+      disposition: String(metadata.disposition ?? (normalized.includes("friendly") ? "friendly" : normalized.includes("hostile") ? "hostile" : "neutral")),
+    };
+  }
+
+  let actor = null;
+  let chaModifier = 0;
+  if (options.addReactionCha && options.reactionActorUuid) {
+    actor = await resolveUuid(options.reactionActorUuid);
+    if (actor?.documentName === "Actor" && actor.type === "Player") {
+      chaModifier = Number(actor.system?.abilities?.cha?.mod ?? 0);
+    } else {
+      actor = null;
     }
   }
 
-  const tableUuid = String(profile.auxiliaryTables?.morale ?? "");
+  const baseFormula = String(profile.outcomes?.reaction?.formula ?? "2d6");
+  const formula = chaModifier ? `${baseFormula} ${chaModifier >= 0 ? "+" : "-"} ${Math.abs(chaModifier)}` : baseFormula;
+  const roll = await evaluateRoll(formula, "Reaction");
+  const total = rollTotal(roll, 0);
+  const tableUuid = String(profile.auxiliaryTables?.reaction ?? "");
+
+  let mapped = null;
+  let tableName = "";
+  if (tableUuid) {
+    const table = await resolveUuid(tableUuid);
+    if (table?.documentName === "RollTable") {
+      const results = Array.from(table.getResultsForRoll?.(total) ?? []);
+      const result = results[0] ?? null;
+      mapped = result ? { label: getRollTableResultText(result) } : null;
+      tableName = table.name;
+    }
+  }
+  mapped ??= mappingForTotal(profile.outcomes?.reaction?.results, total);
+
+  return {
+    label: mapped?.label ?? String(total),
+    total,
+    formula,
+    disposition: mapped?.disposition ?? "",
+    actorUuid: actor?.uuid ?? "",
+    actorName: actor?.name ?? "",
+    chaModifier,
+    revealsPosition: Boolean(actor),
+    tableUuid,
+    tableName,
+  };
+}
+
+export async function rollTreasure(profile, encounter) {
+  const metadata = encounter.metadata ?? {};
+  if (metadata.treasure === true || metadata.treasure === false) {
+    return {
+      label: metadata.treasure ? "Treasure present" : "No treasure",
+      present: Boolean(metadata.treasure),
+      formula: "Encounter result",
+    };
+  }
+
+  const tableUuid = String(profile.auxiliaryTables?.treasure ?? "");
   if (tableUuid) {
     const draw = await drawTableText(tableUuid);
-    const numeric = Number(String(draw.text).match(/-?\d+/)?.[0]);
+    const label = draw.text || "No treasure";
     return {
-      label: Number.isFinite(numeric) ? String(numeric) : draw.text,
-      immune: false,
-      threshold: Number.isFinite(numeric) ? numeric : null,
+      label,
+      present: !/no\s+treasure/i.test(label),
+      total: rollTotal(draw.roll, null),
       formula: draw.roll?.formula ?? "RollTable",
       tableUuid,
       tableName: draw.tableName,
     };
   }
 
-  const fixed = Number(profile.defaultMorale);
-  if (Number.isFinite(fixed)) {
-    return { label: String(fixed), immune: false, threshold: fixed, formula: "Profile" };
+  const rolled = await rollMappedOutcome(profile, "treasure");
+  return {
+    ...rolled,
+    present: Boolean(mappingForTotal(profile.outcomes?.treasure?.results, rolled.total)?.present),
+  };
+}
+
+export async function buildMoraleInfo(profile, encounter) {
+  const actor = encounter.actorUuid ? await resolveUuid(encounter.actorUuid) : null;
+  const metadata = encounter.metadata ?? {};
+  const text = actorText(actor);
+  const immune = metadata.moraleImmune === true
+    || /immune to morale checks?/i.test(text)
+    || /\bfearless\b/i.test(text);
+  const dc = Number(profile.morale?.dc ?? 15);
+  const ability = String(profile.morale?.ability ?? "wis").toLowerCase();
+  const modifier = Number(actor?.system?.abilities?.[ability]?.mod ?? 0);
+
+  if (immune) {
+    return {
+      label: "Immune",
+      immune: true,
+      dc,
+      ability,
+      modifier,
+      trigger: "Does not make morale checks",
+    };
   }
 
-  const rolled = await rollMappedOutcome(profile, "morale");
-  return { label: String(rolled.total), immune: false, threshold: rolled.total, formula: rolled.formula };
+  const count = Math.max(1, Number(encounter.count ?? 1));
+  const hpMax = Number(actor?.system?.attributes?.hp?.max ?? 0);
+  const isSolo = count === 1;
+  const triggerCount = isSolo ? null : Math.max(1, Math.floor(count / 2));
+  const trigger = isSolo
+    ? (hpMax > 0 ? `At ${Math.floor(hpMax / 2)} of ${hpMax} HP` : "At half HP")
+    : `When ${triggerCount} of ${count} remain`;
+
+  return {
+    label: `DC ${dc} ${ability.toUpperCase()}`,
+    immune: false,
+    dc,
+    ability,
+    modifier,
+    trigger,
+    startingCount: count,
+    triggerCount,
+    hpMax: hpMax || null,
+    status: "Not triggered",
+  };
 }
 
 export function deriveDisposition(reaction) {
@@ -343,32 +462,63 @@ export function deriveDisposition(reaction) {
   return "neutral";
 }
 
-export async function buildEncounterData({ profileId, profile, terrain, requestedPeriod, period, tableUuid, tableName, draw }) {
-  const encounter = draw.encounter;
+export function dangerDefinition(profile, dangerLevel) {
+  const levels = profile.dangerLevels ?? DEFAULT_PROFILES.default.dangerLevels;
+  const id = levels[dangerLevel] ? dangerLevel : String(profile.defaultDangerLevel ?? "unsafe");
+  return { id, data: levels[id] ?? DEFAULT_PROFILES.default.dangerLevels.unsafe };
+}
 
-  const [distance, activity, surprise, reaction, intent] = await Promise.all([
+export async function buildEncounterData({
+  profileId,
+  profile,
+  terrain,
+  dangerLevel,
+  requestedPeriod,
+  period,
+  tableUuid,
+  tableName,
+  draw,
+  options = {},
+}) {
+  const encounter = draw.encounter;
+  const activityPromise = encounter.metadata?.activity
+    ? Promise.resolve({ label: String(encounter.metadata.activity), formula: "Encounter result", total: null })
+    : rollMappedOutcome(profile, "activity");
+  const intentEnabled = Boolean(options.rollIntent ?? profile.optionalProcedures?.intent ?? false);
+  const intentPromise = encounter.metadata?.intent
+    ? Promise.resolve({ label: String(encounter.metadata.intent), formula: "Encounter result", total: null })
+    : intentEnabled ? rollMappedOutcome(profile, "intent") : Promise.resolve(null);
+  const surpriseDiceEnabled = Boolean(profile.optionalProcedures?.surpriseDice);
+
+  const [distance, activity, reaction, intent, treasure, optionalSurprise] = await Promise.all([
     rollMappedOutcome(profile, "distance"),
-    encounter.metadata?.activity
-      ? Promise.resolve({ label: String(encounter.metadata.activity), formula: "Encounter result", total: null })
-      : rollMappedOutcome(profile, "activity"),
-    rollSurprise(profile),
-    rollMappedOutcome(profile, "reaction"),
-    encounter.metadata?.intent
-      ? Promise.resolve({ label: String(encounter.metadata.intent), formula: "Encounter result", total: null })
-      : rollMappedOutcome(profile, "intent"),
+    activityPromise,
+    rollReaction(profile, encounter, options),
+    intentPromise,
+    rollTreasure(profile, encounter),
+    surpriseDiceEnabled ? rollOptionalSurprise(profile) : Promise.resolve(null),
   ]);
 
-  const morale = await rollMorale(profile, encounter);
+  const awareness = optionalSurprise ?? awarenessResult(
+    profile,
+    String(encounter.metadata?.awareness ?? options.awareness ?? profile.awareness?.default ?? "determine")
+  );
+  const morale = await buildMoraleInfo(profile, encounter);
   const disposition = String(encounter.metadata?.disposition ?? deriveDisposition(reaction));
+  const danger = dangerDefinition(profile, dangerLevel);
 
   return {
-    schema: 1,
+    schema: 2,
     generatedAt: Date.now(),
+    rulesMode: String(profile.rulesMode ?? "shadowdark"),
     profileId,
     profileName: profile.name ?? profileId,
     sceneId: currentScene()?.id ?? "",
     sceneName: currentScene()?.name ?? "",
     terrain,
+    dangerLevel: danger.id,
+    dangerLabel: String(danger.data.label ?? danger.id),
+    dangerInterval: Number(danger.data.interval ?? 1),
     requestedPeriod,
     period,
     tableUuid,
@@ -376,10 +526,18 @@ export async function buildEncounterData({ profileId, profile, terrain, requeste
     encounter,
     distance,
     activity,
-    surprise,
+    awareness,
     reaction,
     intent,
+    treasure,
     morale,
     disposition,
+    resolutionOptions: {
+      awareness: String(options.awareness ?? "determine"),
+      reactionMode: String(options.reactionMode ?? "roll"),
+      reactionActorUuid: String(options.reactionActorUuid ?? ""),
+      addReactionCha: Boolean(options.addReactionCha),
+      rollIntent: intentEnabled,
+    },
   };
 }

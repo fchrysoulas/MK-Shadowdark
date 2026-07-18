@@ -2,6 +2,12 @@
 
 ## Unreleased
 
+## 1.1.3
+
+- Added Focus Tracker with native Shadowdark 3.x/4.x casting support, configurable capacity and reminders, compact chat controls, summary-bar and token effect icons, legacy migration, and critical-failure spell-loss handling.
+- Added a v12-v14-compatible character-sheet height toggle that minimizes to the Summary Bar, restores the previous height, and keeps its implementation isolated in `scripts/minimize-sheet.js`.
+- Refined the Quick inventory card to show its source analysis on hover or keyboard focus, and reorganized the Quickdraw and Focus Tracker scripts into feature folders.
+
 ## 1.1.2
 
 - Added an optional per-item slot value to Quickdraw `gear()` expressions, such as `gear("bandolier", 2)`.

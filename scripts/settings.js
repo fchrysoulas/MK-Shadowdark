@@ -77,6 +77,30 @@
       ]
     },
     {
+      key: "focusTracker",
+      title: "Focus Tracker",
+      hint: "Configure Focus spell tracking, maintenance reminders, displays, and capacity.",
+      icon: "fas fa-brain",
+      settings: [
+        "focusTrackerEnabled", "focusTrackerTurnReminders", "focusTrackerDamagePrompts",
+        "focusTrackerSummaryBar", "focusTrackerTokenHud", "focusTrackerDefaultCapacity", "focusTrackerDebug"
+      ],
+      sections: [
+        {
+          title: "Automation",
+          settings: ["focusTrackerEnabled", "focusTrackerTurnReminders", "focusTrackerDamagePrompts"]
+        },
+        {
+          title: "Display",
+          settings: ["focusTrackerSummaryBar", "focusTrackerTokenHud"]
+        },
+        {
+          title: "Capacity and Diagnostics",
+          settings: ["focusTrackerDefaultCapacity", "focusTrackerDebug"]
+        }
+      ]
+    },
+    {
       key: "equipmentHands",
       title: "Equipment Hands",
       hint: "Configure equipped-hand rules, limits, dual wielding, and diagnostics.",
@@ -325,6 +349,15 @@
       }
     } catch (err) {
       console.error(`${MODULE_ID} v${getModuleVersion()} | ${SUBMODULE} | refreshOpenActorSheets error`, err);
+    }
+  }
+
+  function refreshFocusTrackerUi() {
+    refreshOpenActorSheets();
+    try {
+      void game.modules.get(MODULE_ID)?.api?.focus?.syncTokenIcons?.();
+    } catch (err) {
+      console.error(`${MODULE_ID} v${getModuleVersion()} | ${SUBMODULE} | refreshFocusTrackerUi error`, err);
     }
   }
 
@@ -588,6 +621,78 @@
     registerSetting("debug", {
       name: "Quickdraw | Debug Mode",
       hint: "Logs Quickdraw debug information to the browser console.",
+      scope: "world",
+      config: true,
+      type: Boolean,
+      default: false
+    });
+
+    /* -------------------- */
+    /* Focus Tracker        */
+    /* -------------------- */
+
+    registerSetting("focusTrackerEnabled", {
+      name: "Focus Tracker | Enabled",
+      hint: "Track active Focus spells and their maintenance checks.",
+      scope: "world",
+      config: true,
+      type: Boolean,
+      default: true,
+      onChange: refreshFocusTrackerUi
+    });
+
+    registerSetting("focusTrackerTurnReminders", {
+      name: "Focus Tracker | Start-of-Turn Reminders",
+      hint: "Whisper a Focus-check reminder when combat reaches the caster's turn.",
+      scope: "world",
+      config: true,
+      type: Boolean,
+      default: true
+    });
+
+    registerSetting("focusTrackerDamagePrompts", {
+      name: "Focus Tracker | Damage Prompts",
+      hint: "Prompt for an immediate Focus check when the caster's HP decreases.",
+      scope: "world",
+      config: true,
+      type: Boolean,
+      default: true
+    });
+
+    registerSetting("focusTrackerSummaryBar", {
+      name: "Focus Tracker | Actor Sheet Display",
+      hint: "Show active Focus spells in the MK-Shadowdark summary bar, with a sheet-header fallback.",
+      scope: "client",
+      config: true,
+      type: Boolean,
+      default: true,
+      onChange: refreshFocusTrackerUi
+    });
+
+    registerSetting("focusTrackerTokenHud", {
+      name: "Focus Tracker | Token Status Icon",
+      hint: "Show the Focus icon with the token's conditions and effects while the actor maintains Focus.",
+      scope: "world",
+      config: true,
+      type: Boolean,
+      default: true,
+      onChange: refreshFocusTrackerUi
+    });
+
+    registerSetting("focusTrackerDefaultCapacity", {
+      name: "Focus Tracker | Default Focus Capacity",
+      hint: "Maximum simultaneous Focus spells unless an actor-specific capacity overrides it.",
+      scope: "world",
+      config: true,
+      type: Number,
+      default: 1,
+      range: { min: 1, max: 4, step: 1 },
+      onChange: refreshFocusTrackerUi
+    });
+
+    registerSetting("focusTrackerDebug", {
+      name: "Focus Tracker | Debug Logging",
+      hint: "Write Focus Tracker diagnostics to the browser console.",
       scope: "world",
       config: true,
       type: Boolean,

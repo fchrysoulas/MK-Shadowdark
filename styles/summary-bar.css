@@ -40,6 +40,43 @@
   margin-top: 3px;
 }
 
+.window-header .mk-sheet-height-toggle {
+  align-items: center;
+  background: transparent;
+  border: 0;
+  color: inherit;
+  cursor: pointer;
+  display: inline-flex;
+  flex: 0 0 auto;
+  height: 24px;
+  justify-content: center;
+  margin: 0;
+  padding: 0 5px;
+  width: 26px;
+}
+
+.window-header .mk-sheet-height-toggle:hover,
+.window-header .mk-sheet-height-toggle:focus-visible,
+.window-header .mk-sheet-height-toggle.active {
+  color: var(--color-text-light-highlight, #fff);
+  text-shadow: 0 0 5px var(--color-shadow-primary, #ff6400);
+}
+
+.window-app.mk-sheet-height-collapsed,
+.application.mk-sheet-height-collapsed,
+.app.mk-sheet-height-collapsed {
+  height: var(--mk-sheet-collapsed-height) !important;
+  min-height: var(--mk-sheet-collapsed-height) !important;
+  max-height: var(--mk-sheet-collapsed-height) !important;
+  overflow: hidden !important;
+}
+
+.window-app.mk-sheet-height-collapsed > .window-content,
+.application.mk-sheet-height-collapsed > .window-content,
+.app.mk-sheet-height-collapsed > .window-content {
+  overflow: hidden !important;
+}
+
 .mk-character-sheet-bar__main,
 .mk-character-sheet-bar__chips {
   display: flex;

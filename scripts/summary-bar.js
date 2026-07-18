@@ -23,11 +23,12 @@ import { reportLuckChange } from "./chat-reporting.js";
   const ABILITY_ELEMENTS = new Set(["STR", "DEX", "CON", "INT", "WIS", "CHA"]);
   const ACTOR_SHEET_RENDER_HOOKS = [
     "renderActorSheet",
+    "renderActorSheetSD",
+    "renderPlayerSheetSD",
     "renderShadowdarkActorSheet",
     "renderShadowdarkActorSheetV2",
     "renderActorSheetShadowdark"
   ];
-
   ensureStylesheet();
 
   Hooks.once("init", () => log("initialized"));
@@ -64,7 +65,7 @@ import { reportLuckChange } from "./chat-reporting.js";
     if (!root?.querySelector || !isShadowdarkPlayerSheet(app, root)) return;
 
     const form = getSheetForm(root);
-    const windowEl = getWindowElement(root);
+    const windowEl = getWindowElement(app, root);
     cleanupSummaryBar(root, form, windowEl);
 
     if (!getSetting(SETTINGS.ENABLED, true)) return;
@@ -111,8 +112,10 @@ import { reportLuckChange } from "./chat-reporting.js";
     return root.querySelector?.("form.shadowdark.sheet.player, form") ?? root;
   }
 
-  function getWindowElement(root) {
-    return root.closest?.(".window-app, .app") ?? root;
+  function getWindowElement(app, root) {
+    const appElement = getRootElement(app?.element);
+    if (appElement?.querySelector?.(".window-header")) return appElement;
+    return root.closest?.(".window-app, .application, .app") ?? root;
   }
 
   function cleanupSummaryBar(root, form, windowEl) {
@@ -156,7 +159,7 @@ import { reportLuckChange } from "./chat-reporting.js";
 
   function injectSummaryBar(app, root, data) {
     const actor = app.actor ?? app.object;
-    if (!actor) return;
+    if (!actor) return null;
 
     const bar = document.createElement("div");
     bar.className = "mk-character-sheet-bar flex0";
@@ -181,6 +184,7 @@ import { reportLuckChange } from "./chat-reporting.js";
     bar.querySelectorAll('[data-mk-action="death-timer"]').forEach(element => {
       element.addEventListener("click", event => onDeathTimer(event, actor));
     });
+    return bar;
   }
 
   function insertSummaryBar(root, bar) {

@@ -1,14 +1,10 @@
 # Changelog
 
+## Unreleased
+
 ## 1.1.1
+
 - Refactored Quickdraw controls and per-group inventory sorting, and added safe per-character limit expressions with ability references, minimum/maximum functions, and carried gear counts.
-- Added Encounter Engine Phase 1 with terrain and time-of-day-aware RollTable selection.
-- Added complete encounter procedure resolution for number appearing, distance, activity, reaction, intent, surprise, disposition, and morale.
-- Added interactive GM chat cards with field rerolls, full rerolls, number rerolls, and a player-safe reveal action.
-- Added reusable Encounter Profiles, scene-specific encounter context flags, world and compendium RollTable support, and a public module API.
-- Integrated successful Time Passes encounter rolls with the Encounter Engine.
-- Added support for direct Actor table results, text results such as `2d6 Goblins (Night)`, and optional encounter metadata stored in `flags.mk-shadowdark.encounter`.
-- Validated the feature design against the public Shadowdark system `release-3.5.0` source without using the uploaded system archive.
 - Revised Encounter Engine Phase 1 to follow the Shadowdark random encounter procedure by default.
 - Added Unsafe, Risky, and Deadly danger levels with checks every 3, 2, or 1 crawling rounds/travel hours and encounters on 1 on 1d6.
 - Corrected starting distance to 1 Close, 2-4 Near, and 5-6 Far on 1d6.

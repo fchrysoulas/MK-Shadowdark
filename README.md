@@ -20,8 +20,6 @@ Modular quality-of-life tools, gameplay automation, party management, and charac
 - **Group Sheet**: adds a party/group actor sheet for members, shared inventory, notes, and Camping task assignment.
 - **Camping Tasks**: provides Bed Down, Cook, Craft, Entertain, Scavenge, Hunt, Keep Watch, and Predict tasks with DCs, tooltips, icons, and drag-and-drop member assignment.
 - **Quickdraw**: marks eligible inventory items as quickdraw, sorts each inventory group with Quickdraw items first, and supports fixed or actor-based limit expressions such as `3`, `max(1, @dex.mod)`, or `max(1, @dex.mod + gear("bandolier"))`.
-- **Time Passes**: lets the GM show a configurable time-passes splash and roll for a random encounter. Successful encounter rolls can automatically invoke the Encounter Engine.
-- **Quickdraw**: marks eligible inventory items as quickdraw, optionally auto-sorting them to the top of inventory lists.
 - **Time Passes**: lets the GM choose 1d6, 2d6, or 3d6 for a time-passes encounter check. An encounter occurs if any die shows 1, and successful checks can invoke the Encounter Engine.
 - **Token Shadows**: draws configurable soft shadows under tokens on the canvas.
 - **Corpse Token Automation**: changes dead NPC tokens to a corpse image, preserves/restores original token data, and aligns corpse placement using the token fall point.

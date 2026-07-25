@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Fixed Focus spell casting in Foundry VTT v12 attempting to position an unbound Token HUD.
+
 ## 1.1.3
 
 - Added Focus Tracker with native Shadowdark 3.x/4.x casting support, configurable capacity and reminders, compact chat controls, summary-bar and token effect icons, legacy migration, and critical-failure spell-loss handling.

@@ -1015,7 +1015,12 @@
       canvas?.tokens?.placeables
         ?.filter(token => token.actor?.uuid === actor?.uuid || token.actor?.id === actor?.id)
         ?.forEach(token => token.refresh?.());
-      canvas?.hud?.token?.render?.();
+
+      // In Foundry v12, rendering an unbound TokenHUD reaches setPosition() with
+      // no Token object and throws while reading its bounds. Only rerender a HUD
+      // that is already open and still bound to a valid Token.
+      const tokenHud = canvas?.hud?.token;
+      if (tokenHud?.rendered && tokenHud.object?.bounds) tokenHud.render?.(false);
     } catch (_err) {
       // Canvas refresh is optional.
     }

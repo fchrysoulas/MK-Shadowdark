@@ -26,8 +26,8 @@
 }
 
 .shadowdark.sheet.mk-character-sheet-tweaks .SD-nav a {
-  margin: 0;
-  padding: 7px;
+  margin: 0px;
+  padding: 0px;
   background: #000000 !important;
   background-image: none !important;
   color: #999999;

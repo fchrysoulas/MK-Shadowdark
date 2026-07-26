@@ -1,0 +1,763 @@
+/* MK-Shadowdark Paper Chat
+ * Scoped to body.mk-paper-chat and intentionally independent from the
+ * module's chat-reporting feature.
+ */
+
+body.mk-paper-chat :is(#chat-log, .chat-log) :is(.message, .chat-message) {
+  --mk-paper-chat-ink: #2d241b;
+  --mk-paper-chat-muted: #665748;
+  --mk-paper-chat-accent: #7d211c;
+  --mk-paper-chat-dice-bg: rgba(100, 75, 52, 0.1);
+  --mk-paper-chat-dice-border: rgba(75, 54, 39, 0.38);
+  --mk-paper-chat-button-bg: rgba(125, 33, 28, 0.1);
+  --mk-paper-chat-button-border: rgba(91, 51, 35, 0.52);
+  --mk-paper-chat-divider-image: url("../assets/rpg-ui/frames/brown_line.webp");
+  position: relative;
+  isolation: isolate;
+  min-height: 82px;
+  margin: 3px 0;
+  padding: 18px 20px 22px;
+  overflow: visible;
+  border: 0 !important;
+  border-radius: 0;
+  box-shadow: none;
+  color: var(--mk-paper-chat-ink);
+  text-shadow: none;
+}
+
+/* Parchment Scroll: the original rough-edged treatment. */
+body.mk-paper-chat--parchment-scroll :is(#chat-log, .chat-log) :is(.message, .chat-message) {
+  background:
+    url("../assets/rpg-ui/other/journal.webp")
+    center / 100% 100%
+    no-repeat !important;
+}
+
+/* Clean Parchment: restrained border and maximum readability. */
+body.mk-paper-chat--clean-parchment :is(#chat-log, .chat-log) :is(.message, .chat-message) {
+  min-height: 0;
+  padding: 14px 16px 16px;
+  border: 1px solid rgba(91, 68, 46, 0.48) !important;
+  border-radius: 4px;
+  background:
+    linear-gradient(rgba(243, 226, 190, 0.22), rgba(197, 166, 119, 0.1)),
+    url("../assets/rpg-ui/other/paper_texture.webp")
+    center / cover
+    no-repeat !important;
+  box-shadow:
+    0 1px 3px rgba(31, 20, 12, 0.28),
+    inset 0 0 16px rgba(91, 58, 31, 0.08);
+}
+
+/* Dark Grimoire: leather, ivory ink, and restrained blood-red accents. */
+body.mk-paper-chat--dark-grimoire :is(#chat-log, .chat-log) :is(.message, .chat-message) {
+  --mk-paper-chat-ink: #e3d6bd;
+  --mk-paper-chat-muted: #aa9d87;
+  --mk-paper-chat-accent: #c14c40;
+  --mk-paper-chat-dice-bg: rgba(0, 0, 0, 0.28);
+  --mk-paper-chat-dice-border: rgba(157, 64, 53, 0.62);
+  --mk-paper-chat-button-bg: rgba(135, 37, 31, 0.2);
+  --mk-paper-chat-button-border: rgba(181, 69, 57, 0.62);
+  --mk-paper-chat-divider-image: url("../assets/rpg-ui/frames/red_line.webp");
+  min-height: 0;
+  padding: 15px 17px 18px;
+  border: 1px solid rgba(106, 58, 50, 0.68) !important;
+  border-radius: 3px;
+  background:
+    linear-gradient(rgba(8, 8, 8, 0.08), rgba(0, 0, 0, 0.24)),
+    url("../assets/rpg-ui/frames/chat-background.webp")
+    center / cover
+    no-repeat !important;
+  box-shadow:
+    0 2px 6px rgba(0, 0, 0, 0.45),
+    inset 0 0 18px rgba(0, 0, 0, 0.42);
+}
+
+/* Torn Field Note: a safe distressed silhouette with a generous content inset.
+ * Do not mask the message itself: Foundry roll cards can extend close to the
+ * edges and would otherwise lose labels, controls, and dice results.
+ */
+body.mk-paper-chat--torn-field-note :is(#chat-log, .chat-log) :is(.message, .chat-message) {
+  --mk-paper-chat-ink: #17120d;
+  --mk-paper-chat-muted: #41362c;
+  --mk-paper-chat-accent: #741f19;
+  --mk-paper-chat-dice-bg: rgba(255, 248, 226, 0.52);
+  --mk-paper-chat-dice-border: rgba(61, 43, 29, 0.52);
+  --mk-paper-chat-button-bg: rgba(255, 247, 221, 0.44);
+  --mk-paper-chat-button-border: rgba(74, 47, 31, 0.58);
+  min-height: 0;
+  margin: 5px 1px;
+  padding: 19px 22px 22px;
+  overflow: hidden;
+  border: 1px solid rgba(76, 52, 34, 0.42) !important;
+  background:
+    linear-gradient(
+      90deg,
+      rgba(82, 47, 28, 0.11) 0,
+      transparent 7%,
+      transparent 93%,
+      rgba(82, 47, 28, 0.11) 100%
+    ),
+    linear-gradient(rgba(255, 249, 229, 0.74), rgba(236, 216, 178, 0.58)),
+    url("../assets/rpg-ui/other/paper_texture.webp")
+    center / cover
+    no-repeat !important;
+  box-shadow:
+    inset 0 0 18px rgba(73, 43, 24, 0.14),
+    inset 0 0 0 1px rgba(245, 226, 186, 0.24);
+  clip-path: polygon(
+    0.7% 5px,
+    4% 2px,
+    9% 4px,
+    15% 1px,
+    23% 3px,
+    32% 0,
+    43% 3px,
+    54% 1px,
+    65% 4px,
+    76% 1px,
+    87% 3px,
+    96% 1px,
+    99.3% 6px,
+    100% 18%,
+    99.2% 33%,
+    100% 49%,
+    99.1% 66%,
+    100% 84%,
+    99.2% calc(100% - 6px),
+    95% calc(100% - 2px),
+    86% calc(100% - 5px),
+    76% calc(100% - 1px),
+    65% calc(100% - 4px),
+    54% 100%,
+    43% calc(100% - 3px),
+    32% 100%,
+    21% calc(100% - 4px),
+    11% calc(100% - 1px),
+    4% calc(100% - 5px),
+    0.8% calc(100% - 8px),
+    0 82%,
+    0.8% 65%,
+    0 48%,
+    0.9% 31%,
+    0 16%
+  );
+  filter: drop-shadow(0 2px 2px rgba(28, 18, 11, 0.34));
+  font-family: var(--font-primary, "Signika", "Segoe UI", sans-serif);
+  font-size: 14px;
+  font-weight: 500;
+  line-height: 1.35;
+}
+
+body.mk-paper-chat--torn-field-note :is(#chat-log, .chat-log) :is(.message, .chat-message) .message-header {
+  margin-bottom: 10px;
+  padding: 0 2px 7px;
+}
+
+body.mk-paper-chat--torn-field-note :is(#chat-log, .chat-log) :is(.message, .chat-message) .message-header::after {
+  right: 0;
+  left: 0;
+  height: 3px;
+  opacity: 0.46;
+}
+
+body.mk-paper-chat--torn-field-note :is(#chat-log, .chat-log) :is(.message, .chat-message) .message-content {
+  padding: 0 2px 3px;
+  overflow: visible;
+}
+
+body.mk-paper-chat--torn-field-note :is(#chat-log, .chat-log) :is(.message, .chat-message) :is(
+  .message-sender,
+  .message-content,
+  .message-content p,
+  .message-content span,
+  .message-content label,
+  .message-content li,
+  .message-content td,
+  .message-content th
+) {
+  color: var(--mk-paper-chat-ink) !important;
+  text-shadow: none !important;
+  opacity: 1;
+}
+
+body.mk-paper-chat--torn-field-note :is(#chat-log, .chat-log) :is(.message, .chat-message) :is(
+  .message-metadata,
+  .flavor-text,
+  .whisper-to
+) {
+  color: var(--mk-paper-chat-muted) !important;
+  opacity: 1;
+}
+
+body.mk-paper-chat--torn-field-note :is(#chat-log, .chat-log) :is(.message, .chat-message) .message-content :is(
+  .shadowdark.roll-card,
+  .shadowdark.item-card,
+  .shadowdark.welcome-message
+) {
+  border-color: rgba(70, 48, 32, 0.36);
+  background: rgba(255, 250, 234, 0.26) !important;
+  color: var(--mk-paper-chat-ink) !important;
+}
+
+body.mk-paper-chat--torn-field-note :is(#chat-log, .chat-log) :is(.message, .chat-message) .message-content :is(
+  a,
+  .rollable,
+  [data-action]
+) {
+  color: var(--mk-paper-chat-accent) !important;
+  font-weight: 700;
+  text-shadow: none !important;
+}
+
+/* Illuminated Manuscript: ivory vellum with restrained red/gold rubrication. */
+body.mk-paper-chat--illuminated-manuscript :is(#chat-log, .chat-log) :is(.message, .chat-message) {
+  --mk-paper-chat-ink: #2c1b12;
+  --mk-paper-chat-muted: #6b4938;
+  --mk-paper-chat-accent: #8d1d17;
+  --mk-paper-chat-dice-bg: rgba(255, 249, 225, 0.52);
+  --mk-paper-chat-dice-border: rgba(151, 111, 35, 0.64);
+  --mk-paper-chat-button-bg: rgba(143, 31, 24, 0.08);
+  --mk-paper-chat-button-border: rgba(143, 31, 24, 0.48);
+  --mk-paper-chat-divider-image: linear-gradient(
+    90deg,
+    transparent,
+    #a77b22 16%,
+    #8d1d17 50%,
+    #a77b22 84%,
+    transparent
+  );
+  min-height: 0;
+  padding: 17px 19px 20px;
+  border: 1px solid #8d1d17 !important;
+  border-radius: 5px;
+  background:
+    linear-gradient(rgba(255, 250, 230, 0.66), rgba(238, 216, 170, 0.42)),
+    url("../assets/rpg-ui/other/paper_texture.webp")
+    center / cover
+    no-repeat !important;
+  box-shadow:
+    inset 0 0 0 2px rgba(171, 128, 38, 0.5),
+    inset 0 0 18px rgba(101, 62, 26, 0.1),
+    0 2px 4px rgba(35, 21, 12, 0.3);
+  font-family: Georgia, "Times New Roman", serif;
+}
+
+body.mk-paper-chat--illuminated-manuscript :is(#chat-log, .chat-log) :is(.message, .chat-message) .message-sender {
+  color: #711812;
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: 1.08em;
+}
+
+body.mk-paper-chat--illuminated-manuscript :is(#chat-log, .chat-log) :is(.message, .chat-message) .message-header::before {
+  display: inline-block;
+  margin-right: 6px;
+  content: "❧";
+  color: #a77b22;
+  font-size: 1.15em;
+}
+
+/* Dungeon Ledger: ruled paper and compact, utilitarian typography. */
+body.mk-paper-chat--dungeon-ledger :is(#chat-log, .chat-log) :is(.message, .chat-message) {
+  --mk-paper-chat-ink: #1c2429;
+  --mk-paper-chat-muted: #46545b;
+  --mk-paper-chat-accent: #244f69;
+  --mk-paper-chat-dice-bg: rgba(219, 218, 205, 0.52);
+  --mk-paper-chat-dice-border: rgba(39, 57, 67, 0.58);
+  --mk-paper-chat-button-bg: rgba(45, 71, 84, 0.08);
+  --mk-paper-chat-button-border: rgba(45, 71, 84, 0.48);
+  --mk-paper-chat-divider-image: repeating-linear-gradient(
+    90deg,
+    #3f5968 0 6px,
+    transparent 6px 10px
+  );
+  min-height: 0;
+  padding: 13px 15px 15px 39px;
+  border: 1px solid rgba(48, 66, 76, 0.65) !important;
+  border-radius: 2px;
+  background:
+    linear-gradient(
+      90deg,
+      transparent 0 27px,
+      rgba(128, 45, 41, 0.42) 27px 28px,
+      transparent 28px
+    ),
+    repeating-linear-gradient(
+      0deg,
+      transparent 0 23px,
+      rgba(49, 75, 89, 0.17) 23px 24px
+    ),
+    linear-gradient(rgba(223, 220, 201, 0.7), rgba(196, 191, 170, 0.58)),
+    url("../assets/rpg-ui/other/paper_texture.webp")
+    center / cover
+    no-repeat !important;
+  box-shadow:
+    inset 0 0 13px rgba(40, 45, 43, 0.1),
+    0 1px 3px rgba(20, 27, 31, 0.32);
+  font-family: var(--font-monospace, Consolas, "Courier New", monospace);
+  font-size: 13px;
+  line-height: 1.3;
+}
+
+body.mk-paper-chat--dungeon-ledger :is(#chat-log, .chat-log) :is(.message, .chat-message) .message-header {
+  margin-bottom: 6px;
+  padding-bottom: 5px;
+}
+
+/* Crimson Dispatch: cream paper with an urgent oxblood report header. */
+body.mk-paper-chat--crimson-dispatch :is(#chat-log, .chat-log) :is(.message, .chat-message) {
+  --mk-paper-chat-ink: #271813;
+  --mk-paper-chat-muted: #62443a;
+  --mk-paper-chat-accent: #8c1f1a;
+  --mk-paper-chat-dice-bg: rgba(255, 244, 218, 0.48);
+  --mk-paper-chat-dice-border: rgba(128, 31, 26, 0.58);
+  --mk-paper-chat-button-bg: rgba(139, 31, 25, 0.1);
+  --mk-paper-chat-button-border: rgba(139, 31, 25, 0.58);
+  --mk-paper-chat-divider-image: url("../assets/rpg-ui/frames/red_line.webp");
+  min-height: 0;
+  padding: 14px 16px 18px;
+  border: 1px solid #751813 !important;
+  border-radius: 3px;
+  background:
+    linear-gradient(rgba(255, 248, 225, 0.62), rgba(225, 198, 153, 0.34)),
+    url("../assets/rpg-ui/other/paper_texture.webp")
+    center / cover
+    no-repeat !important;
+  box-shadow:
+    inset 0 0 15px rgba(104, 29, 22, 0.1),
+    0 2px 4px rgba(49, 20, 14, 0.35);
+}
+
+body.mk-paper-chat--crimson-dispatch :is(#chat-log, .chat-log) :is(.message, .chat-message) .message-header {
+  margin: -14px -16px 11px;
+  padding: 11px 15px 9px;
+  background:
+    linear-gradient(rgba(85, 10, 9, 0.2), rgba(45, 4, 4, 0.18)),
+    url("../assets/rpg-ui/frames/header_red.webp")
+    center / 100% 100%
+    no-repeat;
+  color: #f0dfc6;
+}
+
+body.mk-paper-chat--crimson-dispatch :is(#chat-log, .chat-log) :is(.message, .chat-message) .message-header::after {
+  right: 0;
+  left: 0;
+  bottom: -4px;
+}
+
+body.mk-paper-chat--crimson-dispatch :is(#chat-log, .chat-log) :is(.message, .chat-message) .message-header :is(
+  .message-sender,
+  .message-metadata,
+  .whisper-to
+) {
+  color: #f0dfc6;
+  text-shadow: 0 1px 1px rgba(0, 0, 0, 0.6);
+}
+
+/* Moonlit Arcana: midnight vellum with silver and violet-blue accents. */
+body.mk-paper-chat--moonlit-arcana :is(#chat-log, .chat-log) :is(.message, .chat-message) {
+  --mk-paper-chat-ink: #e5e8ef;
+  --mk-paper-chat-muted: #adb6ca;
+  --mk-paper-chat-accent: #9b93ee;
+  --mk-paper-chat-dice-bg: rgba(19, 26, 47, 0.58);
+  --mk-paper-chat-dice-border: rgba(137, 143, 211, 0.68);
+  --mk-paper-chat-button-bg: rgba(100, 91, 190, 0.16);
+  --mk-paper-chat-button-border: rgba(137, 130, 225, 0.62);
+  --mk-paper-chat-divider-image: linear-gradient(
+    90deg,
+    transparent,
+    #8a91cb 16%,
+    #7564d5 50%,
+    #8a91cb 84%,
+    transparent
+  );
+  min-height: 0;
+  padding: 16px 18px 19px;
+  border: 1px solid rgba(126, 132, 190, 0.7) !important;
+  border-radius: 4px;
+  background:
+    linear-gradient(rgba(10, 19, 43, 0.38), rgba(6, 11, 27, 0.58)),
+    url("../assets/rpg-ui/frames/chat-background.webp")
+    center / cover
+    no-repeat !important;
+  box-shadow:
+    inset 0 0 19px rgba(8, 12, 29, 0.68),
+    0 2px 6px rgba(0, 0, 0, 0.42);
+}
+
+body.mk-paper-chat--moonlit-arcana :is(#chat-log, .chat-log) :is(.message, .chat-message) .message-content :is(
+  p,
+  span,
+  label,
+  li,
+  td,
+  th
+) {
+  color: var(--mk-paper-chat-ink) !important;
+  text-shadow: none !important;
+}
+
+body.mk-paper-chat--moonlit-arcana :is(#chat-log, .chat-log) :is(.message, .chat-message) .message-content :is(
+  h1,
+  h2,
+  h3,
+  h4
+) {
+  color: #eef0f7;
+  border-color: rgba(139, 143, 210, 0.52);
+}
+
+body.mk-paper-chat--moonlit-arcana :is(#chat-log, .chat-log) :is(.message, .chat-message) .message-content :is(
+  a,
+  .rollable,
+  [data-action]
+) {
+  color: var(--mk-paper-chat-accent) !important;
+}
+
+/* Obsidian Sun: volcanic glass, bone text, and a merciless ember sun. */
+body.mk-paper-chat--obsidian-sun :is(#chat-log, .chat-log) :is(.message, .chat-message) {
+  --mk-paper-chat-ink: #f0dfbd;
+  --mk-paper-chat-muted: #c1a77f;
+  --mk-paper-chat-accent: #ff8a2a;
+  --mk-paper-chat-dice-bg: rgba(8, 6, 4, 0.62);
+  --mk-paper-chat-dice-border: rgba(240, 116, 27, 0.78);
+  --mk-paper-chat-button-bg: rgba(196, 64, 20, 0.2);
+  --mk-paper-chat-button-border: rgba(246, 113, 33, 0.7);
+  --mk-paper-chat-divider-image: linear-gradient(
+    90deg,
+    transparent,
+    #ef6d1d 20%,
+    #ffd067 50%,
+    #ef6d1d 80%,
+    transparent
+  );
+  min-height: 0;
+  padding: 17px 19px 20px;
+  overflow: hidden;
+  border: 2px solid #b64a18 !important;
+  border-radius: 0;
+  background:
+    linear-gradient(135deg, rgba(255, 103, 27, 0.08), transparent 38%),
+    linear-gradient(rgba(4, 4, 3, 0.18), rgba(0, 0, 0, 0.58)),
+    url("../assets/rpg-ui/frames/chat-background.webp")
+    center / cover
+    no-repeat !important;
+  box-shadow:
+    inset 0 0 0 1px #26120b,
+    inset 0 0 24px rgba(0, 0, 0, 0.78),
+    0 3px 7px rgba(0, 0, 0, 0.55);
+  clip-path: polygon(0 8px, 8px 0, calc(100% - 18px) 0, 100% 14px, 100% 100%, 0 100%);
+}
+
+body.mk-paper-chat--obsidian-sun :is(#chat-log, .chat-log) :is(.message, .chat-message)::before {
+  position: absolute;
+  z-index: 0;
+  top: -31px;
+  right: -25px;
+  width: 92px;
+  height: 92px;
+  content: "";
+  border-radius: 50%;
+  background: radial-gradient(
+    circle,
+    #ffd776 0 9%,
+    #f06e20 10% 23%,
+    rgba(138, 28, 12, 0.78) 24% 38%,
+    transparent 40%
+  );
+  filter: drop-shadow(0 0 9px rgba(255, 91, 20, 0.5));
+  pointer-events: none;
+}
+
+body.mk-paper-chat--obsidian-sun :is(#chat-log, .chat-log) :is(.message, .chat-message) .message-content :is(
+  p,
+  span,
+  label,
+  li,
+  td,
+  th
+) {
+  color: var(--mk-paper-chat-ink) !important;
+  text-shadow: 0 1px 1px #000 !important;
+}
+
+body.mk-paper-chat--obsidian-sun :is(#chat-log, .chat-log) :is(.message, .chat-message) .message-content :is(
+  h1,
+  h2,
+  h3,
+  h4
+) {
+  color: #ffe1a6;
+  border-color: rgba(241, 112, 31, 0.62);
+}
+
+/* Tyrant's Decree: sun-baked ochre with brutal black geometry. */
+body.mk-paper-chat--tyrants-decree :is(#chat-log, .chat-log) :is(.message, .chat-message) {
+  --mk-paper-chat-ink: #21140c;
+  --mk-paper-chat-muted: #5a3621;
+  --mk-paper-chat-accent: #8f1e12;
+  --mk-paper-chat-dice-bg: rgba(63, 30, 12, 0.1);
+  --mk-paper-chat-dice-border: rgba(44, 24, 12, 0.72);
+  --mk-paper-chat-button-bg: rgba(83, 35, 14, 0.1);
+  --mk-paper-chat-button-border: rgba(47, 24, 11, 0.7);
+  --mk-paper-chat-divider-image: repeating-linear-gradient(
+    90deg,
+    #21140c 0 12px,
+    #a73a17 12px 16px,
+    #d19237 16px 23px
+  );
+  min-height: 0;
+  padding: 17px 18px 19px;
+  border: 3px solid #24140a !important;
+  border-radius: 0;
+  background:
+    linear-gradient(
+      135deg,
+      rgba(85, 31, 12, 0.1) 0 12%,
+      transparent 12% 88%,
+      rgba(85, 31, 12, 0.12) 88%
+    ),
+    linear-gradient(rgba(241, 182, 83, 0.6), rgba(179, 102, 42, 0.36)),
+    url("../assets/rpg-ui/other/paper_texture.webp")
+    center / cover
+    no-repeat !important;
+  box-shadow:
+    inset 0 0 0 2px rgba(148, 49, 17, 0.78),
+    inset 0 0 22px rgba(95, 44, 16, 0.18),
+    0 3px 5px rgba(39, 19, 8, 0.42);
+  clip-path: polygon(0 0, calc(100% - 16px) 0, 100% 16px, 100% 100%, 16px 100%, 0 calc(100% - 16px));
+}
+
+body.mk-paper-chat--tyrants-decree :is(#chat-log, .chat-log) :is(.message, .chat-message) .message-header {
+  margin: -17px -18px 11px;
+  padding: 11px 16px 9px;
+  background:
+    repeating-linear-gradient(
+      135deg,
+      #201209 0 12px,
+      #32180c 12px 20px,
+      #922711 20px 24px
+    );
+  color: #f2c06f;
+}
+
+body.mk-paper-chat--tyrants-decree :is(#chat-log, .chat-log) :is(.message, .chat-message) .message-header :is(
+  .message-sender,
+  .message-metadata,
+  .whisper-to
+) {
+  color: #f2c06f;
+  text-shadow: 0 1px 1px #000;
+}
+
+/* Silt Sea Chart: ash-gray vellum, oxidized bronze, and turquoise map lines. */
+body.mk-paper-chat--silt-sea-chart :is(#chat-log, .chat-log) :is(.message, .chat-message) {
+  --mk-paper-chat-ink: #182524;
+  --mk-paper-chat-muted: #405b57;
+  --mk-paper-chat-accent: #0c6f70;
+  --mk-paper-chat-dice-bg: rgba(213, 205, 168, 0.46);
+  --mk-paper-chat-dice-border: rgba(32, 93, 88, 0.68);
+  --mk-paper-chat-button-bg: rgba(19, 112, 108, 0.09);
+  --mk-paper-chat-button-border: rgba(28, 105, 100, 0.58);
+  --mk-paper-chat-divider-image: linear-gradient(
+    90deg,
+    transparent,
+    #966828 15%,
+    #177f79 50%,
+    #966828 85%,
+    transparent
+  );
+  min-height: 0;
+  padding: 16px 18px 19px;
+  border: 2px solid #315c57 !important;
+  border-radius: 1px;
+  background:
+    linear-gradient(32deg, transparent 47%, rgba(22, 108, 103, 0.16) 48% 49%, transparent 50%),
+    linear-gradient(148deg, transparent 47%, rgba(145, 99, 35, 0.14) 48% 49%, transparent 50%),
+    radial-gradient(circle at 82% 28%, transparent 0 25px, rgba(25, 111, 105, 0.17) 26px 27px, transparent 28px),
+    linear-gradient(rgba(203, 195, 157, 0.7), rgba(157, 146, 114, 0.5)),
+    url("../assets/rpg-ui/other/paper_texture.webp")
+    center / cover
+    no-repeat !important;
+  box-shadow:
+    inset 0 0 16px rgba(42, 64, 58, 0.18),
+    0 2px 4px rgba(24, 37, 35, 0.35);
+  font-family: var(--font-primary, "Signika", "Segoe UI", sans-serif);
+}
+
+body.mk-paper-chat--silt-sea-chart :is(#chat-log, .chat-log) :is(.message, .chat-message) .message-header {
+  border-left: 5px solid #a06b27;
+  padding-left: 9px;
+}
+
+/* Bloodsand Arena: scorched sand, iron bands, and a hard combat silhouette. */
+body.mk-paper-chat--bloodsand-arena :is(#chat-log, .chat-log) :is(.message, .chat-message) {
+  --mk-paper-chat-ink: #25110c;
+  --mk-paper-chat-muted: #613122;
+  --mk-paper-chat-accent: #9d1d13;
+  --mk-paper-chat-dice-bg: rgba(255, 214, 143, 0.34);
+  --mk-paper-chat-dice-border: rgba(77, 22, 13, 0.76);
+  --mk-paper-chat-button-bg: rgba(101, 19, 12, 0.14);
+  --mk-paper-chat-button-border: rgba(87, 22, 13, 0.72);
+  --mk-paper-chat-divider-image: linear-gradient(
+    90deg,
+    #1d100b,
+    #a32314 20%,
+    #d06822 50%,
+    #a32314 80%,
+    #1d100b
+  );
+  min-height: 0;
+  padding: 16px 18px 20px;
+  border: 3px solid #21110a !important;
+  border-radius: 0;
+  background:
+    radial-gradient(circle at 75% 12%, rgba(255, 191, 66, 0.36), transparent 25%),
+    linear-gradient(145deg, rgba(100, 17, 10, 0.12), transparent 42%),
+    linear-gradient(rgba(225, 116, 40, 0.62), rgba(145, 50, 25, 0.46)),
+    url("../assets/rpg-ui/other/paper_texture.webp")
+    center / cover
+    no-repeat !important;
+  box-shadow:
+    inset 0 5px 0 #8d1d12,
+    inset 0 -5px 0 #4b1c12,
+    inset 0 0 18px rgba(78, 25, 12, 0.2),
+    0 3px 5px rgba(38, 17, 9, 0.48);
+  clip-path: polygon(10px 0, calc(100% - 10px) 0, 100% 10px, 100% calc(100% - 10px), calc(100% - 10px) 100%, 10px 100%, 0 calc(100% - 10px), 0 10px);
+  font-weight: 600;
+}
+
+body.mk-paper-chat--bloodsand-arena :is(#chat-log, .chat-log) :is(.message, .chat-message) .message-header {
+  margin: -8px -8px 10px;
+  padding: 9px 10px 8px;
+  border: 1px solid rgba(42, 17, 9, 0.72);
+  background: linear-gradient(90deg, #25100b, #761b11 45%, #32110b);
+}
+
+body.mk-paper-chat--bloodsand-arena :is(#chat-log, .chat-log) :is(.message, .chat-message) .message-header :is(
+  .message-sender,
+  .message-metadata,
+  .whisper-to
+) {
+  color: #f5c779;
+  text-shadow: 0 1px 1px #000;
+}
+
+body.mk-paper-chat :is(#chat-log, .chat-log) :is(.message, .chat-message) > * {
+  position: relative;
+  z-index: 1;
+}
+
+body.mk-paper-chat :is(#chat-log, .chat-log) :is(.message, .chat-message) .message-header {
+  position: relative;
+  margin-bottom: 8px;
+  padding-bottom: 7px;
+  border: 0;
+  color: var(--mk-paper-chat-ink);
+  text-shadow: none;
+}
+
+body.mk-paper-chat :is(#chat-log, .chat-log) :is(.message, .chat-message) .message-header::after {
+  position: absolute;
+  right: -4px;
+  bottom: 0;
+  left: -4px;
+  height: 5px;
+  content: "";
+  background:
+    var(--mk-paper-chat-divider-image)
+    center / 100% 5px
+    no-repeat;
+  opacity: 0.72;
+  pointer-events: none;
+}
+
+body.mk-paper-chat :is(#chat-log, .chat-log) :is(.message, .chat-message) :is(
+  .message-sender,
+  .message-metadata,
+  .flavor-text,
+  .whisper-to
+) {
+  color: var(--mk-paper-chat-muted);
+  text-shadow: none;
+}
+
+body.mk-paper-chat :is(#chat-log, .chat-log) :is(.message, .chat-message) .message-sender {
+  color: var(--mk-paper-chat-ink);
+  font-weight: 800;
+}
+
+body.mk-paper-chat :is(#chat-log, .chat-log) :is(.message, .chat-message) .message-content {
+  color: var(--mk-paper-chat-ink) !important;
+  text-shadow: none;
+}
+
+body.mk-paper-chat :is(#chat-log, .chat-log) :is(.message, .chat-message) .message-content :is(
+  h1,
+  h2,
+  h3,
+  h4
+) {
+  color: #3b291e;
+  border-color: rgba(77, 54, 37, 0.45);
+}
+
+body.mk-paper-chat :is(#chat-log, .chat-log) :is(.message, .chat-message) a {
+  color: var(--mk-paper-chat-accent);
+}
+
+body.mk-paper-chat :is(#chat-log, .chat-log) :is(.message, .chat-message) :is(
+  .dice-formula,
+  .dice-total
+) {
+  border: 1px solid rgba(75, 54, 39, 0.38);
+  border-color: var(--mk-paper-chat-dice-border);
+  background: var(--mk-paper-chat-dice-bg);
+  box-shadow: inset 0 0 6px rgba(58, 38, 24, 0.12);
+  color: var(--mk-paper-chat-ink);
+}
+
+body.mk-paper-chat :is(#chat-log, .chat-log) :is(.message, .chat-message) button {
+  border: 1px solid var(--mk-paper-chat-button-border);
+  background: var(--mk-paper-chat-button-bg);
+  color: var(--mk-paper-chat-ink);
+}
+
+body.mk-paper-chat :is(#chat-log, .chat-log) :is(.message, .chat-message) button:hover {
+  border-color: rgba(125, 33, 28, 0.8);
+  background: rgba(125, 33, 28, 0.18);
+  box-shadow: 0 0 5px rgba(125, 33, 28, 0.22);
+}
+
+body.mk-paper-chat :is(#chat-log, .chat-log) :is(.message, .chat-message).whisper {
+  box-shadow: inset 0 0 0 2px rgba(82, 65, 123, 0.24);
+}
+
+body.mk-paper-chat :is(#chat-log, .chat-log) :is(.message, .chat-message).blind {
+  box-shadow: inset 0 0 0 2px rgba(119, 44, 39, 0.25);
+}
+
+body.mk-paper-chat--dark-grimoire :is(#chat-log, .chat-log) :is(.message, .chat-message) .message-content :is(
+  h1,
+  h2,
+  h3,
+  h4
+) {
+  color: #eadfc9;
+  border-color: rgba(185, 77, 63, 0.45);
+}
+
+body.mk-paper-chat :is(#chat-log, .chat-log) :is(.message, .chat-message) :is(
+  .mk-chat-card,
+  .mk-focus-chat-card,
+  .mk-encounter-card
+) {
+  text-shadow: none;
+}
+
+@media (max-width: 420px) {
+  body.mk-paper-chat :is(#chat-log, .chat-log) :is(.message, .chat-message) {
+    padding-inline: 16px;
+  }
+}

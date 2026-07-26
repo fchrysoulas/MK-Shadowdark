@@ -342,6 +342,14 @@
         <input type="text" data-field="border" value="${escapeHtml(border)}" placeholder="e.g. 1px solid #888" spellcheck="false">
       </label>
       <label>
+        <span>Width</span>
+        <input type="text" data-field="width" value="${escapeHtml(existing.width ?? "")}" placeholder="e.g. 320px, 100%, or auto" spellcheck="false">
+      </label>
+      <label>
+        <span>Height</span>
+        <input type="text" data-field="height" value="${escapeHtml(existing.height ?? "")}" placeholder="e.g. 120px, 50%, or auto" spellcheck="false">
+      </label>
+      <label>
         <span>Padding</span>
         <input type="text" data-field="padding" value="${escapeHtml(padding)}" placeholder="e.g. 4px 8px">
       </label>
@@ -540,7 +548,7 @@
 
   async function applyMenuChanges({ root, selector, menu }) {
     const values = getMenuValues(menu);
-    const { fontFamily, fontSize, fontWeight, color, backgroundColor, border, padding, margin } = values;
+    const { fontFamily, fontSize, fontWeight, color, backgroundColor, border, width, height, padding, margin } = values;
     const backgroundImage = buildBackgroundImageValue(values.backgroundImage);
 
     if (fontFamily && globalThis.CSS?.supports && !CSS.supports("font-family", fontFamily)) {
@@ -575,6 +583,14 @@
       ui.notifications?.warn(`Invalid border: ${border}`);
       return;
     }
+    if (width && globalThis.CSS?.supports && !CSS.supports("width", width)) {
+      ui.notifications?.warn(`Invalid width: ${width}`);
+      return;
+    }
+    if (height && globalThis.CSS?.supports && !CSS.supports("height", height)) {
+      ui.notifications?.warn(`Invalid height: ${height}`);
+      return;
+    }
 
     await updateGlobalCss(currentCss => (
       upsertGeneratedRule(currentCss, selector, {
@@ -585,6 +601,8 @@
         backgroundColor,
         backgroundImage,
         border,
+        width,
+        height,
         padding,
         margin
       })
@@ -622,7 +640,7 @@
       style.id = STYLE_ELEMENT_ID;
       document.head.append(style);
     }
-    style.textContent = String(cssText ?? "");
+    style.textContent = expandPaperThemeRuleScopes(cssText);
   }
 
   function removeDirectEditableStyleLinks() {
@@ -900,6 +918,8 @@
       backgroundColor: declaration.getPropertyValue("background-color").trim(),
       backgroundImage: declaration.getPropertyValue("background-image").trim(),
       border: declaration.getPropertyValue("border").trim(),
+      width: declaration.getPropertyValue("width").trim(),
+      height: declaration.getPropertyValue("height").trim(),
       padding: declaration.getPropertyValue("padding").trim(),
       margin: declaration.getPropertyValue("margin").trim()
     };
@@ -916,14 +936,32 @@
       ["background-color", styles.backgroundColor],
       ["background-image", styles.backgroundImage],
       ["border", styles.border],
+      ["width", styles.width],
+      ["height", styles.height],
       ["padding", styles.padding],
       ["margin", styles.margin]
     ]
       .filter(([, value]) => String(value ?? "").trim())
       .map(([property, value]) => `  ${property}: ${String(value).trim()} !important;`)
       .join("\n");
-    const block = `/* ${RULE_MARKER_PREFIX}:start ${token} */\n.shadowdark.sheet.player ${selector} {\n${declarations}\n}\n/* ${RULE_MARKER_PREFIX}:end ${token} */`;
+    const block = `/* ${RULE_MARKER_PREFIX}:start ${token} */\n`
+      + `.shadowdark.sheet.player ${selector},\n`
+      + `.shadowdark.sheet.player.mk-paper-chat-sheet ${selector} {\n`
+      + `${declarations}\n`
+      + `}\n/* ${RULE_MARKER_PREFIX}:end ${token} */`;
     return withoutExisting ? `${withoutExisting}\n\n${block}\n` : `${block}\n`;
+  }
+
+  function expandPaperThemeRuleScopes(cssText) {
+    const pattern = new RegExp(
+      `(\\/\\* ${RULE_MARKER_PREFIX}:start [^*]+ \\*\\/\\s*)`
+      + `\\.shadowdark\\.sheet\\.player ([^\\r\\n{]+) \\{`,
+      "g"
+    );
+    return String(cssText ?? "").replace(pattern, (_match, marker, selector) => (
+      `${marker}.shadowdark.sheet.player ${selector},\n`
+      + `.shadowdark.sheet.player.mk-paper-chat-sheet ${selector} {`
+    ));
   }
 
   function removeGeneratedRule(cssText, selector) {

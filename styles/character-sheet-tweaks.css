@@ -18,8 +18,8 @@
   display: flex;
   align-items: baseline;
   justify-content: space-evenly;
-  margin: 0 0 8px;
-  padding: 0;
+  margin: 0px;
+  padding: 0px;
   border-bottom: none;
   background: #000000 !important;
   background-image: none !important;
@@ -47,7 +47,7 @@
 }
 
 .shadowdark.sheet.mk-character-sheet-tweaks .SD-content-body {
-  padding: 5px 15px;
+  padding: 15px 15px;
 }
 
 .shadowdark.sheet.mk-character-sheet-tweaks .SD-header {

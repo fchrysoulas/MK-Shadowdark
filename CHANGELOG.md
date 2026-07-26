@@ -2,6 +2,12 @@
 
 ## Unreleased
 
+## 1.2.0
+
+- Sorted the module's feature settings submenus alphabetically by name.
+- Added twelve Paper Chat themes with a GM visual editor for synchronized, theme-specific chat-message styling.
+- Added width and height controls to the Character Sheet and Paper Chat visual style editors.
+- Added an opt-in Paper Chat setting that applies the selected background and supporting palette to player-sheet content and the active tab, preserving the header and inactive navigation.
 - Fixed Focus spell casting in Foundry VTT v12 attempting to position an unbound Token HUD.
 
 ## 1.1.3

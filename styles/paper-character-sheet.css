@@ -1,0 +1,306 @@
+/* Paper Chat theme bridge for Shadowdark player character sheets. */
+
+.shadowdark.sheet.player.mk-paper-chat-sheet {
+  --mk-paper-chat-ink: #2d241b;
+  --mk-paper-chat-muted: #665748;
+  --mk-paper-chat-accent: #7d211c;
+  --mk-paper-chat-dice-bg: rgba(100, 75, 52, 0.1);
+  --mk-paper-chat-dice-border: rgba(75, 54, 39, 0.38);
+  --mk-paper-chat-button-bg: rgba(125, 33, 28, 0.1);
+  --mk-paper-chat-button-border: rgba(91, 51, 35, 0.52);
+  --mk-paper-chat-divider-image: url("../assets/rpg-ui/frames/brown_line.webp");
+  --mk-paper-sheet-background:
+    linear-gradient(rgba(244, 228, 194, 0.28), rgba(197, 165, 116, 0.18)),
+    url("../assets/rpg-ui/other/paper_texture.webp") center / cover no-repeat;
+  --mk-paper-sheet-content-bg: rgba(255, 250, 234, 0.36);
+  --mk-paper-sheet-header-bg:
+    linear-gradient(rgba(45, 24, 14, 0.22), rgba(24, 13, 8, 0.3)),
+    url("../assets/rpg-ui/frames/header.webp") center / 100% 100% no-repeat;
+  --mk-paper-sheet-header-ink: #f2e6cd;
+  --mk-paper-sheet-border: rgba(75, 54, 39, 0.62);
+  --mk-paper-sheet-shadow: inset 0 0 20px rgba(73, 43, 24, 0.14);
+  --mk-paper-sheet-font: inherit;
+}
+
+.shadowdark.sheet.player.mk-paper-chat-sheet .SD-content-body {
+  box-sizing: border-box;
+  border: 1px solid var(--mk-paper-sheet-border) !important;
+  background: var(--mk-paper-sheet-background) !important;
+  box-shadow: var(--mk-paper-sheet-shadow);
+  color: var(--mk-paper-chat-ink);
+  font-family: var(--mk-paper-sheet-font);
+}
+
+.shadowdark.sheet.player.mk-paper-chat-sheet .SD-nav a.active {
+  border-color: var(--mk-paper-sheet-border) !important;
+  background: var(--mk-paper-sheet-background) !important;
+  box-shadow: none;
+  color: var(--mk-paper-chat-ink) !important;
+  text-shadow: none;
+}
+
+.shadowdark.sheet.player.mk-paper-chat-sheet .SD-content-body :is(input, select, textarea) {
+  border: 1px solid var(--mk-paper-chat-dice-border) !important;
+  background: var(--mk-paper-chat-dice-bg) !important;
+  color: var(--mk-paper-chat-ink) !important;
+}
+
+.shadowdark.sheet.player.mk-paper-chat-sheet .SD-content-body :is(input, textarea)::placeholder {
+  color: var(--mk-paper-chat-muted);
+  opacity: 0.78;
+}
+
+.shadowdark.sheet.player.mk-paper-chat-sheet .SD-content-body button {
+  border: 1px solid var(--mk-paper-chat-button-border) !important;
+  background: var(--mk-paper-chat-button-bg) !important;
+  color: var(--mk-paper-chat-ink) !important;
+}
+
+.shadowdark.sheet.player.mk-paper-chat-sheet .SD-content-body button:hover {
+  border-color: var(--mk-paper-chat-accent) !important;
+  box-shadow: 0 0 5px color-mix(in srgb, var(--mk-paper-chat-accent) 35%, transparent);
+}
+
+.shadowdark.sheet.player.mk-paper-chat-sheet .SD-content-body a {
+  color: var(--mk-paper-chat-accent);
+}
+
+.shadowdark.sheet.player.mk-paper-chat-sheet .SD-content-body :is(
+  h1,
+  h2,
+  h3,
+  h4,
+  label,
+  .item-name,
+  .editor-content
+) {
+  color: var(--mk-paper-chat-ink);
+  text-shadow: none;
+}
+
+.shadowdark.sheet.player.mk-paper-chat-sheet .SD-content-body :is(.item-subtext, .notes, .hint) {
+  color: var(--mk-paper-chat-muted) !important;
+}
+
+.shadowdark.sheet.player.mk-paper-chat-sheet .SD-content-body :is(table, th, td, hr) {
+  border-color: var(--mk-paper-sheet-border);
+}
+
+.shadowdark.sheet.player.mk-paper-chat--parchment-scroll {
+  --mk-paper-sheet-background:
+    url("../assets/rpg-ui/other/journal.webp") center / 100% 100% no-repeat;
+  --mk-paper-sheet-content-bg: rgba(255, 250, 234, 0.28);
+}
+
+.shadowdark.sheet.player.mk-paper-chat--clean-parchment {
+  --mk-paper-sheet-background:
+    linear-gradient(rgba(243, 226, 190, 0.22), rgba(197, 166, 119, 0.1)),
+    url("../assets/rpg-ui/other/paper_texture.webp") center / cover no-repeat;
+  --mk-paper-sheet-content-bg: rgba(255, 252, 241, 0.4);
+  --mk-paper-sheet-shadow:
+    0 1px 3px rgba(31, 20, 12, 0.28),
+    inset 0 0 16px rgba(91, 58, 31, 0.08);
+}
+
+.shadowdark.sheet.player.mk-paper-chat--dark-grimoire {
+  --mk-paper-chat-ink: #e3d6bd;
+  --mk-paper-chat-muted: #aa9d87;
+  --mk-paper-chat-accent: #c14c40;
+  --mk-paper-chat-dice-bg: rgba(0, 0, 0, 0.28);
+  --mk-paper-chat-dice-border: rgba(157, 64, 53, 0.62);
+  --mk-paper-chat-button-bg: rgba(135, 37, 31, 0.2);
+  --mk-paper-chat-button-border: rgba(181, 69, 57, 0.62);
+  --mk-paper-chat-divider-image: url("../assets/rpg-ui/frames/red_line.webp");
+  --mk-paper-sheet-background:
+    linear-gradient(rgba(8, 8, 8, 0.08), rgba(0, 0, 0, 0.24)),
+    url("../assets/rpg-ui/frames/chat-background.webp") center / cover no-repeat;
+  --mk-paper-sheet-content-bg: rgba(5, 5, 5, 0.34);
+  --mk-paper-sheet-header-bg:
+    linear-gradient(rgba(55, 8, 7, 0.22), rgba(12, 3, 3, 0.38)),
+    url("../assets/rpg-ui/frames/header_red.webp") center / 100% 100% no-repeat;
+  --mk-paper-sheet-header-ink: #efe1c7;
+  --mk-paper-sheet-border: rgba(157, 64, 53, 0.68);
+  --mk-paper-sheet-shadow:
+    0 2px 6px rgba(0, 0, 0, 0.45),
+    inset 0 0 18px rgba(0, 0, 0, 0.42);
+}
+
+.shadowdark.sheet.player.mk-paper-chat--torn-field-note {
+  --mk-paper-chat-ink: #17120d;
+  --mk-paper-chat-muted: #41362c;
+  --mk-paper-chat-accent: #741f19;
+  --mk-paper-chat-dice-bg: rgba(255, 248, 226, 0.52);
+  --mk-paper-chat-dice-border: rgba(61, 43, 29, 0.52);
+  --mk-paper-chat-button-bg: rgba(255, 247, 221, 0.44);
+  --mk-paper-chat-button-border: rgba(74, 47, 31, 0.58);
+  --mk-paper-sheet-background:
+    linear-gradient(rgba(255, 249, 229, 0.74), rgba(236, 216, 178, 0.58)),
+    url("../assets/rpg-ui/other/paper_texture.webp") center / cover no-repeat;
+  --mk-paper-sheet-content-bg: rgba(255, 249, 229, 0.25);
+  --mk-paper-sheet-header-bg: linear-gradient(90deg, #33251a, #6b4c32 48%, #33251a);
+  --mk-paper-sheet-border: rgba(76, 52, 34, 0.52);
+}
+
+.shadowdark.sheet.player.mk-paper-chat--illuminated-manuscript {
+  --mk-paper-chat-ink: #2c1b12;
+  --mk-paper-chat-muted: #6b4938;
+  --mk-paper-chat-accent: #8d1d17;
+  --mk-paper-chat-dice-bg: rgba(255, 249, 225, 0.52);
+  --mk-paper-chat-dice-border: rgba(151, 111, 35, 0.64);
+  --mk-paper-chat-button-bg: rgba(143, 31, 24, 0.08);
+  --mk-paper-chat-button-border: rgba(143, 31, 24, 0.48);
+  --mk-paper-chat-divider-image: linear-gradient(90deg, transparent, #a77b22 16%, #8d1d17 50%, #a77b22 84%, transparent);
+  --mk-paper-sheet-background:
+    linear-gradient(rgba(255, 250, 230, 0.66), rgba(238, 216, 170, 0.42)),
+    url("../assets/rpg-ui/other/paper_texture.webp") center / cover no-repeat;
+  --mk-paper-sheet-content-bg: rgba(255, 250, 230, 0.28);
+  --mk-paper-sheet-header-bg: linear-gradient(90deg, #5d130f, #a77b22 50%, #5d130f);
+  --mk-paper-sheet-border: #8d1d17;
+  --mk-paper-sheet-shadow:
+    inset 0 0 0 2px rgba(171, 128, 38, 0.5),
+    inset 0 0 18px rgba(101, 62, 26, 0.1);
+  --mk-paper-sheet-font: Georgia, "Times New Roman", serif;
+}
+
+.shadowdark.sheet.player.mk-paper-chat--dungeon-ledger {
+  --mk-paper-chat-ink: #1c2429;
+  --mk-paper-chat-muted: #46545b;
+  --mk-paper-chat-accent: #244f69;
+  --mk-paper-chat-dice-bg: rgba(219, 218, 205, 0.52);
+  --mk-paper-chat-dice-border: rgba(39, 57, 67, 0.58);
+  --mk-paper-chat-button-bg: rgba(45, 71, 84, 0.08);
+  --mk-paper-chat-button-border: rgba(45, 71, 84, 0.48);
+  --mk-paper-chat-divider-image: repeating-linear-gradient(90deg, #3f5968 0 6px, transparent 6px 10px);
+  --mk-paper-sheet-background:
+    repeating-linear-gradient(0deg, transparent 0 23px, rgba(49, 75, 89, 0.17) 23px 24px),
+    linear-gradient(rgba(223, 220, 201, 0.7), rgba(196, 191, 170, 0.58)),
+    url("../assets/rpg-ui/other/paper_texture.webp") center / cover no-repeat;
+  --mk-paper-sheet-content-bg: rgba(223, 220, 201, 0.24);
+  --mk-paper-sheet-header-bg: linear-gradient(90deg, #1c2930, #496574 50%, #1c2930);
+  --mk-paper-sheet-border: rgba(48, 66, 76, 0.72);
+  --mk-paper-sheet-font: var(--font-monospace, Consolas, "Courier New", monospace);
+}
+
+.shadowdark.sheet.player.mk-paper-chat--crimson-dispatch {
+  --mk-paper-chat-ink: #271813;
+  --mk-paper-chat-muted: #62443a;
+  --mk-paper-chat-accent: #8c1f1a;
+  --mk-paper-chat-dice-bg: rgba(255, 244, 218, 0.48);
+  --mk-paper-chat-dice-border: rgba(128, 31, 26, 0.58);
+  --mk-paper-chat-button-bg: rgba(139, 31, 25, 0.1);
+  --mk-paper-chat-button-border: rgba(139, 31, 25, 0.58);
+  --mk-paper-chat-divider-image: url("../assets/rpg-ui/frames/red_line.webp");
+  --mk-paper-sheet-background:
+    linear-gradient(rgba(255, 248, 225, 0.62), rgba(225, 198, 153, 0.34)),
+    url("../assets/rpg-ui/other/paper_texture.webp") center / cover no-repeat;
+  --mk-paper-sheet-content-bg: rgba(255, 248, 225, 0.24);
+  --mk-paper-sheet-header-bg:
+    linear-gradient(rgba(85, 10, 9, 0.2), rgba(45, 4, 4, 0.18)),
+    url("../assets/rpg-ui/frames/header_red.webp") center / 100% 100% no-repeat;
+  --mk-paper-sheet-border: #751813;
+}
+
+.shadowdark.sheet.player.mk-paper-chat--moonlit-arcana {
+  --mk-paper-chat-ink: #e5e8ef;
+  --mk-paper-chat-muted: #adb6ca;
+  --mk-paper-chat-accent: #9b93ee;
+  --mk-paper-chat-dice-bg: rgba(19, 26, 47, 0.58);
+  --mk-paper-chat-dice-border: rgba(137, 143, 211, 0.68);
+  --mk-paper-chat-button-bg: rgba(100, 91, 190, 0.16);
+  --mk-paper-chat-button-border: rgba(137, 130, 225, 0.62);
+  --mk-paper-chat-divider-image: linear-gradient(90deg, transparent, #8a91cb 16%, #7564d5 50%, #8a91cb 84%, transparent);
+  --mk-paper-sheet-background:
+    linear-gradient(rgba(10, 19, 43, 0.38), rgba(6, 11, 27, 0.58)),
+    url("../assets/rpg-ui/frames/chat-background.webp") center / cover no-repeat;
+  --mk-paper-sheet-content-bg: rgba(6, 11, 27, 0.42);
+  --mk-paper-sheet-header-bg: linear-gradient(90deg, #11182f, #443a8f 50%, #11182f);
+  --mk-paper-sheet-header-ink: #eef0f8;
+  --mk-paper-sheet-border: rgba(126, 132, 190, 0.76);
+  --mk-paper-sheet-shadow:
+    inset 0 0 19px rgba(8, 12, 29, 0.68),
+    0 2px 6px rgba(0, 0, 0, 0.42);
+}
+
+.shadowdark.sheet.player.mk-paper-chat--obsidian-sun {
+  --mk-paper-chat-ink: #f0dfbd;
+  --mk-paper-chat-muted: #c1a77f;
+  --mk-paper-chat-accent: #ff8a2a;
+  --mk-paper-chat-dice-bg: rgba(8, 6, 4, 0.62);
+  --mk-paper-chat-dice-border: rgba(240, 116, 27, 0.78);
+  --mk-paper-chat-button-bg: rgba(196, 64, 20, 0.2);
+  --mk-paper-chat-button-border: rgba(246, 113, 33, 0.7);
+  --mk-paper-chat-divider-image: linear-gradient(90deg, transparent, #ef6d1d 20%, #ffd067 50%, #ef6d1d 80%, transparent);
+  --mk-paper-sheet-background:
+    linear-gradient(135deg, rgba(255, 103, 27, 0.08), transparent 38%),
+    linear-gradient(rgba(4, 4, 3, 0.18), rgba(0, 0, 0, 0.58)),
+    url("../assets/rpg-ui/frames/chat-background.webp") center / cover no-repeat;
+  --mk-paper-sheet-content-bg: rgba(0, 0, 0, 0.48);
+  --mk-paper-sheet-header-bg: linear-gradient(90deg, #080604, #8a2d12 50%, #080604);
+  --mk-paper-sheet-header-ink: #ffe7b3;
+  --mk-paper-sheet-border: #b64a18;
+  --mk-paper-sheet-shadow:
+    inset 0 0 0 1px #26120b,
+    inset 0 0 24px rgba(0, 0, 0, 0.78);
+}
+
+.shadowdark.sheet.player.mk-paper-chat--tyrants-decree {
+  --mk-paper-chat-ink: #21140c;
+  --mk-paper-chat-muted: #5a3621;
+  --mk-paper-chat-accent: #8f1e12;
+  --mk-paper-chat-dice-bg: rgba(63, 30, 12, 0.1);
+  --mk-paper-chat-dice-border: rgba(44, 24, 12, 0.72);
+  --mk-paper-chat-button-bg: rgba(83, 35, 14, 0.1);
+  --mk-paper-chat-button-border: rgba(47, 24, 11, 0.7);
+  --mk-paper-chat-divider-image: repeating-linear-gradient(90deg, #21140c 0 12px, #a73a17 12px 16px, #d19237 16px 23px);
+  --mk-paper-sheet-background:
+    linear-gradient(rgba(241, 182, 83, 0.6), rgba(179, 102, 42, 0.36)),
+    url("../assets/rpg-ui/other/paper_texture.webp") center / cover no-repeat;
+  --mk-paper-sheet-content-bg: rgba(241, 182, 83, 0.16);
+  --mk-paper-sheet-header-bg: repeating-linear-gradient(135deg, #201209 0 12px, #32180c 12px 20px, #922711 20px 24px);
+  --mk-paper-sheet-border: #24140a;
+  --mk-paper-sheet-shadow:
+    inset 0 0 0 2px rgba(148, 49, 17, 0.78),
+    inset 0 0 22px rgba(95, 44, 16, 0.18);
+}
+
+.shadowdark.sheet.player.mk-paper-chat--silt-sea-chart {
+  --mk-paper-chat-ink: #182524;
+  --mk-paper-chat-muted: #405b57;
+  --mk-paper-chat-accent: #0c6f70;
+  --mk-paper-chat-dice-bg: rgba(213, 205, 168, 0.46);
+  --mk-paper-chat-dice-border: rgba(32, 93, 88, 0.68);
+  --mk-paper-chat-button-bg: rgba(19, 112, 108, 0.09);
+  --mk-paper-chat-button-border: rgba(28, 105, 100, 0.58);
+  --mk-paper-chat-divider-image: linear-gradient(90deg, transparent, #966828 15%, #177f79 50%, #966828 85%, transparent);
+  --mk-paper-sheet-background:
+    linear-gradient(32deg, transparent 47%, rgba(22, 108, 103, 0.16) 48% 49%, transparent 50%),
+    linear-gradient(148deg, transparent 47%, rgba(145, 99, 35, 0.14) 48% 49%, transparent 50%),
+    linear-gradient(rgba(203, 195, 157, 0.7), rgba(157, 146, 114, 0.5)),
+    url("../assets/rpg-ui/other/paper_texture.webp") center / cover no-repeat;
+  --mk-paper-sheet-content-bg: rgba(203, 195, 157, 0.2);
+  --mk-paper-sheet-header-bg: linear-gradient(90deg, #163b39, #9a6c2d 50%, #163b39);
+  --mk-paper-sheet-border: #315c57;
+}
+
+.shadowdark.sheet.player.mk-paper-chat--bloodsand-arena {
+  --mk-paper-chat-ink: #25110c;
+  --mk-paper-chat-muted: #613122;
+  --mk-paper-chat-accent: #9d1d13;
+  --mk-paper-chat-dice-bg: rgba(255, 214, 143, 0.34);
+  --mk-paper-chat-dice-border: rgba(77, 22, 13, 0.76);
+  --mk-paper-chat-button-bg: rgba(101, 19, 12, 0.14);
+  --mk-paper-chat-button-border: rgba(87, 22, 13, 0.72);
+  --mk-paper-chat-divider-image: linear-gradient(90deg, #1d100b, #a32314 20%, #d06822 50%, #a32314 80%, #1d100b);
+  --mk-paper-sheet-background:
+    radial-gradient(circle at 75% 12%, rgba(255, 191, 66, 0.36), transparent 25%),
+    linear-gradient(rgba(225, 116, 40, 0.62), rgba(145, 50, 25, 0.46)),
+    url("../assets/rpg-ui/other/paper_texture.webp") center / cover no-repeat;
+  --mk-paper-sheet-content-bg: rgba(225, 116, 40, 0.16);
+  --mk-paper-sheet-header-bg: linear-gradient(90deg, #25100b, #761b11 45%, #32110b);
+  --mk-paper-sheet-header-ink: #f8dfb8;
+  --mk-paper-sheet-border: #21110a;
+  --mk-paper-sheet-shadow:
+    inset 0 5px 0 #8d1d12,
+    inset 0 -5px 0 #4b1c12,
+    inset 0 0 18px rgba(78, 25, 12, 0.2);
+}

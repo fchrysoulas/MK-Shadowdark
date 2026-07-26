@@ -12,18 +12,23 @@ Modular quality-of-life tools, gameplay automation, party management, and charac
 ## Features
 
 - **Auto Damage**: automatically applies damage from attack or spell rolls to targeted tokens, with optional GM-only mode, delay, 3D dice support, and token shake feedback.
-- **Character Sheet Tweaks**: adds a configurable compact summary bar to player sheets, a height toggle that minimizes the sheet to that bar, optional header styling, Shadowdark logo hiding, and quick access to common stats.
+- **Character Sheet Tweaks**: adds a configurable compact summary bar, a height toggle, optional header styling, Shadowdark logo hiding, quick access to common stats, and a GM visual editor with element sizing controls.
 - **Death Timer**: adds a configurable sheet button for starting and managing Shadowdark death timers.
 - **Editable Quantity**: lets item quantities be edited directly from actor inventory rows.
 - **Encounter Engine - Phase 1**: follows the Shadowdark random encounter procedure for danger checks, number appearing, distance, activity, awareness, reaction, treasure, and morale guidance, then creates an interactive GM chat card.
 - **Equipment Hands**: checks equipped weapons, shields, and hand-occupying gear against available hand slots, either warning or blocking invalid loadouts.
 - **Focus Tracker**: tracks successfully cast Focus spells, enforces configurable capacity, requests maintenance checks at the caster's turn or after damage, and exposes actor-sheet and chat-card controls with a token status icon.
 - **Group Sheet**: adds a party/group actor sheet for members, shared inventory, notes, and Camping task assignment.
+- **Paper Chat**: provides twelve paper-inspired chat themes and a GM visual editor for theme-specific message styling.
 - **Camping Tasks**: provides Bed Down, Cook, Craft, Entertain, Scavenge, Hunt, Keep Watch, and Predict tasks with DCs, tooltips, icons, and drag-and-drop member assignment.
 - **Quickdraw**: marks eligible inventory items as quickdraw, sorts each inventory group with Quickdraw items first, and supports fixed or actor-based limit expressions such as `3`, `max(1, @dex.mod)`, or `max(1, @dex.mod + gear("bandolier", 2))`.
 - **Time Passes**: lets the GM choose 1d6, 2d6, or 3d6 for a time-passes encounter check. An encounter occurs if any die shows 1, and successful checks can invoke the Encounter Engine.
 - **Token Shadows**: draws configurable soft shadows under tokens on the canvas.
 - **Corpse Token Automation**: changes dead NPC tokens to a corpse image, preserves/restores original token data, and aligns corpse placement using the token fall point.
+
+## Paper Chat
+
+Choose a Paper Chat theme from the module settings. GMs can use the paintbrush control in the Chat tab or its pop-out, then right-click a message element to edit its typography, colors, imagery, border, width, height, spacing, radius, or alignment. Each saved override applies only to the selected theme and synchronizes to all clients. The optional **Apply Theme to Character Sheets** setting applies the selected background and supporting palette to the content below the tabs and the active tab itself, preserving the character sheet's header and inactive navigation.
 
 ## Quickdraw Limit Expressions
 

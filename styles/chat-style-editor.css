@@ -1,0 +1,28 @@
+/* MK-Shadowdark fixed Chat Style Editor interface styles. */
+
+body.mk-chat-style-edit-mode :is(#chat-log, .chat-log) :is(.message, .chat-message),
+body.mk-chat-style-edit-mode :is(#chat-log, .chat-log) :is(.message, .chat-message) * {
+  cursor: context-menu;
+}
+
+body.mk-chat-style-edit-mode :is(#chat-log, .chat-log) :is(.message, .chat-message):hover,
+body.mk-chat-style-edit-mode :is(#chat-log, .chat-log) :is(.message, .chat-message) *:hover {
+  outline: 1px dashed rgba(225, 180, 70, 0.95);
+  outline-offset: 1px;
+}
+
+.mk-chat-style-editor-toggle.active,
+[data-action="mkChatStyleEditor"].active .control {
+  color: var(--color-warm-1, #d8b35f) !important;
+  text-shadow: 0 0 6px rgba(216, 179, 95, 0.65);
+}
+
+.mk-chat-style-editor-toggle:disabled,
+[data-action="mkChatStyleEditor"] .control:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.mk-chat-style-context-menu {
+  width: min(410px, calc(100vw - 16px));
+}

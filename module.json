@@ -2,7 +2,7 @@
   "id": "mk-shadowdark",
   "title": "MK-Shadowdark",
   "description": "Quality-of-life extras and expansions for the Shadowdark RPG system.",
-  "version": "1.2.0",
+  "version": "1.2.1",
   "compatibility": {
     "minimum": "12",
     "verified": "14",
@@ -39,6 +39,7 @@
     "scripts/death-timer.js",
     "scripts/editable-qty.js",
     "scripts/equipment-hands.js",
+    "scripts/token-equipment-display.js",
     "scripts/group-sheet.js",
     "scripts/quickdraw/quickdraw-icons.js",
     "scripts/sheet-style-editor.js",

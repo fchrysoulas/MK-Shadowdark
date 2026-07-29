@@ -12,11 +12,12 @@ Modular quality-of-life tools, gameplay automation, party management, and charac
 ## Features
 
 - **Auto Damage**: automatically applies damage from attack or spell rolls to targeted tokens, with optional GM-only mode, delay, 3D dice support, and token shake feedback.
-- **Character Sheet Tweaks**: adds a configurable compact summary bar, a height toggle, optional header styling, Shadowdark logo hiding, quick access to common stats, and a GM visual editor with element sizing controls.
+- **Character Sheet Tweaks**: adds a configurable compact summary bar with Normal/Grinder resting, a height toggle, optional header styling, Shadowdark logo hiding, quick access to common stats, and a GM visual editor with element sizing controls.
 - **Death Timer**: adds a configurable sheet button for starting and managing Shadowdark death timers.
 - **Editable Quantity**: lets item quantities be edited directly from actor inventory rows.
 - **Encounter Engine - Phase 1**: follows the Shadowdark random encounter procedure for danger checks, number appearing, distance, activity, awareness, reaction, treasure, and morale guidance, then creates an interactive GM chat card.
 - **Equipment Hands**: checks equipped weapons, shields, and hand-occupying gear against available hand slots, either warning or blocking invalid loadouts.
+- **Token Equipment Display**: shows held gear beside player tokens, displays two-handed gear once above or below the token, and adds a smaller configurable Quickdraw row.
 - **Focus Tracker**: tracks successfully cast Focus spells, enforces configurable capacity, requests maintenance checks at the caster's turn or after damage, and exposes actor-sheet and chat-card controls with a token status icon.
 - **Group Sheet**: adds a party/group actor sheet for members, shared inventory, notes, and Camping task assignment.
 - **Paper Chat**: provides twelve paper-inspired chat themes and a GM visual editor for theme-specific message styling.
@@ -48,6 +49,16 @@ max(1, @dex.mod + gear("bandolier", 2))
 - The inventory sidebar includes a native-style Quick card showing only current/total selections; hover over or focus the card to see the actor, Base, and gear source breakdown.
 - Supported operators are `+`, `-`, `*`, `/`, `%`, and `^`. Supported functions are `min`, `max`, `floor`, `ceil`, `round`, `trunc`, `abs`, and `clamp`.
 - The result is rounded down to a whole number. `0` means unlimited. Invalid expressions fall back to `3` and write a warning to the console.
+
+## Token Equipment Display
+
+The Token Equipment Display uses the same equipped, stashed, handedness, shield, and hand-occupying rules as Equipment Hands. It refreshes when actor items are created, updated, deleted, or transferred.
+
+- One-handed items appear on the left and right sides. Shields prefer the left and weapons prefer the right; right-click a held icon to swap its hand assignment.
+- Two-handed weapons appear in both hand slots; the secondary occupancy icon is grayed out.
+- Carried Quickdraw items appear as smaller icons and are omitted from the Quickdraw row while held or stashed.
+- Left-clicking can open the item sheet, use or roll the item through Shadowdark, or do nothing. Shift-click skips prompts where the system supports it.
+- World settings control everyone/owner/GM visibility, optional icon frames, border thickness and colors, independent held/Quickdraw opacity and scale, Quickdraw icon padding, anchors, and X and Y offsets.
 
 ## Focus Tracker
 

@@ -96,7 +96,8 @@
       hint: "Configure the independent character summary bar, its contents, appearance, position, and diagnostics.",
       icon: "fas fa-chart-simple",
       settings: [
-        "characterSheetTweaksSummaryBar", "characterSheetTweaksBarElements", "characterSheetTweaksFontScale",
+        "characterSheetTweaksSummaryBar", "characterSheetTweaksBarElements", "characterSheetTweaksRestMode",
+        "characterSheetTweaksFontScale",
         "characterSheetTweaksBarValueFontSize", "characterSheetTweaksBarButtonRadius", "characterSheetTweaksBarButtonScale",
         "characterSheetTweaksBarPositionX", "characterSheetTweaksBarPositionY", "summaryBarDebug"
       ]
@@ -131,6 +132,61 @@
       hint: "Configure equipped-hand rules, limits, dual wielding, and diagnostics.",
       icon: "fas fa-hand",
       settings: ["equipmentHandsEnabled", "equipmentHandsMode", "equipmentHandsMaxHands", "equipmentHandsAllowDualWield", "equipmentHandsIgnoreStashed", "equipmentHandsDebug"]
+    },
+    {
+      key: "tokenEquipment",
+      title: "Token Equipment Display",
+      hint: "Show held and Quickdraw item icons around player tokens and configure their visibility, interaction, size, anchor, and position.",
+      icon: "fas fa-hand-holding",
+      width: 760,
+      height: 760,
+      settings: [
+        "tokenEquipmentEnabled", "tokenEquipmentVisibility", "tokenEquipmentClickAction", "tokenEquipmentShowQuickdraw",
+        "tokenEquipmentBorderEnabled", "tokenEquipmentBorderWidth",
+        "tokenEquipmentHeldBorderColor", "tokenEquipmentQuickdrawBorderColor",
+        "tokenEquipmentHeldScale", "tokenEquipmentHeldOpacity", "tokenEquipmentHeldAnchor",
+        "tokenEquipmentHeldOffsetX", "tokenEquipmentHeldOffsetY",
+        "tokenEquipmentQuickdrawScale", "tokenEquipmentQuickdrawOpacity",
+        "tokenEquipmentQuickdrawPadding", "tokenEquipmentQuickdrawAnchor",
+        "tokenEquipmentQuickdrawOffsetX", "tokenEquipmentQuickdrawOffsetY", "tokenEquipmentDebug"
+      ],
+      sections: [
+        {
+          title: "General",
+          settings: [
+            "tokenEquipmentEnabled", "tokenEquipmentVisibility",
+            "tokenEquipmentClickAction", "tokenEquipmentShowQuickdraw"
+          ]
+        },
+        {
+          title: "Icon Frames",
+          settings: [
+            "tokenEquipmentBorderEnabled", "tokenEquipmentBorderWidth",
+            "tokenEquipmentHeldBorderColor", "tokenEquipmentQuickdrawBorderColor"
+          ]
+        },
+        {
+          title: "Held Items",
+          settings: [
+            "tokenEquipmentHeldScale", "tokenEquipmentHeldOpacity",
+            "tokenEquipmentHeldAnchor",
+            "tokenEquipmentHeldOffsetX", "tokenEquipmentHeldOffsetY"
+          ]
+        },
+        {
+          title: "Quickdraw Items",
+          settings: [
+            "tokenEquipmentQuickdrawScale", "tokenEquipmentQuickdrawOpacity",
+            "tokenEquipmentQuickdrawPadding",
+            "tokenEquipmentQuickdrawAnchor",
+            "tokenEquipmentQuickdrawOffsetX", "tokenEquipmentQuickdrawOffsetY"
+          ]
+        },
+        {
+          title: "Diagnostics",
+          settings: ["tokenEquipmentDebug"]
+        }
+      ]
     },
     {
       key: "timePasses",
@@ -236,6 +292,7 @@
     const choices = typeof setting.choices === "function" ? setting.choices() : setting.choices;
     const isBoolean = setting.type === Boolean;
     const isNumber = setting.type === Number;
+    const isColor = ["tokenEquipmentHeldBorderColor", "tokenEquipmentQuickdrawBorderColor"].includes(key);
     const isSelect = Boolean(choices && Object.keys(choices).length);
     const options = isSelect
       ? Object.entries(choices).map(([optionValue, optionLabel]) => ({
@@ -256,8 +313,9 @@
       isRange: isNumber && Boolean(setting.range),
       isFilePicker: Boolean(setting.filePicker),
       isTextarea: ["sheetStyleEditorCss", "paperChatEditorCss"].includes(key),
+      isColor,
       filePickerType: setting.filePicker,
-      inputType: isNumber ? "number" : "text",
+      inputType: isColor ? "color" : isNumber ? "number" : "text",
       dataType: isNumber ? "Number" : "String",
       range: setting.range ?? {},
       options
@@ -387,6 +445,14 @@
       void game.modules.get(MODULE_ID)?.api?.focus?.syncTokenIcons?.();
     } catch (err) {
       console.error(`${MODULE_ID} v${getModuleVersion()} | ${SUBMODULE} | refreshFocusTrackerUi error`, err);
+    }
+  }
+
+  function refreshTokenEquipmentUi() {
+    try {
+      game.modules.get(MODULE_ID)?.api?.tokenEquipment?.refreshAll?.();
+    } catch (err) {
+      console.error(`${MODULE_ID} v${getModuleVersion()} | ${SUBMODULE} | refreshTokenEquipmentUi error`, err);
     }
   }
 
@@ -842,11 +908,25 @@
 
     registerSetting("characterSheetTweaksBarElements", {
       name: "Summary Bar | Elements",
-      hint: "Comma-separated list of bar elements, in display order. Available: LVL, HP, DT, AC, XP, LUCK, SLOTS, STR, DEX, CON, INT, WIS, CHA. DT is the Death Timer and appears only at 0 HP. Use | to add a vertical divider.",
+      hint: "Comma-separated list of bar elements, in display order. Available: LVL, HP, DT, AC, XP, LUCK, REST, SLOTS, STR, DEX, CON, INT, WIS, CHA. DT is the Death Timer and appears only at 0 HP. Use | to add a vertical divider.",
       scope: "world",
       config: true,
       type: String,
-      default: "HP, DT, LUCK,|,STR,DEX,CON,INT,WIS,CHA, SLOTS",
+      default: "HP, DT, LUCK, REST,|,STR,DEX,CON,INT,WIS,CHA, SLOTS",
+      onChange: refreshOpenActorSheets
+    });
+
+    registerSetting("characterSheetTweaksRestMode", {
+      name: "Summary Bar | Rest Mode",
+      hint: "Normal restores all HP, class abilities, and spells. Grinder restores class abilities, 1d4 lost spells, and HP equal to one class hit die.",
+      scope: "world",
+      config: true,
+      type: String,
+      default: "normal",
+      choices: {
+        normal: "Normal",
+        grinder: "Grinder"
+      },
       onChange: refreshOpenActorSheets
     });
 
@@ -1168,6 +1248,279 @@
     registerSetting("equipmentHandsDebug", {
       name: "Equipment Hands | Debug Mode",
       hint: "Logs Equipment Hands debug information to the browser console.",
+      scope: "world",
+      config: true,
+      type: Boolean,
+      default: false
+    });
+
+    /* -------------------- */
+    /* Token Equipment      */
+    /* -------------------- */
+
+    registerSetting("tokenEquipmentEnabled", {
+      name: "Token Equipment Display | Enabled",
+      hint: "Shows held items and optional Quickdraw items around player tokens.",
+      scope: "world",
+      config: true,
+      type: Boolean,
+      default: true,
+      onChange: refreshTokenEquipmentUi
+    });
+
+    registerSetting("tokenEquipmentVisibility", {
+      name: "Token Equipment Display | Visibility",
+      hint: "Choose who can see token equipment icons. Owner visibility also includes GMs.",
+      scope: "world",
+      config: true,
+      type: String,
+      default: "everyone",
+      choices: {
+        everyone: "Everyone",
+        owner: "Actor owners and GMs",
+        gm: "GMs only"
+      },
+      onChange: refreshTokenEquipmentUi
+    });
+
+    registerSetting("tokenEquipmentClickAction", {
+      name: "Token Equipment Display | Click Action",
+      hint: "Open the item sheet, use or roll the item using Shadowdark rules, or make icons display-only. Hold Shift while using an item to skip supported prompts.",
+      scope: "world",
+      config: true,
+      type: String,
+      default: "open",
+      choices: {
+        open: "Open item sheet",
+        use: "Use or roll item",
+        none: "No left-click action"
+      }
+    });
+
+    registerSetting("tokenEquipmentShowQuickdraw", {
+      name: "Token Equipment Display | Show Quickdraw Items",
+      hint: "Shows carried Quickdraw items as a smaller row. Held and stashed items are omitted from this row.",
+      scope: "world",
+      config: true,
+      type: Boolean,
+      default: true,
+      onChange: refreshTokenEquipmentUi
+    });
+
+    registerSetting("tokenEquipmentBorderEnabled", {
+      name: "Token Equipment Display | Show Icon Frames",
+      hint: "Draws a dark frame and colored border around held and Quickdraw icons. Disable this to show the item artwork without frame padding.",
+      scope: "world",
+      config: true,
+      type: Boolean,
+      default: true,
+      onChange: refreshTokenEquipmentUi
+    });
+
+    registerSetting("tokenEquipmentBorderWidth", {
+      name: "Token Equipment Display | Border Thickness",
+      hint: "Border thickness as a fraction of the icon size.",
+      scope: "world",
+      config: true,
+      type: Number,
+      default: 0.055,
+      range: {
+        min: 0.01,
+        max: 0.15,
+        step: 0.005
+      },
+      onChange: refreshTokenEquipmentUi
+    });
+
+    registerSetting("tokenEquipmentHeldBorderColor", {
+      name: "Token Equipment Display | Held Border Color",
+      hint: "Border color used for equipped hand-item icons.",
+      scope: "world",
+      config: true,
+      type: String,
+      default: "#f1dfaa",
+      onChange: refreshTokenEquipmentUi
+    });
+
+    registerSetting("tokenEquipmentQuickdrawBorderColor", {
+      name: "Token Equipment Display | Quickdraw Border Color",
+      hint: "Border color used for smaller Quickdraw icons.",
+      scope: "world",
+      config: true,
+      type: String,
+      default: "#d9bd70",
+      onChange: refreshTokenEquipmentUi
+    });
+
+    registerSetting("tokenEquipmentHeldScale", {
+      name: "Token Equipment Display | Held Icon Size",
+      hint: "Held icon size as a fraction of one grid space.",
+      scope: "world",
+      config: true,
+      type: Number,
+      default: 0.38,
+      range: {
+        min: 0.15,
+        max: 0.8,
+        step: 0.01
+      },
+      onChange: refreshTokenEquipmentUi
+    });
+
+    registerSetting("tokenEquipmentHeldOpacity", {
+      name: "Token Equipment Display | Held Icon Opacity",
+      hint: "Controls the transparency of held item artwork and its optional frame.",
+      scope: "world",
+      config: true,
+      type: Number,
+      default: 1,
+      range: {
+        min: 0.1,
+        max: 1,
+        step: 0.05
+      },
+      onChange: refreshTokenEquipmentUi
+    });
+
+    registerSetting("tokenEquipmentHeldAnchor", {
+      name: "Token Equipment Display | One-Handed Vertical Anchor",
+      hint: "Places left- and right-hand icons near the top, middle, or bottom of the token sides.",
+      scope: "world",
+      config: true,
+      type: String,
+      default: "center",
+      choices: {
+        top: "Top",
+        center: "Middle",
+        bottom: "Bottom"
+      },
+      onChange: refreshTokenEquipmentUi
+    });
+
+    registerSetting("tokenEquipmentHeldOffsetX", {
+      name: "Token Equipment Display | Held Horizontal Offset",
+      hint: "Moves all held icons horizontally in grid-space units.",
+      scope: "world",
+      config: true,
+      type: Number,
+      default: 0,
+      range: {
+        min: -2,
+        max: 2,
+        step: 0.05
+      },
+      onChange: refreshTokenEquipmentUi
+    });
+
+    registerSetting("tokenEquipmentHeldOffsetY", {
+      name: "Token Equipment Display | Held Vertical Offset",
+      hint: "Moves all held icons vertically in grid-space units.",
+      scope: "world",
+      config: true,
+      type: Number,
+      default: 0,
+      range: {
+        min: -2,
+        max: 2,
+        step: 0.05
+      },
+      onChange: refreshTokenEquipmentUi
+    });
+
+    registerSetting("tokenEquipmentQuickdrawScale", {
+      name: "Token Equipment Display | Quickdraw Icon Size",
+      hint: "Quickdraw icon size as a fraction of one grid space.",
+      scope: "world",
+      config: true,
+      type: Number,
+      default: 0.22,
+      range: {
+        min: 0.1,
+        max: 0.55,
+        step: 0.01
+      },
+      onChange: refreshTokenEquipmentUi
+    });
+
+    registerSetting("tokenEquipmentQuickdrawOpacity", {
+      name: "Token Equipment Display | Quickdraw Icon Opacity",
+      hint: "Controls the transparency of Quickdraw item artwork and its optional frame.",
+      scope: "world",
+      config: true,
+      type: Number,
+      default: 1,
+      range: {
+        min: 0.1,
+        max: 1,
+        step: 0.05
+      },
+      onChange: refreshTokenEquipmentUi
+    });
+
+    registerSetting("tokenEquipmentQuickdrawPadding", {
+      name: "Token Equipment Display | Quickdraw Icon Padding",
+      hint: "Adds space between neighboring Quickdraw icons as a fraction of the icon size.",
+      scope: "world",
+      config: true,
+      type: Number,
+      default: 0.1,
+      range: {
+        min: 0,
+        max: 1.5,
+        step: 0.05
+      },
+      onChange: refreshTokenEquipmentUi
+    });
+
+    registerSetting("tokenEquipmentQuickdrawAnchor", {
+      name: "Token Equipment Display | Quickdraw Anchor",
+      hint: "Anchors the Quickdraw row above, below, to the left, or to the right of the token.",
+      scope: "world",
+      config: true,
+      type: String,
+      default: "bottom",
+      choices: {
+        top: "Above token",
+        bottom: "Below token",
+        left: "Left of token",
+        right: "Right of token"
+      },
+      onChange: refreshTokenEquipmentUi
+    });
+
+    registerSetting("tokenEquipmentQuickdrawOffsetX", {
+      name: "Token Equipment Display | Quickdraw Horizontal Offset",
+      hint: "Moves the Quickdraw row horizontally in grid-space units.",
+      scope: "world",
+      config: true,
+      type: Number,
+      default: 0,
+      range: {
+        min: -2,
+        max: 2,
+        step: 0.05
+      },
+      onChange: refreshTokenEquipmentUi
+    });
+
+    registerSetting("tokenEquipmentQuickdrawOffsetY", {
+      name: "Token Equipment Display | Quickdraw Vertical Offset",
+      hint: "Moves the Quickdraw row vertically in grid-space units.",
+      scope: "world",
+      config: true,
+      type: Number,
+      default: 0.08,
+      range: {
+        min: -2,
+        max: 2,
+        step: 0.05
+      },
+      onChange: refreshTokenEquipmentUi
+    });
+
+    registerSetting("tokenEquipmentDebug", {
+      name: "Token Equipment Display | Debug Mode",
+      hint: "Logs token equipment rendering and refresh details to the browser console.",
       scope: "world",
       config: true,
       type: Boolean,

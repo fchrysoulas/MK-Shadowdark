@@ -174,6 +174,19 @@ button.mk-sheet-chip:focus-visible {
   color: #e04242;
 }
 
+.mk-rest-chip span {
+  display: flex !important;
+  align-items: center;
+  justify-content: center !important;
+}
+
+.mk-rest-icon {
+  color: #dfc77d;
+  font-size: 0.95em;
+  line-height: 1;
+  filter: drop-shadow(0 1px 1px rgba(0, 0, 0, 0.75));
+}
+
 .mk-death-timer-chip span {
   display: flex !important;
   align-items: center;
@@ -293,4 +306,25 @@ button.mk-sheet-chip:focus-visible {
     right: 6px;
     bottom: 6px;
   }
+}
+
+.mk-rest-spell-picker p {
+  margin-top: 0;
+}
+
+.mk-rest-spell-list {
+  display: grid;
+  gap: 0.35rem;
+  max-height: 18rem;
+  overflow-y: auto;
+}
+
+.mk-rest-spell-option {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+}
+
+.mk-rest-spell-option input {
+  flex: 0 0 auto;
 }

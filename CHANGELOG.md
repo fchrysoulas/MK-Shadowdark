@@ -2,6 +2,11 @@
 
 ## Unreleased
 
+## 1.2.1
+
+- Added a Summary Bar rest button with configurable Normal and Grinder recovery, including class abilities, lost spells, full or hit-die HP recovery, Grinder spell selection, and Dice So Nice animations for recovery rolls.
+- Added a configurable Token Equipment Display for held and Quickdraw item icons, including hand assignment, paired two-handed occupancy with a grayed secondary icon, optional border styling, independent opacity controls, Quickdraw icon padding, visibility controls, item interactions, and live item updates.
+
 ## 1.2.0
 
 - Sorted the module's feature settings submenus alphabetically by name.

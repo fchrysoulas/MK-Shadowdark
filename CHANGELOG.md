@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Moved Summary Bar rest handling into a dedicated module.
+
 ## 1.2.1
 
 - Added a Summary Bar rest button with configurable Normal and Grinder recovery, including class abilities, lost spells, full or hit-die HP recovery, Grinder spell selection, and Dice So Nice animations for recovery rolls.

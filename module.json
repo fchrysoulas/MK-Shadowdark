@@ -58,6 +58,7 @@
     "styles/auto-apply-damage.css",
     "styles/chat-reporting.css",
     "styles/group-sheet.css",
+    "styles/group-sheet-dashboard.css",
     "styles/quickdraw-icons.css",
     "styles/encounter-engine.css",
     "styles/summary-bar.css",

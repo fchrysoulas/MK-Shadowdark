@@ -656,7 +656,7 @@ async function applyTravelPlayerRollResult(groupActor, data = {}, requestingUser
   const actor = await resolveActorFromUuid(data.actorUuid);
   if (!activity || !actor) return null;
   if (!canUserControlActor(actor, requestingUser)) return null;
-  if (!groupData.members.includes(actor.uuid)) return null;
+  if (!groupData.activeMembers.includes(actor.uuid)) return null;
 
   const hasAssignment = getEffectiveTravelAssignments(groupData).some(assignment => (
     assignment.activityKey === activity.key && assignment.actorUuid === actor.uuid

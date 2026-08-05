@@ -15,75 +15,56 @@
   </header>
 
   <nav class="mk-group-nav tabs" data-group="primary">
-    <a class="item active" data-tab="members"><i class="fas fa-users"></i> Members</a>
-    <a class="item" data-tab="traveling"><i class="fas fa-route"></i> Traveling</a>
+    <a class="item active" data-tab="traveling"><i class="fas fa-route"></i> Traveling</a>
     <a class="item" data-tab="camping"><i class="fas fa-campground"></i> Camping</a>
     <a class="item" data-tab="inventory"><i class="fas fa-box-open"></i> Inventory</a>
     <a class="item" data-tab="notes"><i class="fas fa-scroll"></i> Notes</a>
   </nav>
 
+  <div class="mk-group-member-source" aria-hidden="true">
+    {{#each mk.members}}
+    <article
+      class="mk-group-member"
+      data-member-uuid="{{uuid}}"
+      data-party-active="{{#if isActivePartyMember}}true{{else}}false{{/if}}"
+      data-travel-assignment="{{travelAssignment}}"
+      data-camping-assignment="{{campingAssignment}}"
+    >
+      <img class="mk-member-image" src="{{img}}" alt="{{name}}" data-action="open-member">
+
+      <div class="mk-member-main">
+        <div class="mk-member-name-row">
+          <button type="button" class="mk-member-name" data-action="open-member">{{name}}</button>
+          <span class="mk-member-class">{{className}}</span>
+        </div>
+
+        <div class="mk-member-hp-row">
+          <span class="mk-hp-text">{{hp.value}}/{{hp.max}}</span>
+          <div class="mk-hp-bar"><div class="mk-hp-fill" style="width: {{hp.pct}}%;"></div></div>
+        </div>
+
+        <div class="mk-member-abilities">
+          {{#each abilities}}
+          <button type="button" class="mk-ability-button" data-action="roll-ability" data-ability="{{key}}" title="Roll {{label}}">
+            <span>{{label}}</span>
+            <strong>{{mod}}</strong>
+          </button>
+          {{/each}}
+        </div>
+      </div>
+
+      <div class="mk-member-side-stats">
+        <span class="mk-side-stat">AC <strong>{{ac}}</strong></span>
+        <span class="mk-side-stat">LVL <strong>{{level}}</strong></span>
+        <span class="mk-side-stat">XP <strong>{{xp.value}}/{{xp.next}}</strong></span>
+        <span class="mk-side-stat {{#if slots.over}}mk-danger{{/if}}">Slots <strong>{{slots.total}}/{{slots.max}}</strong></span>
+      </div>
+    </article>
+    {{/each}}
+  </div>
+
   <section class="mk-group-content">
-    <div class="tab mk-group-tab mk-group-tab-body active" data-group="primary" data-tab="members">
-      {{#if mk.canEditGroup}}
-      <div class="mk-group-dropzone">
-        <i class="fas fa-hand-pointer"></i>
-        Drop actors here, or use the sheet header button to add controlled tokens.
-      </div>
-      {{/if}}
-
-      {{#if mk.hasMembers}}
-      <div class="mk-group-members">
-        {{#each mk.members}}
-        <article class="mk-group-member" data-member-uuid="{{uuid}}">
-          {{#if ../mk.canEditGroup}}
-          <button type="button" class="mk-member-remove" data-action="remove-member" title="Remove member"><i class="fas fa-times"></i></button>
-          {{/if}}
-
-          <img class="mk-member-image" src="{{img}}" alt="{{name}}" data-action="open-member">
-
-          <div class="mk-member-main">
-            <div class="mk-member-name-row">
-              <button type="button" class="mk-member-name" data-action="open-member">{{name}}</button>
-              <span class="mk-member-class">{{className}}</span>
-            </div>
-
-            <div class="mk-member-hp-row">
-              <span class="mk-small-label">HP</span>
-              <span class="mk-hp-text">{{hp.value}}/{{hp.max}}</span>
-              <div class="mk-hp-bar"><div class="mk-hp-fill" style="width: {{hp.pct}}%;"></div></div>
-            </div>
-
-            <div class="mk-member-abilities">
-              {{#each abilities}}
-              <button type="button" class="mk-ability-button" data-action="roll-ability" data-ability="{{key}}" title="Roll {{label}}">
-                <span>{{label}}</span>
-                <strong>{{mod}}</strong>
-              </button>
-              {{/each}}
-            </div>
-          </div>
-
-          <div class="mk-member-side-stats">
-            <span class="mk-side-stat">AC <strong>{{ac}}</strong></span>
-            <span class="mk-side-stat">LVL <strong>{{level}}</strong></span>
-            <span class="mk-side-stat mk-xp-stat">
-              XP <strong>{{xp.value}}/{{xp.next}}</strong>
-              {{#if ../mk.canEditGroup}}
-              <button type="button" data-action="xp-decrement" title="Decrease XP"><i class="fas fa-minus"></i></button>
-              <button type="button" data-action="xp-increment" title="Increase XP"><i class="fas fa-plus"></i></button>
-              {{/if}}
-            </span>
-            <span class="mk-side-stat {{#if slots.over}}mk-danger{{/if}}">Slots <strong>{{slots.total}}/{{slots.max}}</strong></span>
-          </div>
-        </article>
-        {{/each}}
-      </div>
-      {{else}}
-      <div class="mk-empty-group">{{#if mk.canEditGroup}}No members yet. Drop player actors or tokens onto this sheet.{{else}}No members yet. Ask the GM to add party members.{{/if}}</div>
-      {{/if}}
-    </div>
-
-    <div class="tab mk-group-tab mk-group-tab-body" data-group="primary" data-tab="traveling">
+    <div class="tab mk-group-tab mk-group-tab-body active" data-group="primary" data-tab="traveling">
       <div class="mk-travel-toolbar">
         <button type="button" data-action="cycle-weather"><i class="fas fa-cloud-sun-rain"></i> Weather: {{mk.travel.weatherLabel}}</button>
 

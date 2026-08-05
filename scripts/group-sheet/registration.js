@@ -270,7 +270,7 @@ async function handleTravelAssignmentSocketRequest(data) {
   if (!canUserControlActor(memberActor, requestingUser)) return;
 
   const groupData = getGroupData(groupActor);
-  if (!groupData.members.includes(actorUuid)) return;
+  if (!groupData.activeMembers.includes(actorUuid)) return;
 
   setActivityMember(groupData, activityKind, activityKey, actorUuid, Boolean(data.assigned));
   await groupActor.setFlag(MODULE_ID, "group", groupData);

@@ -1,8 +1,10 @@
 # Changelog
 
-## Unreleased
+## 1.2.2
 
 - Moved Summary Bar rest handling into a dedicated module.
+- Reworked the Group Sheet party sidebar into a full roster with a GM right-click menu for moving characters between the active party and roster.
+- Added travelling and camping assignment indicators to party portraits.
 
 ## 1.2.1
 

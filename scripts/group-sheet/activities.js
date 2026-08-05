@@ -164,7 +164,7 @@ function getEffectiveTravelAssignments(groupData) {
 
   if (!defaultActivity) return assignments;
 
-  for (const memberUuid of groupData.members ?? []) {
+  for (const memberUuid of groupData.activeMembers ?? groupData.members ?? []) {
     if (!memberUuid || assignedMemberUuids.has(memberUuid)) continue;
 
     assignments.push({
@@ -346,7 +346,14 @@ function getGroupData(actor) {
     getModuleFlag(actor, "group", {}) ?? {}
   );
 
-  existing.members ??= [];
+  existing.members = Array.from(new Set(
+    (Array.isArray(existing.members) ? existing.members : [])
+      .filter(uuid => typeof uuid === "string" && uuid)
+  ));
+  existing.activeMembers = Array.from(new Set(
+    (Array.isArray(existing.activeMembers) ? existing.activeMembers : existing.members)
+      .filter(uuid => existing.members.includes(uuid))
+  ));
   existing.travel ??= {};
   existing.camping ??= {};
   existing.travel.weather ??= "normal";

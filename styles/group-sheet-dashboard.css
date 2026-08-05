@@ -54,6 +54,15 @@
     rgba(6, 6, 6, 0.45);
 }
 
+.mk-group-party-sidebar.is-drag-over {
+  border-right-color: var(--mk-group-accent);
+  box-shadow: inset 0 0 0 2px var(--mk-group-accent);
+}
+
+.mk-group-member-source {
+  display: none;
+}
+
 .mk-party-sidebar-header {
   display: flex;
   align-items: center;
@@ -155,8 +164,53 @@
   box-shadow: inset 0 0 0 1px rgba(183, 43, 68, 0.12);
 }
 
+.mk-party-member.is-roster-member {
+  border-style: dashed;
+  opacity: 0.7;
+}
+
+.mk-party-member.is-roster-member[open] {
+  border-color: rgba(255, 255, 255, 0.28);
+  background: rgba(255, 255, 255, 0.055);
+  box-shadow: none;
+}
+
 .mk-party-member.is-dragging {
   opacity: 0.5;
+}
+
+.mk-party-member-context-menu {
+  position: fixed;
+  z-index: 1000;
+  display: grid;
+  min-width: 174px;
+  padding: 4px;
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  border-radius: 5px;
+  background: #1b1b1b;
+  box-shadow: 0 8px 22px rgba(0, 0, 0, 0.45);
+}
+
+.mk-party-member-context-menu button {
+  min-height: 28px;
+  margin: 0;
+  padding: 4px 8px;
+  border: 0;
+  border-radius: 3px;
+  background: transparent;
+  color: #ededed;
+  font-size: 12px;
+  text-align: left;
+  cursor: pointer;
+}
+
+.mk-party-member-context-menu button:hover:not(:disabled) {
+  background: rgba(255, 255, 255, 0.1);
+}
+
+.mk-party-member-context-menu button:disabled {
+  color: var(--mk-group-muted);
+  cursor: not-allowed;
 }
 
 .mk-party-member-summary {
@@ -199,12 +253,13 @@
 .mk-party-member-portrait {
   grid-area: portrait;
   display: block;
+  position: relative;
   width: 42px;
   height: 42px;
   min-height: 0;
   margin: 0;
   padding: 0;
-  overflow: hidden;
+  overflow: visible;
   border: 1px solid rgba(255, 255, 255, 0.18);
   border-radius: 4px;
   background: transparent;
@@ -215,8 +270,32 @@
   width: 100%;
   height: 100%;
   border: 0;
+  border-radius: inherit;
   object-fit: cover;
   object-position: center 18%;
+}
+
+.mk-party-member-assignment {
+  position: absolute;
+  z-index: 1;
+  width: 10px;
+  height: 10px;
+  border: 1px solid rgba(0, 0, 0, 0.8);
+  border-radius: 50%;
+  box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.45);
+  pointer-events: none;
+}
+
+.mk-party-member-assignment-travel {
+  top: -4px;
+  right: -4px;
+  background: #49b35b;
+}
+
+.mk-party-member-assignment-camping {
+  right: -4px;
+  bottom: -4px;
+  background: #e8952f;
 }
 
 .mk-party-member-identity {

@@ -119,7 +119,7 @@ class SDXGroupSheet extends ActorSheetBase {
         {
           navSelector: ".mk-group-nav",
           contentSelector: ".mk-group-content",
-          initial: "members",
+          initial: "traveling",
         },
       ],
       dragDrop: [
@@ -161,22 +161,53 @@ class SDXGroupSheet extends ActorSheetBase {
     const context = await super.getData(options);
     const groupData = getGroupData(this.actor);
 
-    const members = [];
-    const memberActors = [];
+    const rosterMembers = [];
+    const rosterActors = [];
 
     for (const uuid of groupData.members) {
       const memberActor = await resolveActorFromUuid(uuid);
       if (!memberActor) continue;
 
-      memberActors.push(memberActor);
-      members.push(await buildMemberData(memberActor));
+      rosterActors.push(memberActor);
+      rosterMembers.push(await buildMemberData(memberActor));
     }
+
+    const isActivePartyMember = member => groupData.activeMembers.includes(member.uuid);
+    rosterMembers.sort((left, right) => {
+      const activeDifference = Number(isActivePartyMember(right)) - Number(isActivePartyMember(left));
+      if (activeDifference) return activeDifference;
+
+      return String(left.name ?? "").localeCompare(String(right.name ?? ""), undefined, {
+        numeric: true,
+        sensitivity: "base",
+      });
+    });
+    const members = rosterMembers.filter(isActivePartyMember);
+    const memberActors = rosterActors.filter(isActivePartyMember);
 
     const inventoryItems = [...this.actor.items].map(buildInventoryItemData);
     const inventorySlots = calculateGroupInventorySlots(this.actor);
     const coins = this.actor.system?.coins ?? {};
     const campingActivities = await buildActivities(groupData, members, ACTIVITY_KIND_CAMPING);
     const travelActivities = await buildActivities(groupData, members, ACTIVITY_KIND_TRAVEL);
+    const campingMembers = buildActivityMemberRoster(groupData, members, ACTIVITY_KIND_CAMPING);
+    const travelMembers = buildActivityMemberRoster(groupData, members, ACTIVITY_KIND_TRAVEL);
+    const campingAssignments = new Map(
+      campingMembers
+        .filter(member => member.assigned)
+        .map(member => [member.uuid, member.assignedActivityName])
+    );
+    const travelAssignments = new Map(
+      travelMembers
+        .filter(member => member.assigned)
+        .map(member => [member.uuid, member.assignedActivityName])
+    );
+    const memberData = rosterMembers.map(member => ({
+      ...member,
+      isActivePartyMember: isActivePartyMember(member),
+      campingAssignment: campingAssignments.get(member.uuid) ?? "",
+      travelAssignment: travelAssignments.get(member.uuid) ?? "",
+    }));
     const travelProgress = buildTravelProgress(groupData);
     const travelPromptActorCount = getTravelAssignmentKeys(groupData).length;
 
@@ -193,12 +224,14 @@ class SDXGroupSheet extends ActorSheetBase {
       isGroup: true,
       sheetStyle: buildGroupSheetStyle(),
       summary: buildHeaderSummary(members),
-      members,
-      hasMembers: members.length > 0,
+      members: memberData,
+      hasMembers: rosterMembers.length > 0,
+      rosterCount: rosterMembers.length,
+      partyCount: members.length,
       canEditGroup: this.isEditable && game.user.isGM,
       campingResources: buildCampingResources(memberActors, this.actor),
       camping: {
-        members: buildActivityMemberRoster(groupData, members, ACTIVITY_KIND_CAMPING),
+        members: campingMembers,
         hasMembers: members.length > 0,
         activities: campingActivities,
       },
@@ -223,7 +256,7 @@ class SDXGroupSheet extends ActorSheetBase {
           ...option,
           selected: option.value === groupData.travel.speed,
         })),
-        members: buildActivityMemberRoster(groupData, members, ACTIVITY_KIND_TRAVEL),
+        members: travelMembers,
         hasMembers: members.length > 0,
         activities: travelActivities,
         hasAssigned: travelPromptActorCount > 0,
@@ -369,12 +402,43 @@ class SDXGroupSheet extends ActorSheetBase {
     await this.actor.setFlag(MODULE_ID, "group", groupData);
   }
 
+  async _setPartyMemberActive(actorUuid, active) {
+    if (!game.user.isGM) {
+      ui.notifications.warn("Only the GM can change the active party.");
+      return false;
+    }
+
+    const groupData = getGroupData(this.actor);
+    if (!groupData.members.includes(actorUuid)) return false;
+
+    if (active) {
+      if (!groupData.activeMembers.includes(actorUuid)) {
+        groupData.activeMembers.push(actorUuid);
+      }
+    } else {
+      groupData.activeMembers = groupData.activeMembers.filter(uuid => uuid !== actorUuid);
+
+      for (const kind of ACTIVITY_KINDS) {
+        for (const activity of Object.values(getActivityStore(groupData, kind))) {
+          activity.actorUuids = (activity.actorUuids ?? []).filter(uuid => uuid !== actorUuid);
+        }
+      }
+
+      groupData.travel.prompt = normalizeTravelPrompt({});
+    }
+
+    await this._saveGroupData(groupData);
+    this.render(false);
+    return true;
+  }
+
   async _onDrop(event) {
     event.preventDefault();
 
     const data = TextEditorImplementation.getDragEventData(event);
     if (!data) return false;
 
+    const dropTarget = event.target?.closest?.("[data-party-member-dropzone='true']");
     const travelCard = event.target.closest?.("[data-travel-activity-key]");
 
     if (data.type === "Actor" || data.uuid) {
@@ -387,6 +451,12 @@ class SDXGroupSheet extends ActorSheetBase {
         }
 
         if (travelCard) {
+          const groupData = getGroupData(this.actor);
+          if (!groupData.members.includes(droppedActor.uuid)) {
+            ui.notifications.warn("Add player characters by dropping them on the Party bar first.");
+            return false;
+          }
+
           const activityKey = travelCard.dataset.travelActivityKey;
           const activityKind = this._getActivityKindFromElement(travelCard);
           if (game.user.isGM || this.actor.isOwner) {
@@ -397,7 +467,17 @@ class SDXGroupSheet extends ActorSheetBase {
           return false;
         }
 
-        if (!travelCard && !game.user.isGM) {
+        if (!dropTarget) {
+          ui.notifications.warn("Drop player characters onto the Party bar to add them to the group.");
+          return false;
+        }
+
+        if (droppedActor.type !== "Player") {
+          ui.notifications.warn("Only player characters can be added to a group.");
+          return false;
+        }
+
+        if (!game.user.isGM) {
           ui.notifications.warn("Only the GM can add members to a group.");
           return false;
         }
@@ -446,6 +526,7 @@ class SDXGroupSheet extends ActorSheetBase {
     }
 
     groupData.members.push(uuid);
+    groupData.activeMembers.push(uuid);
     await this._saveGroupData(groupData);
     this.render(false);
   }
@@ -464,6 +545,7 @@ class SDXGroupSheet extends ActorSheetBase {
       }
 
       groupData.members.push(memberActor.uuid);
+      groupData.activeMembers.push(memberActor.uuid);
     }
 
     setActivityMember(groupData, kind, activityKey, memberActor.uuid, true);
@@ -487,6 +569,11 @@ class SDXGroupSheet extends ActorSheetBase {
     const groupData = getGroupData(this.actor);
     if (!groupData.members.includes(actorUuid)) {
       ui.notifications.warn(`${memberActor.name} is not in this group.`);
+      return false;
+    }
+
+    if (!groupData.activeMembers.includes(actorUuid)) {
+      ui.notifications.warn(`${memberActor.name} is on the roster. Add them to the active party first.`);
       return false;
     }
 
@@ -548,6 +635,7 @@ class SDXGroupSheet extends ActorSheetBase {
     const groupData = getGroupData(this.actor);
 
     groupData.members = groupData.members.filter(existingUuid => existingUuid !== uuid);
+    groupData.activeMembers = groupData.activeMembers.filter(existingUuid => existingUuid !== uuid);
 
     for (const kind of ACTIVITY_KINDS) {
       for (const activity of Object.values(getActivityStore(groupData, kind))) {
@@ -1114,37 +1202,6 @@ class SDXGroupSheet extends ActorSheetBase {
     ui.notifications.info("Party treasure divided.");
   }
 
-  async _addControlledTokens() {
-    if (!canvas?.ready) return;
-
-    const actors = canvas.tokens.controlled
-      .map(token => token.actor)
-      .filter(actor => actor && actor.id !== this.actor.id);
-
-    if (actors.length === 0) {
-      ui.notifications.info("Select one or more tokens first.");
-      return;
-    }
-
-    for (const actor of actors) {
-      await this._addMember(actor);
-    }
-  }
-
-  _getHeaderButtons() {
-    const buttons = super._getHeaderButtons();
-
-    if (game.user.isGM) {
-      buttons.unshift({
-        label: "Add Tokens",
-        class: "mk-add-controlled-tokens",
-        icon: "fas fa-user-plus",
-        onclick: () => this._addControlledTokens(),
-      });
-    }
-
-    return buttons;
-  }
 }
 export {
   createGroupActor,

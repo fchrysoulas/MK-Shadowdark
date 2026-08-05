@@ -4,6 +4,9 @@ const COLLAPSED_CLASS = "is-party-sidebar-collapsed";
 const STORAGE_PREFIX = `${MODULE_ID}.groupDashboard.sidebarCollapsed`;
 
 const expandedMemberByGroup = new Map();
+let activePartyContextMenu = null;
+let partyContextMenuPointerHandler = null;
+let partyContextMenuKeyHandler = null;
 
 function getRootElement(html) {
   if (!html) return null;
@@ -96,7 +99,7 @@ function createIconButton({ className, icon, label, onClick }) {
   return button;
 }
 
-function createSidebarHeader(app, form, memberCount) {
+function createSidebarHeader(app, form, partyCount, rosterCount) {
   const header = document.createElement("header");
   header.className = "mk-party-sidebar-header";
 
@@ -105,7 +108,7 @@ function createSidebarHeader(app, form, memberCount) {
   title.innerHTML = `
     <span class="mk-party-sidebar-title-icon"><i class="fas fa-users" aria-hidden="true"></i></span>
     <span class="mk-party-sidebar-title-text">Party</span>
-    <strong class="mk-party-sidebar-count">${memberCount}</strong>
+    <strong class="mk-party-sidebar-count" title="Active party / roster">${partyCount}/${rosterCount}</strong>
   `;
 
   const actions = document.createElement("div");
@@ -160,16 +163,19 @@ function getMemberAssignmentControl(form, uuid) {
   ) ?? null;
 }
 
-function configureMemberDrag(app, form, element, uuid) {
+function configureMemberDrag(app, form, element, uuid, isActivePartyMember) {
   const assignmentControl = getMemberAssignmentControl(form, uuid);
-  const canAssign = assignmentControl?.dataset?.canAssign !== "false"
+  const canAssign = Boolean(isActivePartyMember && assignmentControl)
+    && assignmentControl.dataset.canAssign !== "false"
     && !assignmentControl?.classList?.contains("is-unavailable");
 
   element.draggable = Boolean(canAssign);
   element.classList.toggle("is-unavailable", !canAssign);
 
   if (!canAssign) {
-    element.title = "This character is controlled by another user";
+    element.title = isActivePartyMember
+      ? "This character is controlled by another user"
+      : "Move this character to the active party before assigning an activity";
     return;
   }
 
@@ -192,6 +198,82 @@ function configureMemberDrag(app, form, element, uuid) {
   });
 }
 
+function closePartyContextMenu() {
+  activePartyContextMenu?.remove();
+  activePartyContextMenu = null;
+
+  if (partyContextMenuPointerHandler) {
+    document.removeEventListener("pointerdown", partyContextMenuPointerHandler, true);
+    partyContextMenuPointerHandler = null;
+  }
+
+  if (partyContextMenuKeyHandler) {
+    document.removeEventListener("keydown", partyContextMenuKeyHandler, true);
+    partyContextMenuKeyHandler = null;
+  }
+}
+
+function openPartyContextMenu(app, form, card, event) {
+  closePartyContextMenu();
+
+  const uuid = card.dataset.memberUuid;
+  const name = String(card.querySelector(".mk-member-name")?.textContent ?? "Character").trim();
+  const isActivePartyMember = card.dataset.partyActive === "true";
+  const menu = document.createElement("div");
+  menu.className = "mk-party-member-context-menu";
+  menu.setAttribute("role", "menu");
+
+  const toggle = document.createElement("button");
+  toggle.type = "button";
+  toggle.setAttribute("role", "menuitem");
+  toggle.textContent = isActivePartyMember ? "Move to Roster" : "Add to Active Party";
+  toggle.disabled = !game.user.isGM;
+  toggle.title = game.user.isGM
+    ? `${toggle.textContent}: ${name}`
+    : "Only the GM can change the active party";
+  toggle.addEventListener("click", async () => {
+    closePartyContextMenu();
+    await app._setPartyMemberActive(uuid, !isActivePartyMember);
+  });
+
+  const open = document.createElement("button");
+  open.type = "button";
+  open.setAttribute("role", "menuitem");
+  open.textContent = "Open Character Sheet";
+  open.addEventListener("click", clickEvent => {
+    closePartyContextMenu();
+    forwardClick(findOriginalAction(form, uuid, "[data-action='open-member']"), clickEvent);
+  });
+
+  menu.append(toggle, open);
+  document.body.appendChild(menu);
+  activePartyContextMenu = menu;
+
+  const maxLeft = Math.max(8, window.innerWidth - menu.offsetWidth - 8);
+  const maxTop = Math.max(8, window.innerHeight - menu.offsetHeight - 8);
+  menu.style.left = `${Math.min(event.clientX, maxLeft)}px`;
+  menu.style.top = `${Math.min(event.clientY, maxTop)}px`;
+
+  partyContextMenuPointerHandler = pointerEvent => {
+    if (!menu.contains(pointerEvent.target)) closePartyContextMenu();
+  };
+  partyContextMenuKeyHandler = keyEvent => {
+    if (keyEvent.key === "Escape") closePartyContextMenu();
+  };
+  document.addEventListener("pointerdown", partyContextMenuPointerHandler, true);
+  document.addEventListener("keydown", partyContextMenuKeyHandler, true);
+}
+
+function appendAssignmentIndicator(portrait, kind, activityName) {
+  if (!activityName) return;
+
+  const indicator = document.createElement("span");
+  indicator.className = `mk-party-member-assignment mk-party-member-assignment-${kind}`;
+  indicator.title = `${kind === "travel" ? "Travelling" : "Camping"}: ${activityName}`;
+  indicator.setAttribute("aria-label", indicator.title);
+  portrait.appendChild(indicator);
+}
+
 function createMemberSummary(app, form, card) {
   const uuid = card.dataset.memberUuid;
   const name = String(card.querySelector(".mk-member-name")?.textContent ?? "Unknown").trim();
@@ -203,17 +285,19 @@ function createMemberSummary(app, form, card) {
   const level = extractStat(card, "LVL");
   const slots = extractStat(card, "Slots");
   const xp = extractStat(card, "XP");
+  const isActivePartyMember = card.dataset.partyActive === "true";
 
   const details = document.createElement("details");
   details.className = "mk-party-member";
   details.dataset.memberUuid = uuid;
+  details.classList.toggle("is-roster-member", !isActivePartyMember);
 
   const previouslyExpanded = expandedMemberByGroup.get(app.actor.id);
   details.open = previouslyExpanded === uuid;
 
   const summary = document.createElement("summary");
   summary.className = "mk-party-member-summary";
-  configureMemberDrag(app, form, summary, uuid);
+  configureMemberDrag(app, form, summary, uuid, isActivePartyMember);
 
   const portraitButton = document.createElement("button");
   portraitButton.type = "button";
@@ -224,6 +308,8 @@ function createMemberSummary(app, form, card) {
   portraitImage.src = image;
   portraitImage.alt = name;
   portraitButton.appendChild(portraitImage);
+  appendAssignmentIndicator(portraitButton, "travel", card.dataset.travelAssignment);
+  appendAssignmentIndicator(portraitButton, "camping", card.dataset.campingAssignment);
   portraitButton.addEventListener("click", event => {
     event.preventDefault();
     event.stopPropagation();
@@ -322,16 +408,46 @@ function createMemberSummary(app, form, card) {
     });
   });
 
+  details.addEventListener("contextmenu", event => {
+    event.preventDefault();
+    event.stopPropagation();
+    openPartyContextMenu(app, form, card, event);
+  });
+
   return details;
 }
 
 function createSidebar(app, form) {
-  const memberCards = Array.from(form.querySelectorAll(".mk-group-members .mk-group-member[data-member-uuid]"));
+  const memberCards = Array.from(form.querySelectorAll(".mk-group-member-source .mk-group-member[data-member-uuid]"));
   const sidebar = document.createElement("aside");
   sidebar.className = "mk-group-party-sidebar";
   sidebar.setAttribute("aria-label", "Party roster");
+  sidebar.dataset.partyMemberDropzone = "true";
+  sidebar.title = game.user.isGM
+    ? "Drop a player character here to add them to the party"
+    : "Only the GM can add party members";
 
-  sidebar.appendChild(createSidebarHeader(app, form, memberCards.length));
+  sidebar.addEventListener("dragenter", event => {
+    event.preventDefault();
+    sidebar.classList.add("is-drag-over");
+  });
+
+  sidebar.addEventListener("dragover", event => {
+    event.preventDefault();
+    if (event.dataTransfer) event.dataTransfer.dropEffect = "copy";
+    sidebar.classList.add("is-drag-over");
+  });
+
+  sidebar.addEventListener("dragleave", event => {
+    if (!sidebar.contains(event.relatedTarget)) sidebar.classList.remove("is-drag-over");
+  });
+
+  sidebar.addEventListener("drop", () => {
+    sidebar.classList.remove("is-drag-over");
+  });
+
+  const partyCount = memberCards.filter(card => card.dataset.partyActive === "true").length;
+  sidebar.appendChild(createSidebarHeader(app, form, partyCount, memberCards.length));
 
   const list = document.createElement("div");
   list.className = "mk-party-sidebar-list";
@@ -384,6 +500,7 @@ function applyDashboardLayout(app, html) {
 }
 
 function onRenderGroupSheet(app, html) {
+  closePartyContextMenu();
   applyDashboardLayout(app, html);
 }
 

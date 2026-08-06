@@ -108,6 +108,9 @@ function renderTravelProgressSteps(progress) {
 function renderTravelPromptAssignment(assignment, options = {}) {
   const complete = Boolean(assignment.complete);
   const canRoll = Boolean(options.canRoll) && !complete;
+  const rollLabel = options.isGm
+    ? `GM Roll ${escapeHtml(assignment.abilityLabel)}`
+    : `Roll ${escapeHtml(assignment.abilityLabel)}`;
   const ability = Array.isArray(assignment.abilities) ? assignment.abilities[0] : "";
   const classes = [
     "mk-travel-prompt-assignment",
@@ -135,8 +138,8 @@ function renderTravelPromptAssignment(assignment, options = {}) {
       </div>
       <div class="mk-travel-prompt-assignment-controls">
         ${canRoll
-          ? `<button type="button" class="mk-travel-prompt-roll" data-action="travel-prompt-player-roll">Roll ${escapeHtml(assignment.abilityLabel)}</button>`
-          : `<span class="mk-travel-prompt-waiting">${complete ? "Resolved" : "Waiting"}</span>`}
+          ? `<button type="button" class="mk-travel-prompt-roll" data-action="travel-prompt-player-roll">${rollLabel}</button>`
+          : `<span class="mk-travel-prompt-waiting">${complete ? "Resolved" : "Waiting for player or GM"}</span>`}
       </div>
     </article>
   `;
@@ -147,6 +150,20 @@ function clearTravelPromptClientTimers(wrap) {
     clearTimeout(wrap._mkTravelProgressStartTimer);
     wrap._mkTravelProgressStartTimer = null;
   }
+
+  if (wrap?._mkTravelAutoCloseTimer) {
+    clearTimeout(wrap._mkTravelAutoCloseTimer);
+    wrap._mkTravelAutoCloseTimer = null;
+  }
+}
+
+function scheduleTravelPromptAutoClose(wrap) {
+  if (!wrap || wrap._mkTravelAutoCloseTimer) return;
+
+  wrap._mkTravelAutoCloseTimer = setTimeout(() => {
+    wrap._mkTravelAutoCloseTimer = null;
+    removeTravelPromptElement(wrap);
+  }, 5000);
 }
 
 function removeTravelPromptElement(wrap) {
@@ -234,11 +251,12 @@ async function showTravelRollPrompt(payload = {}) {
     const actor = await resolveActorFromUuid(assignment.actorUuid);
     return {
       assignment,
-      canRoll: rollingOpen && canUserControlActor(actor),
+      canRoll: rollingOpen && (game.user?.isGM || canUserControlActor(actor)),
+      isGm: Boolean(game.user?.isGM),
     };
   }));
   const statusText = payload.progress?.complete
-    ? "Travelling complete."
+    ? "Travelling complete. Closing in 5 seconds."
     : resolving
       ? "Travelling is resolving. Watch the route progress."
       : "Waiting for all travelling rolls.";
@@ -263,7 +281,10 @@ async function showTravelRollPrompt(payload = {}) {
         </span>
       </div>
       <div class="mk-travel-prompt-assignments">
-        ${assignmentRows.map(row => renderTravelPromptAssignment(row.assignment, { canRoll: row.canRoll })).join("")}
+        ${assignmentRows.map(row => renderTravelPromptAssignment(row.assignment, {
+          canRoll: row.canRoll,
+          isGm: row.isGm,
+        })).join("")}
       </div>
     </div>
   `;
@@ -274,6 +295,7 @@ async function showTravelRollPrompt(payload = {}) {
   requestAnimationFrame(() => {
     wrap.classList.add("is-visible");
     startTravelProgressAnimation(wrap, payload.progress);
+    if (payload.progress?.complete) scheduleTravelPromptAutoClose(wrap);
   });
 
   wrap.querySelector("[data-action='travel-prompt-close']")?.addEventListener("click", event => {
@@ -307,12 +329,44 @@ async function reportTravelPlayerRollResult(data = {}) {
     return applyTravelPlayerRollResult(groupActor, data, game.user);
   }
 
-  game.socket?.emit(`module.${MODULE_ID}`, {
+  const request = {
     feature: GROUP_SHEET_SOCKET_FEATURE,
     action: GROUP_SHEET_SOCKET_PLAYER_TRAVEL_ROLL,
     ...data,
     userId: game.user?.id,
-  });
+  };
+
+  // The module socket is the fast path. The short-lived whispered chat flag is
+  // a reliable fallback for Foundry sessions where a player's custom socket
+  // event does not reach the primary GM. Both paths are safe because completed
+  // assignment keys make travel results idempotent.
+  game.socket?.emit(`module.${MODULE_ID}`, request);
+
+  try {
+    const messageData = {
+      speaker: ChatMessage.getSpeaker(),
+      content: `<span style="display:none">mk-travelling-roll</span>`,
+      whisper: Array.from(game.users ?? [])
+        .filter(user => user.active && user.isGM)
+        .map(user => user.id),
+      flags: {
+        [MODULE_ID]: {
+          [GROUP_SHEET_CHAT_FLAG_TRAVEL_PROMPT]: {
+            ...request,
+            createdAt: Date.now(),
+          },
+        },
+      },
+    };
+
+    const messageStyle = globalThis.CONST?.CHAT_MESSAGE_STYLES?.OTHER;
+    if (messageStyle !== undefined) messageData.style = messageStyle;
+
+    const message = await ChatMessage.create(messageData);
+    setTimeout(() => message?.delete?.().catch(() => {}), 5000);
+  } catch (error) {
+    console.warn(`${MODULE_ID} | ${SUBMODULE} | Could not send travelling roll fallback`, error);
+  }
 
   return null;
 }
@@ -436,12 +490,13 @@ function applyTravelPromptUpdate(data = {}) {
     if (resolving || data.progress.complete) disableTravelPromptRollControls(wrap);
     if (status) {
       status.textContent = data.progress.complete
-        ? "Travelling complete."
+        ? "Travelling complete. Closing in 5 seconds."
         : resolving
           ? "Travelling is resolving. Watch the route progress."
           : "Waiting for all travelling rolls.";
     }
     startTravelProgressAnimation(wrap, data.progress);
+    if (data.progress.complete) scheduleTravelPromptAutoClose(wrap);
   }
 }
 

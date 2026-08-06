@@ -14,9 +14,13 @@ import {
   SHEET_ID,
   SPEED_OPTIONS,
   TRAVEL_PROMPT_ELEMENT_ID,
-  WEATHER_OPTIONS,
 } from "./constants.js";
-import { canUserControlActor, resolveActorFromUuid, resolveItemFromDropData } from "./actors.js";
+import {
+  canUserControlActor,
+  getActorAbilityModifier,
+  resolveActorFromUuid,
+  resolveItemFromDropData,
+} from "./actors.js";
 import {
   buildActivities,
   buildActivityMemberRoster,
@@ -30,13 +34,23 @@ import {
   getGroupData,
   getTravelAssignmentKeys,
   normalizeTravelPrompt,
+  normalizeCompanions,
   setActivityMember,
 } from "./activities.js";
 import { buildGroupSheetStyle } from "./group-settings.js";
 import {
+  getWeatherLabel,
+  getWeatherSummaries,
+  getWeatherTooltip,
+  rollWeather,
+  showWeatherRolls,
+} from "./weather.js";
+import {
+  buildActiveTorches,
   buildCampingResources,
   buildHeaderSummary,
   buildInventoryItemData,
+  calculateCompanionCarrySlots,
   buildMemberData,
   calculateCoinSlots,
   calculateGroupInventorySlots,
@@ -48,7 +62,7 @@ import {
   removeTravelPromptElement,
   showTravelRollPrompt,
 } from "./travel-prompt.js";
-import { clampNumber, getDialogFieldValue, numberOrZero, optionLabel } from "./utils.js";
+import { clampNumber, getDialogFieldValue, numberOrZero } from "./utils.js";
 import { getPrimaryActiveGm } from "./users.js";
 
 const ActorSheetBase = globalThis.foundry?.appv1?.sheets?.ActorSheet
@@ -83,9 +97,9 @@ async function createGroupActor({ name = "New Group", folder = null } = {}) {
       },
       [MODULE_ID]: {
         isGroup: true,
-        groupInventoryMaxSlots: 10,
         group: {
           members: [],
+          companions: [],
           travel: {
             weather: "normal",
             speed: "normal",
@@ -186,7 +200,9 @@ class SDXGroupSheet extends ActorSheetBase {
     const memberActors = rosterActors.filter(isActivePartyMember);
 
     const inventoryItems = [...this.actor.items].map(buildInventoryItemData);
-    const inventorySlots = calculateGroupInventorySlots(this.actor);
+    const companions = normalizeCompanions(groupData.companions);
+    const inventorySlots = calculateGroupInventorySlots(this.actor, companions);
+    const activeTorches = buildActiveTorches(memberActors, this.actor);
     const coins = this.actor.system?.coins ?? {};
     const campingActivities = await buildActivities(groupData, members, ACTIVITY_KIND_CAMPING);
     const travelActivities = await buildActivities(groupData, members, ACTIVITY_KIND_TRAVEL);
@@ -210,15 +226,37 @@ class SDXGroupSheet extends ActorSheetBase {
     }));
     const travelProgress = buildTravelProgress(groupData);
     const travelPromptActorCount = getTravelAssignmentKeys(groupData).length;
+    const membersByUuid = new Map(members.map(member => [member.uuid, member]));
+    const hirelings = companions
+      .filter(companion => companion.type === "hireling")
+      .map(companion => ({ ...companion }));
+    const mounts = companions
+      .filter(companion => companion.type === "mount")
+      .map(companion => {
+        const gearSlots = Math.max(0, companion.strengthBonus * 5);
+        const riderSlots = companion.riderUuid ? 10 : 0;
+        const rider = membersByUuid.get(companion.riderUuid);
+        const hpValue = Math.max(0, Number(companion.hpValue) || 0);
+        const hpMax = Math.max(0, Number(companion.hpMax) || 0);
 
-    context.notesHTML = await TextEditorImplementation.enrichHTML(
-      this.actor.system?.notes ?? "",
-      {
-        secrets: this.actor.isOwner,
-        async: true,
-        relativeTo: this.actor,
-      }
-    );
+        return {
+          ...companion,
+          gearSlots,
+          riderSlots,
+          availableCarrySlots: calculateCompanionCarrySlots(companion),
+          riderName: rider?.name ?? "",
+          riderImg: rider?.img ?? "",
+          hasRider: Boolean(rider),
+          hpValue,
+          hpMax,
+          hpPct: hpMax > 0 ? Math.min(100, Math.round((hpValue / hpMax) * 100)) : 0,
+          rarityOptions: ["common", "uncommon", "rare", "legendary"].map(value => ({
+            value,
+            label: value[0].toUpperCase() + value.slice(1),
+            selected: value === companion.rarity,
+          })),
+        };
+      });
 
     context.mk = {
       isGroup: true,
@@ -229,6 +267,22 @@ class SDXGroupSheet extends ActorSheetBase {
       rosterCount: rosterMembers.length,
       partyCount: members.length,
       canEditGroup: this.isEditable && game.user.isGM,
+      activeTorches: {
+        entries: activeTorches,
+        hasEntries: activeTorches.length > 0,
+        count: activeTorches.length,
+      },
+      hirelings: {
+        entries: hirelings,
+        hasEntries: hirelings.length > 0,
+        totalCarrySlots: hirelings.reduce((total, hireling) => total + hireling.carrySlots, 0),
+      },
+      mounts: {
+        entries: mounts,
+        hasEntries: mounts.length > 0,
+        totalGearSlots: mounts.reduce((total, mount) => total + mount.gearSlots, 0),
+        totalCarrySlots: mounts.reduce((total, mount) => total + mount.availableCarrySlots, 0),
+      },
       campingResources: buildCampingResources(memberActors, this.actor),
       camping: {
         members: campingMembers,
@@ -248,7 +302,9 @@ class SDXGroupSheet extends ActorSheetBase {
       },
       travel: {
         weather: groupData.travel.weather,
-        weatherLabel: optionLabel(WEATHER_OPTIONS, groupData.travel.weather),
+        weatherLabel: getWeatherLabel(groupData.travel),
+        weatherSummaries: getWeatherSummaries(groupData.travel),
+        weatherTooltip: getWeatherTooltip(groupData.travel),
         speed: groupData.travel.speed,
         milesPerHour: groupData.travel.milesPerHour,
         hexesToExplore: groupData.travel.hexesToExplore,
@@ -366,6 +422,29 @@ class SDXGroupSheet extends ActorSheetBase {
     html.find("[data-action='divide-coins']").on("click", event => {
       this._onDivideCoins(event);
     });
+
+    html.find("[data-action='add-companion']").on("click", event => {
+      this._onAddCompanion(event);
+    });
+
+    html.find("[data-action='change-companion']").on("change", event => {
+      this._onChangeCompanion(event);
+    });
+
+    html.find("[data-action='remove-companion']").on("click", event => {
+      this._onRemoveCompanion(event);
+    });
+
+    html.find("[data-action='clear-mount-rider']").on("click", event => {
+      this._onClearMountRider(event);
+    });
+
+    html[0]?.querySelectorAll("[data-mount-rider-dropzone='true']").forEach(card => {
+      card.addEventListener("dragenter", event => this._onMountRiderDragEnter(event), true);
+      card.addEventListener("dragover", event => this._onMountRiderDragOver(event), true);
+      card.addEventListener("dragleave", event => this._onMountRiderDragLeave(event), true);
+      card.addEventListener("drop", event => this._onMountRiderDrop(event), true);
+    });
   }
 
   _normalizeCampingResetButton(root) {
@@ -417,6 +496,11 @@ class SDXGroupSheet extends ActorSheetBase {
       }
     } else {
       groupData.activeMembers = groupData.activeMembers.filter(uuid => uuid !== actorUuid);
+      groupData.companions.forEach(companion => {
+        if (companion.type === "mount" && companion.riderUuid === actorUuid) {
+          companion.riderUuid = "";
+        }
+      });
 
       for (const kind of ACTIVITY_KINDS) {
         for (const activity of Object.values(getActivityStore(groupData, kind))) {
@@ -435,11 +519,19 @@ class SDXGroupSheet extends ActorSheetBase {
   async _onDrop(event) {
     event.preventDefault();
 
+    const mountRiderTarget = event.target?.closest?.("[data-mount-rider-dropzone='true']");
+    const draggedMemberUuid = this._campingDragActorUuid;
+    if (mountRiderTarget && draggedMemberUuid) {
+      await this._assignMountRider(mountRiderTarget.dataset.companionId, draggedMemberUuid);
+      return false;
+    }
+
     const data = TextEditorImplementation.getDragEventData(event);
     if (!data) return false;
 
     const dropTarget = event.target?.closest?.("[data-party-member-dropzone='true']");
     const travelCard = event.target.closest?.("[data-travel-activity-key]");
+    const mountDropTarget = event.target?.closest?.("[data-mount-dropzone='true']");
 
     if (data.type === "Actor" || data.uuid) {
       const droppedActor = await this._resolveDroppedActor(data);
@@ -464,6 +556,26 @@ class SDXGroupSheet extends ActorSheetBase {
           } else {
             await this._requestTravelActivityMember(activityKind, activityKey, droppedActor.uuid, true);
           }
+          return false;
+        }
+
+        if (mountRiderTarget) {
+          if (droppedActor.type !== "Player") {
+            ui.notifications.warn("Drop an active party member onto a mount to assign its rider.");
+            return false;
+          }
+
+          await this._assignMountRider(mountRiderTarget.dataset.companionId, droppedActor.uuid);
+          return false;
+        }
+
+        if (mountDropTarget) {
+          if (droppedActor.type !== "NPC") {
+            ui.notifications.warn("Only NPC actors can be added as mounts. Drag active party members onto a mount to assign riders.");
+            return false;
+          }
+
+          await this._addMountFromActor(droppedActor);
           return false;
         }
 
@@ -622,20 +734,71 @@ class SDXGroupSheet extends ActorSheetBase {
   async _onRemoveMember(event) {
     event.preventDefault();
 
-    if (!game.user.isGM) {
-      ui.notifications.warn("Only the GM can remove members from a group.");
-      return;
+    const row = event.currentTarget.closest("[data-member-uuid]");
+    return this._removeGroupMember(row?.dataset?.memberUuid);
+  }
+
+  async _addMountFromActor(mountActor) {
+    if (!this._canEditCompanions()) return false;
+
+    const groupData = getGroupData(this.actor);
+    if (groupData.companions.some(companion => companion.actorUuid === mountActor.uuid)) {
+      ui.notifications.info(`${mountActor.name} is already listed as a mount.`);
+      return false;
     }
 
-    const row = event.currentTarget.closest("[data-member-uuid]");
-    const uuid = row?.dataset?.memberUuid;
+    const hp = mountActor.system?.attributes?.hp ?? {};
+    groupData.companions.push({
+      id: foundry.utils?.randomID?.(16) ?? Math.random().toString(36).slice(2, 18),
+      type: "mount",
+      actorUuid: mountActor.uuid,
+      img: mountActor.img,
+      name: mountActor.name,
+      rarity: "common",
+      personality: "",
+      strengthBonus: getActorAbilityModifier(mountActor, "str"),
+      riderUuid: "",
+      level: Math.max(1, Math.floor(Number(mountActor.system?.level?.value) || 1)),
+      hpValue: Math.max(0, Math.floor(Number(hp.value) || 0)),
+      hpMax: Math.max(0, Math.floor(Number(hp.max ?? hp.value) || 0)),
+      movement: "Near",
+      flying: false,
+    });
 
-    if (!uuid) return;
+    await this._saveGroupData(groupData);
+    this.render(false);
+    return true;
+  }
+
+  async _removeGroupMember(uuid, { confirm = false } = {}) {
+    if (!uuid) return false;
+
+    if (!game.user.isGM) {
+      ui.notifications.warn("Only the GM can remove members from a group.");
+      return false;
+    }
+
+    if (confirm) {
+      const member = await resolveActorFromUuid(uuid);
+      const confirmed = await Dialog.confirm({
+        title: "Remove Group Member",
+        content: `<p>Remove <strong>${foundry.utils.escapeHTML(member?.name ?? "this character")}</strong> from the group?</p>`,
+        yes: () => true,
+        no: () => false,
+        defaultYes: false,
+      });
+      if (!confirmed) return false;
+    }
 
     const groupData = getGroupData(this.actor);
 
     groupData.members = groupData.members.filter(existingUuid => existingUuid !== uuid);
     groupData.activeMembers = groupData.activeMembers.filter(existingUuid => existingUuid !== uuid);
+    groupData.companions.forEach(companion => {
+      if (companion.type === "mount" && companion.riderUuid === uuid) {
+        companion.riderUuid = "";
+      }
+    });
 
     for (const kind of ACTIVITY_KINDS) {
       for (const activity of Object.values(getActivityStore(groupData, kind))) {
@@ -692,15 +855,44 @@ class SDXGroupSheet extends ActorSheetBase {
   async _onCycleWeather(event) {
     event.preventDefault();
 
-    const groupData = getGroupData(this.actor);
-    const currentIndex = WEATHER_OPTIONS.findIndex(
-      option => option.value === groupData.travel.weather
-    );
-    const nextIndex = (currentIndex + 1) % WEATHER_OPTIONS.length;
+    if (!game.user.isGM) {
+      ui.notifications.warn("Only the GM can roll weather.");
+      return;
+    }
 
-    groupData.travel.weather = WEATHER_OPTIONS[nextIndex].value;
+    let weather;
+    try {
+      weather = await rollWeather();
+    } catch (error) {
+      ui.notifications.warn(`Weather was not rolled: ${error.message}`);
+      return;
+    }
+
+    const groupData = getGroupData(this.actor);
+    groupData.travel.weatherTemperature = weather.temperature.text;
+    groupData.travel.weatherWindSpeed = weather.windSpeed.text;
+    groupData.travel.weatherTemperatureRoll = {
+      formula: weather.temperature.formula,
+      total: weather.temperature.total,
+    };
+    groupData.travel.weatherWindSpeedRoll = {
+      formula: weather.windSpeed.formula,
+      total: weather.windSpeed.total,
+    };
+    groupData.travel.weather = getWeatherLabel(groupData.travel);
+    groupData.travel.weatherRolledAt = Date.now();
+    groupData.travel.weatherTables = {
+      temperature: weather.temperature.tableUuid,
+      windSpeed: weather.windSpeed.tableUuid,
+    };
 
     await this._saveGroupData(groupData);
+    try {
+      await showWeatherRolls(weather, this.actor);
+    } catch (error) {
+      console.error(`${MODULE_ID} | Group Sheet | Could not post weather rolls.`, error);
+      ui.notifications.warn("Weather was rolled, but its chat message could not be created.");
+    }
     this.render(false);
   }
 
@@ -1091,6 +1283,171 @@ class SDXGroupSheet extends ActorSheetBase {
     await item.update({
       "system.quantity": next,
     });
+  }
+
+  _canEditCompanions() {
+    if (this.isEditable && game.user.isGM) return true;
+
+    ui.notifications.warn("Only the GM can manage hirelings and mounts.");
+    return false;
+  }
+
+  async _onAddCompanion(event) {
+    event.preventDefault();
+    if (!this._canEditCompanions()) return;
+
+    const type = event.currentTarget.dataset.companionType === "mount" ? "mount" : "hireling";
+    const groupData = getGroupData(this.actor);
+    groupData.companions.push({
+      id: foundry.utils?.randomID?.(16) ?? Math.random().toString(36).slice(2, 18),
+      type,
+      name: type === "mount" ? "Unnamed Mount" : "Unnamed Hireling",
+      carrySlots: 0,
+      rarity: "common",
+      personality: "",
+      strengthBonus: 0,
+      riderUuid: "",
+      level: 1,
+      hpValue: 0,
+      hpMax: 0,
+      movement: "Near",
+      flying: false,
+    });
+
+    await this._saveGroupData(groupData);
+    this.render(false);
+    return true;
+  }
+
+  async _onChangeCompanion(event) {
+    event.preventDefault();
+    if (!this._canEditCompanions()) return;
+
+    const row = event.currentTarget.closest("[data-companion-id]");
+    const id = row?.dataset?.companionId;
+    const field = event.currentTarget.dataset.companionField;
+    if (!id || ![
+      "name", "carrySlots", "rarity", "personality", "strengthBonus", "riderUuid",
+      "level", "hpValue", "hpMax", "movement", "flying",
+    ].includes(field)) return;
+
+    const groupData = getGroupData(this.actor);
+    const companion = groupData.companions.find(entry => entry.id === id);
+    if (!companion) return;
+
+    if (field === "name") {
+      companion.name = String(event.currentTarget.value ?? "").trim()
+        || (companion.type === "mount" ? "Unnamed Mount" : "Unnamed Hireling");
+    } else if (field === "flying") {
+      companion.flying = Boolean(event.currentTarget.checked);
+    } else if (["personality", "movement", "riderUuid"].includes(field)) {
+      companion[field] = String(event.currentTarget.value ?? "").trim();
+    } else if (field === "rarity") {
+      companion.rarity = ["common", "uncommon", "rare", "legendary"].includes(event.currentTarget.value)
+        ? event.currentTarget.value
+        : "common";
+    } else if (field === "strengthBonus") {
+      companion.strengthBonus = Math.trunc(Number(event.currentTarget.value) || 0);
+    } else if (field === "level") {
+      companion.level = Math.max(1, Math.floor(Number(event.currentTarget.value) || 1));
+    } else {
+      companion[field] = Math.max(0, Math.floor(Number(event.currentTarget.value) || 0));
+    }
+
+    await this._saveGroupData(groupData);
+    this.render(false);
+  }
+
+  _getMountRiderDropTarget(event) {
+    return event.currentTarget?.closest?.("[data-mount-rider-dropzone='true']")
+      ?? event.target?.closest?.("[data-mount-rider-dropzone='true']");
+  }
+
+  _onMountRiderDragEnter(event) {
+    if (!this._campingDragActorUuid) return;
+    event.preventDefault();
+    this._getMountRiderDropTarget(event)?.classList.add("is-rider-drag-over");
+  }
+
+  _onMountRiderDragOver(event) {
+    if (!this._campingDragActorUuid) return;
+    event.preventDefault();
+    event.dataTransfer.dropEffect = "move";
+    this._getMountRiderDropTarget(event)?.classList.add("is-rider-drag-over");
+  }
+
+  _onMountRiderDragLeave(event) {
+    const target = this._getMountRiderDropTarget(event);
+    if (!target || target.contains(event.relatedTarget)) return;
+    target.classList.remove("is-rider-drag-over");
+  }
+
+  _onMountRiderDrop(event) {
+    this._getMountRiderDropTarget(event)?.classList.remove("is-rider-drag-over");
+  }
+
+  async _assignMountRider(mountId, riderUuid) {
+    if (!this._canEditCompanions() || !mountId || !riderUuid) return false;
+
+    const groupData = getGroupData(this.actor);
+    const mount = groupData.companions.find(companion => (
+      companion.id === mountId && companion.type === "mount"
+    ));
+
+    if (!mount) return false;
+    if (!groupData.activeMembers.includes(riderUuid)) {
+      ui.notifications.warn("Only active party members can ride a mount.");
+      return false;
+    }
+
+    mount.riderUuid = riderUuid;
+    await this._saveGroupData(groupData);
+    this.render(false);
+    return true;
+  }
+
+  async _onClearMountRider(event) {
+    event.preventDefault();
+    if (!this._canEditCompanions()) return;
+
+    const mountId = event.currentTarget.closest("[data-companion-id]")?.dataset?.companionId;
+    if (!mountId) return;
+
+    const groupData = getGroupData(this.actor);
+    const mount = groupData.companions.find(companion => (
+      companion.id === mountId && companion.type === "mount"
+    ));
+    if (!mount) return;
+
+    mount.riderUuid = "";
+    await this._saveGroupData(groupData);
+    this.render(false);
+  }
+
+  async _onRemoveCompanion(event) {
+    event.preventDefault();
+    if (!this._canEditCompanions()) return;
+
+    const row = event.currentTarget.closest("[data-companion-id]");
+    const id = row?.dataset?.companionId;
+    if (!id) return;
+
+    const groupData = getGroupData(this.actor);
+    const companion = groupData.companions.find(entry => entry.id === id);
+    if (!companion) return;
+
+    const confirmed = await Dialog.confirm({
+      title: "Remove Companion",
+      content: `<p>Remove <strong>${foundry.utils.escapeHTML(companion.name)}</strong> from the group?</p>`,
+      yes: () => true,
+      no: () => false,
+      defaultYes: false,
+    });
+    if (!confirmed) return;
+
+    groupData.companions = groupData.companions.filter(entry => entry.id !== id);
+    await this._saveGroupData(groupData);
+    this.render(false);
   }
 
   async _onCreateGroupItem(event) {

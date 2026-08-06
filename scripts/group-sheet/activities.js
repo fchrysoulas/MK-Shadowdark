@@ -354,6 +354,7 @@ function getGroupData(actor) {
     (Array.isArray(existing.activeMembers) ? existing.activeMembers : existing.members)
       .filter(uuid => existing.members.includes(uuid))
   ));
+  existing.companions = normalizeCompanions(existing.companions);
   existing.travel ??= {};
   existing.camping ??= {};
   existing.travel.weather ??= "normal";
@@ -395,6 +396,48 @@ function getGroupData(actor) {
   existing.camping.activities = normalizeActivityAssignments(existing.camping.activities, CAMPING_ACTIVITIES);
 
   return existing;
+}
+
+function normalizeCompanions(value) {
+  const seenIds = new Set();
+  const rarities = new Set(["common", "uncommon", "rare", "legendary"]);
+
+  return (Array.isArray(value) ? value : []).reduce((companions, companion) => {
+    if (!companion || typeof companion !== "object") return companions;
+
+    const type = companion.type === "mount" ? "mount" : "hireling";
+    let id = String(companion.id ?? "").trim();
+
+    if (!id || seenIds.has(id)) {
+      id = foundry.utils?.randomID?.(16) ?? Math.random().toString(36).slice(2, 18);
+    }
+
+    seenIds.add(id);
+    const carrySlots = Math.max(0, Math.floor(Number(companion.carrySlots) || 0));
+    const strengthBonus = Number.isFinite(Number(companion.strengthBonus))
+      ? Math.trunc(Number(companion.strengthBonus))
+      : (type === "mount" ? Math.trunc(carrySlots / 5) : 0);
+
+    companions.push({
+      id,
+      type,
+      name: String(companion.name ?? "").trim() || (type === "mount" ? "Unnamed Mount" : "Unnamed Hireling"),
+      carrySlots,
+      rarity: rarities.has(companion.rarity) ? companion.rarity : "common",
+      personality: String(companion.personality ?? "").trim(),
+      strengthBonus,
+      riderUuid: String(companion.riderUuid ?? "").trim(),
+      level: Math.max(1, Math.floor(Number(companion.level) || 1)),
+      hpValue: Math.max(0, Math.floor(Number(companion.hpValue) || 0)),
+      hpMax: Math.max(0, Math.floor(Number(companion.hpMax) || 0)),
+      movement: String(companion.movement ?? "Near").trim() || "Near",
+      flying: Boolean(companion.flying),
+      actorUuid: String(companion.actorUuid ?? "").trim(),
+      img: String(companion.img ?? "") || "icons/svg/mystery-man.svg",
+    });
+
+    return companions;
+  }, []);
 }
 
 function getActivityName(kind, key) {
@@ -567,6 +610,7 @@ export {
   buildTravelPromptAssignments,
   buildTravelPromptPayload,
   getGroupData,
+  normalizeCompanions,
   getActivityName,
   setActivityMember,
   buildActivityMemberRoster,

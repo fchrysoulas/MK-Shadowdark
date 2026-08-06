@@ -157,25 +157,17 @@ function createSidebarHeader(app, form, partyCount, rosterCount) {
   return header;
 }
 
-function getMemberAssignmentControl(form, uuid) {
-  return Array.from(form.querySelectorAll("[data-camping-member-drag='true'][data-member-uuid]")).find(
-    control => control.dataset.memberUuid === uuid
-  ) ?? null;
-}
-
 function configureMemberDrag(app, form, element, uuid, isActivePartyMember) {
-  const assignmentControl = getMemberAssignmentControl(form, uuid);
-  const canAssign = Boolean(isActivePartyMember && assignmentControl)
-    && assignmentControl.dataset.canAssign !== "false"
-    && !assignmentControl?.classList?.contains("is-unavailable");
+  // The party sidebar is the shared drag source for activity and mount
+  // assignments. It must not inherit the availability state of the hidden
+  // activity-roster button, which can be stale or be absent on another tab.
+  const canAssign = Boolean(isActivePartyMember);
 
   element.draggable = Boolean(canAssign);
   element.classList.toggle("is-unavailable", !canAssign);
 
   if (!canAssign) {
-    element.title = isActivePartyMember
-      ? "This character is controlled by another user"
-      : "Move this character to the active party before assigning an activity";
+    element.title = "Move this character to the active party before assigning an activity or mount.";
     return;
   }
 
@@ -185,6 +177,11 @@ function configureMemberDrag(app, form, element, uuid, isActivePartyMember) {
 
     app._campingDragActorUuid = uuid;
     dataTransfer.effectAllowed = "move";
+    try {
+      dataTransfer.setData("application/x-mk-shadowdark-camping-member", uuid);
+    } catch (_error) {
+      // Some browser shells only allow standard drag data types.
+    }
     dataTransfer.setData("text/plain", uuid);
     element.closest(".mk-party-member")?.classList.add("is-dragging");
   });
@@ -192,8 +189,9 @@ function configureMemberDrag(app, form, element, uuid, isActivePartyMember) {
   element.addEventListener("dragend", () => {
     app._campingDragActorUuid = "";
     element.closest(".mk-party-member")?.classList.remove("is-dragging");
-    form.querySelectorAll(".mk-travel-card.is-drag-over").forEach(card => {
+    form.querySelectorAll(".mk-travel-card.is-drag-over, .mk-mount-card.is-rider-drag-over").forEach(card => {
       card.classList.remove("is-drag-over");
+      card.classList.remove("is-rider-drag-over");
     });
   });
 }
@@ -245,7 +243,21 @@ function openPartyContextMenu(app, form, card, event) {
     forwardClick(findOriginalAction(form, uuid, "[data-action='open-member']"), clickEvent);
   });
 
-  menu.append(toggle, open);
+  const remove = document.createElement("button");
+  remove.type = "button";
+  remove.setAttribute("role", "menuitem");
+  remove.className = "is-danger";
+  remove.textContent = "Remove from Group";
+  remove.disabled = !game.user.isGM;
+  remove.title = game.user.isGM
+    ? `Remove ${name} from the group`
+    : "Only the GM can remove group members";
+  remove.addEventListener("click", async () => {
+    closePartyContextMenu();
+    await app._removeGroupMember(uuid, { confirm: true });
+  });
+
+  menu.append(toggle, open, remove);
   document.body.appendChild(menu);
   activePartyContextMenu = menu;
 

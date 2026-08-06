@@ -12,7 +12,6 @@ import {
   getActorAbilityModifier,
   getFreeCoinCarry,
   getGemsPerSlot,
-  getGroupInventoryMaxSlots,
 } from "./actors.js";
 import { getSettingValue } from "./group-settings.js";
 import { clampPercent, hasOwn, numberOrZero, signed } from "./utils.js";
@@ -121,6 +120,43 @@ function buildCampingResources(memberActors = [], groupActor) {
   };
 }
 
+function buildActiveTorches(memberActors = [], groupActor) {
+  const torchKeywords = getCampingResourceKeywords().torches;
+  const sources = [
+    ...(memberActors ?? []).map(actor => ({ actor, ownerName: actor?.name ?? "" })),
+    ...(groupActor ? [{ actor: groupActor, ownerName: "Shared inventory" }] : []),
+  ];
+
+  const torches = [];
+
+  for (const { actor, ownerName } of sources) {
+    for (const item of actor?.items ?? []) {
+      const light = item.system?.light ?? {};
+      if (!light.isSource || !light.active || !itemMatchesAnyKeyword(item, torchKeywords)) continue;
+
+      const longevitySecs = Math.max(
+        0,
+        Number(light.longevitySecs ?? 0) || (Number(light.longevityMins ?? 0) * 60),
+      );
+      const remainingSecs = Math.max(0, Number(light.remainingSecs ?? longevitySecs) || 0);
+      const fractionRemaining = longevitySecs > 0
+        ? Math.max(0, Math.min(1, remainingSecs / longevitySecs))
+        : 1;
+      const litSegments = Math.max(0, Math.min(4, Math.ceil(fractionRemaining * 4)));
+
+      torches.push({
+        id: `${actor.uuid}:${item.id}`,
+        name: item.name,
+        img: item.img,
+        ownerName,
+        segments: [1, 2, 3, 4].map(index => ({ lit: index <= litSegments })),
+      });
+    }
+  }
+
+  return torches;
+}
+
 function calculateActorGearSlots(actor) {
   if (!actor || actor.type !== "Player") {
     return {
@@ -221,12 +257,14 @@ function calculateItemSlots(item) {
   return Math.max(0, used);
 }
 
-function calculateGroupInventorySlots(actor) {
+function calculateGroupInventorySlots(actor, companions = []) {
   const total = [...actor.items].reduce((sum, item) => {
     return sum + calculateItemSlots(item);
   }, 0);
 
-  const max = getGroupInventoryMaxSlots(actor);
+  const max = (Array.isArray(companions) ? companions : []).reduce((sum, companion) => {
+    return sum + calculateCompanionCarrySlots(companion);
+  }, 0);
 
   return {
     total,
@@ -364,11 +402,23 @@ function buildInventoryItemData(item) {
     slots,
   };
 }
+
+function calculateCompanionCarrySlots(companion) {
+  if (companion?.type !== "mount") {
+    return Math.max(0, Math.floor(Number(companion?.carrySlots) || 0));
+  }
+
+  const gearSlots = Math.max(0, Math.trunc(Number(companion?.strengthBonus) || 0) * 5);
+  const riderSlots = companion?.riderUuid ? 10 : 0;
+  return Math.max(0, gearSlots - riderSlots);
+}
 export {
   buildCampingResources,
+  buildActiveTorches,
   calculateActorGearSlots,
   calculateItemSlots,
   calculateGroupInventorySlots,
+  calculateCompanionCarrySlots,
   calculateCoinSlots,
   getActorClassName,
   buildMemberData,

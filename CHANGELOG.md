@@ -1,5 +1,10 @@
 # Changelog
 
+## 1.2.3
+
+- Expanded the Group Sheet with hirelings, mounts, active torch tracking, shared carrying capacity, and improved travelling and camping interactions.
+- Added GM-configured Rollable Tables for Temperature and Wind Speed. Weather results are summarized on the Group Sheet, retain their full details on hover, post to chat, and animate through Dice So Nice when available.
+
 ## 1.2.2
 
 - Moved Summary Bar rest handling into a dedicated module.

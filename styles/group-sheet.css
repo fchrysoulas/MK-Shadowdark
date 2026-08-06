@@ -210,6 +210,12 @@
   opacity: 0.45;
 }
 
+.mk-weather-keyword {
+  color: #ff8a3d;
+  font-weight: 800;
+  text-shadow: 0 0 6px rgba(255, 107, 31, 0.25);
+}
+
 .mk-speed-control,
 .mk-travel-number-control {
   display: inline-flex;
@@ -1627,38 +1633,516 @@ body.mk-travel-prompt-open #sd-roll-dialog {
 }
 
 /* -------------------------------------------- */
-/* Notes                                        */
+/* Hirelings & Mounts                            */
 /* -------------------------------------------- */
 
-.mk-group-notes {
+.mk-companions-panel {
   min-height: 100%;
-  padding: 10px;
+  padding: 14px;
   border: 1px solid rgba(255, 255, 255, 0.12);
-  border-radius: 4px;
+  border-radius: 5px;
   background: rgba(255, 255, 255, 0.035);
 }
 
-.mk-group-notes .editor {
-  min-height: 480px;
+/* -------------------------------------------- */
+/* Active Torches                                */
+/* -------------------------------------------- */
+
+.mk-active-torches {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-height: 50px;
+  padding: 7px 16px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  background: rgba(185, 83, 24, 0.08);
 }
 
+.mk-active-torches-header {
+  display: inline-flex;
+  flex: 0 0 auto;
+  align-items: center;
+  gap: 7px;
+  color: #f1d192;
+  font-size: 12px;
+  font-weight: 900;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
 
-.mk-group-notes-text {
-  width: 100%;
-  min-height: 480px;
-  resize: vertical;
+.mk-active-torches-header i {
+  color: #ee9d45;
+}
+
+.mk-active-torches-header strong {
+  display: inline-grid;
+  place-items: center;
+  min-width: 19px;
+  height: 19px;
+  padding: 0 5px;
+  border-radius: 10px;
+  background: rgba(238, 157, 69, 0.2);
+  color: #ffe0a5;
+}
+
+.mk-active-torches-list {
+  display: flex;
+  flex: 1;
+  flex-wrap: wrap;
+  gap: 6px;
+  min-width: 0;
+}
+
+.mk-active-torch {
+  display: grid;
+  grid-template-columns: 24px minmax(0, 1fr) 68px;
+  gap: 6px;
+  align-items: center;
+  min-width: 210px;
+  padding: 4px 7px 4px 4px;
+  border: 1px solid rgba(241, 209, 146, 0.2);
+  border-radius: 4px;
+  background: rgba(0, 0, 0, 0.18);
+}
+
+.mk-active-torch img {
+  width: 24px;
+  height: 24px;
+  object-fit: cover;
+  border-radius: 3px;
+}
+
+.mk-active-torch-details {
+  display: grid;
+  min-width: 0;
+}
+
+.mk-active-torch-details strong,
+.mk-active-torch-details span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.mk-active-torch-details strong {
+  color: #eeeeee;
+  font-size: 12px;
+}
+
+.mk-active-torch-details span,
+.mk-active-torches-empty {
+  color: var(--mk-group-muted);
+  font-size: 11px;
+}
+
+.mk-active-torch-bar {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 2px;
+}
+
+.mk-active-torch-bar i {
+  display: block;
+  height: 9px;
+  border: 1px solid rgba(255, 255, 255, 0.11);
+  border-radius: 2px;
+  background: rgba(0, 0, 0, 0.34);
+}
+
+.mk-active-torch-bar i.is-lit {
+  border-color: rgba(246, 184, 82, 0.65);
+  background: linear-gradient(180deg, #ffd275, #dd6d2e);
+  box-shadow: 0 0 5px rgba(238, 128, 40, 0.42);
+}
+
+.mk-active-torches-empty {
+  margin: 0;
+  font-style: italic;
+}
+
+.mk-companions-header {
+  display: flex;
+  align-items: start;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 14px;
+}
+
+.mk-companions-header h2 {
+  margin: 0;
+  color: #f0f0f0;
+  font-size: 18px;
+  font-weight: 900;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.mk-companions-header p,
+.mk-companions-empty {
+  margin: 5px 0 0;
+  color: var(--mk-group-muted);
+  font-size: 14px;
+}
+
+.mk-companion-capacity {
+  display: inline-flex;
+  flex: 0 0 auto;
+  align-items: center;
+  gap: 6px;
+  min-height: 30px;
+  padding: 0 10px;
   border: 1px solid rgba(255, 255, 255, 0.14);
   border-radius: 4px;
   background: rgba(0, 0, 0, 0.24);
-  color: var(--mk-group-text);
-  padding: 10px;
-  font-family: inherit;
-  line-height: 1.35;
+  color: #e8e8e8;
+  font-size: 13px;
+  font-weight: 900;
+  text-transform: uppercase;
 }
 
-.mk-group-notes-text:focus {
-  outline: none;
-  box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.24);
+.mk-companion-capacity i,
+.mk-companion-icon {
+  color: #f2d085;
+}
+
+.mk-companions-list {
+  display: grid;
+  gap: 8px;
+}
+
+.mk-companion-row {
+  display: grid;
+  grid-template-columns: 28px minmax(0, 1fr) 26px;
+  gap: 10px;
+  align-items: end;
+  padding: 10px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 5px;
+  background: rgba(0, 0, 0, 0.2);
+}
+
+.mk-companion-icon {
+  align-self: center;
+  font-size: 18px;
+  text-align: center;
+}
+
+.mk-companion-fields {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 104px;
+  gap: 10px;
+}
+
+.mk-companion-fields label {
+  display: grid;
+  gap: 4px;
+}
+
+.mk-companion-fields label span,
+.mk-companion-type {
+  color: var(--mk-group-muted);
+  font-size: 11px;
+  font-weight: 900;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.mk-companion-fields input {
+  width: 100%;
+  height: 28px;
+  padding: 0 7px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 4px;
+  background: rgba(255, 255, 255, 0.06);
+  color: #e8e8e8;
+  font-size: 14px;
+  font-weight: 800;
+}
+
+.mk-companion-fields input:disabled {
+  opacity: 0.72;
+}
+
+.mk-companion-type {
+  min-width: 66px;
+  padding-bottom: 7px;
+  text-align: right;
+}
+
+.mk-companion-remove {
+  width: 24px;
+  height: 24px;
+  padding: 0;
+  border: 0;
+  border-radius: 3px;
+  background: transparent;
+  color: rgba(255, 255, 255, 0.5);
+  cursor: pointer;
+}
+
+.mk-companion-remove:hover {
+  background: rgba(202, 72, 72, 0.2);
+  color: #ff8794;
+}
+
+.mk-companions-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 14px;
+}
+
+.mk-companions-actions button {
+  min-height: 30px;
+  padding: 0 10px;
+  border: 1px solid rgba(242, 208, 133, 0.34);
+  border-radius: 4px;
+  background: rgba(242, 208, 133, 0.1);
+  color: #f4dfaa;
+  font-size: 13px;
+  font-weight: 900;
+  cursor: pointer;
+}
+
+.mk-companions-actions button:hover {
+  background: rgba(242, 208, 133, 0.2);
+}
+
+.mk-mounts-panel {
+  min-height: 100%;
+  padding: 14px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 5px;
+  background: rgba(255, 255, 255, 0.035);
+}
+
+.mk-mounts-list {
+  display: grid;
+  gap: 12px;
+}
+
+.mk-mount-dropzone {
+  display: grid;
+  grid-template-columns: 22px auto;
+  column-gap: 7px;
+  align-items: center;
+  margin-bottom: 12px;
+  padding: 9px 11px;
+  border: 1px dashed rgba(242, 208, 133, 0.35);
+  border-radius: 5px;
+  background: rgba(242, 208, 133, 0.05);
+  color: #f2d085;
+  font-size: 13px;
+  font-weight: 900;
+}
+
+.mk-mount-dropzone i {
+  grid-row: span 2;
+  font-size: 18px;
+  text-align: center;
+}
+
+.mk-mount-dropzone small {
+  color: var(--mk-group-muted);
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.mk-mount-card {
+  position: relative;
+  display: grid;
+  gap: 8px;
+  padding: 12px;
+  border: 1px solid rgba(242, 208, 133, 0.22);
+  border-radius: 6px;
+  background: rgba(0, 0, 0, 0.2);
+}
+
+.mk-mount-card.is-rider-drag-over {
+  border-color: rgba(242, 208, 133, 0.78);
+  background: rgba(242, 208, 133, 0.1);
+  box-shadow: 0 0 0 1px rgba(242, 208, 133, 0.16);
+}
+
+.mk-mount-overview {
+  display: grid;
+  grid-template-columns: 92px minmax(145px, 1.2fr) minmax(120px, 0.7fr) minmax(160px, 1fr);
+  gap: 14px;
+  align-items: center;
+}
+
+.mk-mount-icon {
+  width: 72px;
+  height: 72px;
+  object-fit: cover;
+  border: 2px solid rgba(242, 208, 133, 0.52);
+  border-radius: 50%;
+  text-align: center;
+}
+
+.mk-mount-identity {
+  display: grid;
+  justify-items: center;
+  gap: 6px;
+}
+
+.mk-mount-identity strong {
+  max-width: 100%;
+  color: #f4dfaa;
+  font-size: 14px;
+  overflow: hidden;
+  text-align: center;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.mk-mount-remove {
+  position: absolute;
+  top: 7px;
+  right: 7px;
+}
+
+.mk-mount-rider-drop {
+  display: flex;
+  align-items: center;
+  min-height: 76px;
+  gap: 8px;
+  padding: 7px 10px;
+  border: 1px dashed rgba(242, 208, 133, 0.32);
+  border-radius: 4px;
+  background: rgba(242, 208, 133, 0.05);
+}
+
+.mk-mount-rider-icon,
+.mk-mount-rider-placeholder {
+  flex: 0 0 auto;
+  width: 42px;
+  height: 42px;
+  border: 1px solid rgba(242, 208, 133, 0.38);
+  border-radius: 50%;
+  object-fit: cover;
+}
+
+.mk-mount-rider-placeholder {
+  display: grid;
+  place-items: center;
+  color: rgba(242, 208, 133, 0.66);
+  font-size: 17px;
+}
+
+.mk-mount-rider-drop strong,
+.mk-mount-rider-drop em {
+  min-width: 0;
+  color: #e8e8e8;
+  font-size: 13px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.mk-mount-rider-drop em {
+  color: var(--mk-group-muted);
+  font-size: 11px;
+}
+
+.mk-mount-rider-drop button {
+  margin-left: auto;
+  width: 22px;
+  min-height: 22px;
+  padding: 0;
+  border: 0;
+  border-radius: 3px;
+  background: transparent;
+  color: rgba(255, 255, 255, 0.55);
+  cursor: pointer;
+}
+
+.mk-mount-rider-drop button:hover {
+  background: rgba(184, 53, 71, 0.2);
+  color: #ff9aa8;
+}
+
+.mk-mount-gear-summary {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  column-gap: 6px;
+  align-items: center;
+  color: #f2d085;
+}
+
+.mk-mount-gear-summary i {
+  grid-row: span 2;
+  font-size: 23px;
+}
+
+.mk-mount-gear-summary strong {
+  font-size: 24px;
+  line-height: 1;
+}
+
+.mk-mount-gear-summary span,
+.mk-mount-hp-summary span:first-child {
+  color: var(--mk-group-muted);
+  font-size: 11px;
+  font-weight: 900;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.mk-mount-hp-summary {
+  display: grid;
+  gap: 7px;
+}
+
+.mk-mount-hp-summary > div {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  align-items: baseline;
+}
+
+.mk-mount-hp-summary strong {
+  color: #e8e8e8;
+  font-size: 13px;
+}
+
+.mk-mount-hp-track {
+  display: block;
+  height: 9px;
+  overflow: hidden;
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  border-radius: 999px;
+  background: rgba(0, 0, 0, 0.45);
+}
+
+.mk-mount-hp-fill {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: linear-gradient(90deg, #a9293f, #e9b463);
+}
+
+.mk-mount-rules {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 7px 12px;
+  margin: 0 0 12px;
+  padding: 10px 0;
+  border-top: 1px solid rgba(255, 255, 255, 0.09);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.09);
+}
+
+.mk-mount-rules span {
+  color: #c9c9c9;
+  font-size: 12px;
+  line-height: 1.25;
+}
+
+.mk-mount-rules i {
+  width: 15px;
+  margin-right: 3px;
+  color: #f2d085;
+  text-align: center;
 }
 
 @media (max-width: 900px) {
@@ -1708,6 +2192,26 @@ body.mk-travel-prompt-open #sd-roll-dialog {
   }
 
   .mk-inventory-layout {
+    grid-template-columns: 1fr;
+  }
+
+  .mk-companion-row {
+    grid-template-columns: 28px minmax(0, 1fr) 26px;
+  }
+
+  .mk-companion-type {
+    display: none;
+  }
+
+  .mk-mount-overview {
+    grid-template-columns: 82px minmax(145px, 1fr) minmax(120px, 0.7fr);
+  }
+
+  .mk-mount-hp-summary {
+    grid-column: 2 / -1;
+  }
+
+  .mk-mount-rules {
     grid-template-columns: 1fr;
   }
 

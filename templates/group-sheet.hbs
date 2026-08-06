@@ -14,11 +14,37 @@
     </div>
   </header>
 
+  <section class="mk-active-torches" aria-label="Active torches">
+    <header class="mk-active-torches-header">
+      <span><i class="fas fa-fire"></i> Active Torches</span>
+      <strong>{{mk.activeTorches.count}}</strong>
+    </header>
+    {{#if mk.activeTorches.hasEntries}}
+    <div class="mk-active-torches-list">
+      {{#each mk.activeTorches.entries}}
+      <article class="mk-active-torch" data-active-torch-id="{{id}}">
+        <img src="{{img}}" alt="{{name}}">
+        <div class="mk-active-torch-details">
+          <strong>{{name}}</strong>
+          <span>{{ownerName}}</span>
+        </div>
+        <div class="mk-active-torch-bar" title="Approximate remaining burn time" aria-label="Approximate remaining burn time">
+          {{#each segments}}<i class="{{#if lit}}is-lit{{/if}}"></i>{{/each}}
+        </div>
+      </article>
+      {{/each}}
+    </div>
+    {{else}}
+    <p class="mk-active-torches-empty">No torches are currently lit.</p>
+    {{/if}}
+  </section>
+
   <nav class="mk-group-nav tabs" data-group="primary">
     <a class="item active" data-tab="traveling"><i class="fas fa-route"></i> Traveling</a>
     <a class="item" data-tab="camping"><i class="fas fa-campground"></i> Camping</a>
     <a class="item" data-tab="inventory"><i class="fas fa-box-open"></i> Inventory</a>
-    <a class="item" data-tab="notes"><i class="fas fa-scroll"></i> Notes</a>
+    <a class="item" data-tab="hirelings"><i class="fas fa-user-shield"></i> Hirelings</a>
+    <a class="item" data-tab="mounts"><i class="fas fa-horse"></i> Mounts</a>
   </nav>
 
   <div class="mk-group-member-source" aria-hidden="true">
@@ -66,7 +92,16 @@
   <section class="mk-group-content">
     <div class="tab mk-group-tab mk-group-tab-body active" data-group="primary" data-tab="traveling">
       <div class="mk-travel-toolbar">
-        <button type="button" data-action="cycle-weather"><i class="fas fa-cloud-sun-rain"></i> Weather: {{mk.travel.weatherLabel}}</button>
+        <button type="button" data-action="cycle-weather" title="{{mk.travel.weatherTooltip}}">
+          <i class="fas fa-cloud-sun-rain"></i> Weather:
+          {{#if mk.travel.weatherSummaries.hasResults}}
+            {{#if mk.travel.weatherSummaries.temperature}}Temperature: <span class="mk-weather-keyword">{{mk.travel.weatherSummaries.temperature}}</span>{{/if}}
+            {{#if mk.travel.weatherSummaries.temperature}}{{#if mk.travel.weatherSummaries.windSpeed}}&middot;{{/if}}{{/if}}
+            {{#if mk.travel.weatherSummaries.windSpeed}}Wind Speed: <span class="mk-weather-keyword">{{mk.travel.weatherSummaries.windSpeed}}</span>{{/if}}
+          {{else}}
+            {{mk.travel.weatherLabel}}
+          {{/if}}
+        </button>
 
         <label class="mk-speed-control">Speed
           <select data-action="change-speed">
@@ -373,10 +408,108 @@
       </div>
     </div>
 
-    <div class="tab mk-group-tab mk-group-tab-body" data-group="primary" data-tab="notes">
-      <div class="mk-group-notes">
-        <textarea class="mk-group-notes-text" name="system.notes" rows="18" placeholder="Group notes, travel log, debts, rumors, shared goals...">{{actor.system.notes}}</textarea>
-      </div>
+    <div class="tab mk-group-tab mk-group-tab-body" data-group="primary" data-tab="hirelings">
+      <section class="mk-companions-panel">
+        <header class="mk-companions-header">
+          <div>
+            <h2>Hirelings</h2>
+            <p>Hireling carry slots contribute directly to the shared inventory limit.</p>
+          </div>
+          <strong class="mk-companion-capacity"><i class="fas fa-weight-hanging"></i> {{mk.hirelings.totalCarrySlots}} slots</strong>
+        </header>
+
+        {{#if mk.hirelings.hasEntries}}
+        <div class="mk-companions-list">
+          {{#each mk.hirelings.entries}}
+          <article class="mk-companion-row" data-companion-id="{{id}}">
+            <i class="fas fa-user-shield mk-companion-icon" aria-hidden="true"></i>
+            <div class="mk-companion-fields">
+              <label>
+                <span>Name</span>
+                <input type="text" value="{{name}}" data-action="change-companion" data-companion-field="name" {{#unless ../mk.canEditGroup}}disabled{{/unless}}>
+              </label>
+              <label>
+                <span>Carry slots</span>
+                <input type="number" value="{{carrySlots}}" min="0" step="1" data-action="change-companion" data-companion-field="carrySlots" {{#unless ../mk.canEditGroup}}disabled{{/unless}}>
+              </label>
+            </div>
+            {{#if ../mk.canEditGroup}}
+            <button type="button" class="mk-companion-remove" data-action="remove-companion" title="Remove {{name}}" aria-label="Remove {{name}}"><i class="fas fa-trash"></i></button>
+            {{/if}}
+          </article>
+          {{/each}}
+        </div>
+        {{else}}
+        <p class="mk-companions-empty">No hirelings yet. Add one to contribute carrying capacity to the group.</p>
+        {{/if}}
+
+        {{#if mk.canEditGroup}}
+        <footer class="mk-companions-actions">
+          <button type="button" data-action="add-companion" data-companion-type="hireling"><i class="fas fa-user-plus"></i> Add Hireling</button>
+        </footer>
+        {{/if}}
+      </section>
+    </div>
+
+    <div class="tab mk-group-tab mk-group-tab-body" data-group="primary" data-tab="mounts">
+      <section class="mk-mounts-panel" data-mount-dropzone="true">
+        <header class="mk-companions-header">
+          <div>
+            <h2>Mounts</h2>
+          </div>
+          <strong class="mk-companion-capacity"><i class="fas fa-weight-hanging"></i> {{mk.mounts.totalCarrySlots}} free slots</strong>
+        </header>
+
+        <div class="mk-mount-rules">
+          <span><i class="fas fa-shield-halved"></i> Acts on the rider's initiative; the rider chooses the mount's action.</span>
+          <span><i class="fas fa-person-walking-arrow-right"></i> Mounting or dismounting uses the rider's entire movement.</span>
+          <span><i class="fas fa-weight-hanging"></i> Gear slots equal 5 x the mount's STR bonus. A rider and their carried gear use 10 slots.</span>
+          <span><i class="fas fa-drumstick-bite"></i> Needs 1 ration each day in an unfamiliar environment.</span>
+        </div>
+
+        <div class="mk-mount-dropzone" data-mount-dropzone="true">
+          <i class="fas fa-horse" aria-hidden="true"></i>
+          <span>Drop an NPC mount here</span>
+          <small>Then drag an active party member onto the mount to assign its rider.</small>
+        </div>
+
+        {{#if mk.mounts.hasEntries}}
+        <div class="mk-mounts-list">
+          {{#each mk.mounts.entries}}
+          <article class="mk-mount-card" data-companion-id="{{id}}" data-mount-rider-dropzone="true">
+            {{#if ../mk.canEditGroup}}<button type="button" class="mk-companion-remove mk-mount-remove" data-action="remove-companion" title="Remove {{name}}" aria-label="Remove {{name}}"><i class="fas fa-trash"></i></button>{{/if}}
+            <div class="mk-mount-overview">
+              <div class="mk-mount-identity">
+              <img class="mk-mount-icon" src="{{img}}" alt="{{name}}">
+                <strong>{{name}}</strong>
+              </div>
+              <div class="mk-mount-rider-drop">
+                {{#if hasRider}}
+                <img class="mk-mount-rider-icon" src="{{riderImg}}" alt="{{riderName}}">
+                <strong>{{riderName}}</strong>
+                {{#if ../mk.canEditGroup}}<button type="button" data-action="clear-mount-rider" title="Remove rider" aria-label="Remove rider"><i class="fas fa-xmark"></i></button>{{/if}}
+                {{else}}
+                <i class="fas fa-user mk-mount-rider-placeholder" aria-hidden="true"></i>
+                <em>Drop an active party member here</em>
+                {{/if}}
+              </div>
+              <div class="mk-mount-gear-summary">
+                <i class="fas fa-suitcase-rolling" aria-hidden="true"></i>
+                <strong>{{availableCarrySlots}}</strong>
+                <span>Free gear slots</span>
+              </div>
+              <div class="mk-mount-hp-summary" title="{{hpValue}} / {{hpMax}} HP">
+                <div><span>HP</span><strong>{{hpValue}} / {{hpMax}}</strong></div>
+                <span class="mk-mount-hp-track"><span class="mk-mount-hp-fill" style="width: {{hpPct}}%;"></span></span>
+              </div>
+            </div>
+          </article>
+          {{/each}}
+        </div>
+        {{else}}
+        <p class="mk-companions-empty">No mounts yet. Drop a mount actor in the area above.</p>
+        {{/if}}
+      </section>
     </div>
   </section>
 </form>

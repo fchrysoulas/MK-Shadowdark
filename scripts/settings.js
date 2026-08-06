@@ -227,11 +227,26 @@
     {
       key: "groupSheet",
       title: "Group Sheet",
-      hint: "Configure Group actors, member presentation, camping supplies, and travel progress.",
+      hint: "Configure Group actors, member presentation, camping supplies, travel progress, and weather tables.",
       icon: "fas fa-users",
       settings: [
         "enableGroupActors", "groupSheetAssignedTokenSize", "groupSheetMemberPortraitSize", "groupSheetCampingFoodKeywords",
-        "groupSheetCampingTorchKeywords", "groupSheetCampingWaterKeywords", "groupSheetTravelProgressDurationMs"
+        "groupSheetCampingTorchKeywords", "groupSheetCampingWaterKeywords", "groupSheetTravelProgressDurationMs",
+        "groupSheetWeatherTemperatureTable", "groupSheetWeatherWindSpeedTable"
+      ],
+      sections: [
+        {
+          title: "General",
+          settings: ["enableGroupActors", "groupSheetAssignedTokenSize", "groupSheetMemberPortraitSize"]
+        },
+        {
+          title: "Camping",
+          settings: ["groupSheetCampingFoodKeywords", "groupSheetCampingTorchKeywords", "groupSheetCampingWaterKeywords"]
+        },
+        {
+          title: "Travel and Weather",
+          settings: ["groupSheetTravelProgressDurationMs", "groupSheetWeatherTemperatureTable", "groupSheetWeatherWindSpeedTable"]
+        }
       ]
     },
     {
@@ -446,6 +461,19 @@
     } catch (err) {
       console.error(`${MODULE_ID} v${getModuleVersion()} | ${SUBMODULE} | refreshFocusTrackerUi error`, err);
     }
+  }
+
+  function weatherRollTableChoices() {
+    const choices = { "": "Select a Rollable Table" };
+    const tables = Array.from(game.tables ?? []).sort((left, right) => (
+      String(left.name ?? "").localeCompare(String(right.name ?? ""), game.i18n?.lang, { sensitivity: "base" })
+    ));
+
+    for (const table of tables) {
+      if (table?.uuid) choices[table.uuid] = table.name;
+    }
+
+    return choices;
   }
 
   function refreshTokenEquipmentUi() {
@@ -1675,7 +1703,7 @@
 
     registerSetting("enableGroupActors", {
       name: "Enable Group Actors",
-      hint: "Adds a MK-Shadowdark group actor sheet for party members, group inventory, travel and camping task assignments, and group notes.",
+      hint: "Adds a MK-Shadowdark group actor sheet for party members, hirelings and mounts, group inventory, and travel and camping task assignments.",
       scope: "world",
       config: true,
       type: Boolean,
@@ -1754,6 +1782,26 @@
         max: 60000,
         step: 500
       }
+    });
+
+    registerSetting("groupSheetWeatherTemperatureTable", {
+      name: "Group Sheet | Weather Temperature Table",
+      hint: "Rollable Table used for the Temperature result when the Group Sheet Weather button is pressed.",
+      scope: "world",
+      config: true,
+      type: String,
+      default: "",
+      choices: weatherRollTableChoices
+    });
+
+    registerSetting("groupSheetWeatherWindSpeedTable", {
+      name: "Group Sheet | Weather Wind Speed Table",
+      hint: "Rollable Table used for the Wind Speed result when the Group Sheet Weather button is pressed.",
+      scope: "world",
+      config: true,
+      type: String,
+      default: "",
+      choices: weatherRollTableChoices
     });
 
     registerFeatureMenus();

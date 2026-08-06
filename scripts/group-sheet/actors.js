@@ -9,9 +9,21 @@ function canUserControlActor(actor, user = game.user) {
   if (!actor || !user) return false;
   if (user.isGM) return true;
 
-  const character = typeof user.character === "string"
-    ? game.actors?.get(user.character)
-    : user.character;
+  const characterReference = user.character;
+  if (typeof characterReference === "string") {
+    // On the player's client `actor.isOwner` is sufficient, but the primary
+    // GM validates submitted rolls from a different client. Accept all common
+    // forms of the User.character reference there as well.
+    if (
+      characterReference === actor.id
+      || characterReference === actor.uuid
+      || characterReference === `Actor.${actor.id}`
+    ) return true;
+  }
+
+  const character = typeof characterReference === "string"
+    ? game.actors?.get(characterReference)
+    : characterReference;
   if (character && (actor.id === character.id || actor.uuid === character.uuid)) return true;
 
   if (user.id === game.user?.id && actor.isOwner) return true;
@@ -98,10 +110,6 @@ async function ensureGroupActorHpDefaults(actor) {
   return true;
 }
 
-function getGroupInventoryMaxSlots(actor) {
-  return Number(getModuleFlag(actor, "groupInventoryMaxSlots", 10)) || 10;
-}
-
 function getFreeCoinCarry() {
   return globalThis.shadowdark?.defaults?.FREE_COIN_CARRY ?? 100;
 }
@@ -147,7 +155,6 @@ export {
   getModuleFlag,
   isGroupActor,
   ensureGroupActorHpDefaults,
-  getGroupInventoryMaxSlots,
   getFreeCoinCarry,
   getGemsPerSlot,
   resolveActorFromUuid,

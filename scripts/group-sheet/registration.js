@@ -13,7 +13,6 @@ import {
 import {
   canUserControlActor,
   ensureGroupActorHpDefaults,
-  getGroupInventoryMaxSlots,
   isGroupActor,
   resolveActorFromUuid,
 } from "./actors.js";
@@ -34,6 +33,8 @@ import { getGameUserById, isPrimaryActiveGm } from "./users.js";
 
 const GROUP_ACTOR_DIALOG_TYPE = "Group";
 const OBSOLETE_ACTOR_DIALOG_TYPES = new Set(["Base", "base"]);
+const LIGHT_SOURCE_MAP_PATH = "systems/shadowdark/assets/mappings/map-light-sources.json";
+const NO_LIGHT = Object.freeze({ dim: 0, bright: 0 });
 let actorCreateDialogPatched = false;
 
 function escapeHtml(value) {
@@ -251,6 +252,55 @@ function rerenderOpenGroupSheets(updatedActor) {
   }
 }
 
+async function getGroupActiveLight(groupActor) {
+  const groupData = getGroupData(groupActor);
+
+  for (const memberUuid of groupData.activeMembers) {
+    const member = await resolveActorFromUuid(memberUuid);
+    const light = member?.items?.find(item => (
+      item.system?.light?.isSource === true && item.system.light.active === true
+    ));
+
+    if (light) return light;
+  }
+
+  return groupActor.items?.find(item => (
+    item.system?.light?.isSource === true && item.system.light.active === true
+  )) ?? null;
+}
+
+async function syncGroupTokenLight(groupActor) {
+  if (!isPrimaryActiveGm() || !isGroupActor(groupActor) || !canvas?.scene) return;
+
+  const activeLight = await getGroupActiveLight(groupActor);
+  let lightData = NO_LIGHT;
+
+  if (activeLight) {
+    const template = String(activeLight.system?.light?.template ?? "");
+    const mappings = await foundry.utils.fetchJsonWithTimeout(LIGHT_SOURCE_MAP_PATH);
+    lightData = mappings?.[template]?.light ?? NO_LIGHT;
+  }
+
+  const tokenDocuments = canvas.scene.tokens?.filter?.(token => (
+    token.actorId === groupActor.id || token.actor?.id === groupActor.id
+  )) ?? [];
+
+  await Promise.all(tokenDocuments.map(token => token.update({ light: foundry.utils.deepClone(lightData) })));
+}
+
+async function syncGroupTokenLightsForActor(actor) {
+  if (!isPrimaryActiveGm() || !actor) return;
+
+  const groups = (game.actors ?? []).filter(groupActor => {
+    if (!isGroupActor(groupActor)) return false;
+    if (groupActor.id === actor.id) return true;
+
+    return getGroupData(groupActor).activeMembers.includes(actor.uuid);
+  });
+
+  await Promise.all(groups.map(groupActor => syncGroupTokenLight(groupActor)));
+}
+
 async function handleTravelAssignmentSocketRequest(data) {
   if (!isPrimaryActiveGm()) return;
 
@@ -327,6 +377,17 @@ function handleTravelPromptChatMessage(message) {
       travelPromptChatMessagesSeen.add(message.id);
     }
 
+    if (data.action === GROUP_SHEET_SOCKET_PLAYER_TRAVEL_ROLL) {
+      handleTravelPlayerRollSocketRequest(data).catch(error => {
+        console.error(`${MODULE_ID} | ${SUBMODULE} | Travel player roll chat fallback error`, error);
+      });
+      return;
+    }
+
+    // Only a GM may broadcast prompt state. Player-authored chat flags are
+    // accepted solely as validated roll requests above.
+    if (!message.author?.isGM) return;
+
     handleTravelPromptTransport(data);
   } catch (error) {
     console.error(`${MODULE_ID} | ${SUBMODULE} | Travel prompt chat flag error`, error);
@@ -364,6 +425,18 @@ async function ensureExistingGroupActorHpDefaults() {
 
 async function onReadyGroupSheetMaintenance() {
   await ensureExistingGroupActorHpDefaults();
+
+  if (!isPrimaryActiveGm()) return;
+
+  for (const actor of game.actors ?? []) {
+    if (!isGroupActor(actor)) continue;
+
+    try {
+      await syncGroupTokenLight(actor);
+    } catch (error) {
+      console.error(`${MODULE_ID} | ${SUBMODULE} | Failed to initialize group token light`, error);
+    }
+  }
 }
 
 function registerGroupSheet() {
@@ -388,25 +461,33 @@ function registerGroupSheet() {
   });
 
   patchActorCreateDialog();
-  Hooks.on("updateActor", rerenderOpenGroupSheets);
+  Hooks.on("updateActor", actor => {
+    rerenderOpenGroupSheets(actor);
+    syncGroupTokenLightsForActor(actor).catch(error => {
+      console.error(`${MODULE_ID} | ${SUBMODULE} | Failed to sync group token light`, error);
+    });
+  });
   Hooks.on("createChatMessage", handleTravelPromptChatMessage);
 
   Hooks.on("createItem", item => {
-    if (isGroupActor(item.actor)) {
-      item.actor.sheet?.render(false);
-    }
+    rerenderOpenGroupSheets(item.actor);
+    syncGroupTokenLightsForActor(item.actor).catch(error => {
+      console.error(`${MODULE_ID} | ${SUBMODULE} | Failed to sync group token light`, error);
+    });
   });
 
   Hooks.on("updateItem", item => {
-    if (isGroupActor(item.actor)) {
-      item.actor.sheet?.render(false);
-    }
+    rerenderOpenGroupSheets(item.actor);
+    syncGroupTokenLightsForActor(item.actor).catch(error => {
+      console.error(`${MODULE_ID} | ${SUBMODULE} | Failed to sync group token light`, error);
+    });
   });
 
   Hooks.on("deleteItem", item => {
-    if (isGroupActor(item.actor)) {
-      item.actor.sheet?.render(false);
-    }
+    rerenderOpenGroupSheets(item.actor);
+    syncGroupTokenLightsForActor(item.actor).catch(error => {
+      console.error(`${MODULE_ID} | ${SUBMODULE} | Failed to sync group token light`, error);
+    });
   });
 
   Hooks.once("ready", onReadyGroupSheetMaintenance);

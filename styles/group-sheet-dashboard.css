@@ -158,6 +158,10 @@
   overflow: hidden;
 }
 
+.mk-party-member:not(.is-roster-member) {
+  border-color: rgba(183, 43, 68, 0.62);
+}
+
 .mk-party-member[open] {
   border-color: rgba(183, 43, 68, 0.55);
   background: rgba(183, 43, 68, 0.075);
@@ -208,6 +212,15 @@
   background: rgba(255, 255, 255, 0.1);
 }
 
+.mk-party-member-context-menu button.is-danger {
+  color: #ff9aa8;
+}
+
+.mk-party-member-context-menu button.is-danger:hover:not(:disabled) {
+  background: rgba(184, 53, 71, 0.2);
+  color: #ffd0d6;
+}
+
 .mk-party-member-context-menu button:disabled {
   color: var(--mk-group-muted);
   cursor: not-allowed;
@@ -246,7 +259,7 @@
 }
 
 .mk-party-member-summary.is-unavailable {
-  cursor: not-allowed;
+  cursor: pointer;
   opacity: 0.56;
 }
 

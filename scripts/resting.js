@@ -285,7 +285,7 @@ function limitCheckedSpells(html, maximum) {
   }
 }
 
-async function reportRest(actor, result) {
+export async function reportRest(actor, result) {
   if (!globalThis.ChatMessage?.create) return;
 
   const isGrinder = result.mode === "grinder";

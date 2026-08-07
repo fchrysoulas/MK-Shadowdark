@@ -1,5 +1,14 @@
 # Changelog
 
+## 1.3.0
+
+- Added configurable Group Sheet activity columns, defaulting to four activities per row.
+- Added configurable background images for every Group Sheet tab.
+- Reworked Camping resources by removing water tracking and adding party rest with evenly distributed ration consumption.
+- Added a configurable second Summary Bar row with 10 icon-only shortcuts by default for abilities, attacks, spells, and potions.
+- Added drag support for character-sheet spells and red shortcut styling for lost spells.
+- Added torch equipment integration: lighting a torch equips it, torches have a manual equipped toggle, and equipped torches appear as `1d4` melee attacks.
+
 ## 1.2.3
 
 - Expanded the Group Sheet with hirelings, mounts, active torch tracking, shared carrying capacity, and improved travelling and camping interactions.

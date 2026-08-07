@@ -9,6 +9,8 @@ import { getRestMode, onRest } from "./resting.js";
 
   const SETTINGS = Object.freeze({
     ENABLED: "characterSheetTweaksSummaryBar",
+    SHORTCUT_ROW: "characterSheetTweaksSummaryBarShortcutRow",
+    SHORTCUT_COUNT: "characterSheetTweaksSummaryBarShortcutCount",
     ELEMENTS: "characterSheetTweaksBarElements",
     FONT_SCALE: "characterSheetTweaksFontScale",
     VALUE_FONT_SIZE: "characterSheetTweaksBarValueFontSize",
@@ -20,6 +22,7 @@ import { getRestMode, onRest } from "./resting.js";
   });
 
   const DEFAULT_ELEMENTS = ["HP", "DT", "LUCK", "REST", "|", "STR", "DEX", "CON", "INT", "WIS", "CHA", "SLOTS"];
+  const SHORTCUT_FLAG = "summaryBarShortcuts";
   const VALID_ELEMENTS = new Set(["LVL", "HP", "AC", "XP", "LUCK", "REST", "DT", "SLOTS", "STR", "DEX", "CON", "INT", "WIS", "CHA", "|"]);
   const ABILITY_ELEMENTS = new Set(["STR", "DEX", "CON", "INT", "WIS", "CHA"]);
   const ACTOR_SHEET_RENDER_HOOKS = [
@@ -126,18 +129,22 @@ import { getRestMode, onRest } from "./resting.js";
 
     for (const element of uniqueElements([form, windowEl])) {
       element.classList.remove("mk-summary-bar-in-header");
+      element.classList.remove("mk-summary-bar-has-shortcuts");
       element.style.removeProperty("--mk-sheet-font-scale");
       element.style.removeProperty("--mk-bar-value-font-size");
       element.style.removeProperty("--mk-bar-button-radius");
       element.style.removeProperty("--mk-bar-button-scale");
       element.style.removeProperty("--mk-bar-position-x");
       element.style.removeProperty("--mk-bar-position-y");
+      element.style.removeProperty("--mk-bar-shortcut-count");
     }
   }
 
   function applySummaryBarScope(form, windowEl) {
+    const hasShortcuts = Boolean(getSetting(SETTINGS.SHORTCUT_ROW, false));
     for (const element of uniqueElements([form, windowEl])) {
       element.classList.add("mk-summary-bar-in-header");
+      element.classList.toggle("mk-summary-bar-has-shortcuts", hasShortcuts);
       applySummaryBarVariables(element);
     }
   }
@@ -149,6 +156,7 @@ import { getRestMode, onRest } from "./resting.js";
     const buttonScale = clampNumber(Number(getSetting(SETTINGS.BUTTON_SCALE, 100)) || 100, 70, 140);
     const positionX = clampNumber(Number(getSetting(SETTINGS.POSITION_X, 20)) || 0, -250, 250);
     const positionY = clampNumber(Number(getSetting(SETTINGS.POSITION_Y, 8)) || 0, -150, 150);
+    const shortcutCount = getShortcutSlotCount();
 
     element.style.setProperty("--mk-sheet-font-scale", String(fontScale / 100));
     element.style.setProperty("--mk-bar-value-font-size", `${valueFontSize}px`);
@@ -156,6 +164,7 @@ import { getRestMode, onRest } from "./resting.js";
     element.style.setProperty("--mk-bar-button-scale", String(buttonScale / 100));
     element.style.setProperty("--mk-bar-position-x", `${positionX}px`);
     element.style.setProperty("--mk-bar-position-y", `${positionY}px`);
+    element.style.setProperty("--mk-bar-shortcut-count", String(shortcutCount));
   }
 
   function injectSummaryBar(app, root, data) {
@@ -172,9 +181,11 @@ import { getRestMode, onRest } from "./resting.js";
           ${buildSummaryChips(actor, data).map(renderChip).join("")}
         </div>
       </div>
+      ${getSetting(SETTINGS.SHORTCUT_ROW, false) ? renderShortcutRow(actor) : ""}
     `;
 
     insertSummaryBar(root, bar);
+    bindShortcutDragSources(root, actor);
 
     bar.querySelectorAll('[data-mk-action="roll-ability"]').forEach(element => {
       element.addEventListener("click", event => onRollAbilityCheck(event, actor));
@@ -188,7 +199,226 @@ import { getRestMode, onRest } from "./resting.js";
     bar.querySelectorAll('[data-mk-action="rest"]').forEach(element => {
       element.addEventListener("click", event => onRest(event, actor));
     });
+    bindShortcutListeners(app, bar, actor);
     return bar;
+  }
+
+  function bindShortcutDragSources(root, actor) {
+    if (!getSetting(SETTINGS.SHORTCUT_ROW, false)) return;
+
+    root.querySelectorAll?.(".tab-spells .item[data-item-id]").forEach(row => {
+      const item = actor.items?.get(row.dataset.itemId);
+      if (!item || String(item.type ?? "").toLowerCase() !== "spell") return;
+
+      row.draggable = true;
+      row.dataset.mkShortcutDragSource = "true";
+      row.addEventListener("dragstart", event => {
+        if (!event.dataTransfer) return;
+
+        event.dataTransfer.effectAllowed = "copy";
+        event.dataTransfer.setData("text/plain", JSON.stringify({
+          type: "Item",
+          uuid: item.uuid,
+        }));
+      });
+    });
+  }
+
+  function renderShortcutRow(actor) {
+    const slots = getShortcutSlots(actor);
+    return `
+      <div class="mk-character-sheet-bar__shortcuts" aria-label="Character shortcuts">
+        ${slots.map((itemId, index) => renderShortcutSlot(actor, itemId, index)).join("")}
+      </div>
+    `;
+  }
+
+  function renderShortcutSlot(actor, itemId, index) {
+    const item = itemId ? actor.items?.get(itemId) : null;
+    const slot = String(index + 1);
+    if (!item) {
+      return `
+        <button type="button" class="mk-summary-shortcut is-empty" data-mk-shortcut-slot="${index}" title="Shortcut ${slot}: drag an ability, attack, spell, or potion here" aria-label="Shortcut ${slot}: drag an ability, attack, spell, or potion here">
+          <i class="fa-solid fa-plus" aria-hidden="true"></i>
+        </button>
+      `;
+    }
+
+    const isLostSpell = String(item.type ?? "").toLowerCase() === "spell" && item.system?.lost === true;
+    return `
+      <button type="button" class="mk-summary-shortcut${isLostSpell ? " is-lost-spell" : ""}" data-mk-shortcut-slot="${index}" data-mk-shortcut-item-id="${escapeHtml(item.id)}" title="${escapeHtml(item.name)}${isLostSpell ? " — lost" : ""} — click to use; right-click to clear" aria-label="${escapeHtml(item.name)}">
+        <img src="${escapeHtml(item.img ?? "icons/svg/item-bag.svg")}" alt="">
+      </button>
+    `;
+  }
+
+  function getShortcutSlots(actor) {
+    let stored = [];
+    try {
+      stored = actor?.getFlag?.(MODULE_ID, SHORTCUT_FLAG) ?? [];
+    } catch (_error) {
+      stored = actor?.flags?.[MODULE_ID]?.[SHORTCUT_FLAG] ?? [];
+    }
+
+    return Array.from({ length: getShortcutSlotCount() }, (_unused, index) => {
+      const itemId = Array.isArray(stored) ? stored[index] : "";
+      return typeof itemId === "string" ? itemId : "";
+    });
+  }
+
+  async function setShortcutSlot(actor, index, itemId = "") {
+    if (!actor?.setFlag || !Number.isInteger(index) || index < 0 || index >= getShortcutSlotCount()) return;
+    if (!actor.isOwner && !game.user?.isGM) {
+      ui.notifications?.warn("MK-Shadowdark | You do not have permission to update these shortcuts.");
+      return;
+    }
+
+    const slots = getShortcutSlots(actor);
+    slots[index] = String(itemId ?? "");
+    await actor.setFlag(MODULE_ID, SHORTCUT_FLAG, slots);
+  }
+
+  function getShortcutSlotCount() {
+    const value = Number(getSetting(SETTINGS.SHORTCUT_COUNT, 10));
+    return Math.round(clampNumber(Number.isFinite(value) ? value : 10, 1, 16));
+  }
+
+  function bindShortcutListeners(app, bar, actor) {
+    bar.querySelectorAll("[data-mk-shortcut-slot]").forEach(slot => {
+      slot.addEventListener("click", event => void onShortcutClick(event, app, actor));
+      slot.addEventListener("contextmenu", event => void onShortcutClear(event, app, actor));
+      slot.addEventListener("dragover", event => {
+        event.preventDefault();
+        slot.classList.add("is-drag-over");
+      });
+      slot.addEventListener("dragleave", () => slot.classList.remove("is-drag-over"));
+      slot.addEventListener("drop", event => void onShortcutDrop(event, app, actor));
+    });
+  }
+
+  async function onShortcutDrop(event, app, actor) {
+    event.preventDefault();
+    event.stopPropagation();
+
+    const slot = event.currentTarget;
+    slot.classList.remove("is-drag-over");
+    const index = Number(slot.dataset.mkShortcutSlot);
+    const item = await getDroppedActorItem(event, actor);
+    if (!item) return;
+
+    if (!isShortcutItem(item)) {
+      ui.notifications?.warn("MK-Shadowdark | Only abilities, attacks, spells, and potions can be added as Summary Bar shortcuts.");
+      return;
+    }
+
+    try {
+      await setShortcutSlot(actor, index, item.id);
+      app.render(false);
+    } catch (error) {
+      console.error(`${MODULE_ID} v${getModuleVersion()} | ${SUBMODULE} | shortcut drop error`, error);
+      ui.notifications?.error("MK-Shadowdark | Could not save the shortcut.");
+    }
+  }
+
+  async function getDroppedActorItem(event, actor) {
+    const nativeEvent = event.originalEvent ?? event;
+    let data = null;
+    try {
+      const textEditor = globalThis.foundry?.applications?.ux?.TextEditor?.implementation
+        ?? globalThis.TextEditor;
+      data = textEditor?.getDragEventData?.(nativeEvent) ?? null;
+    } catch (_error) {
+      // Fall through to standard drag payload formats.
+    }
+
+    if (!data) {
+      for (const type of ["application/json", "text/plain"]) {
+        const raw = nativeEvent.dataTransfer?.getData?.(type);
+        if (!raw) continue;
+        try {
+          data = JSON.parse(raw);
+          break;
+        } catch (_error) {
+          // Try the next payload type.
+        }
+      }
+    }
+
+    const itemId = data?.id ?? data?._id ?? data?.itemId ?? data?.data?._id ?? data?.data?.id;
+    if (itemId && actor.items?.get(itemId)) return actor.items.get(itemId);
+
+    const uuid = data?.uuid ?? data?.itemUuid ?? data?.data?.uuid;
+    if (!uuid || typeof globalThis.fromUuid !== "function") return null;
+
+    try {
+      const item = await globalThis.fromUuid(uuid);
+      return item?.parent?.id === actor.id ? item : null;
+    } catch (_error) {
+      return null;
+    }
+  }
+
+  function isShortcutItem(item) {
+    const type = String(item?.type ?? "").toLowerCase();
+    return Boolean(item?.system?.isAbility || item?.system?.isWeapon || item?.system?.isSpell)
+      || ["weapon", "class ability", "ability", "spell", "potion"].includes(type);
+  }
+
+  async function onShortcutClick(event, app, actor) {
+    event.preventDefault();
+    event.stopPropagation();
+
+    const itemId = event.currentTarget?.dataset?.mkShortcutItemId;
+    if (!itemId) return;
+    const item = actor.items?.get(itemId);
+    if (!item) return;
+
+    try {
+      const options = { skipPrompt: Boolean(event.shiftKey) };
+      if ((item.system?.isSpell || String(item.type).toLowerCase() === "spell") && typeof actor.system?.castSpell === "function") {
+        await actor.system.castSpell(item.uuid, options);
+        return;
+      }
+      if ((item.system?.isAbility || String(item.type).toLowerCase() === "class ability") && typeof actor.system?.useAbility === "function") {
+        await actor.system.useAbility(item.uuid, options);
+        return;
+      }
+      if ((item.system?.isWeapon || String(item.type).toLowerCase() === "weapon") && typeof actor.system?.rollAttack === "function") {
+        await actor.system.rollAttack(item.uuid, options);
+        return;
+      }
+      if (String(item.type).toLowerCase() === "potion" && typeof actor.system?.usePotion === "function") {
+        await actor.system.usePotion(item.id);
+        return;
+      }
+
+      const root = getRootElement(app?.element);
+      const rollControl = Array.from(root?.querySelectorAll?.("[data-action='item-attack'][data-item-id]") ?? [])
+        .find(control => control.dataset.itemId === item.id);
+      if (rollControl) {
+        rollControl.click();
+        return;
+      }
+
+      ui.notifications?.warn(`MK-Shadowdark | ${item.name} cannot be used from a Summary Bar shortcut.`);
+    } catch (error) {
+      console.error(`${MODULE_ID} v${getModuleVersion()} | ${SUBMODULE} | shortcut use error`, error);
+      ui.notifications?.error(`MK-Shadowdark | Could not use ${item.name}.`);
+    }
+  }
+
+  async function onShortcutClear(event, app, actor) {
+    event.preventDefault();
+    event.stopPropagation();
+
+    if (!event.currentTarget?.dataset?.mkShortcutItemId) return;
+    try {
+      await setShortcutSlot(actor, Number(event.currentTarget.dataset.mkShortcutSlot), "");
+      app.render(false);
+    } catch (error) {
+      console.error(`${MODULE_ID} v${getModuleVersion()} | ${SUBMODULE} | shortcut clear error`, error);
+      ui.notifications?.error("MK-Shadowdark | Could not clear the shortcut.");
+    }
   }
 
   function insertSummaryBar(root, bar) {

@@ -96,7 +96,7 @@
       hint: "Configure the independent character summary bar, its contents, appearance, position, and diagnostics.",
       icon: "fas fa-chart-simple",
       settings: [
-        "characterSheetTweaksSummaryBar", "characterSheetTweaksBarElements", "characterSheetTweaksRestMode",
+        "characterSheetTweaksSummaryBar", "characterSheetTweaksSummaryBarShortcutRow", "characterSheetTweaksSummaryBarShortcutCount", "characterSheetTweaksBarElements", "characterSheetTweaksRestMode",
         "characterSheetTweaksFontScale",
         "characterSheetTweaksBarValueFontSize", "characterSheetTweaksBarButtonRadius", "characterSheetTweaksBarButtonScale",
         "characterSheetTweaksBarPositionX", "characterSheetTweaksBarPositionY", "summaryBarDebug"
@@ -227,21 +227,29 @@
     {
       key: "groupSheet",
       title: "Group Sheet",
-      hint: "Configure Group actors, member presentation, camping supplies, travel progress, and weather tables.",
+      hint: "Configure Group actors, member presentation, camping supplies, tab backgrounds, travel progress, and weather tables.",
       icon: "fas fa-users",
       settings: [
-        "enableGroupActors", "groupSheetAssignedTokenSize", "groupSheetMemberPortraitSize", "groupSheetCampingFoodKeywords",
-        "groupSheetCampingTorchKeywords", "groupSheetCampingWaterKeywords", "groupSheetTravelProgressDurationMs",
+        "enableGroupActors", "groupSheetAssignedTokenSize", "groupSheetMemberPortraitSize", "groupSheetActivityColumns", "groupSheetCampingFoodKeywords",
+        "groupSheetCampingTorchKeywords", "groupSheetTabBackgroundTraveling", "groupSheetTabBackgroundCamping", "groupSheetTabBackgroundInventory",
+        "groupSheetTabBackgroundHirelings", "groupSheetTabBackgroundMounts", "groupSheetTravelProgressDurationMs",
         "groupSheetWeatherTemperatureTable", "groupSheetWeatherWindSpeedTable"
       ],
       sections: [
         {
           title: "General",
-          settings: ["enableGroupActors", "groupSheetAssignedTokenSize", "groupSheetMemberPortraitSize"]
+          settings: ["enableGroupActors", "groupSheetAssignedTokenSize", "groupSheetMemberPortraitSize", "groupSheetActivityColumns"]
         },
         {
           title: "Camping",
-          settings: ["groupSheetCampingFoodKeywords", "groupSheetCampingTorchKeywords", "groupSheetCampingWaterKeywords"]
+          settings: ["groupSheetCampingFoodKeywords", "groupSheetCampingTorchKeywords"]
+        },
+        {
+          title: "Tab Backgrounds",
+          settings: [
+            "groupSheetTabBackgroundTraveling", "groupSheetTabBackgroundCamping", "groupSheetTabBackgroundInventory",
+            "groupSheetTabBackgroundHirelings", "groupSheetTabBackgroundMounts"
+          ]
         },
         {
           title: "Travel and Weather",
@@ -931,6 +939,31 @@
       config: true,
       type: Boolean,
       default: true,
+      onChange: refreshOpenActorSheets
+    });
+
+    registerSetting("characterSheetTweaksSummaryBarShortcutRow", {
+      name: "Summary Bar | Enable Shortcut Row",
+      hint: "Adds a second row of per-character shortcut slots. Drag an ability, attack, or spell from the character sheet onto a slot; right-click a filled slot to clear it.",
+      scope: "world",
+      config: true,
+      type: Boolean,
+      default: false,
+      onChange: refreshOpenActorSheets
+    });
+
+    registerSetting("characterSheetTweaksSummaryBarShortcutCount", {
+      name: "Summary Bar | Shortcut Slots",
+      hint: "Number of buttons displayed in the shortcut row. Default 10.",
+      scope: "world",
+      config: true,
+      type: Number,
+      default: 10,
+      range: {
+        min: 1,
+        max: 16,
+        step: 1
+      },
       onChange: refreshOpenActorSheets
     });
 
@@ -1740,6 +1773,21 @@
       onChange: refreshOpenActorSheets
     });
 
+    registerSetting("groupSheetActivityColumns", {
+      name: "Group Sheet | Activity Cards per Row",
+      hint: "Number of activity cards shown per row in the Travel and Camping tabs. Default 4.",
+      scope: "world",
+      config: true,
+      type: Number,
+      default: 4,
+      range: {
+        min: 1,
+        max: 6,
+        step: 1
+      },
+      onChange: refreshOpenActorSheets
+    });
+
     registerSetting("groupSheetCampingFoodKeywords", {
       name: "Group Sheet | Camping Food Keywords",
       hint: "Comma-separated item name keywords counted as food or rations in the Camping campfire summary.",
@@ -1760,13 +1808,58 @@
       onChange: refreshOpenActorSheets
     });
 
-    registerSetting("groupSheetCampingWaterKeywords", {
-      name: "Group Sheet | Camping Water Keywords",
-      hint: "Comma-separated item name keywords counted as water in the Camping campfire summary.",
+    registerSetting("groupSheetTabBackgroundTraveling", {
+      name: "Group Sheet | Traveling Tab Background",
+      hint: "Optional image displayed behind the Traveling tab.",
       scope: "world",
       config: true,
       type: String,
-      default: "water,waterskin,waterskins",
+      default: "",
+      filePicker: "image",
+      onChange: refreshOpenActorSheets
+    });
+
+    registerSetting("groupSheetTabBackgroundCamping", {
+      name: "Group Sheet | Camping Tab Background",
+      hint: "Optional image displayed behind the Camping tab.",
+      scope: "world",
+      config: true,
+      type: String,
+      default: "",
+      filePicker: "image",
+      onChange: refreshOpenActorSheets
+    });
+
+    registerSetting("groupSheetTabBackgroundInventory", {
+      name: "Group Sheet | Inventory Tab Background",
+      hint: "Optional image displayed behind the Inventory tab.",
+      scope: "world",
+      config: true,
+      type: String,
+      default: "",
+      filePicker: "image",
+      onChange: refreshOpenActorSheets
+    });
+
+    registerSetting("groupSheetTabBackgroundHirelings", {
+      name: "Group Sheet | Hirelings Tab Background",
+      hint: "Optional image displayed behind the Hirelings tab.",
+      scope: "world",
+      config: true,
+      type: String,
+      default: "",
+      filePicker: "image",
+      onChange: refreshOpenActorSheets
+    });
+
+    registerSetting("groupSheetTabBackgroundMounts", {
+      name: "Group Sheet | Mounts Tab Background",
+      hint: "Optional image displayed behind the Mounts tab.",
+      scope: "world",
+      config: true,
+      type: String,
+      default: "",
+      filePicker: "image",
       onChange: refreshOpenActorSheets
     });
 

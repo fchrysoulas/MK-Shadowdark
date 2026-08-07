@@ -157,6 +157,29 @@
   height: 100%;
   padding: 10px;
   overflow-y: auto;
+  background-position: center;
+  background-repeat: no-repeat;
+  background-size: cover;
+}
+
+.mk-group-tab[data-tab="traveling"] {
+  background-image: var(--mk-group-tab-background-traveling, none);
+}
+
+.mk-group-tab[data-tab="camping"] {
+  background-image: var(--mk-group-tab-background-camping, none);
+}
+
+.mk-group-tab[data-tab="inventory"] {
+  background-image: var(--mk-group-tab-background-inventory, none);
+}
+
+.mk-group-tab[data-tab="hirelings"] {
+  background-image: var(--mk-group-tab-background-hirelings, none);
+}
+
+.mk-group-tab[data-tab="mounts"] {
+  background-image: var(--mk-group-tab-background-mounts, none);
 }
 
 .mk-group-dropzone,
@@ -894,32 +917,16 @@
 
 .mk-camping-info {
   display: grid;
-  grid-template-columns: minmax(280px, 1fr) minmax(260px, 0.85fr);
+  grid-template-columns: minmax(0, 1fr);
   gap: 10px;
   margin-bottom: 10px;
 }
 
-.mk-camping-procedure,
 .mk-campfire-note {
   border: 1px solid rgba(255, 255, 255, 0.12);
   border-radius: 5px;
   background: rgba(255, 255, 255, 0.04);
   color: var(--mk-group-text);
-}
-
-.mk-camping-procedure {
-  padding: 8px 12px 8px 30px;
-}
-
-.mk-camping-procedure ol {
-  margin: 0;
-  padding: 0;
-}
-
-.mk-camping-procedure li {
-  margin: 3px 0;
-  padding-left: 2px;
-  line-height: 1.35;
 }
 
 .mk-campfire-note {
@@ -1122,8 +1129,14 @@
 
 .mk-travel-grid {
   display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
+  grid-template-columns: repeat(var(--mk-group-activity-columns, 4), minmax(0, 1fr));
   gap: 10px;
+}
+
+.mk-group-rest-button {
+  width: 100%;
+  min-height: 0;
+  margin: 0;
 }
 
 .mk-travel-card {

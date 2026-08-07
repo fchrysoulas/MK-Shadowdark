@@ -2,10 +2,8 @@ import {
   ABILITIES,
   GROUP_CAMPING_FOOD_KEYWORDS_DEFAULT,
   GROUP_CAMPING_TORCH_KEYWORDS_DEFAULT,
-  GROUP_CAMPING_WATER_KEYWORDS_DEFAULT,
   GROUP_SETTING_CAMPING_FOOD_KEYWORDS,
   GROUP_SETTING_CAMPING_TORCH_KEYWORDS,
-  GROUP_SETTING_CAMPING_WATER_KEYWORDS,
 } from "./constants.js";
 import {
   canUserControlActor,
@@ -59,9 +57,6 @@ function getCampingResourceKeywords() {
     torches: splitCampingKeywords(
       getSettingValue(GROUP_SETTING_CAMPING_TORCH_KEYWORDS, GROUP_CAMPING_TORCH_KEYWORDS_DEFAULT),
     ),
-    water: splitCampingKeywords(
-      getSettingValue(GROUP_SETTING_CAMPING_WATER_KEYWORDS, GROUP_CAMPING_WATER_KEYWORDS_DEFAULT),
-    ),
   };
 }
 
@@ -69,7 +64,6 @@ function countCampingResourceItems(items = [], keywords = getCampingResourceKeyw
   const totals = {
     food: 0,
     torches: 0,
-    water: 0,
   };
 
   for (const item of items ?? []) {
@@ -78,10 +72,81 @@ function countCampingResourceItems(items = [], keywords = getCampingResourceKeyw
     const quantity = quantityOrOne(item);
     if (itemMatchesAnyKeyword(item, keywords.food)) totals.food += quantity;
     if (itemMatchesAnyKeyword(item, keywords.torches)) totals.torches += quantity;
-    if (itemMatchesAnyKeyword(item, keywords.water)) totals.water += quantity;
   }
 
   return totals;
+}
+
+function getFoodSupply(actor, keywords = getCampingResourceKeywords()) {
+  const items = Array.from(actor?.items ?? [])
+    .filter(item => !isLostItem(item) && itemMatchesAnyKeyword(item, keywords.food))
+    .map(item => ({ item, quantity: quantityOrOne(item) }))
+    .filter(entry => entry.quantity > 0);
+
+  return {
+    actor,
+    items,
+    total: items.reduce((total, entry) => total + entry.quantity, 0),
+  };
+}
+
+function getPartyFoodTotal(actors = []) {
+  const keywords = getCampingResourceKeywords();
+  return actors.reduce((total, actor) => total + getFoodSupply(actor, keywords).total, 0);
+}
+
+async function consumePartyFoodRations(actors = [], amount = 0) {
+  const rationCount = Number(amount);
+  if (!Number.isInteger(rationCount) || rationCount < 0) {
+    throw new Error("Rations consumed must be a whole number of zero or more.");
+  }
+
+  const keywords = getCampingResourceKeywords();
+  const supplies = actors
+    .map(actor => ({ ...getFoodSupply(actor, keywords), consumed: 0 }))
+    .filter(supply => supply.actor?.updateEmbeddedDocuments);
+  const available = supplies.reduce((total, supply) => total + supply.total, 0);
+
+  if (rationCount > available) {
+    throw new Error(`Only ${available} tracked ration${available === 1 ? "" : "s"} are available among the active party.`);
+  }
+
+  let remaining = rationCount;
+  while (remaining > 0) {
+    for (const supply of supplies) {
+      if (remaining === 0) break;
+      if (supply.consumed >= supply.total) continue;
+
+      supply.consumed += 1;
+      remaining -= 1;
+    }
+  }
+
+  for (const supply of supplies) {
+    if (supply.consumed === 0) continue;
+
+    let toRemove = supply.consumed;
+    const updates = [];
+    for (const { item, quantity } of supply.items) {
+      if (toRemove === 0) break;
+
+      const removed = Math.min(quantity, toRemove);
+      const nextQuantity = quantity - removed;
+      updates.push({
+        _id: item.id,
+        ...(item.system?.quantity && typeof item.system.quantity === "object"
+          ? { "system.quantity.value": nextQuantity }
+          : { "system.quantity": nextQuantity }),
+      });
+      toRemove -= removed;
+    }
+
+    if (updates.length) await supply.actor.updateEmbeddedDocuments("Item", updates);
+  }
+
+  return supplies
+    .filter(supply => supply.consumed > 0)
+    .map(supply => ({ actor: supply.actor, amount: supply.consumed }));
 }
 
 function buildCampingResources(memberActors = [], groupActor) {
@@ -89,14 +154,12 @@ function buildCampingResources(memberActors = [], groupActor) {
   const memberTotals = {
     food: 0,
     torches: 0,
-    water: 0,
   };
 
   for (const actor of memberActors) {
     const actorTotals = countCampingResourceItems(actor?.items, keywords);
     memberTotals.food += actorTotals.food;
     memberTotals.torches += actorTotals.torches;
-    memberTotals.water += actorTotals.water;
   }
 
   const sharedTotals = countCampingResourceItems(groupActor?.items, keywords);
@@ -111,11 +174,6 @@ function buildCampingResources(memberActors = [], groupActor) {
       members: memberTotals.torches,
       shared: sharedTotals.torches,
       total: memberTotals.torches + sharedTotals.torches,
-    },
-    water: {
-      members: memberTotals.water,
-      shared: sharedTotals.water,
-      total: memberTotals.water + sharedTotals.water,
     },
   };
 }
@@ -414,6 +472,8 @@ function calculateCompanionCarrySlots(companion) {
 }
 export {
   buildCampingResources,
+  getPartyFoodTotal,
+  consumePartyFoodRations,
   buildActiveTorches,
   calculateActorGearSlots,
   calculateItemSlots,

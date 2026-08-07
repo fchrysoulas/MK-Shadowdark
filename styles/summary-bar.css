@@ -12,6 +12,7 @@
   --mk-bar-button-scale: 1;
   --mk-bar-position-x: 20px;
   --mk-bar-position-y: 8px;
+  --mk-bar-shortcut-count: 10;
   --mk-sheet-bar-background: rgba(0, 0, 0, 0.08);
   --mk-sheet-bar-border: rgba(0, 0, 0, 0.28);
   --mk-sheet-chip-background: rgba(0, 0, 0, 0.10);
@@ -88,6 +89,58 @@
   gap: 0.35rem;
   flex-wrap: wrap;
   min-height: 1.35rem;
+}
+
+.mk-character-sheet-bar__shortcuts {
+  display: grid;
+  grid-template-columns: repeat(var(--mk-bar-shortcut-count, 10), minmax(0, 1fr));
+  gap: 0.22rem;
+  width: 100%;
+}
+
+.mk-summary-shortcut {
+  display: grid;
+  place-items: center;
+  min-width: 1.85rem;
+  min-height: 1.85rem;
+  margin: 0;
+  padding: 0.16rem 0.24rem;
+  overflow: hidden;
+  border: 1px solid rgba(255, 255, 255, 0.25);
+  border-radius: var(--mk-bar-button-radius, 8px);
+  background: rgba(0, 0, 0, 0.32);
+  color: #f4efe3;
+  font: inherit;
+  cursor: pointer;
+}
+
+.mk-summary-shortcut:hover,
+.mk-summary-shortcut:focus-visible,
+.mk-summary-shortcut.is-drag-over {
+  border-color: rgba(255, 255, 255, 0.65);
+  background: rgba(255, 255, 255, 0.14);
+  outline: none;
+}
+
+.mk-summary-shortcut.is-empty {
+  border-style: dashed;
+  color: #d8cba8;
+}
+
+.mk-summary-shortcut.is-lost-spell {
+  border-color: rgba(218, 72, 72, 0.88);
+  background: rgba(150, 24, 28, 0.32);
+}
+
+.mk-summary-shortcut.is-lost-spell img {
+  filter: sepia(0.7) saturate(2.2) hue-rotate(315deg) brightness(0.9);
+}
+
+.mk-summary-shortcut img {
+  width: 1.5rem;
+  height: 1.5rem;
+  object-fit: contain;
+  border-radius: 3px;
 }
 
 .mk-character-sheet-bar__chips {
@@ -224,6 +277,10 @@ button.mk-sheet-chip:focus-visible {
   padding-bottom: 0;
 }
 
+.shadowdark.sheet.player.mk-summary-bar-has-shortcuts .SD-header {
+  min-height: 176px;
+}
+
 .shadowdark.sheet.player.mk-summary-bar-in-header .SD-header .mk-character-sheet-bar.mk-in-header {
   position: absolute;
   left: clamp(92px, 16%, 128px);
@@ -293,6 +350,10 @@ button.mk-sheet-chip:focus-visible {
 
 .shadowdark.sheet.player.mk-summary-bar-in-header .SD-header .mk-stat-chip strong {
   font-size: 0.72em !important;
+}
+
+.shadowdark.sheet.player.mk-summary-bar-in-header .SD-header .mk-character-sheet-bar__shortcuts {
+  min-width: 0;
 }
 
 .shadowdark.sheet.player.mk-summary-bar-in-header .SD-header .mk-bar-divider {

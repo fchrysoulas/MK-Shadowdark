@@ -535,7 +535,7 @@
 }
 
 .mk-group-dashboard-enabled .mk-group-workspace .mk-travel-grid {
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-columns: repeat(var(--mk-group-activity-columns, 4), minmax(0, 1fr));
 }
 
 .mk-group-dashboard-enabled .mk-group-workspace .mk-camping-roster,

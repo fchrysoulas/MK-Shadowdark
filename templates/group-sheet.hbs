@@ -41,7 +41,7 @@
 
   <nav class="mk-group-nav tabs" data-group="primary">
     <a class="item active" data-tab="traveling"><i class="fas fa-route"></i> Traveling</a>
-    <a class="item" data-tab="camping"><i class="fas fa-campground"></i> Camping</a>
+    <a class="item" data-tab="camping" title="Procedure: PCs make task checks in any order they choose. After resolving tasks, the GM follows normal resting and random encounter procedures."><i class="fas fa-campground"></i> Camping</a>
     <a class="item" data-tab="inventory"><i class="fas fa-box-open"></i> Inventory</a>
     <a class="item" data-tab="hirelings"><i class="fas fa-user-shield"></i> Hirelings</a>
     <a class="item" data-tab="mounts"><i class="fas fa-horse"></i> Mounts</a>
@@ -238,14 +238,6 @@
 
     <div class="tab mk-group-tab mk-group-tab-body" data-group="primary" data-tab="camping">
       <section class="mk-camping-info">
-        <div class="mk-camping-procedure">
-          <ol>
-            <strong>PROCEDURE</strong>
-            <li>The PCs make task checks in any order they choose.</li>
-            <li>After resolving tasks, the GM follows normal resting and random encounter procedures.</li>
-          </ol>
-        </div>
-
         <div class="mk-campfire-note">
           <strong>Campfire</strong>
           <p>The PCs can make a campfire using 3 torches; it lasts 8 hours while a PC remains near to it and casts light out to a near distance.</p>
@@ -258,10 +250,11 @@
               <i class="fas fa-fire"></i>
               <strong>{{mk.campingResources.torches.total}}</strong>
             </span>
-            <span title="Total water carried by members plus shared group inventory">
-              <i class="fas fa-tint"></i>
-              <strong>{{mk.campingResources.water.total}}</strong>
-            </span>
+            {{#if mk.canEditGroup}}
+            <button type="button" class="mk-group-rest-button" data-action="rest-party">
+              <i class="fas fa-bed"></i> Rest Party
+            </button>
+            {{/if}}
           </div>
         </div>
       </section>

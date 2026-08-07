@@ -12,14 +12,14 @@ Modular quality-of-life tools, gameplay automation, party management, and charac
 ## Features
 
 - **Auto Damage**: automatically applies damage from attack or spell rolls to targeted tokens, with optional GM-only mode, delay, 3D dice support, and token shake feedback.
-- **Character Sheet Tweaks**: adds a configurable compact summary bar with Normal/Grinder resting, a height toggle, optional header styling, Shadowdark logo hiding, quick access to common stats, and a GM visual editor with element sizing controls.
+- **Character Sheet Tweaks**: adds a configurable compact summary bar with Normal/Grinder resting, a height toggle, optional header styling, Shadowdark logo hiding, quick access to common stats, and an optional icon-only shortcut row for abilities, attacks, spells, and potions.
 - **Death Timer**: adds a configurable sheet button for starting and managing Shadowdark death timers.
 - **Editable Quantity**: lets item quantities be edited directly from actor inventory rows.
 - **Encounter Engine - Phase 1**: follows the Shadowdark random encounter procedure for danger checks, number appearing, distance, activity, awareness, reaction, treasure, and morale guidance, then creates an interactive GM chat card.
 - **Equipment Hands**: checks equipped weapons, shields, and hand-occupying gear against available hand slots, either warning or blocking invalid loadouts.
 - **Token Equipment Display**: shows held gear beside player tokens, displays two-handed gear once above or below the token, and adds a smaller configurable Quickdraw row.
 - **Focus Tracker**: tracks successfully cast Focus spells, enforces configurable capacity, requests maintenance checks at the caster's turn or after damage, and exposes actor-sheet and chat-card controls with a token status icon.
-- **Group Sheet**: adds a party/group actor sheet for members, hirelings and mounts, shared inventory, active torch tracking, and Camping task assignment.
+- **Group Sheet**: adds a party/group actor sheet for members, hirelings and mounts, shared inventory, active torch tracking, configurable tab backgrounds and activity columns, Camping task assignment, and ration-aware party resting.
 - **Paper Chat**: provides twelve paper-inspired chat themes and a GM visual editor for theme-specific message styling.
 - **Camping Tasks**: provides Bed Down, Cook, Craft, Entertain, Scavenge, Hunt, Keep Watch, and Predict tasks with DCs, tooltips, icons, and drag-and-drop member assignment.
 - **Quickdraw**: marks eligible inventory items as quickdraw, sorts each inventory group with Quickdraw items first, and supports fixed or actor-based limit expressions such as `3`, `max(1, @dex.mod)`, or `max(1, @dex.mod + gear("bandolier", 2))`.

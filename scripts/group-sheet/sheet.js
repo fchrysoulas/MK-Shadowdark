@@ -37,7 +37,7 @@ import {
   normalizeCompanions,
   setActivityMember,
 } from "./activities.js";
-import { buildGroupSheetStyle } from "./group-settings.js";
+import { buildGroupSheetStyle, getGroupSheetTabBackgrounds } from "./group-settings.js";
 import {
   getWeatherLabel,
   getWeatherSummaries,
@@ -54,6 +54,8 @@ import {
   buildMemberData,
   calculateCoinSlots,
   calculateGroupInventorySlots,
+  consumePartyFoodRations,
+  getPartyFoodTotal,
 } from "./inventory.js";
 import { rollActorAbility } from "./rolls.js";
 import {
@@ -62,7 +64,8 @@ import {
   removeTravelPromptElement,
   showTravelRollPrompt,
 } from "./travel-prompt.js";
-import { clampNumber, getDialogFieldValue, numberOrZero } from "./utils.js";
+import { getRestMode, reportRest, restActor } from "../resting.js";
+import { clampNumber, escapeHtml, getDialogFieldValue, numberOrZero } from "./utils.js";
 import { getPrimaryActiveGm } from "./users.js";
 
 const ActorSheetBase = globalThis.foundry?.appv1?.sheets?.ActorSheet
@@ -325,6 +328,7 @@ class SDXGroupSheet extends ActorSheetBase {
 
   activateListeners(html) {
     super.activateListeners(html);
+    this._applyTabBackgrounds(html);
     this._normalizeCampingResetButton(html);
     this._enablePlayerCampingControls(html);
 
@@ -366,6 +370,10 @@ class SDXGroupSheet extends ActorSheetBase {
 
     html.find("[data-action='start-travel-rolls']").on("click", event => {
       this._onStartTravelRolls(event);
+    });
+
+    html.find("[data-action='rest-party']").on("click", event => {
+      this._onRestParty(event);
     });
 
     html.find("[data-action='reset-travel']").on("click", event => {
@@ -479,6 +487,23 @@ class SDXGroupSheet extends ActorSheetBase {
 
   async _saveGroupData(groupData) {
     await this.actor.setFlag(MODULE_ID, "group", groupData);
+  }
+
+  _applyTabBackgrounds(root) {
+    const element = root?.jquery ? root[0] : root?.[0] ?? root;
+    if (!element?.querySelector) return;
+
+    const backgrounds = getGroupSheetTabBackgrounds();
+    for (const [tabName, imagePath] of Object.entries(backgrounds)) {
+      const tab = element.querySelector(`.mk-group-tab[data-tab="${tabName}"]`);
+      if (!tab) continue;
+
+      if (imagePath) {
+        tab.style.setProperty("background-image", `url(${JSON.stringify(imagePath)})`, "important");
+      } else {
+        tab.style.removeProperty("background-image");
+      }
+    }
   }
 
   async _setPartyMemberActive(actorUuid, active) {
@@ -782,7 +807,7 @@ class SDXGroupSheet extends ActorSheetBase {
       const member = await resolveActorFromUuid(uuid);
       const confirmed = await Dialog.confirm({
         title: "Remove Group Member",
-        content: `<p>Remove <strong>${foundry.utils.escapeHTML(member?.name ?? "this character")}</strong> from the group?</p>`,
+        content: `<p>Remove <strong>${escapeHtml(member?.name ?? "this character")}</strong> from the group?</p>`,
         yes: () => true,
         no: () => false,
         defaultYes: false,
@@ -1358,6 +1383,108 @@ class SDXGroupSheet extends ActorSheetBase {
     this.render(false);
   }
 
+  async _onRestParty(event) {
+    event.preventDefault();
+
+    if (!game.user.isGM) {
+      ui.notifications.warn("Only the GM can rest the active party.");
+      return;
+    }
+
+    const button = event.currentTarget;
+    if (button?.disabled) return;
+
+    const groupData = getGroupData(this.actor);
+    const members = [];
+    for (const actorUuid of groupData.activeMembers) {
+      const actor = await resolveActorFromUuid(actorUuid);
+      if (actor?.update && canUserControlActor(actor)) members.push(actor);
+    }
+
+    if (!members.length) {
+      ui.notifications.warn("Add at least one active party member before resting.");
+      return;
+    }
+
+    const availableRations = getPartyFoodTotal(members);
+    const rationInput = await Dialog.wait({
+      title: "Rest Active Party",
+      content: `
+        <form>
+          <p>The active party has <strong>${availableRations}</strong> tracked ration${availableRations === 1 ? "" : "s"}.</p>
+          <div class="form-group">
+            <label>Total rations to consume</label>
+            <input type="number" name="rations" value="${Math.min(members.length, availableRations)}" min="0" max="${availableRations}" step="1" required>
+          </div>
+          <p>Rations are deducted from active party members as evenly as their supplies allow.</p>
+        </form>
+      `,
+      buttons: {
+        rest: {
+          icon: "<i class='fas fa-bed'></i>",
+          label: "Consume Rations and Rest",
+          callback: html => getDialogFieldValue(html, "[name='rations']"),
+        },
+        cancel: {
+          icon: "<i class='fas fa-times'></i>",
+          label: "Cancel",
+          callback: () => null,
+        },
+      },
+      default: "rest",
+      close: () => null,
+    });
+    if (rationInput === null) return;
+
+    const rationCount = Number(rationInput);
+    if (!Number.isInteger(rationCount) || rationCount < 0 || rationCount > availableRations) {
+      ui.notifications.warn(`Enter a whole number from 0 to ${availableRations}.`);
+      return;
+    }
+
+    const mode = getRestMode();
+    if (button) button.disabled = true;
+
+    const restedNames = [];
+    const failedNames = [];
+    try {
+      try {
+        await consumePartyFoodRations(members, rationCount);
+      } catch (error) {
+        console.error(`${MODULE_ID} | Could not consume party rations.`, error);
+        ui.notifications.error(`Could not consume rations. ${error?.message ?? ""}`.trim());
+        return;
+      }
+
+      for (const actor of members) {
+        try {
+          const result = await restActor(actor, mode);
+          if (!result) continue;
+
+          await reportRest(actor, result);
+          restedNames.push(actor.name);
+        } catch (error) {
+          console.error(`${MODULE_ID} | Could not rest ${actor.name}.`, error);
+          failedNames.push(actor.name);
+        }
+      }
+    } finally {
+      if (button?.isConnected) button.disabled = false;
+    }
+
+    if (restedNames.length) {
+      ui.notifications.info(
+        `${restedNames.length} party member${restedNames.length === 1 ? "" : "s"} completed a ${mode} rest. `
+        + `${rationCount} ration${rationCount === 1 ? "" : "s"} consumed.`
+      );
+    }
+    if (failedNames.length) {
+      ui.notifications.warn(`Could not rest: ${failedNames.join(", ")}.`);
+    }
+
+    this.render(false);
+  }
+
   _getMountRiderDropTarget(event) {
     return event.currentTarget?.closest?.("[data-mount-rider-dropzone='true']")
       ?? event.target?.closest?.("[data-mount-rider-dropzone='true']");
@@ -1438,7 +1565,7 @@ class SDXGroupSheet extends ActorSheetBase {
 
     const confirmed = await Dialog.confirm({
       title: "Remove Companion",
-      content: `<p>Remove <strong>${foundry.utils.escapeHTML(companion.name)}</strong> from the group?</p>`,
+      content: `<p>Remove <strong>${escapeHtml(companion.name)}</strong> from the group?</p>`,
       yes: () => true,
       no: () => false,
       defaultYes: false,

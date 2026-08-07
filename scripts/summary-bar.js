@@ -394,6 +394,22 @@ import { getRestMode, onRest } from "./resting.js";
     return false;
   }
 
+  async function useShortcutAbility(actor, item, fastForward = false) {
+    if (typeof actor.system?.useAbility === "function") {
+      await actor.system.useAbility(item.uuid, { skipPrompt: fastForward });
+      return true;
+    }
+
+    // Shadowdark 3.x on Foundry v12 exposes ability use on the Actor document
+    // and expects an embedded item ID instead of an Item UUID.
+    if (typeof actor.useAbility === "function") {
+      await actor.useAbility(item.id, { fastForward });
+      return true;
+    }
+
+    return false;
+  }
+
   async function onShortcutClick(event, app, actor) {
     event.preventDefault();
     event.stopPropagation();
@@ -411,8 +427,10 @@ import { getRestMode, onRest } from "./resting.js";
       ) {
         return;
       }
-      if ((item.system?.isAbility || String(item.type).toLowerCase() === "class ability") && typeof actor.system?.useAbility === "function") {
-        await actor.system.useAbility(item.uuid, options);
+      if (
+        (item.system?.isAbility || String(item.type).toLowerCase() === "class ability") &&
+        await useShortcutAbility(actor, item, Boolean(event.shiftKey))
+      ) {
         return;
       }
       if ((item.system?.isWeapon || String(item.type).toLowerCase() === "weapon") && typeof actor.system?.rollAttack === "function") {

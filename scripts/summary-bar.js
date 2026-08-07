@@ -206,21 +206,35 @@ import { getRestMode, onRest } from "./resting.js";
   function bindShortcutDragSources(root, actor) {
     if (!getSetting(SETTINGS.SHORTCUT_ROW, false)) return;
 
-    root.querySelectorAll?.(".tab-spells .item[data-item-id]").forEach(row => {
-      const item = actor.items?.get(row.dataset.itemId);
-      if (!item || String(item.type ?? "").toLowerCase() !== "spell") return;
+    const bindRows = (selector, acceptsItem) => {
+      root.querySelectorAll?.(selector).forEach(row => {
+        if (row.dataset.mkShortcutDragSource === "true") return;
 
-      row.draggable = true;
-      row.dataset.mkShortcutDragSource = "true";
-      row.addEventListener("dragstart", event => {
-        if (!event.dataTransfer) return;
+        const item = actor.items?.get(row.dataset.itemId);
+        if (!item || !acceptsItem(item)) return;
 
-        event.dataTransfer.effectAllowed = "copy";
-        event.dataTransfer.setData("text/plain", JSON.stringify({
-          type: "Item",
-          uuid: item.uuid,
-        }));
+        row.draggable = true;
+        row.dataset.mkShortcutDragSource = "true";
+        row.addEventListener("dragstart", event => {
+          if (!event.dataTransfer) return;
+
+          event.dataTransfer.effectAllowed = "copy";
+          event.dataTransfer.setData("text/plain", JSON.stringify({
+            type: "Item",
+            uuid: item.uuid,
+          }));
+        });
       });
+    };
+
+    bindRows(".tab-spells .item[data-item-id]", item =>
+      String(item.type ?? "").toLowerCase() === "spell"
+    );
+    bindRows(".tab-abilities .SD-list .item[data-item-id]", item => {
+      const type = String(item.type ?? "").toLowerCase();
+      return Boolean(item.system?.isAbility)
+        || type === "class ability"
+        || type === "ability";
     });
   }
 
@@ -364,6 +378,22 @@ import { getRestMode, onRest } from "./resting.js";
       || ["weapon", "class ability", "ability", "spell", "potion"].includes(type);
   }
 
+  async function castShortcutSpell(actor, item, fastForward = false) {
+    if (typeof actor.system?.castSpell === "function") {
+      await actor.system.castSpell(item.uuid, { skipPrompt: fastForward });
+      return true;
+    }
+
+    // Shadowdark 3.x on Foundry v12 exposes casting on the Actor document and
+    // expects an embedded item ID instead of an Item UUID.
+    if (typeof actor.castSpell === "function") {
+      await actor.castSpell(item.id, { fastForward });
+      return true;
+    }
+
+    return false;
+  }
+
   async function onShortcutClick(event, app, actor) {
     event.preventDefault();
     event.stopPropagation();
@@ -375,8 +405,10 @@ import { getRestMode, onRest } from "./resting.js";
 
     try {
       const options = { skipPrompt: Boolean(event.shiftKey) };
-      if ((item.system?.isSpell || String(item.type).toLowerCase() === "spell") && typeof actor.system?.castSpell === "function") {
-        await actor.system.castSpell(item.uuid, options);
+      if (
+        (item.system?.isSpell || String(item.type).toLowerCase() === "spell") &&
+        await castShortcutSpell(actor, item, Boolean(event.shiftKey))
+      ) {
         return;
       }
       if ((item.system?.isAbility || String(item.type).toLowerCase() === "class ability") && typeof actor.system?.useAbility === "function") {

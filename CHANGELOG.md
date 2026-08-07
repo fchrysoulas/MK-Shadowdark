@@ -1,5 +1,10 @@
 # Changelog
 
+## 1.3.1
+
+- Fixed Summary Bar shortcuts so class abilities can be dragged from the Abilities tab.
+- Restored spell shortcut casting for Foundry v12 / Shadowdark 3.x while retaining newer Shadowdark support.
+
 ## 1.3.0
 
 - Added configurable Group Sheet activity columns, defaulting to four activities per row.

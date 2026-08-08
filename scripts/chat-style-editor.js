@@ -648,8 +648,7 @@
 
   async function browseForBackgroundImage(input) {
     const FilePickerClass = globalThis.foundry?.applications?.apps?.FilePicker?.implementation
-      ?? globalThis.foundry?.applications?.apps?.FilePicker
-      ?? globalThis.FilePicker;
+      ?? globalThis.foundry?.applications?.apps?.FilePicker;
     if (!FilePickerClass) {
       ui.notifications?.warn("The Foundry image picker is unavailable.");
       return;

@@ -864,14 +864,6 @@
         return await actor.system.castSpell(spellUuid, config);
       }
 
-      if (typeof actor.castSpell === "function") {
-        return await actor.castSpell(resolved.document.id, {
-          isFocusRoll: true,
-          fastForward: Boolean(options.fastForward),
-          [CONTEXT_KEY]: checkId
-        });
-      }
-
       ui.notifications?.error(`${MODULE_TITLE} | No compatible native Shadowdark Focus roll was found.`);
       return false;
     } finally {
@@ -1016,9 +1008,8 @@
         ?.filter(token => token.actor?.uuid === actor?.uuid || token.actor?.id === actor?.id)
         ?.forEach(token => token.refresh?.());
 
-      // In Foundry v12, rendering an unbound TokenHUD reaches setPosition() with
-      // no Token object and throws while reading its bounds. Only rerender a HUD
-      // that is already open and still bound to a valid Token.
+      // Only rerender a Token HUD that is already open and still bound to a
+      // valid Token.
       const tokenHud = canvas?.hud?.token;
       if (tokenHud?.rendered && tokenHud.object?.bounds) tokenHud.render?.(false);
     } catch (_err) {

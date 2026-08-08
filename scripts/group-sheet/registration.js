@@ -444,11 +444,7 @@ function registerGroupSheet() {
   groupSheetRegistered = true;
   registerGroupSheetSocket();
 
-  const ActorsCollection =
-    globalThis.foundry?.documents?.collections?.Actors
-    // Foundry v12 exposes Actors as a legacy global binding which is not
-    // guaranteed to also be a property of globalThis.
-    ?? (typeof Actors === "function" ? Actors : globalThis.Actors);
+  const ActorsCollection = globalThis.foundry?.documents?.collections?.Actors;
 
   if (!ActorsCollection?.registerSheet) {
     throw new Error(`${MODULE_ID} | ${SUBMODULE} | Foundry Actor sheet registration API is unavailable.`);

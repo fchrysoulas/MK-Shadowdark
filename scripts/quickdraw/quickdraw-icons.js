@@ -241,7 +241,7 @@ import { evaluateQuickdrawLimitDetails } from "./quickdraw-limit.js";
   function buildQuickdrawButton(item, active) {
     // Match Shadowdark's native inventory actions (equip, light, and stash):
     // a plain action link containing a Font Awesome icon. These classes and
-    // CSS variables are stable across the supported v12-v14 system releases.
+    // CSS variables are stable across the supported v13+ system releases.
     const button = $("<a>", {
       class: "mk-quickdraw-toggle",
       "data-action": "mk-quickdraw",

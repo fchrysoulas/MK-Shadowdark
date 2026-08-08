@@ -525,8 +525,7 @@ function getOwnValue(target, key) {
   const descriptor = Object.getOwnPropertyDescriptor(target, key);
   if (!descriptor) return { exists: false, value: undefined };
 
-  // Important: do not invoke getters on Foundry documents. Accessing migrated getters
-  // such as TokenDocument#actorData causes deprecation spam in Foundry v12.
+  // Important: do not invoke migrated getters on Foundry documents.
   if (!Object.prototype.hasOwnProperty.call(descriptor, "value")) {
     return { exists: false, value: undefined };
   }
@@ -584,7 +583,7 @@ function hpWasChangedInActorUpdate(changed) {
 
 function hpWasChangedInTokenUpdate(changed) {
   return updateHasAnyPath(changed, [
-    // Foundry v12 synthetic token actor data lives under delta.
+    // Synthetic token actor data lives under delta.
     "delta.system.attributes.hp.value",
     "delta.system.attributes.hp",
     "delta.system.attributes",

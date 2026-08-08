@@ -38,7 +38,7 @@
 /* -------------------------------------------- */
 
 /* Match Shadowdark's native inventory action links. The system uses these
-   variables and the same Font Awesome family in its v12-v14 releases. */
+   variables and the same Font Awesome family in its v13+ releases. */
 .shadowdark.sheet.player .item .mk-has-quickdraw-toggle .mk-quickdraw-toggle {
   display: inline-flex;
   align-items: center;
@@ -116,7 +116,7 @@
 
 /* The card deliberately reuses Shadowdark's SD-box, header, content,
    value-grid, and SD-grid primitives so it follows system styling across
-   Foundry v12-v14. Only Quickdraw-specific alignment is defined here. */
+   Foundry v13+. Only Quickdraw-specific alignment is defined here. */
 .shadowdark.sheet.player .mk-quickdraw-card .mk-quickdraw-card-values {
   font-variant-numeric: tabular-nums;
 }

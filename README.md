@@ -4,10 +4,8 @@ Modular quality-of-life tools, gameplay automation, party management, and charac
 
 ## Compatibility
 
-- Foundry VTT v12 through v14
-- Shadowdark RPG system 3.5.0+ (verified with 4.0.6)
-- Encounter Engine Phase 1 was checked against the public Shadowdark `release-3.5.0` source
-- Foundry VTT v14 requires a v14-compatible Shadowdark release (4.0.0+)
+- Foundry VTT v13+
+- Shadowdark RPG system 4.0.0+ (verified with 4.0.6)
 
 ## Features
 
@@ -62,7 +60,7 @@ The Token Equipment Display uses the same equipped, stashed, handedness, shield,
 
 ## Focus Tracker
 
-Focus Tracker integrates with the native Shadowdark 3.x and 4.x spell-casting methods. A successful spell with a Focus duration starts a tracked session; failed maintenance checks end it, and a critical failure also marks the spell as lost for the day.
+Focus Tracker integrates with the native Shadowdark 4.x spell-casting methods. A successful spell with a Focus duration starts a tracked session; failed maintenance checks end it, and a critical failure also marks the spell as lost for the day.
 
 - Start-of-turn and damage reminders are whispered to the caster's owners and active GMs.
 - Chat actions can roll the native Focus check, ignore an optional damage prompt, end Focus, or reopen the source spell.

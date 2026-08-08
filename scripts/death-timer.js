@@ -165,7 +165,7 @@
 
     const dead = effects.find(se => {
       const id = String(se?.id ?? "").toLowerCase();
-      const raw = String(se?.name ?? se?.label ?? se?.title ?? "").toLowerCase();
+      const raw = String(se?.name ?? se?.title ?? "").toLowerCase();
       return (
         id === "dead" ||
         raw === "dead" ||
@@ -177,7 +177,6 @@
     if (!dead) return;
 
     dead.name = "Dead";
-    dead.label = "Dead";
     dead.title = "Dead";
     dead.description = "Dead";
   }
@@ -186,7 +185,7 @@
     const effects = CONFIG.statusEffects ?? [];
     return effects.find(se => {
       const id = String(se?.id ?? "").toLowerCase();
-      const name = String(se?.name ?? se?.label ?? se?.title ?? "").toLowerCase();
+      const name = String(se?.name ?? se?.title ?? "").toLowerCase();
       return id === "dead" || name === "dead";
     }) ?? null;
   }
@@ -197,7 +196,7 @@
 
   function getBuiltInDeadStatusLabel() {
     const se = getBuiltInDeadStatus();
-    const raw = String(se?.name ?? se?.label ?? se?.title ?? "Dead");
+    const raw = String(se?.name ?? se?.title ?? "Dead");
 
     if (!raw) return "Dead";
     if (/^effect\./i.test(raw)) return "Dead";

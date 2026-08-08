@@ -68,13 +68,8 @@ import { getRestMode, reportRest, restActor } from "../resting.js";
 import { clampNumber, escapeHtml, getDialogFieldValue, numberOrZero } from "./utils.js";
 import { getPrimaryActiveGm } from "./users.js";
 
-const ActorSheetBase = globalThis.foundry?.appv1?.sheets?.ActorSheet
-  // Foundry v12 exposes ActorSheet as a legacy global binding which is not
-  // guaranteed to also be a property of globalThis.
-  ?? (typeof ActorSheet === "function" ? ActorSheet : globalThis.ActorSheet);
-const TextEditorImplementation =
-  globalThis.foundry?.applications?.ux?.TextEditor?.implementation
-  ?? (typeof TextEditor !== "undefined" ? TextEditor : globalThis.TextEditor);
+const ActorSheetBase = globalThis.foundry?.appv1?.sheets?.ActorSheet;
+const TextEditorImplementation = globalThis.foundry?.applications?.ux?.TextEditor?.implementation;
 
 async function createGroupActor({ name = "New Group", folder = null } = {}) {
   if (!game.user.isGM) {

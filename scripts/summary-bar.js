@@ -101,7 +101,7 @@ import { getRestMode, onRest } from "./resting.js";
     try {
       if (actor.getFlag?.(MODULE_ID, "isGroup")) return true;
     } catch (_err) {
-      // Foundry v12 may throw on inactive legacy flag scopes.
+      // Inactive legacy flag scopes can throw when read through getFlag.
     }
 
     return Boolean(actor?._source?.flags?.[MODULE_ID]?.isGroup);
@@ -338,8 +338,7 @@ import { getRestMode, onRest } from "./resting.js";
     const nativeEvent = event.originalEvent ?? event;
     let data = null;
     try {
-      const textEditor = globalThis.foundry?.applications?.ux?.TextEditor?.implementation
-        ?? globalThis.TextEditor;
+      const textEditor = globalThis.foundry?.applications?.ux?.TextEditor?.implementation;
       data = textEditor?.getDragEventData?.(nativeEvent) ?? null;
     } catch (_error) {
       // Fall through to standard drag payload formats.
@@ -384,26 +383,12 @@ import { getRestMode, onRest } from "./resting.js";
       return true;
     }
 
-    // Shadowdark 3.x on Foundry v12 exposes casting on the Actor document and
-    // expects an embedded item ID instead of an Item UUID.
-    if (typeof actor.castSpell === "function") {
-      await actor.castSpell(item.id, { fastForward });
-      return true;
-    }
-
     return false;
   }
 
   async function useShortcutAbility(actor, item, fastForward = false) {
     if (typeof actor.system?.useAbility === "function") {
       await actor.system.useAbility(item.uuid, { skipPrompt: fastForward });
-      return true;
-    }
-
-    // Shadowdark 3.x on Foundry v12 exposes ability use on the Actor document
-    // and expects an embedded item ID instead of an Item UUID.
-    if (typeof actor.useAbility === "function") {
-      await actor.useAbility(item.id, { fastForward });
       return true;
     }
 

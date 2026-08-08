@@ -356,10 +356,7 @@
     }));
   }
 
-  const FormApplicationBase = globalThis.foundry?.appv1?.api?.FormApplication
-    // Foundry v12 exposes FormApplication as a legacy global binding which is
-    // not guaranteed to also be a property of globalThis.
-    ?? (typeof FormApplication === "function" ? FormApplication : globalThis.FormApplication);
+  const FormApplicationBase = globalThis.foundry?.appv1?.api?.FormApplication;
 
   const FeatureSettingsForm = FormApplicationBase ? class extends FormApplicationBase {
     static feature = null;

@@ -135,7 +135,7 @@ function isGroupActor(actor) {
   try {
     if (actor.getFlag?.(MODULE_ID, "isGroup")) return true;
   } catch (_error) {
-    // Foundry v12 may throw on inactive legacy flag scopes.
+    // Inactive legacy flag scopes can throw when read through getFlag.
   }
 
   return Boolean(actor?._source?.flags?.[MODULE_ID]?.isGroup);

@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.4.0
+
+- Raised the minimum supported versions to Foundry VTT v13 and Shadowdark RPG 4.0.0.
+- Removed Foundry VTT v12 and Shadowdark RPG 3.x compatibility branches in favor of the v13+ namespaced APIs and Shadowdark 4.x actor-system actions.
+- Updated Death Timer's built-in Dead status normalization to use `StatusEffectConfig.name`, avoiding the removed `label` property in Foundry VTT v14.
+
 ## 1.3.1
 
 - Fixed Summary Bar shortcuts so class abilities can be dragged from the Abilities tab.

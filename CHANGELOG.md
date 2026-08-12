@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.6.0
+
+- Reworked Detailed Wounds into a GM-managed ten-location status board with direct worsen/improve controls and a `2d10` random-wound procedure.
+- Added location and severity dice handling, including Dice So Nice red severity dice, configurable status progression, and mapped body-location labels.
+- Added automatic Shadowdark ability penalties for wounded, critical, and destroyed locations, displayed on each location card and managed through a single actor effect.
+
 ## 1.5.0
 
 - Added an optional Detailed Wounds character-sheet tab for tracking injuries by body location, severity, description, and date.

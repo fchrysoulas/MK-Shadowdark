@@ -3,32 +3,34 @@
   const SUBMODULE = "Detailed Wounds";
   const SETTING_ENABLED = "detailedWoundsEnabled";
   const FLAG_KEY = "detailedWounds";
+  const EFFECT_FLAG = "woundPenalties";
   const TAB_ID = "tab-mk-wounds";
 
   const LOCATIONS = Object.freeze([
-    { key: "head", label: "Head", icon: "fa-solid fa-brain", side: "left" },
-    { key: "leftArm", label: "Left Arm", icon: "fa-solid fa-hand-fist", side: "left" },
-    { key: "leftHand", label: "Left Hand", icon: "fa-solid fa-hand", side: "left" },
-    { key: "leftLeg", label: "Left Leg", icon: "fa-solid fa-person-walking", side: "left" },
-    { key: "torso", label: "Torso", icon: "fa-solid fa-heart-pulse", side: "right" },
-    { key: "abdomen", label: "Abdomen", icon: "fa-solid fa-shield-halved", side: "right" },
-    { key: "rightArm", label: "Right Arm", icon: "fa-solid fa-hand-fist", side: "right" },
-    { key: "rightHand", label: "Right Hand", icon: "fa-solid fa-hand", side: "right" },
-    { key: "rightLeg", label: "Right Leg", icon: "fa-solid fa-person-walking", side: "right" }
+    { key: "head", label: "Head", roll: 10, icon: "fa-solid fa-brain", side: "left" },
+    { key: "leftArm", label: "Left Arm", roll: 8, icon: "fa-solid fa-hand-fist", side: "left" },
+    { key: "leftHand", label: "Left Hand", roll: 6, icon: "fa-solid fa-hand", side: "left" },
+    { key: "leftLeg", label: "Left Leg", roll: 4, icon: "fa-solid fa-person-walking", side: "left" },
+    { key: "leftFoot", label: "Left Foot", roll: 2, icon: "fa-solid fa-shoe-prints", side: "left" },
+    { key: "torso", label: "Torso", roll: 9, icon: "fa-solid fa-heart-pulse", side: "right" },
+    { key: "rightArm", label: "Right Arm", roll: 7, icon: "fa-solid fa-hand-fist", side: "right" },
+    { key: "rightHand", label: "Right Hand", roll: 5, icon: "fa-solid fa-hand", side: "right" },
+    { key: "rightLeg", label: "Right Leg", roll: 3, icon: "fa-solid fa-person-walking", side: "right" },
+    { key: "rightFoot", label: "Right Foot", roll: 1, icon: "fa-solid fa-shoe-prints", side: "right" }
   ]);
 
-  const SEVERITIES = Object.freeze({
-    minor: { label: "Minor", rank: 1 },
-    moderate: { label: "Moderate", rank: 2 },
-    severe: { label: "Severe", rank: 3 },
-    critical: { label: "Critical", rank: 4 }
-  });
+  const STATUSES = Object.freeze([
+    { key: "ok", label: "OK", rank: 1 },
+    { key: "wounded", label: "Wounded", rank: 2 },
+    { key: "critical", label: "Critical", rank: 3 },
+    { key: "destroyed", label: "Destroyed", rank: 4 }
+  ]);
 
   Hooks.once("init", () => {
     if (!game.settings.settings.has(`${MODULE_ID}.${SETTING_ENABLED}`)) {
       game.settings.register(MODULE_ID, SETTING_ENABLED, {
         name: "Detailed Wounds | Enabled",
-        hint: "Adds a Wounds tab to Shadowdark player character sheets for tracking injuries by body location.",
+        hint: "Adds a Wounds tab to Shadowdark player character sheets for tracking body-location status.",
         scope: "world",
         config: true,
         type: Boolean,
@@ -42,6 +44,7 @@
 
   const RENDER_HOOKS = [
     "renderActorSheet",
+    "renderActorSheetV2",
     "renderShadowdarkActorSheet",
     "renderShadowdarkActorSheetV2",
     "renderActorSheetShadowdark"
@@ -49,17 +52,21 @@
 
   for (const hookName of RENDER_HOOKS) {
     Hooks.on(hookName, (app, html) => {
-      try {
-        injectWoundsTab(app, html);
-      } catch (err) {
-        console.error(`${MODULE_ID} v${getModuleVersion()} | ${SUBMODULE} | render error`, err);
-      }
+      injectWoundsTabSafely(app, html);
+      queueMicrotask(() => injectWoundsTabSafely(app, html));
     });
   }
 
+  function injectWoundsTabSafely(app, html) {
+    try {
+      injectWoundsTab(app, html);
+    } catch (err) {
+      console.error(`${MODULE_ID} v${getModuleVersion()} | ${SUBMODULE} | render error`, err);
+    }
+  }
+
   function injectWoundsTab(app, html) {
-    if (game.system?.id !== "shadowdark") return;
-    if (!getSetting(SETTING_ENABLED, true)) return;
+    if (game.system?.id !== "shadowdark" || !getSetting(SETTING_ENABLED, true)) return;
 
     const actor = app?.actor ?? app?.object;
     if (actor?.documentName !== "Actor") return;
@@ -67,12 +74,10 @@
     const root = getRootElement(html);
     if (!root?.querySelector) return;
 
-    const form = getSheetForm(root);
-    if (!form?.matches?.(".shadowdark.sheet.player, form.shadowdark.sheet.player") && !form?.classList?.contains("player")) return;
-
-    const nav = form.querySelector(".SD-nav[data-group='primary'], .SD-nav");
-    const content = form.querySelector(".SD-content-body");
-    if (!nav || !content) return;
+    const sheet = getSheetForm(root) ?? root;
+    const nav = sheet.querySelector?.(".SD-nav[data-group='primary'], .SD-nav");
+    const content = sheet.querySelector?.(".SD-content-body");
+    if (!nav || !content || !nav.querySelector('[data-tab="tab-abilities"]')) return;
 
     nav.querySelector(".mk-wounds-nav")?.remove();
     content.querySelector(`.${TAB_ID}`)?.remove();
@@ -80,7 +85,7 @@
     const navButton = document.createElement("a");
     navButton.className = "navigation-tab mk-wounds-nav";
     navButton.dataset.tab = TAB_ID;
-    navButton.innerHTML = '<i class="fa-solid fa-bandage"></i><span>Wounds</span>';
+    navButton.textContent = "Wounds";
 
     const notesTab = nav.querySelector('[data-tab="tab-notes"]');
     if (notesTab) nav.insertBefore(navButton, notesTab);
@@ -90,11 +95,11 @@
     section.className = `tab ${TAB_ID} mk-wounds-tab`;
     section.dataset.group = "primary";
     section.dataset.tab = TAB_ID;
-    section.innerHTML = renderWoundsHtml(actor, app.__mkWoundsSelectedLocation ?? "torso");
+    section.innerHTML = renderWoundsHtml(actor);
     content.appendChild(section);
 
     bindTabNavigation(app, nav, content, navButton, section);
-    bindWoundControls(app, actor, section);
+    bindStatusControls(app, actor, section);
 
     if (app.__mkWoundsActive) activateWoundsTab(app, nav, content, navButton, section);
   }
@@ -125,282 +130,331 @@
     app.__mkWoundsActive = true;
   }
 
-  function bindWoundControls(app, actor, section) {
-    const canEdit = canEditActor(actor);
+  function bindStatusControls(app, actor, section) {
+    if (!game.user?.isGM) return;
 
-    for (const locationButton of section.querySelectorAll("[data-wound-location]")) {
-      locationButton.addEventListener("click", () => {
-        app.__mkWoundsSelectedLocation = locationButton.dataset.woundLocation;
+    for (const button of section.querySelectorAll("[data-wound-location]")) {
+      button.addEventListener("click", async event => {
+        event.preventDefault();
+        const location = button.dataset.woundLocation;
+        if (!getLocation(location)) return;
+
+        await worsenLocationStatus(actor, location);
+        rerenderWoundsSection(app, actor, section);
+      });
+
+      button.addEventListener("contextmenu", async event => {
+        event.preventDefault();
+        const location = button.dataset.woundLocation;
+        if (!getLocation(location)) return;
+
+        await improveLocationStatus(actor, location);
         rerenderWoundsSection(app, actor, section);
       });
     }
 
-    const form = section.querySelector(".mk-wounds-add-form");
-    if (form && canEdit) {
-      form.addEventListener("submit", async event => {
-        event.preventDefault();
-        const formData = new FormData(form);
-        const location = String(formData.get("location") ?? "");
-        const severity = String(formData.get("severity") ?? "minor");
-        const note = String(formData.get("note") ?? "").trim();
-
-        if (!getLocation(location) || !SEVERITIES[severity]) return;
-        await addWound(actor, location, severity, note);
-      });
-    }
-
-    if (canEdit) {
-      for (const healButton of section.querySelectorAll("[data-action='heal-wound']")) {
-        healButton.addEventListener("click", async event => {
-          event.preventDefault();
-          const location = healButton.dataset.location;
-          const woundId = healButton.dataset.woundId;
-          await removeWound(actor, location, woundId);
-        });
-      }
-
-      const clearButton = section.querySelector("[data-action='clear-location']");
-      clearButton?.addEventListener("click", async event => {
-        event.preventDefault();
-        const location = clearButton.dataset.location;
-        await clearLocation(actor, location);
-      });
-    }
+    section.querySelector("[data-action='roll-random-wound']")?.addEventListener("click", async event => {
+      event.preventDefault();
+      await rollRandomWound(actor);
+      rerenderWoundsSection(app, actor, section);
+    });
   }
 
   function rerenderWoundsSection(app, actor, section) {
-    const selected = app.__mkWoundsSelectedLocation ?? "torso";
-    section.innerHTML = renderWoundsHtml(actor, selected);
-    bindWoundControls(app, actor, section);
+    section.innerHTML = renderWoundsHtml(actor);
+    bindStatusControls(app, actor, section);
   }
 
-  function renderWoundsHtml(actor, selectedLocationKey) {
+  function renderWoundsHtml(actor) {
     const data = normalizeData(actor.getFlag(MODULE_ID, FLAG_KEY));
-    const selectedLocation = getLocation(selectedLocationKey) ?? getLocation("torso") ?? LOCATIONS[0];
-    const selectedWounds = data.locations[selectedLocation.key] ?? [];
-    const totalWounds = LOCATIONS.reduce((sum, location) => sum + (data.locations[location.key]?.length ?? 0), 0);
-    const criticalWounds = LOCATIONS.reduce((sum, location) => (
-      sum + (data.locations[location.key] ?? []).filter(wound => wound.severity === "critical").length
-    ), 0);
-    const canEdit = canEditActor(actor);
+    const editable = Boolean(game.user?.isGM);
 
     const leftCards = LOCATIONS.filter(location => location.side === "left")
-      .map(location => renderLocationCard(location, data, selectedLocation.key))
+      .map(location => renderLocationCard(location, data, editable))
       .join("");
     const rightCards = LOCATIONS.filter(location => location.side === "right")
-      .map(location => renderLocationCard(location, data, selectedLocation.key))
+      .map(location => renderLocationCard(location, data, editable))
       .join("");
 
     return `
       <div class="mk-wounds-shell">
-        <header class="mk-wounds-header">
-          <div>
-            <h2><i class="fa-solid fa-bandage"></i> Detailed Wounds</h2>
-            <p>Track injuries by body location without changing Shadowdark's core HP rules.</p>
-          </div>
-          <div class="mk-wounds-summary" title="Tracked wounds">
-            <strong>${totalWounds}</strong>
-            <span>${totalWounds === 1 ? "wound" : "wounds"}</span>
-            ${criticalWounds ? `<em>${criticalWounds} critical</em>` : ""}
-          </div>
+        <header class="mk-wounds-header SD-banner">
+          <button type="button" class="mk-wounds-random-roll" data-action="roll-random-wound"${editable ? "" : " disabled"}>
+            <i class="fa-solid fa-dice-d10"></i><span>Random Wound</span><b>2d10</b>
+          </button>
         </header>
 
         <div class="mk-wounds-map">
-          <div class="mk-wounds-location-column mk-wounds-location-column-left">
-            ${leftCards}
-          </div>
-
-          <div class="mk-wounds-body" aria-label="Body wound map">
+          <div class="mk-wounds-location-column mk-wounds-location-column-left">${leftCards}</div>
+          <div class="mk-wounds-body" aria-label="Body location status map">
             <div class="mk-wounds-body-glow"></div>
             <i class="fa-solid fa-person mk-wounds-person" aria-hidden="true"></i>
-            ${LOCATIONS.map(location => renderBodyMarker(location, data, selectedLocation.key)).join("")}
+            ${LOCATIONS.map(location => renderBodyMarker(location, data, editable)).join("")}
           </div>
-
-          <div class="mk-wounds-location-column mk-wounds-location-column-right">
-            ${rightCards}
-          </div>
-        </div>
-
-        <div class="mk-wounds-detail">
-          <div class="mk-wounds-detail-heading">
-            <div>
-              <i class="${selectedLocation.icon}"></i>
-              <div>
-                <h3>${escapeHtml(selectedLocation.label)}</h3>
-                <span>${renderLocationStatusText(selectedWounds)}</span>
-              </div>
-            </div>
-            ${canEdit && selectedWounds.length ? `
-              <button type="button" class="mk-wounds-clear" data-action="clear-location" data-location="${selectedLocation.key}">
-                <i class="fa-solid fa-kit-medical"></i> Clear location
-              </button>
-            ` : ""}
-          </div>
-
-          <div class="mk-wounds-list">
-            ${selectedWounds.length
-              ? selectedWounds.map(wound => renderWoundRow(wound, selectedLocation.key, canEdit)).join("")
-              : '<div class="mk-wounds-empty"><i class="fa-solid fa-shield-heart"></i><span>No wounds recorded.</span></div>'}
-          </div>
-
-          ${canEdit ? renderAddForm(selectedLocation.key) : '<p class="mk-wounds-readonly"><i class="fa-solid fa-lock"></i> Read only</p>'}
+          <div class="mk-wounds-location-column mk-wounds-location-column-right">${rightCards}</div>
         </div>
       </div>
     `;
   }
 
-  function renderLocationCard(location, data, selectedLocationKey) {
-    const wounds = data.locations[location.key] ?? [];
-    const status = getLocationStatus(wounds);
-    const selected = location.key === selectedLocationKey;
+  function renderLocationCard(location, data, editable) {
+    const status = getLocationStatus(data, location.key);
+    const rollResult = location.roll;
+    const penalties = formatLocationPenalties(location, status);
+    const action = editable ? "Left-click to worsen; right-click to improve" : "GM only";
 
     return `
-      <button type="button"
-        class="mk-wounds-location-card status-${status.key}${selected ? " selected" : ""}"
-        data-wound-location="${location.key}"
-        title="${escapeHtml(location.label)}: ${escapeHtml(status.label)}">
+      <button type="button" class="mk-wounds-location-card status-${status.key}" data-wound-location="${location.key}"
+        title="${escapeHtml(location.label)}: ${escapeHtml(status.label)}. ${action}"${editable ? "" : " disabled"}>
         <span class="mk-wounds-location-icon"><i class="${location.icon}"></i></span>
-        <span class="mk-wounds-location-copy">
-          <strong>${escapeHtml(location.label)}</strong>
-          <small>${escapeHtml(status.label)}${wounds.length ? ` · ${wounds.length}` : ""}</small>
-        </span>
+        <span class="mk-wounds-location-copy"><strong>${rollResult}. ${escapeHtml(location.label)}</strong><small>${escapeHtml(status.label)}${penalties ? ` · ${escapeHtml(penalties)}` : ""}</small></span>
       </button>
     `;
   }
 
-  function renderBodyMarker(location, data, selectedLocationKey) {
-    const wounds = data.locations[location.key] ?? [];
-    const status = getLocationStatus(wounds);
-    const selected = location.key === selectedLocationKey;
+  function renderBodyMarker(location, data, editable) {
+    const status = getLocationStatus(data, location.key);
+    const action = editable ? "Left-click to worsen; right-click to improve" : "GM only";
 
     return `
-      <button type="button"
-        class="mk-wounds-marker marker-${location.key} status-${status.key}${selected ? " selected" : ""}"
-        data-wound-location="${location.key}"
-        title="${escapeHtml(location.label)}: ${escapeHtml(status.label)}"
-        aria-label="${escapeHtml(location.label)}: ${escapeHtml(status.label)}">
-      </button>
+      <button type="button" class="mk-wounds-marker marker-${location.key} status-${status.key}" data-wound-location="${location.key}"
+        title="${escapeHtml(location.label)}: ${escapeHtml(status.label)}. ${action}"
+        aria-label="${escapeHtml(location.label)}: ${escapeHtml(status.label)}"${editable ? "" : " disabled"}></button>
     `;
   }
 
-  function renderWoundRow(wound, location, canEdit) {
-    const severity = SEVERITIES[wound.severity] ?? SEVERITIES.minor;
-    const note = String(wound.note ?? "").trim();
-    const when = wound.createdAt ? formatTimestamp(wound.createdAt) : "";
-
-    return `
-      <article class="mk-wounds-entry severity-${wound.severity}">
-        <span class="mk-wounds-entry-severity">${escapeHtml(severity.label)}</span>
-        <div class="mk-wounds-entry-copy">
-          <strong>${note ? escapeHtml(note) : "Unspecified injury"}</strong>
-          ${when ? `<small>${escapeHtml(when)}</small>` : ""}
-        </div>
-        ${canEdit ? `
-          <button type="button" class="mk-wounds-heal" data-action="heal-wound" data-location="${location}" data-wound-id="${wound.id}" title="Heal / remove this wound">
-            <i class="fa-solid fa-heart"></i>
-          </button>
-        ` : ""}
-      </article>
-    `;
-  }
-
-  function renderAddForm(location) {
-    return `
-      <form class="mk-wounds-add-form">
-        <input type="hidden" name="location" value="${location}">
-        <select name="severity" aria-label="Wound severity">
-          ${Object.entries(SEVERITIES).map(([key, severity]) => `<option value="${key}">${severity.label}</option>`).join("")}
-        </select>
-        <input type="text" name="note" maxlength="180" placeholder="Wound description…" aria-label="Wound description">
-        <button type="submit" title="Add wound"><i class="fa-solid fa-plus"></i> Add Wound</button>
-      </form>
-    `;
-  }
-
-  async function addWound(actor, location, severity, note = "") {
-    if (!canEditActor(actor)) return;
+  async function worsenLocationStatus(actor, location) {
+    if (!game.user?.isGM || !getLocation(location)) return;
 
     const data = normalizeData(actor.getFlag(MODULE_ID, FLAG_KEY));
-    data.locations[location].push({
-      id: foundry.utils.randomID(),
-      severity,
-      note,
-      createdAt: Date.now()
-    });
-
+    const current = getLocationStatus(data, location);
+    const next = STATUSES[Math.min(current.rank, STATUSES.length - 1)];
+    data.locations[location] = { ...data.locations[location], status: next.key };
     await actor.setFlag(MODULE_ID, FLAG_KEY, data);
+    await syncWoundPenaltyEffect(actor, data);
   }
 
-  async function removeWound(actor, location, woundId) {
-    if (!canEditActor(actor) || !getLocation(location)) return;
+  async function improveLocationStatus(actor, location) {
+    if (!game.user?.isGM || !getLocation(location)) return;
 
     const data = normalizeData(actor.getFlag(MODULE_ID, FLAG_KEY));
-    data.locations[location] = data.locations[location].filter(wound => wound.id !== woundId);
+    const current = getLocationStatus(data, location);
+    const next = STATUSES[Math.max(current.rank - 2, 0)];
+    data.locations[location] = { ...data.locations[location], status: next.key };
     await actor.setFlag(MODULE_ID, FLAG_KEY, data);
+    await syncWoundPenaltyEffect(actor, data);
   }
 
-  async function clearLocation(actor, location) {
-    if (!canEditActor(actor) || !getLocation(location)) return;
+  async function rollRandomWound(actor) {
+    if (!game.user?.isGM) return;
+
+    // Separate terms let Dice So Nice style only the severity die.
+    const roll = new Roll("1d10 + 1d10");
+    setSeverityDieAppearance(roll);
+    await roll.evaluate();
+    const [locationResult = 1, severityResult = 1] = getDieResults(roll);
+    const locationRoll = Math.min(Math.max(locationResult, 1), LOCATIONS.length);
+    const location = LOCATIONS.find(entry => entry.roll === locationRoll) ?? LOCATIONS[0];
+    const severity = getRandomWoundSeverity(severityResult);
+    await applyRandomWound(actor, location.key, severity);
+
+    const publicMode = globalThis.CONST?.DICE_ROLL_MODES?.PUBLIC ?? "publicroll";
+    await roll.toMessage(
+      {
+        speaker: ChatMessage.getSpeaker({ actor }),
+        flavor: `Random Wound: ${escapeHtml(actor.name)} — ${locationRoll}. ${escapeHtml(location.label)} / ${severity.label} (severity ${severityResult})`
+      },
+      { rollMode: publicMode }
+    );
+
+    return { roll, location, locationRoll, severityResult, severity };
+  }
+
+  function getDieResults(roll) {
+    const results = [];
+    for (const die of roll?.dice ?? []) {
+      for (const result of die.results ?? []) {
+        if (result?.active === false) continue;
+        const value = Number(result?.result);
+        if (Number.isFinite(value)) results.push(value);
+      }
+    }
+    return results;
+  }
+
+  function setSeverityDieAppearance(roll) {
+    if (!game.dice3d || !Array.isArray(roll?.terms)) return;
+
+    const d10Terms = roll.terms.filter(term => Number(term?.faces) === 10);
+    const severityDie = d10Terms[1];
+    if (!severityDie) return;
+
+    severityDie.options = severityDie.options ?? {};
+    severityDie.options.appearance = {
+      colorset: "custom",
+      foreground: "#fff4f4",
+      background: "#b71c1c",
+      outline: "#5a0000",
+      edge: "#5a0000"
+    };
+  }
+
+  function getRandomWoundSeverity(severityRoll) {
+    if (severityRoll >= 10) return { label: "Destroyed", status: getStatus("destroyed") };
+    if (severityRoll >= 8) return { label: "Critical", status: getStatus("critical") };
+    if (severityRoll >= 5) return { label: "Wounded", status: getStatus("wounded") };
+    return { label: "Scratch", status: getStatus("ok") };
+  }
+
+  async function applyRandomWound(actor, location, severity) {
+    if (!game.user?.isGM || !getLocation(location) || !severity?.status) return;
+
+    // Scratches are reported in chat but never alter or accumulate against a
+    // location's condition.
+    if (severity.status.key === "ok") return;
 
     const data = normalizeData(actor.getFlag(MODULE_ID, FLAG_KEY));
-    data.locations[location] = [];
+    const currentLocation = data.locations[location];
+    const current = getLocationStatus(data, location);
+    const hits = current.key === "ok" ? 0 : Number(currentLocation.hits) || 1;
+    const baseRank = Math.max(current.rank, severity.status.rank);
+    const nextRank = hits > 0 ? Math.min(baseRank + 1, STATUSES.length) : baseRank;
+    const next = STATUSES[nextRank - 1];
+
+    data.locations[location] = { status: next.key, hits: hits + 1 };
     await actor.setFlag(MODULE_ID, FLAG_KEY, data);
+    await syncWoundPenaltyEffect(actor, data);
+  }
+
+  async function syncWoundPenaltyEffect(actor, woundData = null) {
+    if (!actor?.isOwner || game.system?.id !== "shadowdark") return;
+
+    const data = woundData ?? normalizeData(actor.getFlag(MODULE_ID, FLAG_KEY));
+    const changes = buildWoundPenaltyChanges(data);
+    const existing = actor.effects?.find(effect => (
+      effect.getFlag?.(MODULE_ID, EFFECT_FLAG) ?? effect.flags?.[MODULE_ID]?.[EFFECT_FLAG]
+    ));
+
+    if (!changes.length) {
+      if (existing) await existing.delete();
+      return;
+    }
+
+    const effectData = {
+      name: "Wound Penalties",
+      img: "icons/svg/blood.svg",
+      changes,
+      disabled: false,
+      origin: actor.uuid,
+      flags: { [MODULE_ID]: { [EFFECT_FLAG]: true } }
+    };
+
+    if (existing) await existing.update(effectData);
+    else await actor.createEmbeddedDocuments("ActiveEffect", [effectData]);
+  }
+
+  function buildWoundPenaltyChanges(data) {
+    const penalties = new Map();
+    const addPenalty = (ability, amount) => {
+      penalties.set(ability, (penalties.get(ability) ?? 0) + amount);
+    };
+
+    for (const location of LOCATIONS) {
+      const status = getLocationStatus(data, location.key);
+      for (const [ability, value] of getLocationPenaltyValues(location, status)) addPenalty(ability, value);
+    }
+
+    const activeEffectMode = globalThis.CONST?.ACTIVE_EFFECT_MODES?.ADD ?? 2;
+    return [...penalties.entries()].map(([ability, value]) => ({
+      key: `system.abilities.${ability}.value`,
+      value: String(value),
+      mode: activeEffectMode
+    }));
+  }
+
+  function getLocationPenaltyValues(location, status) {
+    if (status.rank < getStatus("wounded").rank) return [];
+
+    const penalties = [["con", -1]];
+    if (status.rank < getStatus("critical").rank) return penalties;
+
+    if (["leftHand", "rightHand", "leftFoot", "rightFoot"].includes(location.key)) {
+      penalties.push(["dex", -1], ["str", -1]);
+    } else if (["leftArm", "rightArm", "leftLeg", "rightLeg"].includes(location.key)) {
+      penalties.push(["str", -1], ["con", -1]);
+    } else if (location.key === "torso") {
+      penalties.push(["con", -2]);
+    } else if (location.key === "head") {
+      penalties.push(["wis", -1], ["int", -1]);
+    }
+
+    return penalties;
+  }
+
+  function formatLocationPenalties(location, status) {
+    const totals = new Map();
+    for (const [ability, value] of getLocationPenaltyValues(location, status)) {
+      totals.set(ability, (totals.get(ability) ?? 0) + value);
+    }
+
+    return [...totals.entries()]
+      .map(([ability, value]) => `${value} ${ability.toUpperCase()}`)
+      .join(" · ");
   }
 
   function normalizeData(raw) {
-    const data = foundry.utils.deepClone(raw ?? {});
-    data.version = 1;
-    data.locations = data.locations && typeof data.locations === "object" ? data.locations : {};
+    const source = foundry.utils.deepClone(raw ?? {});
+    const data = { version: 2, locations: {} };
 
     for (const location of LOCATIONS) {
-      const wounds = Array.isArray(data.locations[location.key]) ? data.locations[location.key] : [];
-      data.locations[location.key] = wounds
-        .filter(wound => wound && typeof wound === "object")
-        .map(wound => ({
-          id: String(wound.id ?? foundry.utils.randomID()),
-          severity: SEVERITIES[wound.severity] ? wound.severity : "minor",
-          note: String(wound.note ?? ""),
-          createdAt: Number(wound.createdAt) || null
-        }));
+      data.locations[location.key] = normalizeLocation(source.locations?.[location.key]);
     }
+
+    // Version 1 had a separate abdomen location. Preserve its most serious
+    // status when migrating to the consolidated torso location.
+    const abdomen = normalizeLocation(source.locations?.abdomen);
+    const torso = data.locations.torso;
+    const abdomenStatus = getStatus(abdomen.status);
+    const torsoStatus = getLocationStatus(data, "torso");
+    data.locations.torso = {
+      status: (abdomenStatus.rank > torsoStatus.rank ? abdomenStatus : torsoStatus).key,
+      hits: torso.hits + abdomen.hits
+    };
 
     return data;
   }
 
-  function getLocationStatus(wounds) {
-    if (!wounds?.length) return { key: "healthy", label: "Healthy", rank: 0 };
+  function normalizeLocation(value) {
+    const status = getLegacyStatus(value);
+    const hits = Array.isArray(value)
+      ? value.length
+      : Math.max(0, Number(value?.hits) || (status.key === "ok" ? 0 : 1));
 
-    let highest = { key: "minor", label: SEVERITIES.minor.label, rank: SEVERITIES.minor.rank };
-    for (const wound of wounds) {
-      const severity = SEVERITIES[wound.severity] ?? SEVERITIES.minor;
-      if (severity.rank > highest.rank) highest = { key: wound.severity, label: severity.label, rank: severity.rank };
-    }
-    return highest;
+    return { status: status.key, hits };
   }
 
-  function renderLocationStatusText(wounds) {
-    const status = getLocationStatus(wounds);
-    if (!wounds?.length) return "Healthy · no tracked injuries";
-    return `${status.label} · ${wounds.length} ${wounds.length === 1 ? "wound" : "wounds"}`;
+  function getLegacyStatus(value) {
+    if (value && !Array.isArray(value) && typeof value === "object" && getStatus(value.status)) {
+      return getStatus(value.status);
+    }
+
+    if (!Array.isArray(value) || !value.length) return STATUSES[0];
+
+    const severityRanks = { minor: 2, moderate: 2, severe: 3, critical: 3 };
+    const highestRank = value.reduce((rank, wound) => Math.max(rank, severityRanks[wound?.severity] ?? 1), 1);
+    return STATUSES.find(status => status.rank === highestRank) ?? STATUSES[0];
+  }
+
+  function getLocationStatus(data, location) {
+    return getStatus(data.locations?.[location]?.status) ?? STATUSES[0];
+  }
+
+  function getStatus(key) {
+    return STATUSES.find(status => status.key === key) ?? null;
   }
 
   function getLocation(key) {
     return LOCATIONS.find(location => location.key === key) ?? null;
-  }
-
-  function canEditActor(actor) {
-    return Boolean(game.user?.isGM || actor?.isOwner);
-  }
-
-  function formatTimestamp(timestamp) {
-    try {
-      return new Intl.DateTimeFormat(game.i18n?.lang ?? undefined, {
-        dateStyle: "medium",
-        timeStyle: "short"
-      }).format(new Date(timestamp));
-    } catch (_err) {
-      return "";
-    }
   }
 
   function getRootElement(html) {
@@ -448,15 +502,25 @@
 
   Hooks.once("ready", () => {
     const mod = game.modules.get(MODULE_ID);
-    if (!mod) return;
-    mod.api = mod.api ?? {};
-    mod.api.wounds = {
-      locations: LOCATIONS.map(location => ({ ...location })),
-      severities: foundry.utils.deepClone(SEVERITIES),
-      get: actor => normalizeData(actor?.getFlag?.(MODULE_ID, FLAG_KEY)),
-      add: (actor, location, severity, note = "") => addWound(actor, location, severity, note),
-      remove: (actor, location, woundId) => removeWound(actor, location, woundId),
-      clearLocation: (actor, location) => clearLocation(actor, location)
-    };
+    if (mod) {
+      mod.api = mod.api ?? {};
+      mod.api.wounds = {
+        locations: LOCATIONS.map(location => ({ ...location })),
+        statuses: foundry.utils.deepClone(STATUSES),
+        get: actor => normalizeData(actor?.getFlag?.(MODULE_ID, FLAG_KEY)),
+        getPenaltyChanges: actor => buildWoundPenaltyChanges(normalizeData(actor?.getFlag?.(MODULE_ID, FLAG_KEY))),
+        worsen: (actor, location) => worsenLocationStatus(actor, location),
+        improve: (actor, location) => improveLocationStatus(actor, location),
+        rollRandom: actor => rollRandomWound(actor)
+      };
+    }
+
+    if (game.user?.isGM) {
+      for (const actor of game.actors ?? []) {
+        syncWoundPenaltyEffect(actor).catch(error => {
+          console.error(`${MODULE_ID} v${getModuleVersion()} | ${SUBMODULE} | penalty sync error`, error);
+        });
+      }
+    }
   });
 })();

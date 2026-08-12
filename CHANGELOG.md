@@ -1,5 +1,10 @@
 # Changelog
 
+## 1.5.0
+
+- Added an optional Detailed Wounds character-sheet tab for tracking injuries by body location, severity, description, and date.
+- Added location summaries, critical-wound counts, healing and clearing controls, read-only handling, and a public wounds API for integrations.
+
 ## 1.4.0
 
 - Raised the minimum supported versions to Foundry VTT v13 and Shadowdark RPG 4.0.0.

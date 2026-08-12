@@ -10,7 +10,7 @@
 }
 
 .shadowdark.sheet.player .mk-wounds-tab {
-  padding: 0.8rem;
+  padding: 0;
   overflow: auto;
 }
 
@@ -18,11 +18,10 @@
   --mk-wounds-bg: rgba(12, 11, 12, 0.9);
   --mk-wounds-panel: rgba(19, 21, 20, 0.92);
   --mk-wounds-line: rgba(73, 163, 134, 0.42);
-  --mk-wounds-healthy: #74b99d;
-  --mk-wounds-minor: #c6b25d;
-  --mk-wounds-moderate: #d68448;
-  --mk-wounds-severe: #b94646;
-  --mk-wounds-critical: #8d2037;
+  --mk-wounds-ok: #74b99d;
+  --mk-wounds-wounded: #e0bd3e;
+  --mk-wounds-critical: #d84d4d;
+  --mk-wounds-destroyed: #161417;
   --mk-wounds-muted: rgba(230, 230, 224, 0.6);
   color: var(--color-text-light-highlight, #f0f0e8);
   display: flex;
@@ -32,64 +31,69 @@
 }
 
 .shadowdark.sheet.player .mk-wounds-header {
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: 1rem;
-  padding: 0.75rem 0.85rem;
-  border: 1px solid rgba(93, 126, 111, 0.4);
-  background:
-    linear-gradient(90deg, rgba(15, 43, 36, 0.34), transparent 48%),
-    var(--mk-wounds-panel);
-  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.025);
+  display: block;
+  padding: 0;
 }
 
-.shadowdark.sheet.player .mk-wounds-header h2,
-.shadowdark.sheet.player .mk-wounds-detail h3 {
-  margin: 0;
-  line-height: 1.1;
-}
-
-.shadowdark.sheet.player .mk-wounds-header h2 {
+.shadowdark.sheet.player .mk-wounds-random-roll {
+  width: 100%;
+  min-height: 28px;
+  height: 28px;
   display: flex;
   align-items: center;
-  gap: 0.45rem;
-  font-size: 1.15rem;
+  justify-content: center;
+  gap: 0.4rem;
+  margin: 0;
+  padding: 0 3rem;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  color: white;
+  font-family: "Montserrat-SemiBold", sans-serif;
+  font-size: 16px;
   text-transform: uppercase;
-  letter-spacing: 0.06em;
 }
 
-.shadowdark.sheet.player .mk-wounds-header p {
-  margin: 0.3rem 0 0;
-  color: var(--mk-wounds-muted);
-  font-size: 0.78rem;
+.shadowdark.sheet.player .mk-wounds-random-roll:hover:not(:disabled),
+.shadowdark.sheet.player .mk-wounds-random-roll:focus-visible {
+  color: var(--mk-wounds-wounded);
+  box-shadow: none;
 }
 
-.shadowdark.sheet.player .mk-wounds-summary {
-  flex: 0 0 auto;
-  min-width: 74px;
-  display: grid;
-  justify-items: center;
-  gap: 0.05rem;
-  padding: 0.35rem 0.55rem;
-  border: 1px solid var(--mk-wounds-line);
-  background: rgba(0, 0, 0, 0.22);
+.shadowdark.sheet.player .mk-wounds-random-roll b {
+  padding-left: 0.4rem;
+  border-left: 1px solid rgba(255, 255, 255, 0.48);
+  color: var(--mk-wounds-wounded);
+  font-size: 0.7rem;
 }
 
-.shadowdark.sheet.player .mk-wounds-summary strong {
-  font-size: 1.25rem;
-  line-height: 1;
+.shadowdark.sheet.player .mk-wounds-random-roll:disabled {
+  cursor: default;
+  opacity: 0.56;
 }
 
-.shadowdark.sheet.player .mk-wounds-summary span,
-.shadowdark.sheet.player .mk-wounds-summary em {
-  font-size: 0.65rem;
-  line-height: 1.1;
+.shadowdark.sheet.player .mk-wounds-legend {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 0.45rem 0.8rem;
+  padding: 0.4rem 0.65rem;
+  border: 1px solid rgba(75, 111, 95, 0.4);
+  background: var(--mk-wounds-panel);
+  font-size: 0.7rem;
+  text-transform: uppercase;
 }
 
-.shadowdark.sheet.player .mk-wounds-summary em {
-  color: #e17078;
-  font-style: normal;
+.shadowdark.sheet.player .mk-wounds-legend span {
+  color: currentColor;
+}
+
+.shadowdark.sheet.player .mk-wounds-legend b {
+  display: inline-grid;
+  width: 1.15rem;
+  place-items: center;
+  border: 1px solid currentColor;
+  color: inherit;
 }
 
 .shadowdark.sheet.player .mk-wounds-map {
@@ -97,7 +101,7 @@
   display: grid;
   grid-template-columns: minmax(120px, 1fr) minmax(160px, 1.15fr) minmax(120px, 1fr);
   gap: 0.65rem;
-  min-height: 360px;
+  min-height: 420px;
   padding: 0.7rem;
   border: 1px solid rgba(77, 110, 95, 0.36);
   background:
@@ -129,16 +133,16 @@
 
 .shadowdark.sheet.player .mk-wounds-location-card {
   width: 100%;
-  min-height: 58px;
+  min-height: 50px;
   display: grid;
   grid-template-columns: 48px minmax(0, 1fr);
   align-items: center;
   gap: 0.55rem;
-  padding: 0.3rem 0.45rem;
+  padding: 0.15rem 0.45rem;
   border: 1px solid currentColor;
   border-radius: 0;
   background: rgba(7, 12, 11, 0.84);
-  color: var(--mk-wounds-healthy);
+  color: var(--mk-wounds-ok);
   text-align: left;
   box-shadow: inset 0 0 0 2px rgba(0, 0, 0, 0.38);
   cursor: pointer;
@@ -147,10 +151,16 @@
 
 .shadowdark.sheet.player .mk-wounds-location-card:hover,
 .shadowdark.sheet.player .mk-wounds-location-card:focus-visible,
-.shadowdark.sheet.player .mk-wounds-location-card.selected {
+.shadowdark.sheet.player .mk-wounds-location-card:not(:disabled):active {
   transform: translateY(-1px);
   background: rgba(18, 30, 26, 0.95);
   box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.08), inset 0 0 12px rgba(64, 166, 130, 0.1);
+}
+
+.shadowdark.sheet.player .mk-wounds-location-card:disabled,
+.shadowdark.sheet.player .mk-wounds-marker:disabled {
+  cursor: default;
+  opacity: 1;
 }
 
 .shadowdark.sheet.player .mk-wounds-location-icon {
@@ -190,7 +200,7 @@
 .shadowdark.sheet.player .mk-wounds-body {
   position: relative;
   z-index: 1;
-  min-height: 335px;
+  min-height: 395px;
   display: grid;
   place-items: center;
 }
@@ -244,7 +254,7 @@
   border: 2px solid currentColor;
   border-radius: 1px;
   background: #0b1512;
-  color: var(--mk-wounds-healthy);
+  color: var(--mk-wounds-ok);
   transform: translate(-50%, -50%) rotate(45deg);
   box-shadow: 0 0 0 2px rgba(0, 0, 0, 0.56);
   cursor: pointer;
@@ -259,7 +269,7 @@
 
 .shadowdark.sheet.player .mk-wounds-marker:hover,
 .shadowdark.sheet.player .mk-wounds-marker:focus-visible,
-.shadowdark.sheet.player .mk-wounds-marker.selected {
+.shadowdark.sheet.player .mk-wounds-marker:not(:disabled):active {
   width: 17px;
   height: 17px;
   outline: none;
@@ -267,174 +277,25 @@
 }
 
 .shadowdark.sheet.player .marker-head { left: 50%; top: 11%; }
-.shadowdark.sheet.player .marker-torso { left: 50%; top: 33%; }
-.shadowdark.sheet.player .marker-abdomen { left: 50%; top: 53%; }
+.shadowdark.sheet.player .marker-torso { left: 50%; top: 41%; }
 .shadowdark.sheet.player .marker-leftArm { left: 31%; top: 36%; }
 .shadowdark.sheet.player .marker-rightArm { left: 69%; top: 36%; }
 .shadowdark.sheet.player .marker-leftHand { left: 20%; top: 56%; }
 .shadowdark.sheet.player .marker-rightHand { left: 80%; top: 56%; }
-.shadowdark.sheet.player .marker-leftLeg { left: 42%; top: 78%; }
-.shadowdark.sheet.player .marker-rightLeg { left: 58%; top: 78%; }
+.shadowdark.sheet.player .marker-leftLeg { left: 40%; top: 73%; }
+.shadowdark.sheet.player .marker-rightLeg { left: 60%; top: 73%; }
+.shadowdark.sheet.player .marker-leftFoot { left: 38%; top: 84%; }
+.shadowdark.sheet.player .marker-rightFoot { left: 62%; top: 84%; }
 
-.shadowdark.sheet.player .status-healthy { color: var(--mk-wounds-healthy); }
-.shadowdark.sheet.player .status-minor { color: var(--mk-wounds-minor); }
-.shadowdark.sheet.player .status-moderate { color: var(--mk-wounds-moderate); }
-.shadowdark.sheet.player .status-severe { color: var(--mk-wounds-severe); }
+.shadowdark.sheet.player .status-ok { color: var(--mk-wounds-ok); }
+.shadowdark.sheet.player .status-wounded { color: var(--mk-wounds-wounded); }
 .shadowdark.sheet.player .status-critical { color: var(--mk-wounds-critical); }
+.shadowdark.sheet.player .status-destroyed { color: var(--mk-wounds-destroyed); }
 
-.shadowdark.sheet.player .mk-wounds-detail {
-  display: flex;
-  flex-direction: column;
-  gap: 0.55rem;
-  padding: 0.7rem;
-  border: 1px solid rgba(75, 111, 95, 0.4);
-  background: var(--mk-wounds-panel);
-}
-
-.shadowdark.sheet.player .mk-wounds-detail-heading {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 0.6rem;
-}
-
-.shadowdark.sheet.player .mk-wounds-detail-heading > div {
-  display: flex;
-  align-items: center;
-  gap: 0.55rem;
-}
-
-.shadowdark.sheet.player .mk-wounds-detail-heading > div > i {
-  width: 36px;
-  height: 36px;
-  display: grid;
-  place-items: center;
-  border: 1px solid var(--mk-wounds-line);
-  color: var(--mk-wounds-healthy);
-  background: rgba(0, 0, 0, 0.22);
-}
-
-.shadowdark.sheet.player .mk-wounds-detail-heading h3 {
-  font-size: 0.95rem;
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-}
-
-.shadowdark.sheet.player .mk-wounds-detail-heading span {
-  color: var(--mk-wounds-muted);
-  font-size: 0.68rem;
-}
-
-.shadowdark.sheet.player .mk-wounds-clear,
-.shadowdark.sheet.player .mk-wounds-heal,
-.shadowdark.sheet.player .mk-wounds-add-form button {
-  width: auto;
-  min-height: 30px;
-  border: 1px solid rgba(117, 158, 139, 0.42);
-  background: rgba(20, 38, 32, 0.82);
-  color: var(--color-text-light-highlight, #f1f1eb);
-}
-
-.shadowdark.sheet.player .mk-wounds-clear:hover,
-.shadowdark.sheet.player .mk-wounds-heal:hover,
-.shadowdark.sheet.player .mk-wounds-add-form button:hover {
-  border-color: var(--mk-wounds-healthy);
-  box-shadow: 0 0 0 1px rgba(116, 185, 157, 0.18);
-}
-
-.shadowdark.sheet.player .mk-wounds-list {
-  display: flex;
-  flex-direction: column;
-  gap: 0.35rem;
-}
-
-.shadowdark.sheet.player .mk-wounds-entry {
-  display: grid;
-  grid-template-columns: 78px minmax(0, 1fr) auto;
-  align-items: center;
-  gap: 0.5rem;
-  min-height: 40px;
-  padding: 0.32rem 0.4rem;
-  border-left: 3px solid currentColor;
-  background: rgba(0, 0, 0, 0.2);
-}
-
-.shadowdark.sheet.player .mk-wounds-entry.severity-minor { color: var(--mk-wounds-minor); }
-.shadowdark.sheet.player .mk-wounds-entry.severity-moderate { color: var(--mk-wounds-moderate); }
-.shadowdark.sheet.player .mk-wounds-entry.severity-severe { color: var(--mk-wounds-severe); }
-.shadowdark.sheet.player .mk-wounds-entry.severity-critical { color: var(--mk-wounds-critical); }
-
-.shadowdark.sheet.player .mk-wounds-entry-severity {
-  font-size: 0.7rem;
-  font-weight: 700;
-  text-transform: uppercase;
-}
-
-.shadowdark.sheet.player .mk-wounds-entry-copy {
-  min-width: 0;
-  display: flex;
-  flex-direction: column;
-  gap: 0.08rem;
-}
-
-.shadowdark.sheet.player .mk-wounds-entry-copy strong {
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  color: var(--color-text-light-highlight, #f1f1eb);
-  font-size: 0.75rem;
-}
-
-.shadowdark.sheet.player .mk-wounds-entry-copy small {
-  color: var(--mk-wounds-muted);
-  font-size: 0.62rem;
-}
-
-.shadowdark.sheet.player .mk-wounds-heal {
-  width: 30px;
-  padding: 0;
-  color: var(--mk-wounds-healthy);
-}
-
-.shadowdark.sheet.player .mk-wounds-empty {
-  min-height: 52px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 0.45rem;
-  color: var(--mk-wounds-muted);
-  border: 1px dashed rgba(121, 151, 138, 0.28);
-  background: rgba(0, 0, 0, 0.12);
-  font-size: 0.73rem;
-}
-
-.shadowdark.sheet.player .mk-wounds-add-form {
-  display: grid;
-  grid-template-columns: 110px minmax(0, 1fr) auto;
-  gap: 0.4rem;
-  align-items: center;
-  padding-top: 0.45rem;
-  border-top: 1px solid rgba(99, 130, 117, 0.28);
-}
-
-.shadowdark.sheet.player .mk-wounds-add-form select,
-.shadowdark.sheet.player .mk-wounds-add-form input {
-  height: 32px;
-  margin: 0;
-  border: 1px solid rgba(111, 145, 130, 0.38);
-  background: rgba(0, 0, 0, 0.24);
-  color: var(--color-text-light-highlight, #f1f1eb);
-}
-
-.shadowdark.sheet.player .mk-wounds-add-form input::placeholder {
-  color: rgba(230, 230, 224, 0.42);
-}
-
-.shadowdark.sheet.player .mk-wounds-readonly {
-  margin: 0;
-  color: var(--mk-wounds-muted);
-  font-size: 0.68rem;
-  text-align: right;
+.shadowdark.sheet.player .mk-wounds-location-card.status-destroyed,
+.shadowdark.sheet.player .mk-wounds-marker.status-destroyed {
+  background-color: #060506;
+  box-shadow: 0 0 0 1px rgba(231, 231, 225, 0.42), inset 0 0 0 2px rgba(0, 0, 0, 0.7);
 }
 
 @media (max-width: 560px) {
@@ -471,7 +332,4 @@
     font-size: 14rem;
   }
 
-  .shadowdark.sheet.player .mk-wounds-add-form {
-    grid-template-columns: 1fr;
-  }
 }

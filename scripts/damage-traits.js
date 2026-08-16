@@ -4,9 +4,7 @@
   const ACTOR_TRAITS_FLAG = "damageTraits";
   const FEATURE_TRAITS_FLAG = "npcFeatureTraits";
   const ONLY_MAGICAL_DAMAGE_KEY = "system.damage.immunity.nonmagical";
-  const ONLY_MAGICAL_PREDEFINED_KEY = "onlyMagicalDamageSources";
   const MAGICAL_ATTACKS_KEY = "system.damage.source.magical";
-  const MAGICAL_ATTACKS_PREDEFINED_KEY = "magicalAttacks";
   const TRAIT_EFFECT_KEYS = Object.freeze({
     resistance: "system.damage.resistance.property",
     immunity: "system.damage.immunity.property",
@@ -229,34 +227,12 @@
     return hasTruthyEffectChange(actor, MAGICAL_ATTACKS_KEY);
   }
 
-  function registerOnlyMagicalPredefinedEffect() {
-    const config = CONFIG.SHADOWDARK;
-    if (!config?.PREDEFINED_EFFECTS) return;
-
-    config.PREDEFINED_EFFECTS[ONLY_MAGICAL_PREDEFINED_KEY] ??= {
-      defaultValue: 1,
-      effectKey: ONLY_MAGICAL_DAMAGE_KEY,
-      img: "modules/mk-shadowdark/assets/icons/effects/only-magical-damage.svg",
-      name: `SHADOWDARK.item.effect.predefined_effect.${ONLY_MAGICAL_PREDEFINED_KEY}`,
-      mode: "CONST.ACTIVE_EFFECT_MODES.OVERRIDE",
-      transfer: true
-    };
-
-    config.PREDEFINED_EFFECTS[MAGICAL_ATTACKS_PREDEFINED_KEY] ??= {
-      defaultValue: 1,
-      effectKey: MAGICAL_ATTACKS_KEY,
-      img: "modules/mk-shadowdark/assets/icons/effects/magical-attacks.svg",
-      name: `SHADOWDARK.item.effect.predefined_effect.${MAGICAL_ATTACKS_PREDEFINED_KEY}`,
-      mode: "CONST.ACTIVE_EFFECT_MODES.OVERRIDE",
-      transfer: true
-    };
-
-    config.EFFECT_TRANSLATIONS ??= {};
-    config.EFFECT_TRANSLATIONS[ONLY_MAGICAL_DAMAGE_KEY] = "Only Damaged by Magical Sources";
-    config.EFFECT_TRANSLATIONS[MAGICAL_ATTACKS_KEY] = "Magical Attacks";
-    config.EFFECT_TRANSLATIONS[TRAIT_EFFECT_KEYS.resistance] = "Damage Resistance Property";
-    config.EFFECT_TRANSLATIONS[TRAIT_EFFECT_KEYS.immunity] = "Damage Immunity Property";
-    config.EFFECT_TRANSLATIONS[TRAIT_EFFECT_KEYS.vulnerability] = "Damage Vulnerability Property";
+  function registerDamageTraitTranslations() {
+    const translations = CONFIG.SHADOWDARK?.EFFECT_TRANSLATIONS;
+    if (!translations) return;
+    translations[TRAIT_EFFECT_KEYS.resistance] = "Damage Resistance Property";
+    translations[TRAIT_EFFECT_KEYS.immunity] = "Damage Immunity Property";
+    translations[TRAIT_EFFECT_KEYS.vulnerability] = "Damage Vulnerability Property";
   }
 
   function hasPropertyType(property, itemType = null) {
@@ -830,7 +806,7 @@
   }
 
   Hooks.once("init", () => {
-    registerOnlyMagicalPredefinedEffect();
+    registerDamageTraitTranslations();
     exposeApi();
   });
   Hooks.once("ready", () => {

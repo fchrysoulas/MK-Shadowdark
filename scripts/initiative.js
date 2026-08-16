@@ -1,4 +1,4 @@
-// MK-Shadowdark — Grouped Enemy Initiative
+// MK-Shadowdark - Grouped Enemy Initiative
 // Players retain their individual native Shadowdark initiative rolls.
 // Hostile NPCs roll once using the hostile creature with the highest DEX modifier.
 (() => {
@@ -66,8 +66,6 @@
 
     const disposition = Number(combatant.token?.disposition);
     const hostile = Number(CONST.TOKEN_DISPOSITIONS?.HOSTILE ?? -1);
-
-    // If there is no usable Token disposition, treat an NPC as an enemy.
     return Number.isFinite(disposition) ? disposition === hostile : true;
   }
 
@@ -137,6 +135,7 @@
       const number = Number(value);
       return Number.isFinite(number) ? number : null;
     };
+
     const leftInitiative = numericInitiative(left?.initiative);
     const rightInitiative = numericInitiative(right?.initiative);
     if (leftInitiative === null || rightInitiative === null) return nativeResult;
@@ -146,8 +145,7 @@
     const rightIsEnemy = isHostileNpc(right);
     if (leftIsEnemy === rightIsEnemy) return nativeResult;
 
-    // Keep every member of a shared enemy initiative slot together so one GM
-    // turn can advance past the whole group without landing on a tied PC.
+    // Keep the shared enemy slot together even when a PC has the same total.
     return leftIsEnemy ? -1 : 1;
   }
 
@@ -210,7 +208,6 @@
     const roll = await new Roll(formula, rollData).evaluate();
     const total = Number(roll.total) || 0;
 
-    // Every hostile NPC receives the same result: one GM/enemy initiative slot.
     await combat.updateEmbeddedDocuments(
       "Combatant",
       enemies.map(combatant => ({ _id: combatant.id, initiative: total }))
@@ -221,7 +218,7 @@
 
     await roll.toMessage({
       speaker: ChatMessage.getSpeaker?.({ actor: roller.actor }) ?? {},
-      flavor: `Enemy Initiative — ${roller.name ?? roller.actor.name ?? "Enemies"} (highest DEX ${signed(dexModifier(roller.actor))}) | ${enemies.length} combatant${enemies.length === 1 ? "" : "s"} | ${leaderSummary.label}`
+      flavor: `Enemy Initiative: ${roller.name ?? roller.actor.name ?? "Enemies"} (highest DEX ${signed(dexModifier(roller.actor))}) | ${enemies.length} combatant${enemies.length === 1 ? "" : "s"} | ${leaderSummary.label}`
     }, messageOptions);
 
     log("enemy side rolled", {
@@ -268,13 +265,10 @@
         .map(id => getCombatant(this, id))
         .filter(Boolean);
 
-      // Player characters and non-hostile NPCs remain completely native.
       if (!requestedCombatants.some(isHostileNpc)) {
         return originalRollInitiative.call(this, ids, options);
       }
 
-      // If Roll All supplied a mixed set, roll PCs/allies normally first.
-      // Foundry preserves their individual totals and descending initiative order.
       const nativeIds = requestedCombatants
         .filter(combatant => !isHostileNpc(combatant))
         .map(combatant => combatant.id);
@@ -283,8 +277,6 @@
         await originalRollInitiative.call(this, nativeIds, options);
       }
 
-      // Any hostile-NPC initiative request represents the GM/enemy slot and
-      // rerolls every hostile NPC together.
       await rollEnemySide(this, options);
       return this;
     };

@@ -1,5 +1,5 @@
 // MK-Shadowdark — Morale Automation
-// Automates Shadowdark morale checks for hostile NPC combatants.
+// Tracks all hostile NPC combatants as one force for Shadowdark morale.
 (() => {
   "use strict";
 
@@ -7,13 +7,16 @@
   const SUBMODULE = "Morale";
   const STATE_FLAG = "moraleState";
   const TOKEN_FLAG = "morale";
-  const STATE_VERSION = 1;
+  const STATE_VERSION = 2;
   const MORALE_DC = 15;
+  const FORCE_KEY = "hostile-force";
+  const FLEEING_STATUS_ID = "mk-shadowdark-fleeing";
+  const FLEEING_STATUS_NAME = "Fleeing";
+  const FLEEING_STATUS_ICON = "icons/svg/wing.svg";
   const FEATURE_SETTINGS_TEMPLATE = `modules/${MODULE_ID}/templates/feature-settings.hbs`;
 
   const SETTINGS = Object.freeze({
     ENABLED: "moraleEnabled",
-    AUTO_GROUP: "moraleAutoGroupIdentical",
     VISIBILITY: "moraleVisibility",
     TOKEN_HUD: "moraleTokenHudControls",
     DEBUG: "moraleDebug"
@@ -77,21 +80,6 @@
     })[character]);
   }
 
-  function randomId() {
-    if (globalThis.foundry?.utils?.randomID) return globalThis.foundry.utils.randomID();
-    return Math.random().toString(36).slice(2, 14);
-  }
-
-  function slug(value) {
-    const text = String(value ?? "").trim().toLowerCase();
-    if (typeof text.slugify === "function") return text.slugify();
-    return text
-      .normalize?.("NFKD")
-      ?.replace(/[\u0300-\u036f]/g, "")
-      ?.replace(/[^a-z0-9]+/g, "-")
-      ?.replace(/^-+|-+$/g, "") || randomId();
-  }
-
   function getPrimaryActiveGM() {
     return game.users
       ?.filter(user => user.active && user.isGM)
@@ -115,10 +103,8 @@
 
   function isHostileCombatant(combatant) {
     if (!combatant || !isNpc(combatant.actor)) return false;
-
-    const token = combatant.token;
-    const disposition = Number(token?.disposition ?? combatant.token?.disposition);
-    const hostile = CONST.TOKEN_DISPOSITIONS?.HOSTILE ?? -1;
+    const disposition = Number(combatant.token?.disposition);
+    const hostile = Number(CONST.TOKEN_DISPOSITIONS?.HOSTILE ?? -1);
     return Number.isFinite(disposition) ? disposition === hostile : true;
   }
 
@@ -150,12 +136,6 @@
     const tokenData = tokenMoraleData(combatant.token);
     if (tokenData.immune === true) return true;
     return actorEncounterFlag(combatant.actor, "moraleImmune") === true;
-  }
-
-  function getExplicitGroup(combatant) {
-    const value = tokenMoraleData(combatant?.token).group;
-    const text = String(value ?? "").trim();
-    return text || null;
   }
 
   function isExplicitLeader(combatant) {
@@ -252,31 +232,6 @@
       ?? null;
   }
 
-  function buildGroupIdentity(combatant) {
-    const explicit = getExplicitGroup(combatant);
-    if (explicit) {
-      return {
-        key: `explicit:${slug(explicit)}`,
-        name: explicit,
-        mode: "explicit"
-      };
-    }
-
-    if (setting(SETTINGS.AUTO_GROUP, true) && combatant.actorId) {
-      return {
-        key: `actor:${combatant.actorId}`,
-        name: combatant.actor?.name ?? combatant.name ?? "NPC Group",
-        mode: "actor"
-      };
-    }
-
-    return {
-      key: `solo:${combatant.id}`,
-      name: combatant.name ?? combatant.actor?.name ?? "NPC",
-      mode: "solo"
-    };
-  }
-
   function memberSnapshot(combatant) {
     const hp = getHp(combatant.actor);
     return {
@@ -285,52 +240,38 @@
       tokenId: combatant.tokenId ?? combatant.token?.id ?? null,
       actorUuid: combatant.actor?.uuid ?? null,
       name: combatant.name ?? combatant.actor?.name ?? "NPC",
-      wisMod: getWisMod(combatant.actor),
       maxHp: hp?.max ?? null
     };
   }
 
   function buildSnapshot(combat) {
-    const groups = {};
+    const members = combatantsArray(combat)
+      .filter(isHostileCombatant)
+      .map(memberSnapshot);
 
-    for (const combatant of combatantsArray(combat)) {
-      if (!isHostileCombatant(combatant) || isMoraleImmune(combatant)) continue;
-
-      const identity = buildGroupIdentity(combatant);
-      const group = groups[identity.key] ??= {
-        key: identity.key,
-        name: identity.name,
-        mode: identity.mode,
-        initialCount: 0,
-        threshold: 0,
-        checked: false,
-        result: null,
-        members: []
-      };
-
-      group.members.push(memberSnapshot(combatant));
-      group.initialCount += 1;
-    }
-
-    for (const group of Object.values(groups)) {
-      group.threshold = group.initialCount > 1
-        ? Math.floor(group.initialCount / 2)
-        : null;
-    }
-
+    const initialCount = members.length;
     return {
       version: STATE_VERSION,
       initializedAt: Date.now(),
       combatId: combat.id,
-      groups
+      force: {
+        key: FORCE_KEY,
+        name: "Enemies",
+        initialCount,
+        threshold: initialCount > 1 ? initialCount / 2 : null,
+        checked: false,
+        result: null,
+        members
+      }
     };
   }
 
   function normalizeState(raw) {
     if (!raw || typeof raw !== "object") return null;
+    if (Number(raw.version) !== STATE_VERSION || !raw.force) return null;
     const state = deepClone(raw);
     state.version = STATE_VERSION;
-    state.groups = state.groups && typeof state.groups === "object" ? state.groups : {};
+    state.force.members = Array.isArray(state.force.members) ? state.force.members : [];
     return state;
   }
 
@@ -378,58 +319,27 @@
     return next;
   }
 
-  function livingMembers(combat, group) {
-    return (group.members ?? [])
+  function livingMembers(combat, force) {
+    return (force?.members ?? [])
       .map(member => getCombatant(combat, member.combatantId))
       .filter(combatant => combatant && !combatantDefeated(combatant));
   }
 
-  function selectMoraleSource(combat, group) {
-    const living = livingMembers(combat, group);
-    if (!living.length) return null;
-
-    const leader = living.find(isExplicitLeader);
-    if (leader) {
-      return {
-        combatant: leader,
-        actor: leader.actor,
-        modifier: getWisMod(leader.actor),
-        reason: "leader"
-      };
-    }
-
-    const byModifier = new Map();
-    for (const combatant of living) {
-      const modifier = getWisMod(combatant.actor);
-      const bucket = byModifier.get(modifier) ?? [];
-      bucket.push(combatant);
-      byModifier.set(modifier, bucket);
-    }
-
-    const ranked = [...byModifier.entries()].sort((left, right) => {
-      const countDifference = right[1].length - left[1].length;
-      if (countDifference !== 0) return countDifference;
-      // A mixed group with no clear majority does not receive the best WIS by default.
-      return left[0] - right[0];
-    });
-
-    const [modifier, candidates] = ranked[0];
-    const combatant = candidates[0];
-    return {
-      combatant,
-      actor: combatant.actor,
-      modifier,
-      reason: "majority"
-    };
+  function moraleEligibleMembers(combat, force) {
+    return livingMembers(combat, force).filter(combatant => !isMoraleImmune(combatant));
   }
 
-  function moraleTrigger(combat, group) {
-    if (!group || group.checked === true) return null;
+  function livingLeader(combat, force) {
+    return moraleEligibleMembers(combat, force).find(isExplicitLeader) ?? null;
+  }
 
-    if (group.initialCount <= 1) {
-      const member = group.members?.[0];
+  function moraleTrigger(combat, force) {
+    if (!force || force.checked === true || force.initialCount <= 0) return null;
+
+    if (force.initialCount === 1) {
+      const member = force.members?.[0];
       const combatant = member ? getCombatant(combat, member.combatantId) : null;
-      if (!combatant || combatantDefeated(combatant)) return null;
+      if (!combatant || combatantDefeated(combatant) || isMoraleImmune(combatant)) return null;
 
       const hp = getHp(combatant.actor);
       const maxHp = Number(member?.maxHp ?? hp?.max);
@@ -447,14 +357,13 @@
       return null;
     }
 
-    const living = livingMembers(combat, group);
-    const current = living.length;
-    const threshold = Number(group.threshold ?? Math.floor(group.initialCount / 2));
+    const current = livingMembers(combat, force).length;
+    const threshold = Number(force.threshold ?? (force.initialCount / 2));
     if (current > 0 && current <= threshold) {
       return {
         type: "group",
         current,
-        initial: group.initialCount,
+        initial: force.initialCount,
         threshold
       };
     }
@@ -482,75 +391,209 @@
     return `${trigger.current} / ${trigger.initial} enemies remain`;
   }
 
-  async function postMoraleRoll(combat, group, trigger, source, roll) {
-    const success = Number(roll.total) >= MORALE_DC;
-    const resultLabel = success ? "MORALE HOLDS" : "MORALE FAILED";
-    const resultIcon = success ? "✓" : "✘";
-    const consequence = success
-      ? "The enemies maintain their nerve."
-      : "The enemies attempt to flee. The GM decides how they escape, surrender, or otherwise react to the fiction.";
-    const sourceLabel = source.reason === "leader"
-      ? `${source.combatant?.name ?? source.actor?.name ?? "Leader"} (leader)`
-      : `${source.combatant?.name ?? source.actor?.name ?? "Group"} (group WIS)`;
+  function effectHasStatus(effect, statusId) {
+    if (!effect) return false;
+    if (effect.statuses?.has?.(statusId)) return true;
+    if (Array.isArray(effect.statuses) && effect.statuses.includes(statusId)) return true;
+    if (effect.getFlag?.("core", "statusId") === statusId) return true;
+    return effect.flags?.core?.statusId === statusId;
+  }
+
+  function actorEffects(actor) {
+    if (Array.isArray(actor?.effects)) return actor.effects;
+    if (Array.isArray(actor?.effects?.contents)) return actor.effects.contents;
+    if (typeof actor?.effects?.values === "function") return [...actor.effects.values()];
+    return [];
+  }
+
+  async function applyFleeing(combatant) {
+    const actor = combatant?.actor;
+    if (!actor) return false;
+    if (actorEffects(actor).some(effect => effectHasStatus(effect, FLEEING_STATUS_ID))) return true;
+
+    try {
+      if (typeof actor.toggleStatusEffect === "function") {
+        await actor.toggleStatusEffect(FLEEING_STATUS_ID, { active: true });
+        return true;
+      }
+
+      if (typeof actor.createEmbeddedDocuments === "function") {
+        await actor.createEmbeddedDocuments("ActiveEffect", [{
+          name: FLEEING_STATUS_NAME,
+          img: FLEEING_STATUS_ICON,
+          statuses: [FLEEING_STATUS_ID],
+          disabled: false,
+          changes: [],
+          flags: {
+            core: { statusId: FLEEING_STATUS_ID },
+            [MODULE_ID]: { moraleFleeing: true }
+          }
+        }]);
+        return true;
+      }
+    } catch (error) {
+      warn(`Could not apply Fleeing to ${combatant.name ?? actor.name}`, error);
+    }
+
+    return false;
+  }
+
+  function registerFleeingStatus() {
+    CONFIG.statusEffects ??= [];
+    if (CONFIG.statusEffects.some(status => status.id === FLEEING_STATUS_ID)) return;
+    CONFIG.statusEffects.push({
+      id: FLEEING_STATUS_ID,
+      name: FLEEING_STATUS_NAME,
+      img: FLEEING_STATUS_ICON
+    });
+  }
+
+  async function createMoraleMessage({ trigger, mode, leader = null, entries = [], rolls = [] }) {
+    const failing = entries.filter(entry => !entry.success);
+    const header = mode === "leader" ? "LEADER MORALE CHECK" : "INDIVIDUAL MORALE CHECKS";
+
+    let body = "";
+    if (mode === "leader") {
+      const entry = entries[0];
+      const consequence = entry.success
+        ? "The enemy force holds its nerve."
+        : "The remaining enemy force is marked Fleeing.";
+      body = `
+        <div>WIS ${escapeHtml(signed(entry.modifier))} vs DC ${MORALE_DC}</div>
+        <div style="font-size:0.9em; opacity:0.8;">Using ${escapeHtml(leader?.name ?? leader?.actor?.name ?? "Leader")}</div>
+        <div style="font-size:1.08em; margin-top:0.2rem;"><strong>${entry.success ? "✓ MORALE HOLDS" : "✘ MORALE FAILED"}</strong> — ${escapeHtml(String(entry.total))}</div>
+        <div>${escapeHtml(consequence)}</div>`;
+    } else {
+      const rows = entries.map(entry => `
+        <div style="display:grid; grid-template-columns:1fr auto; gap:0.6rem; align-items:center; padding:0.15rem 0;">
+          <span>${escapeHtml(entry.name)} — WIS ${escapeHtml(signed(entry.modifier))}</span>
+          <strong>${escapeHtml(String(entry.total))} ${entry.success ? "✓" : "✘ Fleeing"}</strong>
+        </div>`).join("");
+      body = `${rows}<div style="margin-top:0.35rem;">${failing.length} of ${entries.length} remaining enemies failed morale.</div>`;
+    }
 
     const content = `
-      <div class="mk-morale-card" data-mk-morale-group="${escapeHtml(group.key)}">
+      <div class="mk-morale-card" data-mk-morale-force="${FORCE_KEY}">
         <header style="border-bottom:1px solid var(--color-border-light-2, #777); margin-bottom:0.45rem; padding-bottom:0.3rem;">
-          <strong>☠ MORALE CHECK — ${escapeHtml(group.name)}</strong>
+          <strong>☠ ${header}</strong>
         </header>
         <div style="display:grid; gap:0.25rem;">
           <div>${escapeHtml(triggerDescription(trigger))}</div>
-          <div>WIS ${escapeHtml(signed(source.modifier))} vs DC ${MORALE_DC}</div>
-          <div style="font-size:0.9em; opacity:0.8;">Using ${escapeHtml(sourceLabel)}</div>
-          <div style="font-size:1.08em; margin-top:0.2rem;"><strong>${resultIcon} ${resultLabel}</strong> — ${escapeHtml(String(roll.total))}</div>
-          <div>${escapeHtml(consequence)}</div>
+          ${body}
         </div>
       </div>`;
 
     const messageData = {
-      speaker: ChatMessage.getSpeaker?.({ actor: source.actor }) ?? {},
+      speaker: ChatMessage.getSpeaker?.({ actor: leader?.actor ?? entries[0]?.combatant?.actor }) ?? {},
       style: globalThis.CONST?.CHAT_MESSAGE_STYLES?.ROLL ?? globalThis.CONST?.CHAT_MESSAGE_TYPES?.ROLL ?? 5,
       content,
-      rolls: [roll]
+      rolls
     };
 
     const whisper = whisperIds();
     if (whisper.length) messageData.whisper = whisper;
     await ChatMessage.create(messageData);
-    return success;
   }
 
-  async function executeMoraleCheck(combat, state, group, trigger) {
-    const source = selectMoraleSource(combat, group);
-    if (!source?.actor) return false;
+  async function rollMorale(combatant) {
+    const modifier = getWisMod(combatant.actor);
+    const roll = await new Roll(`1d20 + ${modifier}`).evaluate();
+    return {
+      combatant,
+      name: combatant.name ?? combatant.actor?.name ?? "NPC",
+      modifier,
+      roll,
+      total: Number(roll.total),
+      success: Number(roll.total) >= MORALE_DC
+    };
+  }
 
-    group.checked = true;
-    group.result = {
+  async function executeMoraleCheck(combat, state, trigger) {
+    const force = state.force;
+    if (!force || force.checked === true) return false;
+
+    force.checked = true;
+    force.result = {
       checkedAt: Date.now(),
       trigger: deepClone(trigger),
-      modifier: source.modifier,
-      sourceCombatantId: source.combatant?.id ?? null,
-      sourceReason: source.reason,
-      total: null,
-      success: null
+      mode: null,
+      entries: [],
+      fleeingCombatantIds: []
     };
-
     await setState(combat, state);
 
     try {
-      const roll = await new Roll(`1d20 + ${Number(source.modifier) || 0}`).evaluate();
-      const success = await postMoraleRoll(combat, group, trigger, source, roll);
-      group.result.total = Number(roll.total);
-      group.result.success = success;
+      const eligible = moraleEligibleMembers(combat, force);
+      if (!eligible.length) {
+        force.result.mode = "none";
+        await setState(combat, state);
+        log("morale threshold reached; no morale-eligible survivors", force.result);
+        return true;
+      }
+
+      const leader = livingLeader(combat, force);
+      if (leader) {
+        const entry = await rollMorale(leader);
+        force.result.mode = "leader";
+        force.result.entries = [{
+          combatantId: entry.combatant.id,
+          name: entry.name,
+          modifier: entry.modifier,
+          total: entry.total,
+          success: entry.success
+        }];
+
+        if (!entry.success) {
+          for (const combatant of eligible) {
+            if (await applyFleeing(combatant)) {
+              force.result.fleeingCombatantIds.push(combatant.id);
+            }
+          }
+        }
+
+        await createMoraleMessage({
+          trigger,
+          mode: "leader",
+          leader,
+          entries: [entry],
+          rolls: [entry.roll]
+        });
+      } else {
+        const entries = [];
+        for (const combatant of eligible) {
+          const entry = await rollMorale(combatant);
+          entries.push(entry);
+          if (!entry.success && await applyFleeing(combatant)) {
+            force.result.fleeingCombatantIds.push(combatant.id);
+          }
+        }
+
+        force.result.mode = "individual";
+        force.result.entries = entries.map(entry => ({
+          combatantId: entry.combatant.id,
+          name: entry.name,
+          modifier: entry.modifier,
+          total: entry.total,
+          success: entry.success
+        }));
+
+        await createMoraleMessage({
+          trigger,
+          mode: "individual",
+          entries,
+          rolls: entries.map(entry => entry.roll)
+        });
+      }
+
       await setState(combat, state);
-      log("morale check", group.name, group.result);
+      log("morale check", force.result);
       return true;
     } catch (error) {
-      group.checked = false;
-      group.result = null;
+      force.checked = false;
+      force.result = null;
       await setState(combat, state);
       console.error(`${MODULE_ID} v${moduleVersion()} | ${SUBMODULE} | Morale roll failed`, error);
-      ui.notifications?.error(`MK-Shadowdark | Could not roll morale for ${group.name}.`);
+      ui.notifications?.error("MK-Shadowdark | Could not resolve morale.");
       return false;
     }
   }
@@ -559,16 +602,11 @@
     if (!enabled() || !isAuthority() || !isStartedCombat(combat)) return false;
 
     const state = await ensureSnapshot(combat);
-    if (!state) return false;
+    if (!state?.force || state.force.checked === true) return false;
 
-    for (const group of Object.values(state.groups ?? {})) {
-      if (group.checked === true) continue;
-      const trigger = moraleTrigger(combat, group);
-      if (!trigger) continue;
-      await executeMoraleCheck(combat, state, group, trigger);
-    }
-
-    return true;
+    const trigger = moraleTrigger(combat, state.force);
+    if (!trigger) return false;
+    return executeMoraleCheck(combat, state, trigger);
   }
 
   function scheduleEvaluation(combat, delay = 80) {
@@ -648,28 +686,9 @@
     return value.document ?? null;
   }
 
-  function tokenDocsFromInput(tokens) {
-    const values = Array.isArray(tokens) ? tokens : [tokens];
-    return values.map(tokenDocument).filter(Boolean);
-  }
-
-  async function setGroup(tokens, groupName) {
-    if (!game.user?.isGM) return false;
-    const docs = tokenDocsFromInput(tokens);
-    if (!docs.length) return false;
-    const group = String(groupName ?? "").trim();
-
-    for (const doc of docs) {
-      const current = tokenMoraleData(doc);
-      const next = { ...current };
-      if (group) next.group = group;
-      else delete next.group;
-      await doc.setFlag(MODULE_ID, TOKEN_FLAG, next);
-    }
-
-    if (isStartedCombat(game.combat)) {
-      await resetCombat(game.combat);
-    }
+  async function writeTokenMoraleData(doc, next) {
+    if (!doc?.setFlag) return false;
+    await doc.setFlag(MODULE_ID, TOKEN_FLAG, next);
     return true;
   }
 
@@ -677,8 +696,21 @@
     if (!game.user?.isGM) return false;
     const doc = tokenDocument(token);
     if (!doc) return false;
+
+    if (leader === true && isStartedCombat(game.combat)) {
+      for (const combatant of combatantsArray(game.combat)) {
+        if (!isHostileCombatant(combatant)) continue;
+        const other = combatant.token;
+        if (!other || other.id === doc.id) continue;
+        const otherData = tokenMoraleData(other);
+        if (otherData.leader === true) {
+          await writeTokenMoraleData(other, { ...otherData, leader: false });
+        }
+      }
+    }
+
     const current = tokenMoraleData(doc);
-    await doc.setFlag(MODULE_ID, TOKEN_FLAG, { ...current, leader: leader === true });
+    await writeTokenMoraleData(doc, { ...current, leader: leader === true });
     scheduleEvaluation(game.combat, 0);
     return true;
   }
@@ -688,50 +720,9 @@
     const doc = tokenDocument(token);
     if (!doc) return false;
     const current = tokenMoraleData(doc);
-    await doc.setFlag(MODULE_ID, TOKEN_FLAG, { ...current, immune: immune === true });
-    if (isStartedCombat(game.combat)) await resetCombat(game.combat);
+    await writeTokenMoraleData(doc, { ...current, immune: immune === true });
+    scheduleEvaluation(game.combat, 0);
     return true;
-  }
-
-  function getHudTokenDocs(app) {
-    const hudDoc = tokenDocument(app?.object);
-    const controlled = canvas?.tokens?.controlled?.map(token => token.document).filter(Boolean) ?? [];
-    if (hudDoc && !controlled.some(doc => doc.id === hudDoc.id)) controlled.push(hudDoc);
-    return controlled.length ? controlled : (hudDoc ? [hudDoc] : []);
-  }
-
-  function openGroupDialog(app) {
-    const docs = getHudTokenDocs(app);
-    if (!docs.length) return;
-    const existingGroups = [...new Set(docs.map(doc => String(tokenMoraleData(doc).group ?? "").trim()))];
-    const initial = existingGroups.length === 1 ? existingGroups[0] : "";
-
-    const content = `
-      <form class="mk-morale-group-form">
-        <div class="form-group">
-          <label>Morale Group</label>
-          <input type="text" name="group" value="${escapeHtml(initial)}" placeholder="e.g. Black Fang Tribe" />
-          <p class="hint">Selected tokens with the same group name make one morale unit. Leave blank to return to automatic grouping.</p>
-        </div>
-      </form>`;
-
-    const apply = html => {
-      const root = html?.[0] ?? html;
-      const group = root?.querySelector?.('input[name="group"]')?.value ?? "";
-      void setGroup(docs, group);
-    };
-
-    if (globalThis.Dialog) {
-      new Dialog({
-        title: "MK-Shadowdark | Morale Group",
-        content,
-        buttons: {
-          apply: { label: "Apply", callback: apply },
-          cancel: { label: "Cancel" }
-        },
-        default: "apply"
-      }).render(true);
-    }
   }
 
   function renderTokenHud(app, html) {
@@ -740,21 +731,11 @@
     if (!root?.querySelector) return;
 
     const right = root.querySelector(".col.right");
-    if (!right || right.querySelector(".mk-morale-group-control")) return;
+    if (!right || right.querySelector(".mk-morale-leader-control")) return;
 
     const doc = tokenDocument(app?.object);
     if (!doc || !isNpc(doc.actor)) return;
     const data = tokenMoraleData(doc);
-
-    const groupControl = document.createElement("div");
-    groupControl.className = "control-icon mk-morale-group-control";
-    groupControl.title = data.group ? `Morale Group: ${data.group}` : "Set Morale Group";
-    groupControl.innerHTML = '<i class="fas fa-users"></i>';
-    groupControl.addEventListener("click", event => {
-      event.preventDefault();
-      event.stopPropagation();
-      openGroupDialog(app);
-    });
 
     const leaderControl = document.createElement("div");
     leaderControl.className = `control-icon mk-morale-leader-control${data.leader === true ? " active" : ""}`;
@@ -766,7 +747,17 @@
       void setLeader(doc, data.leader !== true).then(() => app.render?.(false));
     });
 
-    right.append(groupControl, leaderControl);
+    const resetControl = document.createElement("div");
+    resetControl.className = "control-icon mk-morale-reset-control";
+    resetControl.title = "Reset Morale Strength for Current Combat";
+    resetControl.innerHTML = '<i class="fas fa-rotate"></i>';
+    resetControl.addEventListener("click", event => {
+      event.preventDefault();
+      event.stopPropagation();
+      void resetCombat(game.combat);
+    });
+
+    right.append(leaderControl, resetControl);
   }
 
   function registerSettings() {
@@ -776,14 +767,7 @@
     const definitions = {
       [SETTINGS.ENABLED]: {
         name: "Morale | Enabled",
-        hint: "Automatically rolls Shadowdark morale checks for hostile NPCs at half strength or, for a solo enemy, at half HP.",
-        scope: "world",
-        type: Boolean,
-        default: true
-      },
-      [SETTINGS.AUTO_GROUP]: {
-        name: "Morale | Auto-group Identical NPCs",
-        hint: "NPC combatants created from the same Actor automatically share one morale group unless a manual token group is assigned.",
+        hint: "Tracks all hostile NPCs as one combat-start force. At half strength, a living leader rolls once for the force; without a leader, each remaining NPC checks morale individually. Solo enemies check at half HP.",
         scope: "world",
         type: Boolean,
         default: true
@@ -801,14 +785,14 @@
       },
       [SETTINGS.TOKEN_HUD]: {
         name: "Morale | Token HUD Controls",
-        hint: "Adds GM Token HUD buttons for assigning a manual morale group and marking a morale leader.",
+        hint: "Adds GM Token HUD buttons for marking the force leader and resetting the current combat's morale baseline.",
         scope: "world",
         type: Boolean,
         default: true
       },
       [SETTINGS.DEBUG]: {
         name: "Morale | Debug Mode",
-        hint: "Logs morale snapshots, triggers, and rolls to the browser console.",
+        hint: "Logs morale snapshots, triggers, rolls, and Fleeing applications to the browser console.",
         scope: "world",
         type: Boolean,
         default: false
@@ -870,11 +854,11 @@
       getData() {
         return {
           title: "Morale",
-          hint: "Automate Shadowdark DC 15 WIS morale checks while leaving flee and surrender behavior to the GM.",
+          hint: "Automate Shadowdark DC 15 WIS morale checks for the hostile force and mark failed enemies as Fleeing.",
           sections: [
             {
               title: "Automation",
-              settings: [descriptor(SETTINGS.ENABLED), descriptor(SETTINGS.AUTO_GROUP)]
+              settings: [descriptor(SETTINGS.ENABLED)]
             },
             {
               title: "Presentation and Controls",
@@ -900,7 +884,7 @@
     game.settings.registerMenu(MODULE_ID, "moraleSettings", {
       name: "Morale",
       label: "Configure",
-      hint: "Configure automatic Shadowdark morale checks, grouping, visibility, and Token HUD controls.",
+      hint: "Configure automatic hostile-force morale checks, visibility, and Token HUD controls.",
       icon: "fas fa-flag",
       type: MoraleSettingsForm,
       restricted: true
@@ -916,13 +900,14 @@
       snapshot: combat => ensureSnapshot(combat ?? game.combat, { force: false }),
       evaluate: combat => evaluateCombat(combat ?? game.combat),
       reset: combat => resetCombat(combat ?? game.combat),
-      setGroup,
       setLeader,
-      setImmune
+      setImmune,
+      applyFleeing
     };
   }
 
   Hooks.once("init", () => {
+    registerFleeingStatus();
     registerSettings();
   });
 
@@ -941,7 +926,7 @@
   Hooks.on("deleteCombatant", combatant => onCombatantChanged(combatant));
   Hooks.on("createCombatant", combatant => {
     // Reinforcements do not alter the combat-start baseline automatically.
-    // They become part of morale only when the GM explicitly resets morale strength.
+    // They are included only if the GM explicitly resets morale strength.
     log("combatant added; baseline unchanged", combatant?.name ?? combatant?.id);
   });
   Hooks.on("combatStart", combat => {

@@ -6,7 +6,6 @@
   const MODULE_ID = "mk-shadowdark";
   const SUBMODULE = "Targeted Spell DC";
   const EFFECT_KEY = "system.roll.spell.dc";
-  const PREDEFINED_EFFECT_KEY = "targetedSpellDc";
   const WRAPPED = Symbol.for(`${MODULE_ID}.targetedSpellDc.wrappedPrepareContext`);
   const ORIGINAL_HEADING = Symbol.for(`${MODULE_ID}.targetedSpellDc.originalHeading`);
 
@@ -21,23 +20,6 @@
     if (Array.isArray(collection.contents)) return collection.contents;
     if (typeof collection.values === "function") return [...collection.values()];
     return Array.from(collection);
-  }
-
-  function registerPredefinedEffect() {
-    const config = CONFIG.SHADOWDARK;
-    if (!config?.PREDEFINED_EFFECTS) return;
-
-    config.PREDEFINED_EFFECTS[PREDEFINED_EFFECT_KEY] ??= {
-      defaultValue: 18,
-      effectKey: EFFECT_KEY,
-      img: "modules/mk-shadowdark/assets/icons/effects/targeted-spell-dc.svg",
-      name: `SHADOWDARK.item.effect.predefined_effect.${PREDEFINED_EFFECT_KEY}`,
-      mode: "CONST.ACTIVE_EFFECT_MODES.OVERRIDE",
-      transfer: true
-    };
-
-    config.EFFECT_TRANSLATIONS ??= {};
-    config.EFFECT_TRANSLATIONS[EFFECT_KEY] = "Targeted Spell DC";
   }
 
   function activeEffects(actor) {
@@ -154,7 +136,6 @@
     return true;
   }
 
-  Hooks.once("init", registerPredefinedEffect);
   Hooks.once("ready", () => {
     if (game.system?.id !== "shadowdark") return;
     install();

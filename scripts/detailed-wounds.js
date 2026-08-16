@@ -6,6 +6,10 @@
   const EFFECT_FLAG = "woundPenalties";
   const TAB_ID = "tab-mk-wounds";
 
+  function isPlayerActor(actor) {
+    return actor?.documentName === "Actor" && actor.type === "Player";
+  }
+
   const LOCATIONS = Object.freeze([
     { key: "head", label: "Head", roll: 10, icon: "fa-solid fa-brain", side: "left" },
     { key: "leftArm", label: "Left Arm", roll: 8, icon: "fa-solid fa-hand-fist", side: "left" },
@@ -69,7 +73,7 @@
     if (game.system?.id !== "shadowdark" || !getSetting(SETTING_ENABLED, true)) return;
 
     const actor = app?.actor ?? app?.object;
-    if (actor?.documentName !== "Actor") return;
+    if (!isPlayerActor(actor)) return;
 
     const root = getRootElement(html);
     if (!root?.querySelector) return;
@@ -224,7 +228,7 @@
   }
 
   async function worsenLocationStatus(actor, location) {
-    if (!game.user?.isGM || !getLocation(location)) return;
+    if (!game.user?.isGM || !isPlayerActor(actor) || !getLocation(location)) return;
 
     const data = normalizeData(actor.getFlag(MODULE_ID, FLAG_KEY));
     const current = getLocationStatus(data, location);
@@ -235,7 +239,7 @@
   }
 
   async function improveLocationStatus(actor, location) {
-    if (!game.user?.isGM || !getLocation(location)) return;
+    if (!game.user?.isGM || !isPlayerActor(actor) || !getLocation(location)) return;
 
     const data = normalizeData(actor.getFlag(MODULE_ID, FLAG_KEY));
     const current = getLocationStatus(data, location);
@@ -246,7 +250,7 @@
   }
 
   async function rollRandomWound(actor) {
-    if (!game.user?.isGM) return;
+    if (!game.user?.isGM || !isPlayerActor(actor)) return;
 
     // Separate terms let Dice So Nice style only the severity die.
     const roll = new Roll("1d10 + 1d10");
@@ -307,7 +311,7 @@
   }
 
   async function applyRandomWound(actor, location, severity) {
-    if (!game.user?.isGM || !getLocation(location) || !severity?.status) return;
+    if (!game.user?.isGM || !isPlayerActor(actor) || !getLocation(location) || !severity?.status) return;
 
     // Scratches are reported in chat but never alter or accumulate against a
     // location's condition.
@@ -329,11 +333,16 @@
   async function syncWoundPenaltyEffect(actor, woundData = null) {
     if (!actor?.isOwner || game.system?.id !== "shadowdark") return;
 
-    const data = woundData ?? normalizeData(actor.getFlag(MODULE_ID, FLAG_KEY));
-    const changes = buildWoundPenaltyChanges(data);
     const existing = actor.effects?.find(effect => (
       effect.getFlag?.(MODULE_ID, EFFECT_FLAG) ?? effect.flags?.[MODULE_ID]?.[EFFECT_FLAG]
     ));
+    if (!isPlayerActor(actor)) {
+      if (existing) await existing.delete();
+      return;
+    }
+
+    const data = woundData ?? normalizeData(actor.getFlag(MODULE_ID, FLAG_KEY));
+    const changes = buildWoundPenaltyChanges(data);
 
     if (!changes.length) {
       if (existing) await existing.delete();
@@ -507,8 +516,10 @@
       mod.api.wounds = {
         locations: LOCATIONS.map(location => ({ ...location })),
         statuses: foundry.utils.deepClone(STATUSES),
-        get: actor => normalizeData(actor?.getFlag?.(MODULE_ID, FLAG_KEY)),
-        getPenaltyChanges: actor => buildWoundPenaltyChanges(normalizeData(actor?.getFlag?.(MODULE_ID, FLAG_KEY))),
+        get: actor => isPlayerActor(actor) ? normalizeData(actor.getFlag(MODULE_ID, FLAG_KEY)) : null,
+        getPenaltyChanges: actor => isPlayerActor(actor)
+          ? buildWoundPenaltyChanges(normalizeData(actor.getFlag(MODULE_ID, FLAG_KEY)))
+          : [],
         worsen: (actor, location) => worsenLocationStatus(actor, location),
         improve: (actor, location) => improveLocationStatus(actor, location),
         rollRandom: actor => rollRandomWound(actor)

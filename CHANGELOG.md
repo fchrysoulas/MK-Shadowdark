@@ -1,5 +1,14 @@
 # Changelog
 
+## 1.7.0
+
+- Added native Shadowdark Property selectors to spells and NPC attacks, plus NPC Feature Property effects for resistance, immunity, and vulnerability.
+- Auto Damage now aggregates matching effects from all NPC Features and reports the calculation; resistance halves damage with a minimum of 1, immunity prevents it, and vulnerability doubles it.
+- Moved Creature Properties off actor sheets into a dedicated NPC Feature **Traits** tab with separate Resistances, Immunities, and Vulnerabilities Property boxes. Existing actor-level assignments migrate into an embedded **Creature Properties** NPC Feature.
+- Removed world-Property creation buttons from all module Property selectors; selectors now attach existing Properties only.
+- Restricted Detailed Wounds sheets, mutations, API results, and penalty effects to Player actors; NPC sheets no longer show the Wounds tab.
+- Added a distinct active Temporary Magical Enchantment marker on weapon sheets, preserving Shadowdark's permanent Magical Item state.
+
 ## 1.6.0
 
 - Reworked Detailed Wounds into a GM-managed ten-location status board with direct worsen/improve controls and a `2d10` random-wound procedure.

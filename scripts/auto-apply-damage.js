@@ -32,6 +32,12 @@
     return text.trim();
   }
 
+  function escapeHtml(value) {
+    const div = document.createElement("div");
+    div.textContent = String(value ?? "");
+    return div.innerHTML;
+  }
+
   /** Simple async sleep helper */
   function sleep(ms) {
     return new Promise(resolve => setTimeout(resolve, ms));
@@ -448,20 +454,23 @@
    * Apply damage to all tokens targeted by the user that created the message.
    * This must be called only by the primary active GM.
    */
-  async function applyDamageToTargets(message, damage) {
+  async function applyDamageToTargets(message, damage, sourceContext = {}) {
     const author = getMessageAuthor(message);
     if (!author) {
       adLog(`Message ${message.id}: no author found; cannot resolve targets.`);
-      return;
+      return [];
     }
 
     const targets = Array.from(author.targets ?? []);
     if (!targets.length) {
       adLog(`Message ${message.id}: author ${author.name} has no targets; nothing to damage.`);
-      return;
+      return [];
     }
 
     const shakeEnabled = game.settings.get(MODULE_ID, "autoDamageShakeTokens");
+    const damageTraitsApi = game.modules.get(MODULE_ID)?.api?.damageTraits;
+    const sourceProperties = Array.from(sourceContext?.properties ?? []);
+    const results = [];
 
     for (const token of targets) {
       const actor = token.actor;
@@ -477,19 +486,112 @@
         continue;
       }
 
+      let reduction = 0;
+      let damageIncrease = 0;
+      let traitMode = null;
+      let reducedDamage = null;
+      let reductionProperties = [];
+      if (sourceProperties.length && typeof damageTraitsApi?.resolveReduction === "function") {
+        try {
+          const resolved = await damageTraitsApi.resolveReduction(actor, sourceProperties, damage, sourceContext);
+          reduction = Math.max(0, Number(resolved?.reduction) || 0);
+          damageIncrease = Math.max(0, Number(resolved?.increase) || 0);
+          traitMode = resolved?.mode ?? null;
+          reducedDamage = Number.isFinite(Number(resolved?.appliedDamage))
+            ? Math.max(0, Number(resolved.appliedDamage))
+            : null;
+          reductionProperties = Array.from(resolved?.propertyNames ?? []);
+        } catch (error) {
+          console.error(
+            `${MODULE_ID} | ${SUBMODULE} v${getModuleVersion()} | Could not resolve damage traits for ${actor.name}`,
+            error
+          );
+        }
+      }
+
       const { path: hpPath, value: currentHP } = hpInfo;
-      const newHP = Math.max(0, currentHP - damage);
+      const appliedDamage = reducedDamage ?? Math.max(0, damage - reduction);
+      const newHP = Math.max(0, currentHP - appliedDamage);
 
       adLog(
-        `Token ${token.id} (${actor.name}): HP via "${hpPath}" ${currentHP} -> ${newHP} (damage ${damage})`
+        `Token ${token.id} (${actor.name}): HP via "${hpPath}" ${currentHP} -> ${newHP} ` +
+        `(damage ${damage}, trait ${traitMode ?? "none"}, applied ${appliedDamage})`
       );
 
-      await actor.update({ [hpPath]: newHP });
+      if (newHP !== currentHP) {
+        await actor.update({ [hpPath]: newHP });
+      }
+      results.push({
+        actorName: actor.name,
+        tokenId: token.id,
+        damage,
+        reduction,
+        damageIncrease,
+        traitMode,
+        appliedDamage,
+        propertyNames: reductionProperties,
+        currentHP,
+        newHP
+      });
 
       // Shake the token visually on damage (for everyone, via TokenDocument updates)
       if (shakeEnabled && newHP < currentHP) {
         await shakeToken(token);
       }
+    }
+
+    return results;
+  }
+
+  async function appendDamageReductionDisplay(message, results) {
+    const adjusted = Array.from(results ?? []).filter(result => result.traitMode);
+    if (!adjusted.length) return;
+
+    try {
+      const wrapper = document.createElement("div");
+      wrapper.innerHTML = String(message.content ?? "").trim();
+      wrapper.querySelector(".mk-damage-traits-result")?.remove();
+
+      const summary = document.createElement("div");
+      summary.className = "mk-damage-traits-result";
+      summary.innerHTML = `
+        <strong><i class="fas fa-scale-balanced"></i> Damage Trait</strong>
+        ${adjusted.map(result => {
+          const properties = result.propertyNames.length
+            ? ` (${result.propertyNames.map(escapeHtml).join(", ")})`
+            : "";
+          const calculation = result.traitMode === "resistance"
+            ? `${result.damage} &times; &frac12; = <strong>${result.appliedDamage}</strong>`
+            : result.traitMode === "immunity"
+              ? `${result.damage} &rarr; <strong>0</strong>`
+              : result.traitMode === "vulnerability"
+                ? `${result.damage} &times; 2 = <strong>${result.appliedDamage}</strong>`
+                : `${result.damage} (Resistance + Vulnerability) = <strong>${result.appliedDamage}</strong>`;
+          return `
+            <div class="mk-damage-traits-result-row">
+              <span>${escapeHtml(result.actorName)}${properties}</span>
+              <span>${calculation}</span>
+            </div>
+          `;
+        }).join("")}
+      `;
+
+      const card = wrapper.querySelector(".shadowdark.chat-card, .shadowdark.chat-card.item-card");
+      if (card) {
+        const footer = card.querySelector(".card-footer");
+        if (footer?.parentNode === card) card.insertBefore(summary, footer);
+        else card.appendChild(summary);
+      } else {
+        wrapper.appendChild(summary);
+      }
+
+      await message.update({ content: wrapper.innerHTML });
+      scrollChatToBottom();
+    } catch (error) {
+      console.error(
+        `${MODULE_ID} | ${SUBMODULE} v${getModuleVersion()} | Could not append damage reduction summary`,
+        error
+      );
     }
   }
 
@@ -660,7 +762,23 @@
         debug
       );
 
-      await applyDamageToTargets(message, damage);
+      const damageTraitsEnabled = game.settings.get(MODULE_ID, "damageTraitsEnabled");
+      const damageTraitsApi = damageTraitsEnabled
+        ? game.modules.get(MODULE_ID)?.api?.damageTraits
+        : null;
+      let sourceContext = { properties: [], isWeapon: false, isMagicalWeapon: false };
+      if (typeof damageTraitsApi?.getSourceContext === "function") {
+        try {
+          sourceContext = await damageTraitsApi.getSourceContext(message);
+        } catch (error) {
+          console.error(
+            `${MODULE_ID} | ${SUBMODULE} v${getModuleVersion()} | Could not resolve source damage context`,
+            error
+          );
+        }
+      }
+
+      const damageResults = await applyDamageToTargets(message, damage, sourceContext);
 
       // If damage came from a dice expression, show it on the card with full dice HTML.
       if (damageDisplay) {
@@ -669,6 +787,8 @@
         // Weapons: still scroll so the player sees the updated HP / latest card.
         scrollChatToBottom();
       }
+
+      await appendDamageReductionDisplay(message, damageResults);
     } catch (err) {
       console.error(`${MODULE_ID} | ${SUBMODULE} v${getModuleVersion()} | Error in handleChatMessage`, err);
     } finally {

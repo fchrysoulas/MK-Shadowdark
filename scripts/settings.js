@@ -9,7 +9,7 @@
       title: "Auto Damage",
       hint: "Configure automatic damage application, timing, dice, and token feedback.",
       icon: "fas fa-heart-crack",
-      settings: ["autoDamageEnabled", "autoDamageGMOnly", "autoDamageShowDice3D", "autoDamageShakeTokens", "autoDamageDelayMs"]
+      settings: ["autoDamageEnabled", "damageTraitsEnabled", "autoDamageGMOnly", "autoDamageShowDice3D", "autoDamageShakeTokens", "autoDamageDelayMs"]
     },
     {
       key: "tokenShadows",
@@ -575,6 +575,15 @@
     registerSetting("autoDamageEnabled", {
       name: "Auto Damage | Enabled",
       hint: "Automatically subtract damage from targeted tokens when an attack or spell roll shows damage.",
+      scope: "world",
+      config: true,
+      type: Boolean,
+      default: true
+    });
+
+    registerSetting("damageTraitsEnabled", {
+      name: "Auto Damage | Property Damage Modifiers",
+      hint: "Lets matching Properties on NPC Features provide resistance, immunity, or vulnerability to damage.",
       scope: "world",
       config: true,
       type: Boolean,

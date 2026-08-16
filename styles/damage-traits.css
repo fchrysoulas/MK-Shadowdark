@@ -1,0 +1,121 @@
+.shadowdark.sheet .mk-damage-traits-box {
+  margin-top: 0.5rem;
+}
+
+.shadowdark.sheet .mk-damage-traits-box .header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.4rem;
+}
+
+.shadowdark.sheet .mk-damage-traits-actions {
+  display: inline-flex;
+  gap: 0.2rem;
+}
+
+.shadowdark.sheet .mk-damage-traits-actions button {
+  width: auto;
+  min-width: 1.5rem;
+  height: 1.5rem;
+  margin: 0;
+  padding: 0 0.3rem;
+  border: 0;
+  background: transparent;
+  line-height: 1;
+}
+
+.shadowdark.sheet .mk-damage-traits-empty {
+  opacity: 0.65;
+  font-style: italic;
+}
+
+.shadowdark.sheet .mk-npc-feature-traits-tab {
+  overflow-y: auto;
+}
+
+.shadowdark.sheet .mk-npc-feature-traits-groups {
+  display: grid;
+  gap: 0.65rem;
+}
+
+.shadowdark.sheet .mk-feature-trait-notes {
+  margin: 0;
+}
+
+.shadowdark.sheet .mk-npc-feature-traits-groups .mk-damage-traits-box {
+  margin-top: 0;
+}
+
+.shadowdark.sheet .mk-temporary-enchantment-content {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  gap: 0.45rem;
+  align-items: end;
+}
+
+.shadowdark.sheet .mk-temporary-enchantment-active,
+.shadowdark.sheet .mk-temporary-enchantment-source {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  margin: 0;
+}
+
+.shadowdark.sheet .mk-temporary-enchantment-source {
+  min-width: 0;
+}
+
+.shadowdark.sheet .mk-temporary-enchantment-source input {
+  min-width: 0;
+}
+
+.shadowdark.sheet .mk-temporary-enchantment-content button {
+  width: auto;
+  margin: 0;
+  white-space: nowrap;
+}
+
+.shadowdark.sheet .mk-temporary-enchantment-content .notes {
+  grid-column: 1 / -1;
+  margin: 0;
+}
+
+.mk-damage-traits-dialog .mk-damage-trait-choices {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
+  gap: 0.3rem;
+  max-height: 28rem;
+  overflow-y: auto;
+  padding: 0.25rem;
+}
+
+.mk-damage-traits-dialog .mk-damage-trait-choice {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  margin: 0;
+  padding: 0.3rem 0.4rem;
+  border: 1px solid rgba(0, 0, 0, 0.18);
+  border-radius: 4px;
+}
+
+.chat-message .mk-damage-traits-result {
+  margin-top: 0.45rem;
+  padding: 0.4rem 0.5rem;
+  border: 1px dashed rgba(115, 72, 32, 0.45);
+  border-radius: 4px;
+  background: rgba(255, 255, 255, 0.16);
+  font-size: 0.82rem;
+}
+
+.chat-message .mk-damage-traits-result > strong {
+  display: block;
+  margin-bottom: 0.25rem;
+}
+
+.chat-message .mk-damage-traits-result-row {
+  display: flex;
+  justify-content: space-between;
+  gap: 0.5rem;
+}

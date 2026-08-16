@@ -9,9 +9,11 @@ Modular quality-of-life tools, gameplay automation, party management, and charac
 
 ## Features
 
-- **Auto Damage**: automatically applies damage from attack or spell rolls to targeted tokens, with optional GM-only mode, delay, 3D dice support, and token shake feedback.
+- **Auto Damage**: automatically applies damage from attack or spell rolls to targeted tokens, with property-based damage reduction, optional GM-only mode, delay, 3D dice support, and token shake feedback.
+- **Damage Traits**: exposes native Shadowdark Properties on spells and NPC attacks, adds resistance, immunity, and vulnerability traits to NPC Features, and reports adjustments on damage chat cards.
 - **Character Sheet Tweaks**: adds a configurable compact summary bar with Normal/Grinder resting, a height toggle, optional header styling, Shadowdark logo hiding, quick access to common stats, and an optional icon-only shortcut row for abilities, attacks, spells, and potions.
 - **Death Timer**: adds a configurable sheet button for starting and managing Shadowdark death timers.
+- **Detailed Wounds**: adds a GM-managed body-location wound tracker and automatic penalties exclusively to player characters.
 - **Editable Quantity**: lets item quantities be edited directly from actor inventory rows.
 - **Encounter Engine - Phase 1**: follows the Shadowdark random encounter procedure for danger checks, number appearing, distance, activity, awareness, reaction, treasure, and morale guidance, then creates an interactive GM chat card.
 - **Equipment Hands**: checks equipped weapons, shields, and hand-occupying gear against available hand slots, either warning or blocking invalid loadouts.
@@ -24,6 +26,14 @@ Modular quality-of-life tools, gameplay automation, party management, and charac
 - **Time Passes**: lets the GM choose 1d6, 2d6, or 3d6 for a time-passes encounter check. An encounter occurs if any die shows 1, and successful checks can invoke the Encounter Engine.
 - **Token Shadows**: draws configurable soft shadows under tokens on the canvas.
 - **Corpse Token Automation**: changes dead NPC tokens to a corpse image, preserves/restores original token data, and aligns corpse placement using the token fall point.
+
+## Damage Traits
+
+Create or use a Shadowdark **Property** item such as `Fire`, then select that same Property on a weapon, spell, or NPC attack and on one of the target NPC's embedded NPC Features. **Resistance** halves damage and rounds down with a minimum of 1, **Immunity** prevents all damage, and **Vulnerability** doubles damage. Immunity takes precedence; resistance and vulnerability cancel when both match. Auto Damage aggregates traits from every NPC Feature and shows the resulting calculation on the chat card. Matching uses the Property UUID, so both source and target must reference the same Property item.
+
+Spell and NPC attack sheets expose a **Properties** selector. Every NPC Feature sheet has a dedicated **Traits** tab containing separate **Resistances**, **Immunities**, and **Vulnerabilities** Property boxes. Use the edit button to select existing Properties. World Properties must be created separately through Foundry's Items directory. Existing actor-level Creature Properties are automatically moved into an embedded NPC Feature named **Creature Properties**. The feature also works with weapon Properties selected through Shadowdark's native weapon sheet.
+
+Weapon sheets include a separate **Temporary Magical Enchantment** marker for spells and effects that temporarily make a mundane weapon magical without changing Shadowdark's permanent `Magical Item` checkbox. The marker is also available through `module.api.damageTraits.setTemporaryMagicalEnchantment()` for future rule automation.
 
 ## Paper Chat
 

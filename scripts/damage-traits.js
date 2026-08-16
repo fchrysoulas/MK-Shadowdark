@@ -3,12 +3,20 @@
   const SUBMODULE = "Damage Traits";
   const ACTOR_TRAITS_FLAG = "damageTraits";
   const FEATURE_TRAITS_FLAG = "npcFeatureTraits";
-  const TEMPORARY_ENCHANTMENT_FLAG = "temporaryMagicalEnchantment";
+  const ONLY_MAGICAL_DAMAGE_KEY = "system.damage.immunity.nonmagical";
+  const ONLY_MAGICAL_PREDEFINED_KEY = "onlyMagicalDamageSources";
+  const MAGICAL_ATTACKS_KEY = "system.damage.source.magical";
+  const MAGICAL_ATTACKS_PREDEFINED_KEY = "magicalAttacks";
+  const TRAIT_EFFECT_KEYS = Object.freeze({
+    resistance: "system.damage.resistance.property",
+    immunity: "system.damage.immunity.property",
+    vulnerability: "system.damage.vulnerability.property"
+  });
 
   const ITEM_TYPES = new Set(["Spell", "NPC Attack", "NPC Special Attack"]);
   const RENDER_MARKER = "mkDamageTraitsRendered";
   const TRAIT_MODES = new Set(["resistance", "immunity", "vulnerability"]);
-  const ACTIVE_FEATURE_TRAIT_TABS = new Set();
+  const ACTIVE_FEATURE_EFFECT_TABS = new Set();
 
   function getModuleVersion() {
     const mod = game.modules.get(MODULE_ID);
@@ -56,29 +64,6 @@
     return normalized.charAt(0).toUpperCase() + normalized.slice(1);
   }
 
-  function traitGroupLabel(mode) {
-    return {
-      resistance: "Resistances",
-      immunity: "Immunities",
-      vulnerability: "Vulnerabilities"
-    }[mode] ?? "Traits";
-  }
-
-  function getTemporaryEnchantment(weapon) {
-    const value = weapon?.getFlag?.(MODULE_ID, TEMPORARY_ENCHANTMENT_FLAG)
-      ?? weapon?.flags?.[MODULE_ID]?.[TEMPORARY_ENCHANTMENT_FLAG];
-    if (!value || value.active === false) return null;
-    return {
-      active: true,
-      source: String(value.source ?? "").trim(),
-      startedAt: Number(value.startedAt) || null
-    };
-  }
-
-  function isTemporaryMagicalEnchantmentActive(weapon) {
-    return Boolean(getTemporaryEnchantment(weapon));
-  }
-
   function hasMagicalProperty(properties) {
     return Array.from(properties ?? []).some(property => {
       const name = String(property?.name ?? "").trim().toLowerCase();
@@ -89,25 +74,7 @@
   function isMagicalWeapon(weapon, properties = []) {
     if (!weapon || weapon.type !== "Weapon") return false;
     return weapon.system?.magicItem === true
-      || isTemporaryMagicalEnchantmentActive(weapon)
       || hasMagicalProperty(properties);
-  }
-
-  async function setTemporaryMagicalEnchantment(weapon, { active = true, source = "" } = {}) {
-    if (!weapon || weapon.type !== "Weapon") throw new Error("Temporary magical enchantments require a Weapon item.");
-    if (!active) {
-      await weapon.unsetFlag(MODULE_ID, TEMPORARY_ENCHANTMENT_FLAG);
-      return null;
-    }
-
-    const existing = getTemporaryEnchantment(weapon);
-    const enchantment = {
-      active: true,
-      source: String(source ?? "").trim(),
-      startedAt: existing?.startedAt ?? Date.now()
-    };
-    await weapon.setFlag(MODULE_ID, TEMPORARY_ENCHANTMENT_FLAG, enchantment);
-    return enchantment;
   }
 
   function normalizeTraits(value) {
@@ -127,7 +94,7 @@
     return [...records.values()];
   }
 
-  function getFeatureTraits(feature) {
+  function getLegacyFeatureTraits(feature) {
     const nativeUuids = Array.from(feature?.system?.properties ?? []).filter(Boolean).map(String);
     const flagValue = feature?.getFlag?.(MODULE_ID, FEATURE_TRAITS_FLAG)
       ?? feature?.flags?.[MODULE_ID]?.[FEATURE_TRAITS_FLAG];
@@ -136,16 +103,67 @@
     return flagRecords.filter(record => nativeSet.has(record.uuid));
   }
 
+  function traitModeFromEffectKey(key) {
+    return Object.entries(TRAIT_EFFECT_KEYS).find(([, effectKey]) => effectKey === key)?.[0] ?? null;
+  }
+
+  function effectTraitRecords(effects, { activeOnly = true } = {}) {
+    const records = new Map();
+    for (const effect of collectionValues(effects)) {
+      if (activeOnly && (effect?.disabled || effect?.isSuppressed)) continue;
+      for (const change of effect?.changes ?? []) {
+        const mode = traitModeFromEffectKey(change.key);
+        const uuid = String(change.value ?? "").trim();
+        if (!mode || !uuid) continue;
+        records.set(`${uuid}:${mode}`, { uuid, mode });
+      }
+    }
+    return [...records.values()];
+  }
+
+  function getFeatureTraits(feature, { activeOnly = true, includeLegacy = true } = {}) {
+    const records = new Map(effectTraitRecords(feature?.effects, { activeOnly })
+      .map(record => [`${record.uuid}:${record.mode}`, record]));
+    if (includeLegacy) {
+      for (const record of getLegacyFeatureTraits(feature)) {
+        records.set(`${record.uuid}:${record.mode}`, record);
+      }
+    }
+    return [...records.values()];
+  }
+
+  function actorTraitEffects(actor) {
+    const effects = new Set();
+    const addEffects = collection => {
+      for (const effect of collectionValues(collection)) effects.add(effect);
+    };
+
+    addEffects(actor?.appliedEffects);
+    addEffects(actor?.effects);
+    try {
+      addEffects(actor?.allApplicableEffects?.());
+    } catch (_error) {
+      // Foundry v13 does not expose allApplicableEffects consistently.
+    }
+    for (const item of collectionValues(actor?.items)) {
+      for (const effect of collectionValues(item?.effects)) {
+        if (effect?.transfer === true) effects.add(effect);
+      }
+    }
+    return [...effects];
+  }
+
   function getActorTraits(actor) {
-    const embedded = collectionValues(actor?.items)
+    const legacyEmbedded = collectionValues(actor?.items)
       .filter(item => item?.type === "NPC Feature")
-      .flatMap(getFeatureTraits);
+      .flatMap(getLegacyFeatureTraits);
+    const effects = effectTraitRecords(actorTraitEffects(actor));
     const legacy = normalizeTraits(
       actor?.getFlag?.(MODULE_ID, ACTOR_TRAITS_FLAG)
       ?? actor?.flags?.[MODULE_ID]?.[ACTOR_TRAITS_FLAG]
     );
     const records = new Map();
-    for (const record of [...embedded, ...legacy]) {
+    for (const record of [...effects, ...legacyEmbedded, ...legacy]) {
       records.set(`${record.uuid}:${record.mode}`, record);
     }
     return [...records.values()];
@@ -175,17 +193,91 @@
     return Array.from(collection);
   }
 
-  async function getAvailableProperties(selectedUuids = []) {
+  function actorEffects(actor) {
+    const effects = new Set();
+    const addEffects = collection => {
+      for (const effect of collectionValues(collection)) effects.add(effect);
+    };
+
+    addEffects(actor?.appliedEffects);
+    addEffects(actor?.effects);
+    try {
+      addEffects(actor?.allApplicableEffects?.());
+    } catch (_error) {
+      // Foundry v13 does not expose allApplicableEffects consistently.
+    }
+    for (const item of collectionValues(actor?.items)) addEffects(item?.effects);
+    return [...effects];
+  }
+
+  function hasTruthyEffectChange(actor, key) {
+    return actorEffects(actor).some(effect => (
+      !effect.disabled
+      && !effect.isSuppressed
+      && Array.from(effect.changes ?? []).some(change => (
+        change.key === key
+        && !["", "0", "false"].includes(String(change.value ?? "").trim().toLowerCase())
+      ))
+    ));
+  }
+
+  function hasOnlyMagicalDamageEffect(actor) {
+    return hasTruthyEffectChange(actor, ONLY_MAGICAL_DAMAGE_KEY);
+  }
+
+  function hasMagicalAttacksEffect(actor) {
+    return hasTruthyEffectChange(actor, MAGICAL_ATTACKS_KEY);
+  }
+
+  function registerOnlyMagicalPredefinedEffect() {
+    const config = CONFIG.SHADOWDARK;
+    if (!config?.PREDEFINED_EFFECTS) return;
+
+    config.PREDEFINED_EFFECTS[ONLY_MAGICAL_PREDEFINED_KEY] ??= {
+      defaultValue: 1,
+      effectKey: ONLY_MAGICAL_DAMAGE_KEY,
+      img: "modules/mk-shadowdark/assets/icons/effects/only-magical-damage.svg",
+      name: `SHADOWDARK.item.effect.predefined_effect.${ONLY_MAGICAL_PREDEFINED_KEY}`,
+      mode: "CONST.ACTIVE_EFFECT_MODES.OVERRIDE",
+      transfer: true
+    };
+
+    config.PREDEFINED_EFFECTS[MAGICAL_ATTACKS_PREDEFINED_KEY] ??= {
+      defaultValue: 1,
+      effectKey: MAGICAL_ATTACKS_KEY,
+      img: "modules/mk-shadowdark/assets/icons/effects/magical-attacks.svg",
+      name: `SHADOWDARK.item.effect.predefined_effect.${MAGICAL_ATTACKS_PREDEFINED_KEY}`,
+      mode: "CONST.ACTIVE_EFFECT_MODES.OVERRIDE",
+      transfer: true
+    };
+
+    config.EFFECT_TRANSLATIONS ??= {};
+    config.EFFECT_TRANSLATIONS[ONLY_MAGICAL_DAMAGE_KEY] = "Only Damaged by Magical Sources";
+    config.EFFECT_TRANSLATIONS[MAGICAL_ATTACKS_KEY] = "Magical Attacks";
+    config.EFFECT_TRANSLATIONS[TRAIT_EFFECT_KEYS.resistance] = "Damage Resistance Property";
+    config.EFFECT_TRANSLATIONS[TRAIT_EFFECT_KEYS.immunity] = "Damage Immunity Property";
+    config.EFFECT_TRANSLATIONS[TRAIT_EFFECT_KEYS.vulnerability] = "Damage Vulnerability Property";
+  }
+
+  function hasPropertyType(property, itemType = null) {
+    if (!itemType) return true;
+    return String(property?.system?.itemType ?? "").toLowerCase() === itemType;
+  }
+
+  async function getAvailableProperties(selectedUuids = [], { itemType = null } = {}) {
     const properties = new Map();
+    const normalizedItemType = String(itemType ?? "").trim().toLowerCase() || null;
 
     for (const item of collectionValues(game.items)) {
-      if (item?.type === "Property" && item.uuid) properties.set(item.uuid, item);
+      if (item?.type === "Property" && item.uuid && hasPropertyType(item, normalizedItemType)) {
+        properties.set(item.uuid, item);
+      }
     }
 
     try {
       const compendiumProperties = await globalThis.shadowdark?.compendiums?.properties?.();
       for (const entry of collectionValues(compendiumProperties)) {
-        if (!entry?.uuid) continue;
+        if (!entry?.uuid || !hasPropertyType(entry, normalizedItemType)) continue;
         properties.set(entry.uuid, entry);
       }
     } catch (error) {
@@ -193,7 +285,7 @@
     }
 
     for (const property of await resolveProperties(selectedUuids)) {
-      properties.set(property.uuid, property);
+      if (hasPropertyType(property, normalizedItemType)) properties.set(property.uuid, property);
     }
 
     return [...properties.values()].sort((a, b) => String(a.name).localeCompare(String(b.name)));
@@ -239,49 +331,40 @@
     return box;
   }
 
-  async function saveFeatureTraits(feature, records) {
-    const normalized = normalizeTraits(records);
-    await feature.update({
-      "system.properties": normalized.map(record => record.uuid),
-      [`flags.${MODULE_ID}.${FEATURE_TRAITS_FLAG}`]: normalized
-    });
-  }
-
-  async function setFeatureTraitProperties(feature, mode, uuids) {
-    const selected = new Set(Array.from(uuids ?? []).filter(Boolean).map(String));
-    const retained = getFeatureTraits(feature).filter(record => (
-      record.mode !== mode && !selected.has(record.uuid)
-    ));
-    await saveFeatureTraits(feature, [
-      ...retained,
-      ...[...selected].map(uuid => ({ uuid, mode }))
-    ]);
-  }
-
-  async function selectFeatureTraitProperties(feature, mode) {
-    const records = getFeatureTraits(feature);
-    const selected = new Set(records.filter(record => record.mode === mode).map(record => record.uuid));
-    const properties = await getAvailableProperties(records.map(record => record.uuid));
+  async function createDamageTraitEffects(feature) {
+    const properties = await getAvailableProperties();
     const rows = properties.map(property => `
       <label class="mk-damage-trait-choice">
-        <input type="checkbox" name="property" value="${escapeHtml(property.uuid)}"${selected.has(property.uuid) ? " checked" : ""}>
+        <input type="checkbox" name="property" value="${escapeHtml(property.uuid)}">
         <span>${escapeHtml(property.name)}</span>
       </label>
     `).join("");
 
     const result = await Dialog.wait({
-      title: `${traitModeLabel(mode)} Properties: ${feature.name}`,
+      title: `Add Damage Trait Effects: ${feature.name}`,
       content: `
         <form class="mk-damage-traits-dialog">
-          <p class="notes">Choose the Properties this NPC Feature treats as ${traitModeLabel(mode).toLowerCase()}.</p>
+          <div class="form-group">
+            <label>Trait</label>
+            <select name="mode">
+              ${[...TRAIT_MODES].map(mode => `<option value="${mode}">${traitModeLabel(mode)}</option>`).join("")}
+            </select>
+          </div>
+          <p class="notes">Each selected Property becomes a transferring Active Effect on this NPC Feature.</p>
           <div class="mk-damage-trait-choices">${rows || "<p>No Property items are available.</p>"}</div>
         </form>
       `,
       buttons: {
         save: {
           icon: '<i class="fas fa-save"></i>',
-          label: "Save",
-          callback: html => [...dialogRoot(html).querySelectorAll('input[name="property"]:checked')].map(input => input.value)
+          label: "Add Effects",
+          callback: html => {
+            const root = dialogRoot(html);
+            return {
+              mode: root.querySelector('select[name="mode"]')?.value,
+              uuids: [...root.querySelectorAll('input[name="property"]:checked')].map(input => input.value)
+            };
+          }
         },
         cancel: { label: "Cancel", callback: () => null }
       },
@@ -289,58 +372,178 @@
       close: () => null
     });
 
-    if (!result) return;
-    await setFeatureTraitProperties(feature, mode, result);
+    if (!result?.uuids?.length || !TRAIT_MODES.has(result.mode)) return;
+    await addTraitEffects(feature, result.uuids.map(uuid => ({ uuid, mode: result.mode })));
   }
 
-  async function makeFeatureTraitGroup({ feature, mode, editable }) {
-    const uuids = getFeatureTraits(feature)
-      .filter(record => record.mode === mode)
-      .map(record => record.uuid);
-    const tagsHtml = await renderPropertyTags(uuids);
-    return makeTraitsBox({
-      label: traitGroupLabel(mode),
-      tagsHtml,
-      editable,
-      onEdit: () => selectFeatureTraitProperties(feature, mode)
+  async function addTraitEffects(feature, records) {
+    const normalized = normalizeTraits(records);
+    const existing = new Set(getFeatureTraits(feature, { activeOnly: false, includeLegacy: false })
+      .map(record => `${record.uuid}:${record.mode}`));
+    const additions = normalized.filter(record => !existing.has(`${record.uuid}:${record.mode}`));
+    if (!additions.length) return [];
+
+    const properties = await resolveProperties(additions.map(record => record.uuid));
+    const propertyByUuid = new Map(properties.map(property => [property.uuid, property]));
+    const effectData = additions.map(record => {
+      const property = propertyByUuid.get(record.uuid);
+      const propertyName = property?.name ?? record.uuid;
+      return {
+        name: `${propertyName} ${traitModeLabel(record.mode)}`,
+        img: property?.img || "icons/svg/aura.svg",
+        origin: feature.uuid,
+        transfer: true,
+        disabled: false,
+        changes: [{
+          key: TRAIT_EFFECT_KEYS[record.mode],
+          mode: CONST.ACTIVE_EFFECT_MODES.OVERRIDE,
+          value: record.uuid
+        }],
+        flags: {
+          [MODULE_ID]: {
+            damageTrait: true
+          }
+        }
+      };
     });
+    return feature.createEmbeddedDocuments("ActiveEffect", effectData);
   }
 
-  async function makeFeatureTraitsContent({ feature, editable }) {
-    const wrapper = document.createElement("div");
-    wrapper.className = "mk-npc-feature-traits-groups";
-    const note = document.createElement("p");
-    note.className = "notes mk-feature-trait-notes";
-    note.textContent = "Assign Properties to this NPC Feature as resistances, immunities, or vulnerabilities.";
-    wrapper.appendChild(note);
-    for (const mode of TRAIT_MODES) {
-      wrapper.appendChild(await makeFeatureTraitGroup({ feature, mode, editable }));
+  async function createBlankFeatureEffect(feature) {
+    const [effect] = await feature.createEmbeddedDocuments("ActiveEffect", [{
+      name: "New Effect",
+      img: "icons/commodities/tech/cog-steel-grey.webp",
+      origin: feature.uuid,
+      transfer: true,
+      disabled: false,
+      changes: []
+    }]);
+    effect?.sheet?.render(true);
+  }
+
+  async function effectChangeSummary(effect) {
+    const summaries = [];
+    for (const change of effect?.changes ?? []) {
+      const mode = traitModeFromEffectKey(change.key);
+      if (mode) {
+        const property = await resolveProperty(String(change.value ?? "").trim());
+        summaries.push(`${traitModeLabel(mode)}: ${property?.name ?? change.value}`);
+        continue;
+      }
+      const label = CONFIG.SHADOWDARK?.EFFECT_TRANSLATIONS?.[change.key] ?? change.key;
+      summaries.push(`${label}: ${change.value}`);
     }
+    return summaries.join("; ") || "No changes";
+  }
+
+  async function makeFeatureEffectsContent({ feature, editable }) {
+    const wrapper = document.createElement("div");
+    wrapper.className = "mk-npc-feature-effects";
+    const note = document.createElement("p");
+    note.className = "notes mk-feature-effect-notes";
+    note.textContent = "Enabled effects with Transfer active apply to the NPC that owns this Feature.";
+    wrapper.appendChild(note);
+
+    if (editable) {
+      const predefined = Object.entries(CONFIG.SHADOWDARK?.PREDEFINED_EFFECTS ?? {})
+        .sort((left, right) => String(left[1]?.name).localeCompare(String(right[1]?.name)));
+      const toolbar = document.createElement("div");
+      toolbar.className = "mk-feature-effect-toolbar";
+      toolbar.innerHTML = `
+        <button type="button" data-mk-effect-action="add-trait"><i class="fas fa-shield-halved"></i> Add Damage Trait</button>
+        <select data-mk-predefined-effect>
+          <option value="">Predefined effect...</option>
+          ${predefined.map(([key, data]) => `<option value="${escapeHtml(key)}">${escapeHtml(data.name)}</option>`).join("")}
+        </select>
+        <button type="button" data-mk-effect-action="add-predefined" data-tooltip="Add predefined effect"><i class="fas fa-plus"></i></button>
+        <button type="button" data-mk-effect-action="create"><i class="fas fa-plus"></i> New Effect</button>
+      `;
+      wrapper.appendChild(toolbar);
+
+      toolbar.querySelector('[data-mk-effect-action="add-trait"]')?.addEventListener("click", event => {
+        event.preventDefault();
+        void createDamageTraitEffects(feature);
+      });
+      toolbar.querySelector('[data-mk-effect-action="add-predefined"]')?.addEventListener("click", event => {
+        event.preventDefault();
+        const key = toolbar.querySelector("[data-mk-predefined-effect]")?.value;
+        if (key) void globalThis.shadowdark?.effects?.createPredefinedEffect?.(feature, key);
+      });
+      toolbar.querySelector('[data-mk-effect-action="create"]')?.addEventListener("click", event => {
+        event.preventDefault();
+        void createBlankFeatureEffect(feature);
+      });
+    }
+
+    const list = document.createElement("ol");
+    list.className = "mk-feature-effect-list";
+    const effects = collectionValues(feature.effects);
+    if (!effects.length) {
+      list.innerHTML = '<li class="mk-damage-traits-empty">No effects</li>';
+    } else {
+      for (const effect of effects) {
+        const row = document.createElement("li");
+        row.className = `mk-feature-effect-row${effect.disabled ? " disabled" : ""}`;
+        row.innerHTML = `
+          <img src="${escapeHtml(effect.img || "icons/svg/aura.svg")}" alt="">
+          <span class="mk-feature-effect-description">
+            <strong>${escapeHtml(effect.name)}</strong>
+            <small>${escapeHtml(await effectChangeSummary(effect))}</small>
+          </span>
+          <span class="mk-feature-effect-transfer${effect.transfer === false ? " inactive" : ""}" data-tooltip="${effect.transfer === false ? "Does not transfer" : "Transfers to NPC"}">
+            <i class="fas fa-right-left"></i>
+          </span>
+          ${editable ? `
+            <span class="mk-feature-effect-actions">
+              <button type="button" data-mk-effect-action="toggle" data-effect-id="${escapeHtml(effect.id)}" data-tooltip="${effect.disabled ? "Enable" : "Disable"}"><i class="fas fa-power-off"></i></button>
+              <button type="button" data-mk-effect-action="transfer" data-effect-id="${escapeHtml(effect.id)}" data-tooltip="Toggle Transfer"><i class="fas fa-right-left"></i></button>
+              <button type="button" data-mk-effect-action="edit" data-effect-id="${escapeHtml(effect.id)}" data-tooltip="Edit"><i class="fas fa-pen-to-square"></i></button>
+              <button type="button" data-mk-effect-action="delete" data-effect-id="${escapeHtml(effect.id)}" data-tooltip="Delete"><i class="fas fa-trash"></i></button>
+            </span>
+          ` : ""}
+        `;
+        list.appendChild(row);
+      }
+    }
+    wrapper.appendChild(list);
+
+    list.addEventListener("click", event => {
+      const button = event.target.closest?.("[data-mk-effect-action]");
+      if (!button) return;
+      event.preventDefault();
+      const effect = feature.effects?.get?.(button.dataset.effectId)
+        ?? collectionValues(feature.effects).find(entry => entry.id === button.dataset.effectId);
+      if (!effect) return;
+      if (button.dataset.mkEffectAction === "toggle") void effect.update({ disabled: !effect.disabled });
+      if (button.dataset.mkEffectAction === "transfer") void effect.update({ transfer: effect.transfer === false });
+      if (button.dataset.mkEffectAction === "edit") effect.sheet?.render(true);
+      if (button.dataset.mkEffectAction === "delete") void effect.delete();
+    });
     return wrapper;
   }
 
-  async function addNpcFeatureTraitsTab(form, feature, editable) {
+  async function addNpcFeatureEffectsTab(form, feature, editable) {
     const nav = form.querySelector("nav.SD-nav");
     const content = form.querySelector(".SD-content-body");
-    if (!nav || !content || nav.querySelector('[data-tab="tab-traits"]')) return;
+    if (!nav || !content || nav.querySelector('[data-tab="tab-effects"]')) return;
 
     const navLink = document.createElement("a");
     navLink.className = "navigation-tab";
-    navLink.dataset.tab = "tab-traits";
-    navLink.textContent = "Traits";
+    navLink.dataset.tab = "tab-effects";
+    navLink.textContent = "Effects";
 
     const tab = document.createElement("section");
-    tab.className = "tab tab-traits mk-npc-feature-traits-tab";
+    tab.className = "tab tab-effects mk-npc-feature-effects-tab";
     tab.dataset.group = "primary";
-    tab.dataset.tab = "tab-traits";
-    tab.appendChild(await makeFeatureTraitsContent({ feature, editable }));
+    tab.dataset.tab = "tab-effects";
+    tab.appendChild(await makeFeatureEffectsContent({ feature, editable }));
     if (!form.isConnected) return;
 
     nav.appendChild(navLink);
     content.appendChild(tab);
 
     const featureKey = feature.uuid ?? feature.id;
-    const activateTraitsTab = () => {
+    const activateEffectsTab = () => {
       for (const link of nav.querySelectorAll(".navigation-tab")) link.classList.remove("active");
       for (const section of content.querySelectorAll('.tab[data-group="primary"]')) section.classList.remove("active");
       navLink.classList.add("active");
@@ -349,19 +552,19 @@
 
     navLink.addEventListener("click", event => {
       event.preventDefault();
-      if (featureKey) ACTIVE_FEATURE_TRAIT_TABS.add(featureKey);
-      activateTraitsTab();
+      if (featureKey) ACTIVE_FEATURE_EFFECT_TABS.add(featureKey);
+      activateEffectsTab();
     });
 
-    for (const link of nav.querySelectorAll('.navigation-tab:not([data-tab="tab-traits"])')) {
+    for (const link of nav.querySelectorAll('.navigation-tab:not([data-tab="tab-effects"])')) {
       link.addEventListener("click", () => {
-        if (featureKey) ACTIVE_FEATURE_TRAIT_TABS.delete(featureKey);
+        if (featureKey) ACTIVE_FEATURE_EFFECT_TABS.delete(featureKey);
         navLink.classList.remove("active");
         tab.classList.remove("active");
       });
     }
 
-    if (featureKey && ACTIVE_FEATURE_TRAIT_TABS.has(featureKey)) activateTraitsTab();
+    if (featureKey && ACTIVE_FEATURE_EFFECT_TABS.has(featureKey)) activateEffectsTab();
   }
 
   function isPrimaryActiveGM() {
@@ -371,90 +574,44 @@
     return collectionValues(game.users).find(user => user?.active && user?.isGM)?.id === game.user.id;
   }
 
-  async function migrateActorTraitsToNpcFeatures() {
+  async function migrateDamageTraitsToEffects() {
     if (!isPrimaryActiveGM()) return;
 
     for (const actor of collectionValues(game.actors).filter(entry => entry?.type === "NPC")) {
       const legacyValue = actor?.getFlag?.(MODULE_ID, ACTOR_TRAITS_FLAG)
         ?? actor?.flags?.[MODULE_ID]?.[ACTOR_TRAITS_FLAG];
-      if (!Array.isArray(legacyValue) || !legacyValue.length) continue;
       const legacy = normalizeTraits(legacyValue);
 
       try {
-        if (!legacy.length) {
+        let legacyFeature = null;
+        if (legacy.length) {
+          legacyFeature = collectionValues(actor.items).find(item => (
+            item?.type === "NPC Feature" && item.name === "Creature Properties"
+          ));
+          if (!legacyFeature) {
+            [legacyFeature] = await actor.createEmbeddedDocuments("Item", [{
+              name: "Creature Properties",
+              type: "NPC Feature"
+            }]);
+          }
+          await addTraitEffects(legacyFeature, legacy);
           await actor.unsetFlag(MODULE_ID, ACTOR_TRAITS_FLAG);
-          continue;
         }
-        let feature = collectionValues(actor.items).find(item => (
-          item?.type === "NPC Feature" && item.name === "Creature Properties"
-        ));
-        const merged = new Map((feature ? getFeatureTraits(feature) : []).map(record => [record.uuid, record]));
-        for (const record of legacy) merged.set(record.uuid, record);
-        const records = [...merged.values()];
 
-        if (feature) {
-          await saveFeatureTraits(feature, records);
-        } else {
-          [feature] = await actor.createEmbeddedDocuments("Item", [{
-            name: "Creature Properties",
-            type: "NPC Feature",
-            system: { properties: records.map(record => record.uuid) },
-            flags: { [MODULE_ID]: { [FEATURE_TRAITS_FLAG]: records } }
-          }]);
+        for (const feature of collectionValues(actor.items).filter(item => item?.type === "NPC Feature")) {
+          const records = getLegacyFeatureTraits(feature);
+          if (!records.length) continue;
+          await addTraitEffects(feature, records);
+          const migratedUuids = new Set(records.map(record => record.uuid));
+          const retainedProperties = Array.from(feature.system?.properties ?? [])
+            .filter(uuid => !migratedUuids.has(String(uuid)));
+          await feature.update({ "system.properties": retainedProperties });
+          await feature.unsetFlag(MODULE_ID, FEATURE_TRAITS_FLAG);
         }
-        await actor.unsetFlag(MODULE_ID, ACTOR_TRAITS_FLAG);
       } catch (error) {
-        warn(`Could not migrate Creature Properties for ${actor.name}`, error);
+        warn(`Could not migrate damage traits to Active Effects for ${actor.name}`, error);
       }
     }
-  }
-
-  function makeWeaponEnchantmentBox(weapon, editable) {
-    const enchantment = getTemporaryEnchantment(weapon);
-    const permanent = weapon.system?.magicItem === true;
-    const box = document.createElement("div");
-    box.className = "SD-box mk-damage-traits-box mk-temporary-enchantment-box";
-    box.innerHTML = `
-      <div class="header light"><label>Temporary Magical Enchantment</label></div>
-      <div class="content mk-temporary-enchantment-content">
-        <label class="mk-temporary-enchantment-active">
-          <input type="checkbox" data-mk-enchantment-active${enchantment ? " checked" : ""}${editable ? "" : " disabled"}>
-          <span>Active</span>
-        </label>
-        <label class="mk-temporary-enchantment-source">
-          <span>Source</span>
-          <input type="text" data-mk-enchantment-source value="${escapeHtml(enchantment?.source ?? "")}" placeholder="Spell or effect"${editable ? "" : " disabled"}>
-        </label>
-        ${editable && enchantment ? '<button type="button" data-mk-enchantment-clear><i class="fas fa-xmark"></i> Clear</button>' : ""}
-        <p class="notes">
-          ${permanent
-            ? "This weapon is also permanently magical. Clearing this enchantment will not change its native Magical Item setting."
-            : "This active enchantment makes the weapon magical without changing its permanent Magical Item setting."}
-        </p>
-      </div>
-    `;
-
-    const activeInput = box.querySelector("[data-mk-enchantment-active]");
-    const sourceInput = box.querySelector("[data-mk-enchantment-source]");
-    activeInput?.addEventListener("change", event => {
-      void setTemporaryMagicalEnchantment(weapon, {
-        active: event.currentTarget.checked,
-        source: sourceInput?.value
-      });
-    });
-    sourceInput?.addEventListener("change", event => {
-      if (!activeInput?.checked) return;
-      void setTemporaryMagicalEnchantment(weapon, {
-        active: true,
-        source: event.currentTarget.value
-      });
-    });
-    box.querySelector("[data-mk-enchantment-clear]")?.addEventListener("click", event => {
-      event.preventDefault();
-      event.stopPropagation();
-      void setTemporaryMagicalEnchantment(weapon, { active: false });
-    });
-    return box;
   }
 
   function dialogRoot(html) {
@@ -463,7 +620,11 @@
 
   async function selectItemProperties(item) {
     const selected = new Set(Array.from(item?.system?.properties ?? []).map(String));
-    const properties = await getAvailableProperties(selected);
+    const itemType = item.type === "NPC Attack" ? "weapon" : null;
+    const properties = await getAvailableProperties(selected, { itemType });
+    const propertyHint = itemType === "weapon"
+      ? "NPC attacks can use Weapon-type Properties only."
+      : "Selected properties are stored in Shadowdark's native item property list.";
     const rows = properties.map(property => `
       <label class="mk-damage-trait-choice">
         <input type="checkbox" name="property" value="${escapeHtml(property.uuid)}"${selected.has(property.uuid) ? " checked" : ""}>
@@ -475,7 +636,7 @@
       title: `Properties: ${item.name}`,
       content: `
         <form class="mk-damage-traits-dialog">
-          <p class="notes">Selected properties are stored in Shadowdark's native item property list.</p>
+          <p class="notes">${propertyHint}</p>
           <div class="mk-damage-trait-choices">${rows || "<p>No Property items are available.</p>"}</div>
         </form>
       `,
@@ -498,7 +659,7 @@
   async function renderItemTraits(app, html) {
     if (game.system?.id !== "shadowdark") return;
     const item = app?.item ?? app?.object;
-    if (!item || (!ITEM_TYPES.has(item.type) && !["Weapon", "NPC Feature"].includes(item.type))) return;
+    if (!item || (!ITEM_TYPES.has(item.type) && item.type !== "NPC Feature")) return;
 
     const root = getRootElement(html);
     const form = getSheetForm(root);
@@ -507,16 +668,11 @@
 
     const editable = Boolean(app?.isEditable ?? item.isOwner);
     if (item.type === "NPC Feature") {
-      await addNpcFeatureTraitsTab(form, item, editable);
+      await addNpcFeatureEffectsTab(form, item, editable);
       return;
     }
 
     const tab = form.querySelector('.tab[data-tab="tab-details"]');
-    if (item.type === "Weapon") {
-      tab?.appendChild(makeWeaponEnchantmentBox(item, editable));
-      return;
-    }
-
     const uuids = Array.from(item.system?.properties ?? []);
     const tagsHtml = await renderPropertyTags(uuids);
     if (!form.isConnected) return;
@@ -534,27 +690,59 @@
     const rollConfig = message?.getFlag?.("shadowdark", "rollConfig")
       ?? message?.flags?.shadowdark?.rollConfig;
     const itemUuid = rollConfig?.itemUuid ?? rollConfig?.cast?.spellUuid;
-    if (!itemUuid) return { item: null, properties: [], isWeapon: false, isMagicalWeapon: false };
+    const spellRoll = rollConfig?.type === "spell" || Boolean(rollConfig?.cast?.spellUuid);
+    if (!itemUuid) {
+      return {
+        item: null,
+        properties: [],
+        isWeapon: false,
+        isMagicalWeapon: false,
+        isMagicalSource: spellRoll,
+        magicSource: spellRoll ? "spell" : null
+      };
+    }
 
     let item = null;
     try {
       item = await fromUuid(itemUuid);
     } catch (_error) {
-      return { item: null, properties: [], isWeapon: false, isMagicalWeapon: false };
+      return {
+        item: null,
+        properties: [],
+        isWeapon: false,
+        isMagicalWeapon: false,
+        isMagicalSource: spellRoll,
+        magicSource: spellRoll ? "spell" : null
+      };
     }
     const properties = await resolveProperties(item?.system?.properties ?? []);
+    const magicalWeapon = isMagicalWeapon(item, properties);
+    const magicalProperty = hasMagicalProperty(properties);
+    const sourceActor = item?.actor
+      ?? (item?.parent?.documentName === "Actor" ? item.parent : null);
+    const attackSource = ["Weapon", "NPC Attack", "NPC Special Attack"].includes(item?.type);
+    const magicalAttacks = attackSource && hasMagicalAttacksEffect(sourceActor);
+    const spellSource = spellRoll
+      || ["Spell", "Scroll", "Wand"].includes(item?.type)
+      || item?.system?.isSpell === true
+      || item?.system?.isScroll === true
+      || item?.system?.isWand === true;
+    const magicSource = spellSource
+      ? "spell"
+      : magicalAttacks
+        ? "actor-effect"
+        : item?.system?.magicItem === true
+          ? "permanent"
+          : magicalProperty
+            ? "property"
+            : null;
     return {
       item,
       properties,
       isWeapon: item?.type === "Weapon",
-      isMagicalWeapon: isMagicalWeapon(item, properties),
-      magicSource: item?.system?.magicItem === true
-        ? "permanent"
-        : isTemporaryMagicalEnchantmentActive(item)
-          ? "temporary-enchantment"
-          : hasMagicalProperty(properties)
-            ? "property"
-            : null
+      isMagicalWeapon: magicalWeapon || (item?.type === "Weapon" && magicalAttacks),
+      isMagicalSource: spellSource || magicalWeapon || magicalProperty || magicalAttacks,
+      magicSource
     };
   }
 
@@ -571,11 +759,15 @@
       .filter(record => sourceUuids.has(record.uuid));
     const matching = candidates;
     const modes = new Set(matching.map(record => record.mode));
+    const onlyMagical = hasOnlyMagicalDamageEffect(actor);
 
     let mode = null;
     let appliedDamage = incomingDamage;
 
-    if (modes.has("immunity")) {
+    if (onlyMagical && sourceContext?.isMagicalSource !== true) {
+      mode = "nonmagical-immunity";
+      appliedDamage = 0;
+    } else if (modes.has("immunity")) {
       mode = "immunity";
       appliedDamage = 0;
     } else if (modes.has("resistance") && modes.has("vulnerability")) {
@@ -596,13 +788,19 @@
       mode,
       appliedDamage,
       matching,
+      onlyMagical,
       bypassed: []
     };
   }
 
   async function resolveReduction(actor, sourceProperties, damage = 0, sourceContext = {}) {
     const result = calculateReduction(actor, sourceProperties, damage, sourceContext);
-    if (!result.matching.length) return { ...result, propertyNames: [] };
+    if (!result.matching.length) {
+      return {
+        ...result,
+        propertyNames: result.mode === "nonmagical-immunity" ? ["Nonmagical source"] : []
+      };
+    }
 
     const properties = await resolveProperties(result.matching.map(record => record.uuid));
     const names = new Map(properties.map(property => [property.uuid, property.name]));
@@ -623,17 +821,21 @@
       getSourceProperties,
       calculateReduction,
       resolveReduction,
-      getTemporaryEnchantment,
+      hasOnlyMagicalDamageEffect,
+      hasMagicalAttacksEffect,
       isMagicalWeapon,
-      setTemporaryMagicalEnchantment,
+      addTraitEffects,
       selectItemProperties
     };
   }
 
-  Hooks.once("init", exposeApi);
+  Hooks.once("init", () => {
+    registerOnlyMagicalPredefinedEffect();
+    exposeApi();
+  });
   Hooks.once("ready", () => {
     exposeApi();
-    void migrateActorTraitsToNpcFeatures();
+    void migrateDamageTraitsToEffects();
   });
 
   for (const hook of ["renderItemSheet", "renderShadowdarkItemSheet", "renderShadowdarkItemSheetV2", "renderItemSheetShadowdark"]) {

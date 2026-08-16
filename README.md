@@ -19,6 +19,7 @@ Modular quality-of-life tools, gameplay automation, party management, and charac
 - **Equipment Hands**: checks equipped weapons, shields, and hand-occupying gear against available hand slots, either warning or blocking invalid loadouts.
 - **Token Equipment Display**: shows held gear beside player tokens, displays two-handed gear once above or below the token, and adds a smaller configurable Quickdraw row.
 - **Focus Tracker**: tracks successfully cast Focus spells, enforces configurable capacity, requests maintenance checks at the caster's turn or after damage, and exposes actor-sheet and chat-card controls with a token status icon.
+- **Targeted Spell DC Effects**: lets hostile targets set a spellcasting DC through an Active Effect, for creature defenses such as a lich's Spellward.
 - **Group Sheet**: adds a party/group actor sheet for members, hirelings and mounts, shared inventory, active torch tracking, configurable tab backgrounds and activity columns, Camping task assignment, and ration-aware party resting.
 - **Paper Chat**: provides twelve paper-inspired chat themes and a GM visual editor for theme-specific message styling.
 - **Camping Tasks**: provides Bed Down, Cook, Craft, Entertain, Scavenge, Hunt, Keep Watch, and Predict tasks with DCs, tooltips, icons, and drag-and-drop member assignment.
@@ -29,11 +30,13 @@ Modular quality-of-life tools, gameplay automation, party management, and charac
 
 ## Damage Traits
 
-Create or use a Shadowdark **Property** item such as `Fire`, then select that same Property on a weapon, spell, or NPC attack and on one of the target NPC's embedded NPC Features. **Resistance** halves damage and rounds down with a minimum of 1, **Immunity** prevents all damage, and **Vulnerability** doubles damage. Immunity takes precedence; resistance and vulnerability cancel when both match. Auto Damage aggregates traits from every NPC Feature and shows the resulting calculation on the chat card. Matching uses the Property UUID, so both source and target must reference the same Property item.
+Create or use a Shadowdark **Property** item such as `Fire`, then select that Property on a weapon, spell, or NPC attack. On a target NPC's embedded NPC Feature, open **Effects**, choose **Add Damage Trait**, select Resistance, Immunity, or Vulnerability, and select the matching Property. **Resistance** halves damage and rounds down with a minimum of 1, **Immunity** prevents all damage, and **Vulnerability** doubles damage. Immunity takes precedence; resistance and vulnerability cancel when both match. Auto Damage aggregates transferred effects from every NPC Feature and shows the calculation on the chat card. Matching uses the Property UUID, so both source and target must reference the same Property item.
 
-Spell and NPC attack sheets expose a **Properties** selector. Every NPC Feature sheet has a dedicated **Traits** tab containing separate **Resistances**, **Immunities**, and **Vulnerabilities** Property boxes. Use the edit button to select existing Properties. World Properties must be created separately through Foundry's Items directory. Existing actor-level Creature Properties are automatically moved into an embedded NPC Feature named **Creature Properties**. The feature also works with weapon Properties selected through Shadowdark's native weapon sheet.
+Spell and NPC attack sheets expose a **Properties** selector. Every NPC Feature sheet has an **Effects** tab for damage traits, predefined effects, and ordinary Active Effects. Damage-trait effects are created with Transfer enabled and apply to the NPC that owns the Feature; disabling the effect or Transfer disables the trait. Existing Traits-tab assignments and older actor-level Creature Properties automatically migrate into transferring Active Effects. World Properties must be created separately through Foundry's Items directory. The feature also works with weapon Properties selected through Shadowdark's native weapon sheet.
 
-Weapon sheets include a separate **Temporary Magical Enchantment** marker for spells and effects that temporarily make a mundane weapon magical without changing Shadowdark's permanent `Magical Item` checkbox. The marker is also available through `module.api.damageTraits.setTemporaryMagicalEnchantment()` for future rule automation.
+The predefined **Magical Attacks** effect makes weapon and NPC attacks from an actor count as magical. Add it directly to the actor or to an embedded Effect item such as Holy Weapon; disabling or expiring that effect restores normal attacks. Permanently magical weapons and attacks with a Magic/Magical Property also count as magical.
+
+The predefined Effect **Only Damaged by Magical Sources** prevents Auto Damage from reducing the protected actor's HP when the source is nonmagical. Spells, scrolls, wands, magical attacks, permanently magical weapons, and attacks with a Magic/Magical Property count as magical. Add the predefined effect to an Effect item embedded on any NPC or player character.
 
 ## Paper Chat
 
@@ -76,6 +79,16 @@ Focus Tracker integrates with the native Shadowdark 4.x spell-casting methods. A
 - Chat actions can roll the native Focus check, ignore an optional damage prompt, end Focus, or reopen the source spell.
 - Active Focus sessions appear as compact custom icons in the MK-Shadowdark summary bar and in the token's top-left conditions/effects area, with a sheet-header fallback when the summary bar is disabled.
 - The default simultaneous Focus capacity is configurable from the Focus Tracker settings screen. The module API is available at `game.modules.get("mk-shadowdark").api.focus`.
+
+## Targeted Spell DC Effects
+
+To make spells targeting any creature require DC 18, add an Active Effect to that actor with this change:
+
+| Key | Mode | Value |
+| --- | --- | --- |
+| `system.roll.spell.dc` | Any | `18` |
+
+You can also select the predefined **Targeted Spell DC** effect, which starts at DC 18; edit its value for a different DC. When a caster targets that token, the spellcasting dialog uses the configured DC and displays it in the heading. The Effect item must be embedded on the targeted actor and its effect must be enabled. The Change mode and v13 Transfer setting are ignored for this target-DC key, so a default **New Effect** works. The effect works on any actor type, including player characters and NPCs. If a spell targets several protected actors, the highest applicable DC is used.
 
 ## Encounter Engine Phase 1
 

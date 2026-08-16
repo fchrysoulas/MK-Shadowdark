@@ -1,5 +1,19 @@
 # Changelog
 
+## 1.8.0
+
+- Added target-aware Active Effect spell DC overrides. Any targeted actor can use `system.roll.spell.dc` (for example, `18`) to set the caster's spellcasting DC before the roll dialog opens, regardless of Change mode.
+- Added a predefined **Targeted Spell DC** effect with a default DC of 18.
+- Targeted spell DCs are now stated in the spellcasting dialog heading, including on Foundry VTT v13.
+- Foundry VTT v13 target-DC detection now reads enabled effects directly from Effect items embedded on the target, even when the Active Effect's Transfer option is disabled.
+- Fixed Foundry VTT v13 startup by integrating through the roll-dialog class instead of attempting to replace the system's read-only `dice.rollDialog` export.
+- NPC Attack rows now display their selected Properties on the same secondary line and with the same styling as player weapon attacks.
+- The NPC Attack Property picker now lists only Properties whose type is **Weapon**.
+- Added a predefined **Only Damaged by Magical Sources** effect. Auto Damage now blocks nonmagical sources while allowing spells, magic items, actor-level magical attacks, and attacks with a Magic/Magical Property.
+- Replaced the weapon-specific Temporary Magical Enchantment control with a predefined actor-level **Magical Attacks** effect suitable for Holy Weapon and similar effects.
+- Added bundled Game-Icons.net artwork for the Targeted Spell DC, Magical Attacks, and Only Damaged by Magical Sources predefined effects.
+- Replaced the custom NPC Feature Traits tab with an Effects tab backed by transferring Active Effects. Existing resistance, immunity, and vulnerability assignments migrate automatically without losing their Property references.
+
 ## 1.7.0
 
 - Added native Shadowdark Property selectors to spells and NPC attacks, plus NPC Feature Property effects for resistance, immunity, and vulnerability.

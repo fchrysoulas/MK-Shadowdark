@@ -56,7 +56,7 @@
 
     applySheetClasses(windowEl, form);
     if (getSetting(SETTINGS.ATTACK_PROPERTIES, true)) {
-      formatWeaponAttackProperties(app, form ?? root);
+      formatAttackProperties(app, form ?? root);
     }
     log("applied", app.actor?.name ?? app.object?.name ?? "unknown actor");
   }
@@ -120,7 +120,7 @@
     }
   }
 
-  function formatWeaponAttackProperties(app, root) {
+  function formatAttackProperties(app, root) {
     const actor = app.actor ?? app.object;
     if (!actor?.items || !root?.querySelectorAll) return;
 
@@ -131,21 +131,23 @@
 
       const itemId = link.dataset.itemId;
       const item = actor.items.get(itemId) ?? actor.items.find?.(candidate => candidate.id === itemId);
-      if (!item || item.type !== "Weapon") continue;
+      if (!item || !["Weapon", "NPC Attack"].includes(item.type)) continue;
 
-      Promise.resolve(getWeaponPropertiesText(item)).then(properties => {
+      Promise.resolve(getAttackPropertiesText(item)).then(properties => {
         const propertiesText = normalizeInlineText(properties);
         if (!propertiesText || !link.isConnected || link.classList.contains("mk-attack-formatted")) return;
 
         const currentText = normalizeInlineText(link.textContent);
-        const mainText = stripTrailingProperties(currentText, propertiesText);
+        const mainText = item.type === "NPC Attack"
+          ? getNpcAttackMainText(item, currentText)
+          : stripTrailingProperties(currentText, propertiesText);
         const iconHtml = link.querySelector("i")?.outerHTML ?? '<i class="fa-solid fa-dice-d20"></i>';
-        const weaponName = String(item.name ?? "").trim();
+        const attackName = String(item.name ?? "").trim();
 
         link.innerHTML = `
           ${iconHtml}
           <span class="mk-attack-lines">
-            <span class="mk-attack-main-line">${renderAttackMainLine(mainText, weaponName)}</span>
+            <span class="mk-attack-main-line">${renderAttackMainLine(mainText, attackName)}</span>
             <span class="mk-attack-properties-line">${escapeHtml(propertiesText)}</span>
           </span>
         `;
@@ -156,7 +158,9 @@
     }
   }
 
-  async function getWeaponPropertiesText(item) {
+  async function getAttackPropertiesText(item) {
+    if (item.type === "NPC Attack") return getNpcAttackPropertiesText(item);
+
     try {
       if (typeof item.propertiesDisplay === "function") {
         const display = await item.propertiesDisplay();
@@ -176,11 +180,77 @@
     }).filter(Boolean).join(", ");
   }
 
-  function renderAttackMainLine(mainText, weaponName) {
+  async function getNpcAttackPropertiesText(item) {
+    const ranges = Array.from(item.system?.ranges ?? [])
+      .map(localizeRange)
+      .filter(Boolean)
+      .join("/");
+    const attackType = Array.from(item.system?.ranges ?? []).includes("close")
+      ? localizeConfigValue("WEAPON_TYPES", "melee", "Melee")
+      : localizeConfigValue("WEAPON_TYPES", "ranged", "Ranged");
+    const damage = formatNpcAttackDamage(item);
+    const properties = await getPropertyNames(item);
+
+    return [attackType, ranges, damage, properties.join(", ")]
+      .filter(Boolean)
+      .join(" • ");
+  }
+
+  function getNpcAttackMainText(item, fallback) {
+    const count = Number(item.system?.attack?.num) || 1;
+    const name = String(item.name ?? "").trim();
+    const attackBonus = Number(item.system?.bonuses?.attackBonus) || 0;
+    const damage = formatNpcAttackDamage(item);
+    if (!name || !damage) return fallback;
+
+    return `${count} ${name}${attackBonus ? ` +${attackBonus}` : ""} (${damage})`;
+  }
+
+  function formatNpcAttackDamage(item) {
+    const base = String(item.system?.damage?.value ?? "").trim();
+    if (!base) return "";
+
+    const bonus = Number(item.system?.bonuses?.damageBonus) || 0;
+    const special = String(item.system?.damage?.special ?? "").trim();
+    return `${base}${bonus ? `+${bonus}` : ""}${special ? ` + ${special}` : ""}`;
+  }
+
+  async function getPropertyNames(item) {
+    const properties = [];
+    for (const property of Array.from(item.system?.properties ?? [])) {
+      if (property && typeof property === "object") {
+        const name = String(property.name ?? property.label ?? "").trim();
+        if (name) properties.push(name);
+        continue;
+      }
+
+      try {
+        const resolved = await fromUuid(property);
+        const name = String(resolved?.name ?? "").trim();
+        if (name) properties.push(name);
+      } catch (_err) {
+        // Omit unavailable Property documents rather than exposing UUIDs.
+      }
+    }
+    return properties;
+  }
+
+  function localizeRange(range) {
+    const key = CONFIG.SHADOWDARK?.RANGES?.[range];
+    return key ? game.i18n.localize(key) : String(range ?? "");
+  }
+
+  function localizeConfigValue(collection, key, fallback) {
+    const value = CONFIG.SHADOWDARK?.[collection]?.[key];
+    return value ? game.i18n.localize(value) : fallback;
+  }
+
+  function renderAttackMainLine(mainText, attackName) {
     const text = String(mainText ?? "").trim();
-    const name = String(weaponName ?? "").trim();
-    if (!name || !text.toLowerCase().startsWith(name.toLowerCase())) return escapeHtml(text);
-    return `<b>${escapeHtml(name)}</b>${escapeHtml(text.slice(name.length))}`;
+    const name = String(attackName ?? "").trim();
+    const index = text.toLowerCase().indexOf(name.toLowerCase());
+    if (!name || index < 0) return escapeHtml(text);
+    return `${escapeHtml(text.slice(0, index))}<b>${escapeHtml(name)}</b>${escapeHtml(text.slice(index + name.length))}`;
   }
 
   function stripTrailingProperties(text, properties) {

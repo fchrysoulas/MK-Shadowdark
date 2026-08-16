@@ -1,1 +1,5 @@
-{}
+{
+  "SHADOWDARK.item.effect.predefined_effect.onlyMagicalDamageSources": "Only Damaged by Magical Sources",
+  "SHADOWDARK.item.effect.predefined_effect.magicalAttacks": "Magical Attacks",
+  "SHADOWDARK.item.effect.predefined_effect.targetedSpellDc": "Targeted Spell DC"
+}

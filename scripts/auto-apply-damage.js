@@ -491,7 +491,7 @@
       let traitMode = null;
       let reducedDamage = null;
       let reductionProperties = [];
-      if (sourceProperties.length && typeof damageTraitsApi?.resolveReduction === "function") {
+      if (typeof damageTraitsApi?.resolveReduction === "function") {
         try {
           const resolved = await damageTraitsApi.resolveReduction(actor, sourceProperties, damage, sourceContext);
           reduction = Math.max(0, Number(resolved?.reduction) || 0);
@@ -562,6 +562,8 @@
             : "";
           const calculation = result.traitMode === "resistance"
             ? `${result.damage} &times; &frac12; = <strong>${result.appliedDamage}</strong>`
+            : result.traitMode === "nonmagical-immunity"
+              ? `${result.damage} &rarr; <strong>0</strong> (nonmagical source)`
             : result.traitMode === "immunity"
               ? `${result.damage} &rarr; <strong>0</strong>`
               : result.traitMode === "vulnerability"
@@ -766,7 +768,13 @@
       const damageTraitsApi = damageTraitsEnabled
         ? game.modules.get(MODULE_ID)?.api?.damageTraits
         : null;
-      let sourceContext = { properties: [], isWeapon: false, isMagicalWeapon: false };
+      let sourceContext = {
+        properties: [],
+        isWeapon: false,
+        isMagicalWeapon: false,
+        isMagicalSource: false,
+        magicSource: null
+      };
       if (typeof damageTraitsApi?.getSourceContext === "function") {
         try {
           sourceContext = await damageTraitsApi.getSourceContext(message);

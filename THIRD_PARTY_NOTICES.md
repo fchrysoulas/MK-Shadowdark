@@ -14,6 +14,6 @@ MK-Shadowdark is an independent add-on module for Foundry Virtual Tabletop and i
 
 ## Game-icons.net
 
-Bundled Camping activity icons are sourced from [Game-icons.net](https://game-icons.net/) and are used under the Creative Commons Attribution 3.0 license (CC BY 3.0).
+Bundled Camping activity and predefined-effect icons are sourced from [Game-icons.net](https://game-icons.net/) and are used under the Creative Commons Attribution 3.0 license (CC BY 3.0).
 
 Those icons retain their original CC BY 3.0 license and are not covered by the MIT License that applies to MK-Shadowdark's original source code.

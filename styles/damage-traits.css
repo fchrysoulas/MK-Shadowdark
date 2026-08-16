@@ -30,55 +30,91 @@
   font-style: italic;
 }
 
-.shadowdark.sheet .mk-npc-feature-traits-tab {
+.shadowdark.sheet .mk-npc-feature-effects-tab {
   overflow-y: auto;
 }
 
-.shadowdark.sheet .mk-npc-feature-traits-groups {
+.shadowdark.sheet .mk-npc-feature-effects {
   display: grid;
   gap: 0.65rem;
 }
 
-.shadowdark.sheet .mk-feature-trait-notes {
+.shadowdark.sheet .mk-feature-effect-notes {
   margin: 0;
 }
 
-.shadowdark.sheet .mk-npc-feature-traits-groups .mk-damage-traits-box {
-  margin-top: 0;
-}
-
-.shadowdark.sheet .mk-temporary-enchantment-content {
+.shadowdark.sheet .mk-feature-effect-toolbar {
   display: grid;
-  grid-template-columns: auto minmax(0, 1fr) auto;
-  gap: 0.45rem;
-  align-items: end;
-}
-
-.shadowdark.sheet .mk-temporary-enchantment-active,
-.shadowdark.sheet .mk-temporary-enchantment-source {
-  display: flex;
-  align-items: center;
+  grid-template-columns: auto minmax(10rem, 1fr) auto auto;
   gap: 0.35rem;
-  margin: 0;
+  align-items: center;
 }
 
-.shadowdark.sheet .mk-temporary-enchantment-source {
-  min-width: 0;
-}
-
-.shadowdark.sheet .mk-temporary-enchantment-source input {
-  min-width: 0;
-}
-
-.shadowdark.sheet .mk-temporary-enchantment-content button {
+.shadowdark.sheet .mk-feature-effect-toolbar button,
+.shadowdark.sheet .mk-feature-effect-toolbar select {
   width: auto;
+  min-width: 0;
   margin: 0;
+}
+
+.shadowdark.sheet .mk-feature-effect-list {
+  display: grid;
+  gap: 0.3rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.shadowdark.sheet .mk-feature-effect-row {
+  display: grid;
+  grid-template-columns: 2.25rem minmax(0, 1fr) auto auto;
+  gap: 0.45rem;
+  align-items: center;
+  padding: 0.35rem;
+  border: 1px solid rgba(0, 0, 0, 0.2);
+  border-radius: 3px;
+}
+
+.shadowdark.sheet .mk-feature-effect-row.disabled {
+  opacity: 0.55;
+}
+
+.shadowdark.sheet .mk-feature-effect-row > img {
+  width: 2.25rem;
+  height: 2.25rem;
+  border: 0;
+  object-fit: contain;
+}
+
+.shadowdark.sheet .mk-feature-effect-description {
+  display: grid;
+  min-width: 0;
+}
+
+.shadowdark.sheet .mk-feature-effect-description small {
+  overflow: hidden;
+  opacity: 0.75;
+  text-overflow: ellipsis;
   white-space: nowrap;
 }
 
-.shadowdark.sheet .mk-temporary-enchantment-content .notes {
-  grid-column: 1 / -1;
+.shadowdark.sheet .mk-feature-effect-transfer.inactive {
+  opacity: 0.3;
+}
+
+.shadowdark.sheet .mk-feature-effect-actions {
+  display: inline-flex;
+  gap: 0.15rem;
+}
+
+.shadowdark.sheet .mk-feature-effect-actions button {
+  width: 1.7rem;
+  min-width: 1.7rem;
+  height: 1.7rem;
   margin: 0;
+  padding: 0;
+  border: 0;
+  background: transparent;
 }
 
 .mk-damage-traits-dialog .mk-damage-trait-choices {

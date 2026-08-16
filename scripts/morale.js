@@ -1,4 +1,4 @@
-// MK-Shadowdark — Morale Automation
+// MK-Shadowdark - Morale Automation
 // Tracks all hostile NPC combatants as one force for Shadowdark morale.
 (() => {
   "use strict";
@@ -7,12 +7,12 @@
   const SUBMODULE = "Morale";
   const STATE_FLAG = "moraleState";
   const TOKEN_FLAG = "morale";
-  const STATE_VERSION = 2;
+  const STATE_VERSION = 3;
   const MORALE_DC = 15;
   const FORCE_KEY = "hostile-force";
   const FLEEING_STATUS_ID = "mk-shadowdark-fleeing";
   const FLEEING_STATUS_NAME = "Fleeing";
-  const FLEEING_STATUS_ICON = "icons/svg/wing.svg";
+  const FLEEING_STATUS_ICON = "icons/svg/terror.svg";
   const FEATURE_SETTINGS_TEMPLATE = `modules/${MODULE_ID}/templates/feature-settings.hbs`;
 
   const SETTINGS = Object.freeze({
@@ -22,12 +22,23 @@
     DEBUG: "moraleDebug"
   });
 
-  const evaluationTimers = new Map();
   const internalCombatUpdates = new Set();
 
   function moduleVersion() {
     const mod = game.modules.get(MODULE_ID);
     return mod?.version ?? mod?.data?.version ?? "unknown";
+  }
+
+  function setting(key, fallback) {
+    try {
+      return game.settings.get(MODULE_ID, key) ?? fallback;
+    } catch (_error) {
+      return fallback;
+    }
+  }
+
+  function enabled() {
+    return game.system?.id === "shadowdark" && setting(SETTINGS.ENABLED, true);
   }
 
   function log(...args) {
@@ -37,19 +48,6 @@
 
   function warn(...args) {
     console.warn(`${MODULE_ID} v${moduleVersion()} | ${SUBMODULE} |`, ...args);
-  }
-
-  function setting(key, fallback) {
-    try {
-      const value = game.settings.get(MODULE_ID, key);
-      return value ?? fallback;
-    } catch (_error) {
-      return fallback;
-    }
-  }
-
-  function enabled() {
-    return game.system?.id === "shadowdark" && setting(SETTINGS.ENABLED, true);
   }
 
   function getProperty(object, path) {
@@ -108,6 +106,36 @@
     return Number.isFinite(disposition) ? disposition === hostile : true;
   }
 
+  function sameInitiative(left, right) {
+    const a = Number(left?.initiative);
+    const b = Number(right?.initiative);
+    return Number.isFinite(a) && Number.isFinite(b) && a === b;
+  }
+
+  function turnsArray(combat) {
+    if (Array.isArray(combat?.turns)) return combat.turns;
+    return [];
+  }
+
+  function currentCombatant(combat) {
+    const turn = Number(combat?.turn);
+    if (!Number.isInteger(turn) || turn < 0) return null;
+    return turnsArray(combat)[turn] ?? null;
+  }
+
+  function isEnemyTurnStart(combat) {
+    if (!isStartedCombat(combat)) return false;
+    const turn = Number(combat.turn);
+    if (!Number.isInteger(turn) || turn < 0) return false;
+
+    const turns = turnsArray(combat);
+    const current = turns[turn];
+    if (!isHostileCombatant(current)) return false;
+
+    const previous = turn > 0 ? turns[turn - 1] : null;
+    return !(isHostileCombatant(previous) && sameInitiative(previous, current));
+  }
+
   function actorEncounterFlag(actor, key) {
     try {
       const data = actor?.getFlag?.(MODULE_ID, "encounter");
@@ -133,8 +161,7 @@
 
   function isMoraleImmune(combatant) {
     if (!combatant) return true;
-    const tokenData = tokenMoraleData(combatant.token);
-    if (tokenData.immune === true) return true;
+    if (tokenMoraleData(combatant.token).immune === true) return true;
     return actorEncounterFlag(combatant.actor, "moraleImmune") === true;
   }
 
@@ -159,15 +186,14 @@
     const base = Number(getProperty(actor, "system.abilities.wis.base"));
     const bonus = Number(getProperty(actor, "system.abilities.wis.bonus"));
     if (Number.isFinite(base)) {
-      const total = base + (Number.isFinite(bonus) ? bonus : 0);
-      return Math.floor((total - 10) / 2);
+      return Math.floor((base + (Number.isFinite(bonus) ? bonus : 0) - 10) / 2);
     }
-
     return 0;
   }
 
   function getHp(actor) {
     if (!actor) return null;
+
     const valueCandidates = [
       "system.attributes.hp.value",
       "system.hp.value",
@@ -181,6 +207,7 @@
 
     let value = null;
     let max = null;
+
     for (const path of valueCandidates) {
       const candidate = Number(getProperty(actor, path));
       if (Number.isFinite(candidate)) {
@@ -188,6 +215,7 @@
         break;
       }
     }
+
     for (const path of maxCandidates) {
       const candidate = Number(getProperty(actor, path));
       if (Number.isFinite(candidate) && candidate >= 0) {
@@ -202,7 +230,7 @@
 
   function combatantDefeated(combatant) {
     if (!combatant) return true;
-    if (combatant.defeated === true) return true;
+    if (combatant.defeated === true || combatant.isDefeated === true) return true;
 
     const hp = getHp(combatant.actor);
     if (hp && hp.value <= 0) return true;
@@ -286,10 +314,9 @@
 
   async function setState(combat, state) {
     if (!combat) return false;
-    const path = `flags.${MODULE_ID}.${STATE_FLAG}`;
     internalCombatUpdates.add(combat.id);
     try {
-      await combat.update({ [path]: state });
+      await combat.update({ [`flags.${MODULE_ID}.${STATE_FLAG}`]: state });
       return true;
     } finally {
       window.setTimeout(() => internalCombatUpdates.delete(combat.id), 0);
@@ -409,7 +436,14 @@
   async function applyFleeing(combatant) {
     const actor = combatant?.actor;
     if (!actor) return false;
-    if (actorEffects(actor).some(effect => effectHasStatus(effect, FLEEING_STATUS_ID))) return true;
+
+    const existing = actorEffects(actor).find(effect => effectHasStatus(effect, FLEEING_STATUS_ID));
+    if (existing) {
+      if (existing.img !== FLEEING_STATUS_ICON && typeof existing.update === "function") {
+        await existing.update({ img: FLEEING_STATUS_ICON });
+      }
+      return true;
+    }
 
     try {
       if (typeof actor.toggleStatusEffect === "function") {
@@ -440,7 +474,13 @@
 
   function registerFleeingStatus() {
     CONFIG.statusEffects ??= [];
-    if (CONFIG.statusEffects.some(status => status.id === FLEEING_STATUS_ID)) return;
+    const existing = CONFIG.statusEffects.find(status => status.id === FLEEING_STATUS_ID);
+    if (existing) {
+      existing.name = FLEEING_STATUS_NAME;
+      existing.img = FLEEING_STATUS_ICON;
+      return;
+    }
+
     CONFIG.statusEffects.push({
       id: FLEEING_STATUS_ID,
       name: FLEEING_STATUS_NAME,
@@ -461,12 +501,12 @@
       body = `
         <div>WIS ${escapeHtml(signed(entry.modifier))} vs DC ${MORALE_DC}</div>
         <div style="font-size:0.9em; opacity:0.8;">Using ${escapeHtml(leader?.name ?? leader?.actor?.name ?? "Leader")}</div>
-        <div style="font-size:1.08em; margin-top:0.2rem;"><strong>${entry.success ? "✓ MORALE HOLDS" : "✘ MORALE FAILED"}</strong> — ${escapeHtml(String(entry.total))}</div>
+        <div style="font-size:1.08em; margin-top:0.2rem;"><strong>${entry.success ? "✓ MORALE HOLDS" : "✘ MORALE FAILED"}</strong>: ${escapeHtml(String(entry.total))}</div>
         <div>${escapeHtml(consequence)}</div>`;
     } else {
       const rows = entries.map(entry => `
         <div style="display:grid; grid-template-columns:1fr auto; gap:0.6rem; align-items:center; padding:0.15rem 0;">
-          <span>${escapeHtml(entry.name)} — WIS ${escapeHtml(signed(entry.modifier))}</span>
+          <span>${escapeHtml(entry.name)} | WIS ${escapeHtml(signed(entry.modifier))}</span>
           <strong>${escapeHtml(String(entry.total))} ${entry.success ? "✓" : "✘ Fleeing"}</strong>
         </div>`).join("");
       body = `${rows}<div style="margin-top:0.35rem;">${failing.length} of ${entries.length} remaining enemies failed morale.</div>`;
@@ -515,6 +555,8 @@
     force.checked = true;
     force.result = {
       checkedAt: Date.now(),
+      round: Number(combat.round ?? 0),
+      turn: Number(combat.turn ?? 0),
       trigger: deepClone(trigger),
       mode: null,
       entries: [],
@@ -598,8 +640,9 @@
     }
   }
 
-  async function evaluateCombat(combat) {
+  async function evaluateCombat(combat, { requireEnemyTurnStart = true } = {}) {
     if (!enabled() || !isAuthority() || !isStartedCombat(combat)) return false;
+    if (requireEnemyTurnStart && !isEnemyTurnStart(combat)) return false;
 
     const state = await ensureSnapshot(combat);
     if (!state?.force || state.force.checked === true) return false;
@@ -609,61 +652,18 @@
     return executeMoraleCheck(combat, state, trigger);
   }
 
-  function scheduleEvaluation(combat, delay = 80) {
-    if (!combat?.id || !enabled()) return;
-    const existing = evaluationTimers.get(combat.id);
-    if (existing) window.clearTimeout(existing);
-
-    const timer = window.setTimeout(() => {
-      evaluationTimers.delete(combat.id);
-      void evaluateCombat(combat);
-    }, delay);
-    evaluationTimers.set(combat.id, timer);
-  }
-
-  function combatsContainingActor(actor) {
-    if (!actor) return [];
-    return [...(game.combats ?? [])].filter(combat => {
-      if (!isStartedCombat(combat)) return false;
-      return combatantsArray(combat).some(combatant => {
-        if (!combatant.actor) return false;
-        if (combatant.actor.uuid && actor.uuid) return combatant.actor.uuid === actor.uuid;
-        return combatant.actorId === actor.id;
-      });
-    });
-  }
-
-  function changedValue(changes, path) {
-    if (!changes || typeof changes !== "object") return undefined;
-    if (Object.prototype.hasOwnProperty.call(changes, path)) return changes[path];
-    return getProperty(changes, path);
-  }
-
-  function onActorUpdated(actor, changes) {
-    if (!enabled() || !isAuthority()) return;
-    const hpChanged = changedValue(changes, "system.attributes.hp.value") !== undefined
-      || changedValue(changes, "system.hp.value") !== undefined
-      || changedValue(changes, "system.hp") !== undefined;
-    if (!hpChanged) return;
-
-    for (const combat of combatsContainingActor(actor)) scheduleEvaluation(combat);
-  }
-
-  function onCombatantChanged(combatant) {
-    if (!enabled() || !isAuthority()) return;
-    const combat = combatant?.parent;
-    if (combat) scheduleEvaluation(combat);
-  }
-
-  function onCombatUpdated(combat, changes) {
+  async function onCombatUpdated(combat, changes) {
     if (!enabled() || !isAuthority() || internalCombatUpdates.has(combat.id)) return;
-    const relevant = Object.prototype.hasOwnProperty.call(changes ?? {}, "round")
-      || Object.prototype.hasOwnProperty.call(changes ?? {}, "turn")
-      || Object.prototype.hasOwnProperty.call(changes ?? {}, "active");
-    if (!relevant) return;
 
-    if (isStartedCombat(combat)) {
-      void ensureSnapshot(combat).then(() => scheduleEvaluation(combat, 0));
+    const turnChanged = Object.prototype.hasOwnProperty.call(changes ?? {}, "turn");
+    const roundChanged = Object.prototype.hasOwnProperty.call(changes ?? {}, "round");
+    const activeChanged = Object.prototype.hasOwnProperty.call(changes ?? {}, "active");
+    if (!turnChanged && !roundChanged && !activeChanged) return;
+    if (!isStartedCombat(combat)) return;
+
+    await ensureSnapshot(combat);
+    if (isEnemyTurnStart(combat)) {
+      await evaluateCombat(combat, { requireEnemyTurnStart: true });
     }
   }
 
@@ -672,7 +672,6 @@
     await clearState(combat);
     if (isStartedCombat(combat)) {
       await ensureSnapshot(combat, { force: true });
-      scheduleEvaluation(combat, 0);
     }
     ui.notifications?.info("MK-Shadowdark | Morale strength reset for this combat.");
     return true;
@@ -711,7 +710,6 @@
 
     const current = tokenMoraleData(doc);
     await writeTokenMoraleData(doc, { ...current, leader: leader === true });
-    scheduleEvaluation(game.combat, 0);
     return true;
   }
 
@@ -721,7 +719,6 @@
     if (!doc) return false;
     const current = tokenMoraleData(doc);
     await writeTokenMoraleData(doc, { ...current, immune: immune === true });
-    scheduleEvaluation(game.combat, 0);
     return true;
   }
 
@@ -767,7 +764,7 @@
     const definitions = {
       [SETTINGS.ENABLED]: {
         name: "Morale | Enabled",
-        hint: "Tracks all hostile NPCs as one combat-start force. At half strength, a living leader rolls once for the force; without a leader, each remaining NPC checks morale individually. Solo enemies check at half HP.",
+        hint: "Tracks all hostile NPCs as one combat-start force. Morale is checked only at the start of the enemies' turn. At half strength, a living leader rolls once for the force; without a leader, each remaining NPC checks individually. Solo enemies check at half HP.",
         scope: "world",
         type: Boolean,
         default: true
@@ -792,7 +789,7 @@
       },
       [SETTINGS.DEBUG]: {
         name: "Morale | Debug Mode",
-        hint: "Logs morale snapshots, triggers, rolls, and Fleeing applications to the browser console.",
+        hint: "Logs morale snapshots, enemy-turn triggers, rolls, and Fleeing applications to the browser console.",
         scope: "world",
         type: Boolean,
         default: false
@@ -854,7 +851,7 @@
       getData() {
         return {
           title: "Morale",
-          hint: "Automate Shadowdark DC 15 WIS morale checks for the hostile force and mark failed enemies as Fleeing.",
+          hint: "Automate Shadowdark DC 15 WIS morale checks at the start of the enemy turn and mark failed enemies as Fleeing.",
           sections: [
             {
               title: "Automation",
@@ -898,11 +895,12 @@
     mod.api.morale = {
       getState,
       snapshot: combat => ensureSnapshot(combat ?? game.combat, { force: false }),
-      evaluate: combat => evaluateCombat(combat ?? game.combat),
+      evaluate: combat => evaluateCombat(combat ?? game.combat, { requireEnemyTurnStart: false }),
       reset: combat => resetCombat(combat ?? game.combat),
       setLeader,
       setImmune,
-      applyFleeing
+      applyFleeing,
+      isEnemyTurnStart: combat => isEnemyTurnStart(combat ?? game.combat)
     };
   }
 
@@ -915,29 +913,30 @@
     exposeApi();
     if (!enabled() || !isAuthority()) return;
     for (const combat of game.combats ?? []) {
-      if (isStartedCombat(combat)) {
-        void ensureSnapshot(combat).then(() => scheduleEvaluation(combat, 0));
-      }
+      if (isStartedCombat(combat)) void ensureSnapshot(combat);
     }
   });
 
-  Hooks.on("updateActor", (actor, changes) => onActorUpdated(actor, changes));
-  Hooks.on("updateCombatant", combatant => onCombatantChanged(combatant));
-  Hooks.on("deleteCombatant", combatant => onCombatantChanged(combatant));
   Hooks.on("createCombatant", combatant => {
-    // Reinforcements do not alter the combat-start baseline automatically.
-    // They are included only if the GM explicitly resets morale strength.
     log("combatant added; baseline unchanged", combatant?.name ?? combatant?.id);
   });
+
+  Hooks.on("deleteCombatant", combatant => {
+    log("combatant removed; baseline remains based on combat start", combatant?.name ?? combatant?.id);
+  });
+
   Hooks.on("combatStart", combat => {
     if (!enabled() || !isAuthority()) return;
-    void ensureSnapshot(combat, { force: true }).then(() => scheduleEvaluation(combat, 0));
+    void ensureSnapshot(combat, { force: true }).then(async () => {
+      if (isEnemyTurnStart(combat)) {
+        await evaluateCombat(combat, { requireEnemyTurnStart: true });
+      }
+    });
   });
-  Hooks.on("updateCombat", (combat, changes) => onCombatUpdated(combat, changes));
-  Hooks.on("deleteCombat", combat => {
-    const timer = evaluationTimers.get(combat?.id);
-    if (timer) window.clearTimeout(timer);
-    evaluationTimers.delete(combat?.id);
+
+  Hooks.on("updateCombat", (combat, changes) => {
+    void onCombatUpdated(combat, changes);
   });
+
   Hooks.on("renderTokenHUD", (app, html) => renderTokenHud(app, html));
 })();

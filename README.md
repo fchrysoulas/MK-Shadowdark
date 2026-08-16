@@ -19,6 +19,7 @@ Modular quality-of-life tools, gameplay automation, party management, and charac
 - **Equipment Hands**: checks equipped weapons, shields, and hand-occupying gear against available hand slots, either warning or blocking invalid loadouts.
 - **Token Equipment Display**: shows held gear beside player tokens, displays two-handed gear once above or below the token, and adds a smaller configurable Quickdraw row.
 - **Focus Tracker**: tracks successfully cast Focus spells, enforces configurable capacity, requests maintenance checks at the caster's turn or after damage, and exposes actor-sheet and chat-card controls with a token status icon.
+- **Initiative**: rolls all hostile NPCs together using the highest DEX modifier while preserving individual player rolls and keeping the shared enemy slot together on tied initiatives.
 - **Targeted Spell DC Effects**: lets hostile targets set a spellcasting DC through an Active Effect, for creature defenses such as a lich's Spellward.
 - **Group Sheet**: adds a party/group actor sheet for members, hirelings and mounts, shared inventory, active torch tracking, configurable tab backgrounds and activity columns, Camping task assignment, and ration-aware party resting.
 - **Paper Chat**: provides twelve paper-inspired chat themes and a GM visual editor for theme-specific message styling.

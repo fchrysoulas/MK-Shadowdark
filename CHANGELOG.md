@@ -1,5 +1,16 @@
 # Changelog
 
+## 1.9.1
+
+- Fixed grouped enemy initiative so **Next Turn** skips the remaining NPC entries in the shared enemy slot and advances to the next eligible combatant.
+- Enemy initiative chat rolls now report the hostile-combatant count and whether a morale leader is assigned.
+- Removed the Reset Morale Strength control from the Token HUD.
+
+## 1.9.0
+
+- Added grouped hostile-enemy initiative: all hostile NPCs share one roll using the highest DEX modifier, while player characters retain individual initiative rolls.
+- Added morale automation for hostile NPCs: makes one DC 15 WIS check per group at half strength, or per solo enemy at half HP, with automatic identical-NPC grouping, GM Token HUD controls, visibility settings, and reset support.
+
 ## 1.8.0
 
 - Added target-aware Active Effect spell DC overrides. Any targeted actor can use `system.roll.spell.dc` (for example, `18`) to set the caster's spellcasting DC before the roll dialog opens, regardless of Change mode.

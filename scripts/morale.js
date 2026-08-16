@@ -766,17 +766,7 @@
       void setLeader(doc, data.leader !== true).then(() => app.render?.(false));
     });
 
-    const resetControl = document.createElement("div");
-    resetControl.className = "control-icon mk-morale-reset-control";
-    resetControl.title = "Reset Morale Strength for Current Combat";
-    resetControl.innerHTML = '<i class="fas fa-rotate"></i>';
-    resetControl.addEventListener("click", event => {
-      event.preventDefault();
-      event.stopPropagation();
-      void resetCombat(game.combat);
-    });
-
-    right.append(groupControl, leaderControl, resetControl);
+    right.append(groupControl, leaderControl);
   }
 
   function registerSettings() {

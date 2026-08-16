@@ -85,6 +85,31 @@
     return combatantsArray(combat).filter(isHostileNpc);
   }
 
+  function hasAssignedLeader(combatant) {
+    const token = combatant?.token;
+    try {
+      const morale = token?.getFlag?.(MODULE_ID, "morale");
+      if (morale?.leader === true) return true;
+    } catch (_error) {
+      // Fall through to source data.
+    }
+    return token?.flags?.[MODULE_ID]?.morale?.leader === true
+      || token?._source?.flags?.[MODULE_ID]?.morale?.leader === true;
+  }
+
+  function enemyLeaderSummary(enemies) {
+    const leaders = enemies.filter(hasAssignedLeader);
+    if (!leaders.length) return { leaders, label: "No assigned leader" };
+
+    const names = leaders.map(combatant => combatant.name ?? combatant.actor?.name ?? "Unnamed leader");
+    return {
+      leaders,
+      label: leaders.length === 1
+        ? `Assigned leader: ${names[0]}`
+        : `Assigned leaders: ${names.join(", ")}`
+    };
+  }
+
   function selectEnemyRoller(combat) {
     return enemyCombatants(combat)
       .sort((left, right) => {
@@ -104,6 +129,73 @@
     return { formula, rollData };
   }
 
+  function sortGroupedEnemyTie(left, right, nativeResult) {
+    if (!enabled()) return nativeResult;
+
+    const numericInitiative = value => {
+      if (value === null || value === undefined || value === "") return null;
+      const number = Number(value);
+      return Number.isFinite(number) ? number : null;
+    };
+    const leftInitiative = numericInitiative(left?.initiative);
+    const rightInitiative = numericInitiative(right?.initiative);
+    if (leftInitiative === null || rightInitiative === null) return nativeResult;
+    if (leftInitiative !== rightInitiative) return nativeResult;
+
+    const leftIsEnemy = isHostileNpc(left);
+    const rightIsEnemy = isHostileNpc(right);
+    if (leftIsEnemy === rightIsEnemy) return nativeResult;
+
+    // Keep every member of a shared enemy initiative slot together so one GM
+    // turn can advance past the whole group without landing on a tied PC.
+    return leftIsEnemy ? -1 : 1;
+  }
+
+  function sameInitiative(left, right) {
+    const leftValue = left?.initiative;
+    const rightValue = right?.initiative;
+    if (leftValue === null || leftValue === undefined || leftValue === "") return false;
+    if (rightValue === null || rightValue === undefined || rightValue === "") return false;
+    const leftInitiative = Number(leftValue);
+    const rightInitiative = Number(rightValue);
+    return Number.isFinite(leftInitiative)
+      && Number.isFinite(rightInitiative)
+      && leftInitiative === rightInitiative;
+  }
+
+  async function nextGroupedEnemyTurn(combat, originalNextTurn) {
+    if (!enabled() || !game.user?.isGM || combat?.round === 0) {
+      return originalNextTurn.call(combat);
+    }
+
+    const turn = combat.turn ?? -1;
+    const current = combat.turns?.[turn];
+    if (!isHostileNpc(current)) return originalNextTurn.call(combat);
+
+    let nextTurn = turn + 1;
+    while (nextTurn < combat.turns.length) {
+      const candidate = combat.turns[nextTurn];
+      if (isHostileNpc(candidate) && sameInitiative(current, candidate)) {
+        nextTurn += 1;
+        continue;
+      }
+      if (combat.settings?.skipDefeated && candidate?.isDefeated) {
+        nextTurn += 1;
+        continue;
+      }
+      break;
+    }
+
+    if (nextTurn >= combat.turns.length) return combat.nextRound();
+
+    const advanceTime = combat.getTimeDelta(combat.round, combat.turn, combat.round, nextTurn);
+    const updateData = { round: combat.round, turn: nextTurn };
+    const updateOptions = { direction: 1, worldTime: { delta: advanceTime } };
+    Hooks.callAll("combatTurn", combat, updateData, updateOptions);
+    await combat.update(updateData, updateOptions);
+    return combat;
+  }
+
   async function rollEnemySide(combat, options = {}) {
     if (!combat || !game.user?.isGM) return combat;
 
@@ -112,6 +204,7 @@
 
     const roller = selectEnemyRoller(combat);
     if (!roller?.actor) return combat;
+    const leaderSummary = enemyLeaderSummary(enemies);
 
     const { formula, rollData } = initiativeFormula(roller);
     const roll = await new Roll(formula, rollData).evaluate();
@@ -128,7 +221,7 @@
 
     await roll.toMessage({
       speaker: ChatMessage.getSpeaker?.({ actor: roller.actor }) ?? {},
-      flavor: `Enemy Initiative — ${roller.name ?? roller.actor.name ?? "Enemies"} (highest DEX ${signed(dexModifier(roller.actor))})`
+      flavor: `Enemy Initiative — ${roller.name ?? roller.actor.name ?? "Enemies"} (highest DEX ${signed(dexModifier(roller.actor))}) | ${enemies.length} combatant${enemies.length === 1 ? "" : "s"} | ${leaderSummary.label}`
     }, messageOptions);
 
     log("enemy side rolled", {
@@ -136,7 +229,8 @@
       dex: dexModifier(roller.actor),
       formula,
       total,
-      combatants: enemies.map(combatant => combatant.name)
+      combatants: enemies.map(combatant => combatant.name),
+      leaders: leaderSummary.leaders.map(combatant => combatant.name)
     });
 
     return combat;
@@ -148,6 +242,12 @@
     if (!prototype || typeof prototype.rollInitiative !== "function" || prototype[PATCH_MARK]) return;
 
     const originalRollInitiative = prototype.rollInitiative;
+    const originalNextTurn = typeof prototype.nextTurn === "function"
+      ? prototype.nextTurn
+      : null;
+    const originalSortCombatants = typeof prototype._sortCombatants === "function"
+      ? prototype._sortCombatants
+      : null;
 
     Object.defineProperty(prototype, PATCH_MARK, {
       value: { originalRollInitiative },
@@ -189,7 +289,23 @@
       return this;
     };
 
-    log("grouped enemy initiative patch installed");
+    if (originalNextTurn) {
+      prototype.nextTurn = function() {
+        return nextGroupedEnemyTurn(this, originalNextTurn);
+      };
+    }
+
+    if (originalSortCombatants) {
+      prototype._sortCombatants = function(left, right) {
+        const nativeResult = originalSortCombatants.call(this, left, right);
+        return sortGroupedEnemyTie(left, right, nativeResult);
+      };
+    }
+
+    log("grouped enemy initiative patch installed", {
+      groupedTieBreak: Boolean(originalSortCombatants),
+      groupedTurnAdvance: Boolean(originalNextTurn)
+    });
   }
 
   function registerSettings() {

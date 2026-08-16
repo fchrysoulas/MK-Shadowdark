@@ -1,5 +1,24 @@
 # Changelog
 
+## 1.9.5
+
+- Consolidated the module-provided predefined Active Effects into a shared registry so they are registered consistently across actor and item sheets.
+
+## 1.9.4
+
+- Added the predefined **Immune to Morale Checks** Active Effect for creatures that should not participate in morale checks.
+
+## 1.9.3
+
+- Morale checks now resolve only at the start of the shared enemy turn, preventing them from interrupting player turns or unrelated combat updates.
+- Updated the Fleeing status icon and standardized grouped-enemy morale chat output.
+
+## 1.9.2
+
+- Reworked morale to treat all hostile NPC combatants as one enemy force instead of separate NPC groups.
+- At half strength, an assigned living leader makes one morale check for the force; without one, each remaining eligible NPC checks individually.
+- Failed morale checks now automatically apply the **Fleeing** status to the affected enemies.
+
 ## 1.9.1
 
 - Fixed grouped enemy initiative so **Next Turn** skips the remaining NPC entries in the shared enemy slot and advances to the next eligible combatant.

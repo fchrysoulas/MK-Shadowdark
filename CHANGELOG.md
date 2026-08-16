@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.9.6
+
+- Removed the inadvertently restored Reset Morale Strength control from the Token HUD.
+
 ## 1.9.5
 
 - Consolidated the module-provided predefined Active Effects into a shared registry so they are registered consistently across actor and item sheets.

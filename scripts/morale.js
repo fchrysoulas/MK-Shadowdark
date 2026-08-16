@@ -744,17 +744,7 @@
       void setLeader(doc, data.leader !== true).then(() => app.render?.(false));
     });
 
-    const resetControl = document.createElement("div");
-    resetControl.className = "control-icon mk-morale-reset-control";
-    resetControl.title = "Reset Morale Strength for Current Combat";
-    resetControl.innerHTML = '<i class="fas fa-rotate"></i>';
-    resetControl.addEventListener("click", event => {
-      event.preventDefault();
-      event.stopPropagation();
-      void resetCombat(game.combat);
-    });
-
-    right.append(leaderControl, resetControl);
+    right.append(leaderControl);
   }
 
   function registerSettings() {
@@ -782,7 +772,7 @@
       },
       [SETTINGS.TOKEN_HUD]: {
         name: "Morale | Token HUD Controls",
-        hint: "Adds GM Token HUD buttons for marking the force leader and resetting the current combat's morale baseline.",
+        hint: "Adds a GM Token HUD button for marking the force leader.",
         scope: "world",
         type: Boolean,
         default: true

@@ -10,7 +10,8 @@ test("GM Screen morale member view exposes leader, immunity, and Fleeing", () =>
   assert.match(controls, /immune: moraleImmune\(combatant\?\.actor\)/);
   assert.match(controls, /fleeing: fleeing\(combatant\?\.actor\)/);
   assert.match(controls, /FLEEING_STATUS_ID = "mk-shadowdark-fleeing"/);
-  assert.match(controls, /"encounter\.moraleImmune"/);
+  assert.match(controls, /PREDEFINED_EFFECT_KEYS\.MORALE_IMMUNE/);
+  assert.doesNotMatch(controls, /["']encounter\.moraleImmune["']/);
 });
 
 test("GM Screen morale result summary covers leader and individual results", () => {

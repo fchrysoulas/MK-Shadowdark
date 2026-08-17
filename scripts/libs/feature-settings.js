@@ -205,6 +205,13 @@ Hooks.once("init", () => {
     type: Boolean,
     default: false
   });
+  registerSetting("moraleMigrationVersion", {
+    name: "Morale Migration Version",
+    scope: "world",
+    config: false,
+    type: Number,
+    default: 0
+  });
 
   registerSetting("corpseTokenEnabled", {
     name: "Corpse Token: Enabled",

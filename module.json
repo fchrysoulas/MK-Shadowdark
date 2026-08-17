@@ -58,6 +58,7 @@
     "scripts/gm-screen/live-refresh.js",
     "scripts/gm-screen/assignment-controls.js",
     "scripts/gm-screen/encounter-controls.js",
+    "scripts/gm-screen/rest-controls.js",
     "scripts/mk-shadowdark.js"
   ],
   "styles": [

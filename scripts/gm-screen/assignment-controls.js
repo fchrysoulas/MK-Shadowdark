@@ -214,7 +214,7 @@ function watchDialogContent(state, party) {
     const watch = watches[index] ?? null;
     const enabled = Boolean(watch);
     return `
-      <fieldset data-mk-watch-slot data-slot-index="${index}">
+      <fieldset data-mk-watch-slot data-slot-index="${index}" data-watch-id="${escapeHtml(watch?.id ?? "")}">
         <legend>Watch ${index + 1}</legend>
         <div class="form-group">
           <label>Use slot</label>
@@ -249,7 +249,7 @@ function readWatchDialog(html) {
   return Array.from(root.querySelectorAll("[data-mk-watch-slot]"))
     .filter(row => row.querySelector('[name="enabled"]')?.checked)
     .map((row, index) => ({
-      id: `watch-${index + 1}`,
+      id: String(row.dataset.watchId ?? "").trim() || `watch-${index + 1}`,
       label: String(row.querySelector('[name="label"]')?.value ?? "").trim() || `Watch ${index + 1}`,
       actorUuids: Array.from(row.querySelector('[name="members"]')?.selectedOptions ?? [])
         .map(option => String(option.value ?? ""))

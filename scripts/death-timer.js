@@ -1,3 +1,9 @@
+import {
+  findConfiguredStatus,
+  setConfiguredStatus,
+  statusLabel
+} from "./death-status.js";
+
 (() => {
   const MODULE_ID = "mk-shadowdark";
   const SUBMODULE = "Death Timer";
@@ -159,35 +165,8 @@
     `;
   }
 
-
-  function normalizeBuiltInDeadStatusConfig() {
-    const effects = CONFIG.statusEffects ?? [];
-
-    const dead = effects.find(se => {
-      const id = String(se?.id ?? "").toLowerCase();
-      const raw = String(se?.name ?? se?.title ?? "").toLowerCase();
-      return (
-        id === "dead" ||
-        raw === "dead" ||
-        raw === "effect.statusdead" ||
-        raw === "effect.status.dead"
-      );
-    });
-
-    if (!dead) return;
-
-    dead.name = "Dead";
-    dead.title = "Dead";
-    dead.description = "Dead";
-  }
-
   function getBuiltInDeadStatus() {
-    const effects = CONFIG.statusEffects ?? [];
-    return effects.find(se => {
-      const id = String(se?.id ?? "").toLowerCase();
-      const name = String(se?.name ?? se?.title ?? "").toLowerCase();
-      return id === "dead" || name === "dead";
-    }) ?? null;
+    return findConfiguredStatus(CONFIG.statusEffects ?? [], "dead");
   }
 
   function getBuiltInDeadStatusId() {
@@ -195,18 +174,12 @@
   }
 
   function getBuiltInDeadStatusLabel() {
-    const se = getBuiltInDeadStatus();
-    const raw = String(se?.name ?? se?.title ?? "Dead");
-
-    if (!raw) return "Dead";
-    if (/^effect\./i.test(raw)) return "Dead";
-
-    return raw;
+    return statusLabel(getBuiltInDeadStatus(), "Dead");
   }
 
   function getBuiltInDeadStatusIcon() {
-    const se = getBuiltInDeadStatus();
-    return se?.img ?? se?.icon ?? "icons/svg/skull.svg";
+    const status = getBuiltInDeadStatus();
+    return status?.img ?? status?.icon ?? "icons/svg/skull.svg";
   }
 
   function refreshActorTokenEffects(actor) {
@@ -313,48 +286,30 @@
   }
 
   async function upsertDeadEffect(actor) {
-    const statusId = getBuiltInDeadStatusId();
-    const icon = getBuiltInDeadStatusIcon();
-
-    const data = {
-      name: "Dead",
-      description: "Dead",
-      img: icon,
-      statuses: [statusId],
-      disabled: false,
-      changes: [],
-      flags: {
-        [MODULE_ID]: {
-          isDeadCondition: true
-        },
-        core: {
-          statusId
-        }
-      }
-    };
-
-    const existing = findDeadEffect(actor);
-    if (existing) {
-      await existing.update(data);
-    } else {
-      await actor.createEmbeddedDocuments("ActiveEffect", [data]);
+    const status = getBuiltInDeadStatus();
+    if (!status?.id) {
+      throw new Error("Foundry Dead status is not configured.");
     }
 
+    await setConfiguredStatus(actor, CONFIG.statusEffects ?? [], status.id, true);
     refreshActorTokenEffects(actor);
   }
 
   async function removeDeadEffect(actor) {
-    const statusId = getBuiltInDeadStatusId();
+    const status = getBuiltInDeadStatus();
+    if (status?.id) {
+      await setConfiguredStatus(actor, CONFIG.statusEffects ?? [], status.id, false);
+    }
 
-    const effects = actor.effects.filter(e =>
-      effectHasStatus(e, statusId) ||
-      e.getFlag(MODULE_ID, "isDeadCondition") === true ||
-      (typeof e.name === "string" && e.name.toUpperCase() === getBuiltInDeadStatusLabel().toUpperCase()) ||
-      (typeof e.name === "string" && e.name.toUpperCase() === "DEAD")
+    // Clean up only MK-Shadowdark's legacy hand-built Dead effects if any
+    // remain after the built-in status API has run.
+    const legacyEffects = actor.effects.filter(
+      effect => effect.getFlag(MODULE_ID, "isDeadCondition") === true
     );
+    if (legacyEffects.length) {
+      await actor.deleteEmbeddedDocuments("ActiveEffect", legacyEffects.map(effect => effect.id));
+    }
 
-    if (!effects.length) return;
-    await actor.deleteEmbeddedDocuments("ActiveEffect", effects.map(e => e.id));
     refreshActorTokenEffects(actor);
   }
 
@@ -501,7 +456,6 @@
 
   Hooks.once("ready", () => {
     ensureStylesOnce();
-    normalizeBuiltInDeadStatusConfig();
     dtLog("ready | system:", game.system?.id, "| built-in DEAD:", getBuiltInDeadStatus());
   });
 
@@ -529,7 +483,6 @@
     await tickDeathTimer(actor, existingTurns);
   }
 
-  // Track HP changes so any healing clears Death Timer / Dead
   Hooks.on("preUpdateActor", (actor, change, options) => {
     if (game.system?.id !== "shadowdark") return;
     options._mkPrevHp = getHpPathAndValue(actor).value;

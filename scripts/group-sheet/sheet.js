@@ -118,7 +118,7 @@ async function createGroupActor({ name = "New Group", folder = null } = {}) {
   return actor;
 }
 
-class SDXGroupSheet extends ActorSheetBase {
+class MKGroupSheet extends ActorSheetBase {
   static get defaultOptions() {
     return foundry.utils.mergeObject(super.defaultOptions, {
       classes: ["shadowdark", "sheet", "actor", "mk-group-sheet-window"],
@@ -465,11 +465,6 @@ class SDXGroupSheet extends ActorSheetBase {
       resetButton.removeAttribute("title");
       resetButton.setAttribute("aria-label", label);
       resetButton.innerHTML = '<i class="fas fa-undo"></i>';
-
-      const roster = resetButton.closest(".mk-camping-roster");
-      if (roster && !roster.contains(resetButton)) {
-        roster.appendChild(resetButton);
-      }
     });
   }
 
@@ -1684,5 +1679,5 @@ class SDXGroupSheet extends ActorSheetBase {
 }
 export {
   createGroupActor,
-  SDXGroupSheet,
+  MKGroupSheet,
 };

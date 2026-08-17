@@ -25,7 +25,7 @@ import {
 } from "./activities.js";
 import { getSettingValue } from "./group-settings.js";
 import { handleTravelRollChatMessage } from "./rolls.js";
-import { createGroupActor, SDXGroupSheet } from "./sheet.js";
+import { createGroupActor, MKGroupSheet } from "./sheet.js";
 import { travelPromptChatMessagesSeen } from "./state.js";
 import { applyTravelPlayerRollResult, handleTravelPromptTransport } from "./travel-prompt.js";
 import { mkGroupLog } from "./utils.js";
@@ -232,7 +232,7 @@ function patchActorCreateDialog() {
 
 function rerenderOpenGroupSheets(updatedActor) {
   for (const app of Object.values(ui.windows)) {
-    if (!(app instanceof SDXGroupSheet)) continue;
+    if (!(app instanceof MKGroupSheet)) continue;
 
     const groupData = getGroupData(app.actor);
 
@@ -450,7 +450,7 @@ function registerGroupSheet() {
     throw new Error(`${MODULE_ID} | ${SUBMODULE} | Foundry Actor sheet registration API is unavailable.`);
   }
 
-  ActorsCollection.registerSheet(MODULE_ID, SDXGroupSheet, {
+  ActorsCollection.registerSheet(MODULE_ID, MKGroupSheet, {
     types: ["Player"],
     makeDefault: false,
     label: "MK-Shadowdark: Group Sheet",

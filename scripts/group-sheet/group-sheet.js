@@ -1,7 +1,7 @@
-import { registerGroupSheet } from "./group-sheet/registration.js";
-import "./group-sheet/dashboard-layout.js";
+import { registerGroupSheet } from "./registration.js";
+import "./dashboard-layout.js";
 
-export { createGroupActor, SDXGroupSheet } from "./group-sheet/sheet.js";
+export { createGroupActor, SDXGroupSheet } from "./sheet.js";
 export { registerGroupSheet };
 
 function getSheetRoot(html) {

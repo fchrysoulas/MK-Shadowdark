@@ -5,7 +5,7 @@ import {
   TIME_PASSES_SPLASH_EVENT,
   createTimePassesSplashEvent,
   isTimePassesSplashEvent
-} from "../scripts/time-passes-socket.js";
+} from "../scripts/time-passes/time-passes-socket.js";
 
 test("creates a typed Time Passes splash event", () => {
   const payload = { title: "time passes...", durationMs: 2000 };

@@ -7,6 +7,10 @@ import {
   broadcastTokenShake,
   installTokenShakeSocket
 } from "./token-shake.js";
+import {
+  calculateHpChange,
+  resolveAutoDamageOperation
+} from "./auto-damage-operation.js";
 
 (() => {
   const MODULE_ID = "mk-shadowdark";
@@ -371,15 +375,15 @@ import {
 
   function resolveHpField(actor) {
     const paths = [
-      "system.hp.value",
-      "system.hp.current",
-      "system.hp",
-      "system.attributes.hp.value",
-      "system.attributes.hp.hp",
-      "system.attributes.hp"
+      ["system.hp.value", "system.hp.max"],
+      ["system.hp.current", "system.hp.max"],
+      ["system.hp", null],
+      ["system.attributes.hp.value", "system.attributes.hp.max"],
+      ["system.attributes.hp.hp", "system.attributes.hp.max"],
+      ["system.attributes.hp", null]
     ];
 
-    for (const path of paths) {
+    for (const [path, maxPath] of paths) {
       let value = foundry.utils.getProperty(actor, path);
       if (typeof value === "string") {
         const num = Number(value);
@@ -387,17 +391,23 @@ import {
       }
 
       if (typeof value === "number") {
-        return { path, value };
+        let max = maxPath ? foundry.utils.getProperty(actor, maxPath) : null;
+        if (typeof max === "string") max = Number(max);
+        return {
+          path,
+          value,
+          max: Number.isFinite(max) ? max : null
+        };
       }
     }
 
     return null;
   }
 
-  async function applyDamageToTargets(message, damage, sourceContext = {}, targetUuids = []) {
+  async function applyAmountToTargets(message, amount, operation, sourceContext = {}, targetUuids = []) {
     const targets = await resolveTargetDocuments(targetUuids);
     if (!targets.length) {
-      adLog(`Message ${message.id}: target snapshot has no resolvable tokens; nothing to damage.`);
+      adLog(`Message ${message.id}: target snapshot has no resolvable tokens; nothing to ${operation}.`);
       return [];
     }
 
@@ -426,9 +436,9 @@ import {
       let traitMode = null;
       let reducedDamage = null;
       let reductionProperties = [];
-      if (typeof damageTraitsApi?.resolveReduction === "function") {
+      if (operation === "damage" && typeof damageTraitsApi?.resolveReduction === "function") {
         try {
-          const resolved = await damageTraitsApi.resolveReduction(actor, sourceProperties, damage, sourceContext);
+          const resolved = await damageTraitsApi.resolveReduction(actor, sourceProperties, amount, sourceContext);
           reduction = Math.max(0, Number(resolved?.reduction) || 0);
           damageIncrease = Math.max(0, Number(resolved?.increase) || 0);
           traitMode = resolved?.mode ?? null;
@@ -444,13 +454,24 @@ import {
         }
       }
 
-      const { path: hpPath, value: currentHP } = hpInfo;
-      const appliedDamage = reducedDamage ?? Math.max(0, damage - reduction);
-      const newHP = Math.max(0, currentHP - appliedDamage);
+      const { path: hpPath, value: currentHP, max: maxHP } = hpInfo;
+      const adjustedAmount = operation === "damage"
+        ? reducedDamage ?? Math.max(0, amount - reduction)
+        : amount;
+      const { newHP, appliedAmount } = calculateHpChange(
+        currentHP,
+        maxHP,
+        adjustedAmount,
+        operation
+      );
+      const appliedDamage = operation === "damage" ? appliedAmount : 0;
+      const appliedHealing = operation === "healing" ? appliedAmount : 0;
 
       adLog(
         `Token ${tokenId} (${actor.name}): HP via "${hpPath}" ${currentHP} -> ${newHP} ` +
-        `(damage ${damage}, trait ${traitMode ?? "none"}, applied ${appliedDamage})`
+        (operation === "healing"
+          ? `(healing ${amount}, applied ${appliedHealing})`
+          : `(damage ${amount}, trait ${traitMode ?? "none"}, applied ${appliedDamage})`)
       );
 
       if (newHP !== currentHP) {
@@ -460,11 +481,14 @@ import {
       results.push({
         actorName: actor.name,
         tokenId,
-        damage,
+        operation,
+        damage: operation === "damage" ? amount : 0,
+        healing: operation === "healing" ? amount : 0,
         reduction,
         damageIncrease,
         traitMode,
         appliedDamage,
+        appliedHealing,
         propertyNames: reductionProperties,
         currentHP,
         newHP
@@ -532,7 +556,7 @@ import {
     }
   }
 
-  async function appendDamageDisplayToMessage(message, { total, formula, html }) {
+  async function appendDamageDisplayToMessage(message, { total, formula, html }, operation = "damage") {
     try {
       const original = message.content ?? "";
       const wrapper = document.createElement("div");
@@ -541,15 +565,16 @@ import {
       const card = wrapper.querySelector(".shadowdark.chat-card.item-card");
       const damageDiv = document.createElement("div");
       damageDiv.className = "sd-auto-damage";
+      const label = operation === "healing" ? "Healing" : "Damage";
 
       if (html) {
         damageDiv.innerHTML = `
-          <div class="sd-auto-damage-label"><strong>Damage</strong></div>
+          <div class="sd-auto-damage-label"><strong>${label}</strong></div>
           ${html}
         `;
       } else {
         damageDiv.innerHTML =
-          `<strong>Damage</strong> ${formula ? `${formula} = ${total}` : total}`;
+          `<strong>${label}</strong> ${formula ? `${formula} = ${total}` : total}`;
       }
 
       if (card) {
@@ -570,7 +595,7 @@ import {
           content: original +
             `
         <div class="sd-auto-damage">
-          <strong>Damage</strong> ${formula ? `${formula} = ${total}` : total}
+          <strong>${label}</strong> ${formula ? `${formula} = ${total}` : total}
         </div>`
         });
       }
@@ -594,6 +619,12 @@ import {
 
       const targetUuids = getTargetSnapshot(message);
       let damageDisplay = null;
+      const operation = await resolveAutoDamageOperation(message);
+
+      if (!operation) {
+        adLog(`Message ${message.id}: spell damage type is none; not applying HP changes.`);
+        return;
+      }
 
       let { damage, outcome, debug } = extractDamageAndOutcome(message);
 
@@ -639,7 +670,7 @@ import {
 
       if (damage == null) {
         adLog(
-          `Message ${message.id}: no damage detected (${context.source});`,
+          `Message ${message.id}: no ${operation} amount detected (${context.source});`,
           debug?.reason ?? "no reason",
           debug
         );
@@ -648,7 +679,7 @@ import {
 
       if (outcome === "failure") {
         adLog(
-          `Message ${message.id}: damage found but roll looks like a FAILURE; not applying.`,
+          `Message ${message.id}: ${operation} found but roll looks like a FAILURE; not applying.`,
           debug
         );
         return;
@@ -669,19 +700,20 @@ import {
       const delayMs = Number(game.settings.get(MODULE_ID, "autoDamageDelayMs")) || 0;
       if (delayMs > 0) {
         adLog(
-          `Message ${message.id}: delaying auto-damage ${damage} by ${delayMs}ms`
+          `Message ${message.id}: delaying auto-${operation} ${damage} by ${delayMs}ms`
         );
         await sleep(delayMs);
       }
 
       adLog(
-        `Message ${message.id}: auto-applying damage ${damage} (outcome: ${
+        `Message ${message.id}: auto-applying ${operation} ${damage} (outcome: ${
           outcome ?? "unknown/assumed success"
         })`,
         debug
       );
 
-      const damageTraitsEnabled = game.settings.get(MODULE_ID, "damageTraitsEnabled");
+      const damageTraitsEnabled = operation === "damage"
+        && game.settings.get(MODULE_ID, "damageTraitsEnabled");
       const damageTraitsApi = damageTraitsEnabled
         ? game.modules.get(MODULE_ID)?.api?.damageTraits
         : null;
@@ -704,20 +736,23 @@ import {
         }
       }
 
-      const damageResults = await applyDamageToTargets(
+      const damageResults = await applyAmountToTargets(
         message,
         damage,
+        operation,
         sourceContext,
         targetUuids
       );
 
       if (damageDisplay) {
-        await appendDamageDisplayToMessage(message, damageDisplay);
+        await appendDamageDisplayToMessage(message, damageDisplay, operation);
       } else {
         scrollChatToBottom();
       }
 
-      await appendDamageReductionDisplay(message, damageResults);
+      if (operation === "damage") {
+        await appendDamageReductionDisplay(message, damageResults);
+      }
     } catch (err) {
       console.error(`${MODULE_ID} | ${SUBMODULE} v${getModuleVersion()} | Error in handleChatMessage`, err);
     } finally {

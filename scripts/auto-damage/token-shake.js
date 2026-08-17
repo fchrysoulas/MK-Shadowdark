@@ -7,13 +7,13 @@ function sleep(ms) {
   return new Promise(resolve => setTimeout(resolve, ms));
 }
 
-function setPosition(position, x, y) {
-  if (typeof position?.set === "function") {
-    position.set(x, y);
+function setPoint(point, x, y) {
+  if (typeof point?.set === "function") {
+    point.set(x, y);
     return;
   }
-  position.x = x;
-  position.y = y;
+  point.x = x;
+  point.y = y;
 }
 
 function tokenDocument(token) {
@@ -23,7 +23,27 @@ function tokenDocument(token) {
 function tokenPlaceable(token) {
   return token?.object
     ?? token?.document?.object
-    ?? (token?.position ? token : null);
+    ?? (token?.mesh ? token : null);
+}
+
+function tokenDisplayObject(placeable) {
+  // Foundry v13+ PlaceableObjects are not PIXI containers themselves. The
+  // visible Token sprite lives on mesh, while a raw display object already
+  // exposes position directly (useful for compatibility and focused tests).
+  if (placeable?.mesh?.position) return placeable.mesh;
+  return placeable?.position ? placeable : null;
+}
+
+function refreshTokenPosition(placeable) {
+  if (typeof placeable?._refreshPosition === "function") {
+    placeable._refreshPosition();
+    return true;
+  }
+  if (typeof placeable?.renderFlags?.set === "function") {
+    placeable.renderFlags.set({ refreshPosition: true });
+    return true;
+  }
+  return false;
 }
 
 function tokenUuid(token) {
@@ -44,7 +64,8 @@ async function animateDisplayObject(displayObject, {
   steps = 6,
   stepDuration = 50,
   random = Math.random,
-  sleepFn = sleep
+  sleepFn = sleep,
+  restoreFn = null
 } = {}) {
   const position = displayObject?.position;
   if (!position) return false;
@@ -59,11 +80,16 @@ async function animateDisplayObject(displayObject, {
     for (let i = 0; i < count; i++) {
       const dx = (random() * 2 - 1) * maxOffset;
       const dy = (random() * 2 - 1) * maxOffset;
-      setPosition(position, baseX + dx, baseY + dy);
+      setPoint(position, baseX + dx, baseY + dy);
       if (duration > 0) await sleepFn(duration);
     }
   } finally {
-    setPosition(position, baseX, baseY);
+    let restored = false;
+    try {
+      restored = typeof restoreFn === "function" && restoreFn() !== false;
+    } finally {
+      if (!restored) setPoint(position, baseX, baseY);
+    }
   }
 
   return true;
@@ -71,10 +97,12 @@ async function animateDisplayObject(displayObject, {
 
 async function shakeTokenVisual(token, options = {}) {
   const placeable = tokenPlaceable(token);
-  if (!placeable) return false;
-  return animateDisplayObject(placeable, {
+  const displayObject = tokenDisplayObject(placeable ?? token);
+  if (!displayObject) return false;
+  return animateDisplayObject(displayObject, {
     gridSize: gridSize(),
-    ...options
+    ...options,
+    restoreFn: () => refreshTokenPosition(placeable)
   });
 }
 

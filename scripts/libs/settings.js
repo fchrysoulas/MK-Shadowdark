@@ -7,7 +7,7 @@
     {
       key: "autoDamage",
       title: "Auto Damage",
-      hint: "Configure automatic damage application, timing, dice, and token feedback.",
+      hint: "Configure automatic damage and healing application, timing, dice, and token feedback.",
       icon: "fas fa-heart-crack",
       settings: ["autoDamageEnabled", "damageTraitsEnabled", "autoDamageGMOnly", "autoDamageShowDice3D", "autoDamageShakeTokens", "autoDamageDelayMs"]
     },
@@ -574,7 +574,7 @@
 
     registerSetting("autoDamageEnabled", {
       name: "Auto Damage | Enabled",
-      hint: "Automatically subtract damage from targeted tokens when an attack or spell roll shows damage.",
+      hint: "Automatically damage or heal targeted tokens from attack and spell rolls. Healing spells use Shadowdark's spell damage type.",
       scope: "world",
       config: true,
       type: Boolean,

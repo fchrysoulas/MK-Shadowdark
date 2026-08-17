@@ -8,7 +8,8 @@ Guidance for AI agents working in this repository.
 - The current compatibility baseline is Foundry VTT v13+ and Shadowdark RPG 4.0.0+. Treat the exact minimum and verified versions in `module.json` as authoritative.
 - The module id is `mk-shadowdark`. Keep settings, flags, templates, socket data, assets, and API namespaces scoped to that id.
 - `module.json` is the source of truth for module metadata and load order. Feature logic lives in `scripts/`, CSS in `styles/`, Handlebars templates in `templates/`, localization in `lang/`, and bundled media in `assets/`.
-- There is no package manager, bundler, transpiler, or checked-in automated test harness.
+- Keep `scripts/mk-shadowdark.js` as the top-level module bootstrap. Every feature owns a dedicated folder under `scripts/`; code consumed across multiple features belongs in `scripts/libs/` instead of a feature folder.
+- There is no bundler or transpiler. The checked-in Node harness provides syntax, lint, manifest, and focused unit-test validation without building runtime assets.
 
 ## Repository And Editing Rules
 
@@ -19,7 +20,7 @@ Guidance for AI agents working in this repository.
 - Use the existing `game.modules.get("mk-shadowdark").api` namespace for public feature APIs.
 - Keep comments for non-obvious rules, compatibility constraints, migrations, hook timing, or load-order requirements. Avoid path-only comments and repeated headers.
 - Add or update localization when a user-facing string belongs in the Shadowdark configuration UI. Existing feature settings currently contain some inline English; do not expand that inconsistency casually.
-- Settings are intentionally hybrid: common feature settings are registered in `scripts/settings.js`, while self-contained systems such as Initiative, Morale, Corpse Token, Detailed Wounds, and Encounter Engine register their own settings. Preserve the local pattern and never register the same key twice.
+- Settings are intentionally hybrid: common feature settings are registered in `scripts/libs/settings.js`, while self-contained systems such as Initiative, Morale, Corpse Token, Detailed Wounds, and Encounter Engine register their own settings. Preserve the local pattern and never register the same key twice.
 - Preserve the harmless removed Base Management compatibility stub in `scripts/mk-shadowdark.js` unless the task explicitly removes that legacy API.
 
 ## Foundry And Shadowdark Compatibility
@@ -29,7 +30,7 @@ Guidance for AI agents working in this repository.
 - Guard optional globals and documents where Foundry hook timing can make them unavailable, including `game`, `ui`, `canvas`, `CONFIG`, and third-party modules.
 - Do not assign to imported or system-owned API exports that can be read-only. Targeted Spell DC integration must wrap the roll-dialog class/prototype path; never replace `shadowdark.dice.rollDialog` directly.
 - Keep document mutations authority-safe. World migrations and combat automation should run only from the active GM/authoritative client using the established helpers.
-- Respect manifest script order. In particular, `scripts/predefined-effects.js` must load before `scripts/damage-traits.js` and `scripts/targeted-spell-dc.js`.
+- Respect manifest script order. In particular, `scripts/libs/predefined-effects.js` must load before `scripts/auto-damage/damage-traits.js` and `scripts/targeted-spell-dc/targeted-spell-dc.js`.
 
 ## UI And Assets
 
@@ -41,7 +42,7 @@ Guidance for AI agents working in this repository.
 
 ## Active Effects, Properties, And Damage
 
-- Module-provided predefined effects are registered centrally in `scripts/predefined-effects.js`. Add new definitions and effect-key translations there rather than registering them in feature consumers.
+- Module-provided predefined effects are registered centrally in `scripts/libs/predefined-effects.js`. Add new definitions and effect-key translations there rather than registering them in feature consumers.
 - The current predefined effects are:
 
   - **Only Damaged by Magical Sources**: `system.damage.immunity.nonmagical`
@@ -56,6 +57,8 @@ Guidance for AI agents working in this repository.
 - NPC Feature sheets use an **Effects** tab. Enabled Active Effects with Transfer active apply to the owning NPC. Damage resistance, immunity, and vulnerability are represented as transferred Active Effects referencing the same Property UUID as the damage source.
 - Preserve the existing migration from legacy actor/NPC Feature trait data into transferring Active Effects. Migrations must be idempotent and active-GM-only.
 - Auto Damage treats spells, scrolls, wands, permanent magic items, Magic/Magical Properties, and actor-level **Magical Attacks** as magical sources. Property immunity takes precedence; resistance and vulnerability cancel; resistance halves with a minimum of 1; vulnerability doubles.
+- Auto Damage uses Shadowdark's spell damage type to distinguish damage from healing. Healing bypasses damage traits, restores no more than maximum HP, and does not shake the target token.
+- Attack and spell roll dialogs require at least one valid canvas token target. Keep their compact target list live, preserve every selected UUID for multi-target automation, and use the first selected target as Shadowdark's primary target.
 
 ## Initiative And Morale Invariants
 
@@ -66,11 +69,11 @@ Guidance for AI agents working in this repository.
 - Morale resolves at the start of the shared enemy turn: at half force strength, a living assigned leader makes one DC 15 WIS check for the force; without a leader, each eligible survivor checks individually. A solo enemy checks at half HP.
 - Failed morale checks apply the module's **Fleeing** status. Creatures with the morale-immunity flag/effect are excluded.
 - The Token HUD morale control is for assigning the force leader. The Reset Morale Strength button was intentionally removed; do not reintroduce it.
-- Keep initiative and morale coordination explicit. Changes to combat sorting, `nextTurn`, enemy-turn detection, or combat snapshots must be checked against both `scripts/initiative.js` and `scripts/morale.js`.
+- Keep initiative and morale coordination explicit. Changes to combat sorting, `nextTurn`, enemy-turn detection, or combat snapshots must be checked against both `scripts/initiative/initiative.js` and `scripts/morale/morale.js`.
 
 ## Group Sheet Functionality
 
-- `scripts/group-sheet.js` is the entry point. Keep imports explicit and browser-compatible.
+- `scripts/group-sheet/group-sheet.js` is the entry point. Keep imports explicit and browser-compatible.
 - Group actor state is stored under the module's `group` flag. Normalize or migrate it through existing helpers in `scripts/group-sheet/activities.js`, `scripts/group-sheet/actors.js`, and `scripts/group-sheet/state.js`; do not invent parallel flag shapes.
 - Camping tasks use drag-and-drop member assignment, one task per member, local Game-icons.net icons, resource handling, and reset support.
 - Travelling tasks are Pathfind, March, Lookout, and Scavenge. Unassigned group members default to Lookout.
@@ -100,5 +103,5 @@ Guidance for AI agents working in this repository.
 - Add user-visible additions, fixes, and removals to the newest applicable section of `CHANGELOG.md`; do not invent an `Unreleased` convention unless the changelog is deliberately restructured.
 - Keep `README.md` aligned with shipped user-facing behavior and Active Effect instructions.
 - Increment `module.json` only when the user explicitly asks for a version increment or release preparation.
-- Commit, push, tag, publish, prune branches, or sync to the local Foundry installation only when requested. Keep commits focused and report the resulting commit id.
+- Commit, push, tag, publish, or prune branches only when requested. After validated runtime changes, always sync them to the local Foundry installation for testing and report what was copied or removed.
 - A local Foundry sync should copy every runtime file changed by the task, preserve the module directory layout, and verify the destination files after copying.

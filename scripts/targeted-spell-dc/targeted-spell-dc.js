@@ -6,8 +6,11 @@
   const MODULE_ID = "mk-shadowdark";
   const SUBMODULE = "Targeted Spell DC";
   const EFFECT_KEY = "system.roll.spell.dc";
+  const TARGETS_CHANGED_HOOK = "mkShadowdarkTargetingChanged";
   const WRAPPED = Symbol.for(`${MODULE_ID}.targetedSpellDc.wrappedPrepareContext`);
   const ORIGINAL_HEADING = Symbol.for(`${MODULE_ID}.targetedSpellDc.originalHeading`);
+  const ORIGINAL_DC = Symbol.for(`${MODULE_ID}.targetedSpellDc.originalDc`);
+  const ORIGINAL_TOOLTIPS = Symbol.for(`${MODULE_ID}.targetedSpellDc.originalTooltips`);
 
   function log(...args) {
     const version = game.modules.get(MODULE_ID)?.version ?? "unknown";
@@ -82,6 +85,13 @@
   function applyTargetSpellDc(config) {
     if (config?.type !== "spell" || !config.mainRoll) return;
 
+    config[ORIGINAL_HEADING] ??= String(config.heading ?? "Spellcasting Check").trim();
+    if (!(ORIGINAL_DC in config)) config[ORIGINAL_DC] = config.mainRoll.dc;
+    if (!(ORIGINAL_TOOLTIPS in config)) config[ORIGINAL_TOOLTIPS] = config.mainRoll.tooltips;
+    config.heading = config[ORIGINAL_HEADING];
+    config.mainRoll.dc = config[ORIGINAL_DC];
+    config.mainRoll.tooltips = config[ORIGINAL_TOOLTIPS];
+
     const candidates = [];
     for (const token of game.user?.targets ?? []) {
       const actor = token.actor ?? token.document?.actor;
@@ -100,7 +110,6 @@
     const applied = candidates[0];
     config.mainRoll.dc = applied.dc;
 
-    config[ORIGINAL_HEADING] ??= String(config.heading ?? "Spellcasting Check").trim();
     config.heading = `${config[ORIGINAL_HEADING]} - DC ${applied.dc}`;
 
     const tooltip = `${applied.source}: spell DC ${applied.dc}`;
@@ -139,5 +148,6 @@
   Hooks.once("ready", () => {
     if (game.system?.id !== "shadowdark") return;
     install();
+    Hooks.on(TARGETS_CHANGED_HOOK, config => applyTargetSpellDc(config));
   });
 })();

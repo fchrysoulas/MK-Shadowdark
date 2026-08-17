@@ -1,0 +1,70 @@
+.mk-targeting-assistant {
+  margin: 0.5rem 0.75rem 0.75rem;
+  padding: 0.6rem;
+  border: 1px solid var(--color-border-light-2, #999);
+  border-radius: 5px;
+  background: color-mix(in srgb, var(--color-bg-option, #222) 88%, transparent);
+}
+
+.mk-targeting-assistant.is-empty {
+  border-color: var(--color-level-warning, #d99a24);
+}
+
+.mk-targeting-assistant-heading {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  margin-bottom: 0.4rem;
+}
+
+.mk-targeting-assistant.is-empty p {
+  margin: 0;
+  font-size: 0.85rem;
+}
+
+.mk-targeting-assistant-list {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.35rem;
+  max-height: 8rem;
+  overflow-y: auto;
+}
+
+.mk-targeting-assistant-target {
+  display: grid;
+  grid-template-columns: 2rem minmax(0, 1fr);
+  grid-template-rows: auto auto;
+  align-items: center;
+  column-gap: 0.4rem;
+  min-width: 0;
+  padding: 0.25rem;
+  border: 1px solid var(--color-border-light-2, #888);
+  border-radius: 4px;
+}
+
+.mk-targeting-assistant-target img {
+  grid-row: 1 / 3;
+  width: 2rem;
+  height: 2rem;
+  border: 0;
+  border-radius: 50%;
+  object-fit: cover;
+}
+
+.mk-targeting-assistant-target span {
+  overflow: hidden;
+  font-weight: 600;
+  line-height: 1.1;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.mk-targeting-assistant-target small {
+  opacity: 0.75;
+  font-size: 0.7rem;
+}
+
+#sd-roll-dialog button[type="submit"]:disabled {
+  cursor: not-allowed;
+  opacity: 0.5;
+}

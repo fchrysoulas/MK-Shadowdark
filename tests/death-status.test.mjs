@@ -5,7 +5,7 @@ import {
   findConfiguredStatus,
   setConfiguredStatus,
   statusLabel
-} from "../scripts/death-status.js";
+} from "../scripts/death-timer/death-status.js";
 
 test("findConfiguredStatus resolves Dead without mutating configuration", () => {
   const statuses = [

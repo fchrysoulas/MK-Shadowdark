@@ -7,7 +7,7 @@ import {
   snapshotTargetUuids,
   storedTargetUuids,
   uniqueUuids
-} from "../scripts/auto-damage-targets.js";
+} from "../scripts/auto-damage/auto-damage-targets.js";
 
 test("Shadowdark roll target is preferred over live user targets", () => {
   const message = {

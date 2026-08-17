@@ -64,7 +64,7 @@ import {
   removeTravelPromptElement,
   showTravelRollPrompt,
 } from "./travel-prompt.js";
-import { getRestMode, reportRest, restActor } from "../resting.js";
+import { getRestMode, reportRest, restActor } from "../libs/resting.js";
 import { clampNumber, escapeHtml, getDialogFieldValue, numberOrZero } from "./utils.js";
 import { getPrimaryActiveGm } from "./users.js";
 

@@ -1,5 +1,5 @@
-import { reportLuckChange } from "./chat-reporting.js";
-import { getRestMode, onRest } from "./resting.js";
+import { reportLuckChange } from "../chat-reporting/chat-reporting.js";
+import { getRestMode, onRest } from "../libs/resting.js";
 
 (() => {
   const MODULE_ID = "mk-shadowdark";

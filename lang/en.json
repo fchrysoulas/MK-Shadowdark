@@ -2,5 +2,9 @@
   "SHADOWDARK.item.effect.predefined_effect.onlyMagicalDamageSources": "Only Damaged by Magical Sources",
   "SHADOWDARK.item.effect.predefined_effect.magicalAttacks": "Magical Attacks",
   "SHADOWDARK.item.effect.predefined_effect.targetedSpellDc": "Targeted Spell DC",
-  "SHADOWDARK.item.effect.predefined_effect.moraleImmune": "Immune to morale checks"
+  "SHADOWDARK.item.effect.predefined_effect.moraleImmune": "Immune to morale checks",
+  "MK_SHADOWDARK.targeting.targets": "Targets",
+  "MK_SHADOWDARK.targeting.choose": "Choose at least one target on the canvas with the Target tool (T).",
+  "MK_SHADOWDARK.targeting.primary": "Primary",
+  "MK_SHADOWDARK.targeting.warning": "Choose a valid target before rolling. Your selected targets will appear in the roll window."
 }

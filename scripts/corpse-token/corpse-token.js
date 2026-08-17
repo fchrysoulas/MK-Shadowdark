@@ -1,3 +1,5 @@
+import { isCorpseLifecycleActive } from "./corpse-token-state.js";
+
 const MODULE_ID = "mk-shadowdark";
 const SUBMODULE = "Corpse Token";
 const FLAG_KEY = "corpseToken";
@@ -477,7 +479,19 @@ function hasStoredCorpseData(document) {
   return Boolean(readStoredValue(document, "originalTexture"));
 }
 
+function hasActiveCorpseData(document) {
+  return isCorpseLifecycleActive({
+    applied: readStoredValue(document, "applied"),
+    hasStoredData: hasStoredCorpseData(document),
+    matchesCorpseAppearance: isAlreadyCorpse(document)
+  });
+}
+
 function getPreviousStoredState(document) {
+  // Retained post-revival flags are historical only. Reusing them would move a
+  // living token back to its prior death position on a later HP change/death.
+  if (!hasActiveCorpseData(document)) return {};
+
   return {
     originalTexture: readStoredValue(document, "originalTexture"),
     originalX: readStoredValue(document, "originalX"),
@@ -1014,6 +1028,7 @@ async function applyCorpseToToken(tokenOrDocument) {
 async function restoreCorpseToken(tokenOrDocument) {
   const document = getTokenDocument(tokenOrDocument);
   if (!document) return false;
+  if (!hasActiveCorpseData(document)) return false;
 
   const originalTexture = readStoredValue(document, "originalTexture");
   const originalX = toFiniteNumber(readStoredValue(document, "originalX"), undefined);
@@ -1085,7 +1100,7 @@ async function maybeRestoreHealedToken(tokenOrDocument) {
 
   if (!document || !actor) return false;
   if (!shouldProcessActor(actor)) return false;
-  if (!hasStoredCorpseData(document)) return false;
+  if (!hasActiveCorpseData(document)) return false;
 
   const hp = getHp(actor);
   if (hp === null || hp <= 0) return false;

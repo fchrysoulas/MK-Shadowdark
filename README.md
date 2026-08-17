@@ -9,7 +9,8 @@ Modular quality-of-life tools, gameplay automation, party management, and charac
 
 ## Features
 
-- **Auto Damage**: automatically applies damage from attack or spell rolls to targeted tokens, with property-based damage reduction, optional GM-only mode, delay, 3D dice support, and token shake feedback.
+- **Auto Damage**: automatically damages or heals targeted tokens from attack and spell rolls using Shadowdark's spell damage type, with property-based damage reduction, optional GM-only mode, delay, 3D dice support, and token shake feedback for damage.
+- **Targeting Assistant**: requires a valid canvas target before attack and spell rolls, shows every selected target in the roll window, and preserves multi-target selections for automation.
 - **Damage Traits**: exposes native Shadowdark Properties on spells and NPC attacks, adds resistance, immunity, and vulnerability traits to NPC Features, and reports adjustments on damage chat cards.
 - **Character Sheet Tweaks**: adds a configurable compact summary bar with Normal/Grinder resting, a height toggle, optional header styling, Shadowdark logo hiding, quick access to common stats, and an optional icon-only shortcut row for abilities, attacks, spells, and potions.
 - **Death Timer**: adds a configurable sheet button for starting and managing Shadowdark death timers.

@@ -4,7 +4,7 @@ import assert from "node:assert/strict";
 import {
   advancePastGroupedCombatants,
   sameInitiative
-} from "../scripts/initiative-helpers.js";
+} from "../scripts/initiative/initiative-helpers.js";
 
 function makeCombat(turns, { round = 1, turn = 0 } = {}) {
   return {

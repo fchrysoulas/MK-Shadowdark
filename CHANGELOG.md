@@ -2,7 +2,11 @@
 
 ## 1.9.6
 
+- Attack and spell roll windows now prompt for a valid canvas target, display the current target selection live, and preserve all selected targets for automation.
+- Auto Damage now reads Shadowdark's spell damage type, applying damaging spells as damage and healing spells as healing up to the target's maximum HP.
 - Removed the inadvertently restored Reset Morale Strength control from the Token HUD.
+- Fixed Auto Damage hit shakes on Foundry VTT v13+ by offsetting the rendered token mesh without changing TokenDocument coordinates, then restoring its authoritative rendered position after the effect.
+- Fixed revived Corpse Tokens jumping back to their previous death position whenever HP changed, and ensured later deaths capture the token's current position.
 
 ## 1.9.5
 
@@ -115,7 +119,7 @@
 ## 1.1.3
 
 - Added Focus Tracker with native Shadowdark 3.x/4.x casting support, configurable capacity and reminders, compact chat controls, summary-bar and token effect icons, legacy migration, and critical-failure spell-loss handling.
-- Added a v12-v14-compatible character-sheet height toggle that minimizes to the Summary Bar, restores the previous height, and keeps its implementation isolated in `scripts/minimize-sheet.js`.
+- Added a v12-v14-compatible character-sheet height toggle that minimizes to the Summary Bar, restores the previous height, and keeps its implementation isolated in `scripts/minimize-sheet/minimize-sheet.js`.
 - Refined the Quick inventory card to show its source analysis on hover or keyboard focus, and reorganized the Quickdraw and Focus Tracker scripts into feature folders.
 
 ## 1.1.2

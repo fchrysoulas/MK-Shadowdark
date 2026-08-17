@@ -20,9 +20,8 @@ import {
 
   const MODE_WARN = "warn";
   const MODE_BLOCK = "block";
-
-  const LAST_WARNING_KEY = "__mkEquipmentHandsLastWarning";
-  const CHECK_TIMEOUT_KEY = "__mkEquipmentHandsTimeout";
+  const lastWarningSignatures = new WeakMap();
+  const actorCheckTimeouts = new WeakMap();
 
   function log(...args) {
     if (!isDebugEnabled()) return;
@@ -144,10 +143,10 @@ import {
     const details = formatReport(report);
     const message = `${action}: ${report.actorName} ${problems}. ${details}`;
 
-    if (once) {
-      const sig = reportSignature(report);
-      if (report.actor?.[LAST_WARNING_KEY] === sig) return;
-      if (report.actor) report.actor[LAST_WARNING_KEY] = sig;
+    if (once && report.actor) {
+      const signature = reportSignature(report);
+      if (lastWarningSignatures.get(report.actor) === signature) return;
+      lastWarningSignatures.set(report.actor, signature);
     }
 
     ui.notifications?.warn?.(message);
@@ -186,13 +185,16 @@ import {
     if (game.system?.id !== "shadowdark") return;
     if (!canCheckActor(actor)) return;
 
-    if (actor[CHECK_TIMEOUT_KEY]) window.clearTimeout(actor[CHECK_TIMEOUT_KEY]);
+    const existingTimeout = actorCheckTimeouts.get(actor);
+    if (existingTimeout) window.clearTimeout(existingTimeout);
 
-    actor[CHECK_TIMEOUT_KEY] = window.setTimeout(() => {
-      actor[CHECK_TIMEOUT_KEY] = null;
+    const timeout = window.setTimeout(() => {
+      actorCheckTimeouts.delete(actor);
       log("scheduled check", reason, actor.name);
       checkActorHands(actor, { notify: true, mode: MODE_WARN, once });
     }, delay);
+
+    actorCheckTimeouts.set(actor, timeout);
   }
 
   Hooks.on("preUpdateItem", (item, changes) => {
@@ -230,21 +232,8 @@ import {
     }
   });
 
-  // Fallback for sheets/systems that update embedded item data through actor-level changes.
-  Hooks.on("updateActor", (actor, changes) => {
-    try {
-      if (!isEnabled()) return;
-      if (game.system?.id !== "shadowdark") return;
-      if (!canCheckActor(actor)) return;
-      if (!equipmentChangeTouchesClassification(changes)) return;
-
-      scheduleActorCheck(actor, { reason: "updateActor", once: true });
-    } catch (err) {
-      warn("updateActor error", err);
-    }
-  });
-
-  // Fallback for UI-driven equip buttons: after the sheet re-renders, check final state.
+  // UI-driven equipment buttons eventually resolve through item updates, but a
+  // post-render check keeps warn mode aligned with the final visible sheet state.
   function onRenderActorSheet(app) {
     try {
       if (!isEnabled()) return;

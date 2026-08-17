@@ -1,4 +1,3 @@
-import { getGroupData } from "../group-sheet/activities.js";
 import { CHAT_FLAG, MODULE_ID } from "../encounter-engine/constants.js";
 import {
   getGmScreen,
@@ -20,10 +19,25 @@ function documentActor(document) {
   return null;
 }
 
+function groupFlagData(groupActor) {
+  if (!groupActor) return {};
+
+  try {
+    const value = groupActor.getFlag?.(MODULE_ID, "group");
+    if (value && typeof value === "object") return value;
+  } catch (_error) {
+    // Fall through to source flags for partial/deleted documents and tests.
+  }
+
+  return groupActor.flags?.[MODULE_ID]?.group
+    ?? groupActor._source?.flags?.[MODULE_ID]?.group
+    ?? {};
+}
+
 function activeMemberUuidSet(groupActor) {
-  if (!groupActor) return new Set();
-  const group = getGroupData(groupActor);
-  return new Set((group.activeMembers ?? []).map(String).filter(Boolean));
+  const group = groupFlagData(groupActor);
+  const activeMembers = Array.isArray(group.activeMembers) ? group.activeMembers : [];
+  return new Set(activeMembers.map(String).filter(Boolean));
 }
 
 function encounterMessageData(message) {
@@ -123,6 +137,7 @@ registerGmScreenLiveRefresh();
 export {
   LIVE_REFRESH_DELAY_MS,
   documentActor,
+  groupFlagData,
   activeMemberUuidSet,
   encounterMessageData,
   encounterMessageBelongsToGroup,

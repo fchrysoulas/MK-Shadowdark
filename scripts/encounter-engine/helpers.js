@@ -1,12 +1,19 @@
 import {
-  DEFAULT_PROFILE_ID,
-  DEFAULT_PROFILES,
   MODULE_ID,
-  PROFILE_SCHEMA,
-  SCENE_FLAG,
-  SETTINGS,
   SUBMODULE,
 } from "./constants.js";
+
+export {
+  normalizeEnvironmentProfiles as normalizeProfiles,
+  getEnvironmentProfiles as getProfiles,
+  getDefaultEnvironmentProfileId as getDefaultProfileId,
+  getEnvironmentProfile as getProfile,
+  determineEnvironmentPeriod as determinePeriod,
+  getSceneEnvironmentContext as getSceneEncounterContext,
+  setSceneEnvironmentContext as setSceneEncounterContext,
+  terrainNames,
+  tableUuidForEnvironmentContext as tableUuidForContext,
+} from "../libs/environment-context.js";
 
 export function moduleVersion() {
   const module = game.modules?.get(MODULE_ID);
@@ -113,154 +120,6 @@ export function activeGmIds() {
 
 export function currentScene() {
   return globalThis.canvas?.scene ?? game.scenes?.current ?? null;
-}
-
-function rawSceneFlag(scene, key) {
-  return scene?._source?.flags?.[MODULE_ID]?.[key];
-}
-
-function getSceneFlag(scene, key, fallback = undefined) {
-  if (!scene) return fallback;
-  try {
-    const current = scene.getFlag?.(MODULE_ID, key);
-    return current === undefined ? rawSceneFlag(scene, key) ?? fallback : current;
-  } catch (_error) {
-    return rawSceneFlag(scene, key) ?? fallback;
-  }
-}
-
-export function normalizeProfiles(rawValue) {
-  let parsed = rawValue;
-  if (typeof rawValue === "string") {
-    try {
-      parsed = JSON.parse(rawValue || "{}");
-    } catch (parseError) {
-      warn("Invalid Encounter Profiles JSON. Using defaults.", parseError);
-      parsed = {};
-    }
-  }
-
-  if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) parsed = {};
-
-  const normalized = {};
-  const source = Object.keys(parsed).length ? parsed : DEFAULT_PROFILES;
-  for (const [profileId, profileValueRaw] of Object.entries(source)) {
-    const id = slug(profileId);
-    let profileValue = profileValueRaw ?? {};
-
-    const isLegacyDefault = id === DEFAULT_PROFILE_ID
-      && Number(profileValue?.profileSchema ?? 1) < PROFILE_SCHEMA
-      && String(profileValue?.name ?? "Default") === "Default";
-
-    if (isLegacyDefault) {
-      const preservedAuxiliary = deepClone(profileValue.auxiliaryTables ?? {});
-      delete preservedAuxiliary.morale;
-      profileValue = mergeObject(DEFAULT_PROFILES.default, {
-        name: "Shadowdark Core",
-        dayStart: profileValue.dayStart ?? DEFAULT_PROFILES.default.dayStart,
-        nightStart: profileValue.nightStart ?? DEFAULT_PROFILES.default.nightStart,
-        defaultTerrain: profileValue.defaultTerrain ?? DEFAULT_PROFILES.default.defaultTerrain,
-        defaultNumberAppearing: profileValue.defaultNumberAppearing ?? DEFAULT_PROFILES.default.defaultNumberAppearing,
-        terrains: deepClone(profileValue.terrains ?? DEFAULT_PROFILES.default.terrains),
-        auxiliaryTables: preservedAuxiliary,
-        outcomes: {
-          intent: deepClone(profileValue.outcomes?.intent ?? DEFAULT_PROFILES.default.outcomes.intent),
-        },
-      });
-    }
-
-    normalized[id] = mergeObject(DEFAULT_PROFILES.default, profileValue);
-    normalized[id].profileSchema = PROFILE_SCHEMA;
-    normalized[id].name = String(profileValue?.name ?? profileId ?? "Shadowdark Core");
-  }
-
-  if (!Object.keys(normalized).length) normalized.default = deepClone(DEFAULT_PROFILES.default);
-  return normalized;
-}
-
-export function getProfiles() {
-  return normalizeProfiles(setting(SETTINGS.profiles, JSON.stringify(DEFAULT_PROFILES, null, 2)));
-}
-
-export function getDefaultProfileId(profiles = getProfiles()) {
-  const requested = slug(setting(SETTINGS.defaultProfile, DEFAULT_PROFILE_ID));
-  if (profiles[requested]) return requested;
-  return Object.keys(profiles)[0] ?? DEFAULT_PROFILE_ID;
-}
-
-export function getProfile(profileId, profiles = getProfiles()) {
-  const id = slug(profileId || getDefaultProfileId(profiles));
-  return {
-    id: profiles[id] ? id : getDefaultProfileId(profiles),
-    data: profiles[id] ?? profiles[getDefaultProfileId(profiles)] ?? deepClone(DEFAULT_PROFILES.default),
-  };
-}
-
-function worldHour() {
-  const worldTime = Number(game.time?.worldTime ?? 0);
-  const secondsInDay = 24 * 60 * 60;
-  const normalized = ((worldTime % secondsInDay) + secondsInDay) % secondsInDay;
-  return Math.floor(normalized / 3600);
-}
-
-export function determinePeriod(profile, requestedPeriod = "auto") {
-  if (["day", "night"].includes(requestedPeriod)) return requestedPeriod;
-
-  const hour = worldHour();
-  const dayStart = Number(profile.dayStart ?? 6);
-  const nightStart = Number(profile.nightStart ?? 18);
-
-  if (dayStart === nightStart) return "day";
-  if (dayStart < nightStart) return hour >= dayStart && hour < nightStart ? "day" : "night";
-  return hour >= dayStart || hour < nightStart ? "day" : "night";
-}
-
-export function getSceneEncounterContext(scene = currentScene()) {
-  const profiles = getProfiles();
-  const fallbackProfileId = getDefaultProfileId(profiles);
-  const stored = getSceneFlag(scene, SCENE_FLAG, {}) ?? {};
-  const profileId = profiles[slug(stored.profileId)] ? slug(stored.profileId) : fallbackProfileId;
-  const profile = profiles[profileId];
-  const dangerLevel = String(stored.dangerLevel ?? profile.defaultDangerLevel ?? "unsafe");
-
-  return {
-    profileId,
-    terrain: String(stored.terrain ?? profile.defaultTerrain ?? Object.keys(profile.terrains ?? {})[0] ?? "Default"),
-    dangerLevel: profile.dangerLevels?.[dangerLevel] ? dangerLevel : String(profile.defaultDangerLevel ?? "unsafe"),
-    period: ["auto", "day", "night"].includes(stored.period) ? stored.period : "auto",
-    tableUuid: String(stored.tableUuid ?? ""),
-  };
-}
-
-export async function setSceneEncounterContext(context, scene = currentScene()) {
-  if (!scene || !game.user?.isGM) return null;
-  const normalized = {
-    profileId: slug(context.profileId),
-    terrain: String(context.terrain ?? "Default"),
-    dangerLevel: String(context.dangerLevel ?? "unsafe"),
-    period: ["auto", "day", "night"].includes(context.period) ? context.period : "auto",
-    tableUuid: String(context.tableUuid ?? ""),
-  };
-  await scene.setFlag(MODULE_ID, SCENE_FLAG, normalized);
-  return normalized;
-}
-
-export function terrainNames(profile) {
-  const names = Object.keys(profile.terrains ?? {});
-  if (profile.defaultTerrain && !names.includes(profile.defaultTerrain)) names.unshift(profile.defaultTerrain);
-  return names.length ? names : ["Default"];
-}
-
-export function tableUuidForContext(profile, terrain, period, explicitUuid = "") {
-  if (explicitUuid) return explicitUuid;
-
-  const terrainData = profile.terrains?.[terrain] ?? profile.terrains?.[profile.defaultTerrain] ?? {};
-  return String(
-    terrainData?.[period] ||
-    terrainData?.any ||
-    setting(SETTINGS.defaultTable, "") ||
-    ""
-  );
 }
 
 export async function resolveUuid(uuid) {

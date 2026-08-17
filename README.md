@@ -1,8 +1,13 @@
 # MK-Shadowdark
 
-Modular quality-of-life tools, gameplay automation, party management, and character-sheet enhancements for the **Shadowdark RPG** system on **Foundry VTT**.
+Modular quality-of-life tools, gameplay automation, party management, GM tools, and character-sheet enhancements for the **Shadowdark RPG** system on **Foundry VTT**.
 
-MK-Shadowdark now uses a **Group-first procedure architecture**: character automation remains on individual actors, while shared exploration, resting, encounters, staging, and party-management procedures are coordinated through the native MK-Shadowdark Group Sheet.
+MK-Shadowdark uses a **Group-first procedure architecture** while providing two complementary GM-facing surfaces:
+
+1. **Group Management** — the authoritative party/procedure workspace.
+2. **GM Screen** — a separate GM-only overview and command surface that consumes the same canonical Group, Scene, Encounter, Combat, and character-feature state.
+
+The Group Sheet remains the gameplay owner for party/procedure state. The GM Screen does not duplicate that state.
 
 ## Compatibility
 
@@ -23,58 +28,84 @@ Manual release download:
 https://github.com/fchrysoulas/MK-Shadowdark/releases/latest/download/mk-shadowdark.zip
 ```
 
-The old **MK-Shadowdark GM Screen Mock** prototype is not a dependency and is not required for any current MK-Shadowdark feature.
+The old **MK-Shadowdark GM Screen Mock** prototype is not a dependency and is not required for the production GM Screen or any current MK-Shadowdark feature.
 
 ---
 
-## Features
+# Features
 
-### Character and combat automation
+## Character and combat automation
 
-- **Auto Damage**: automatically damages or heals targeted tokens from attack and spell rolls using Shadowdark's spell damage type, with property-based damage reduction, optional GM-only mode, delay, 3D dice support, and token shake feedback for damage.
-- **Targeting Assistant**: requires a valid canvas target before attack and spell rolls, shows every selected target in the roll window, and preserves multi-target selections for automation.
-- **Damage Traits**: exposes native Shadowdark Properties on spells and NPC attacks, adds resistance, immunity, and vulnerability traits to NPC Features, and reports adjustments on damage chat cards.
-- **Character Sheet Tweaks**: adds a configurable compact summary bar with Normal/Grinder resting, a height toggle, optional header styling, Shadowdark logo hiding, quick access to common stats, and an optional icon-only shortcut row for abilities, attacks, spells, and potions.
-- **Death Timer**: adds a configurable sheet button for starting and managing Shadowdark death timers while death itself uses Foundry's native Dead status.
-- **Detailed Wounds**: adds a GM-managed body-location wound tracker and automatic penalties exclusively to player characters.
-- **Editable Quantity**: lets item quantities be edited directly from actor inventory rows.
-- **Equipment Hands**: checks equipped weapons, shields, and hand-occupying gear against available hand slots, either warning or blocking invalid loadouts.
-- **Token Equipment Display**: shows held gear beside player tokens, represents two-handed occupancy in both hand slots, and adds a smaller configurable Quickdraw row.
-- **Focus Tracker**: tracks successfully cast Focus spells, enforces configurable capacity, requests maintenance checks at the caster's turn or after damage, and exposes actor-sheet and chat-card controls with a token status icon.
-- **Initiative**: rolls hostile NPCs together using the highest DEX modifier while preserving individual player rolls and keeping the shared enemy slot together on tied initiatives.
-- **Morale Automation**: snapshots the hostile force at combat start, checks Shadowdark morale at the correct force/HP threshold, supports a GM-designated morale leader, and applies the Fleeing status on failure.
-- **Targeted Spell DC Effects**: lets hostile targets set a spellcasting DC through an Active Effect, for creature defenses such as a lich's Spellward.
-- **Torch Attack**: integrates torches as attacks through supported Shadowdark actor APIs.
-- **Corpse Token Automation**: changes dead NPC tokens to a corpse image, preserves/restores original token data, and aligns corpse placement using the token fall point.
-- **Token Shadows**: draws configurable soft shadows under tokens on the canvas.
+- **Auto Damage** — applies targeted attack/spell damage or healing with Shadowdark damage properties and optional token shake feedback.
+- **Damage Traits** — Resistance, Immunity, and Vulnerability through Shadowdark Properties and transferring effects.
+- **Targeting Assistant** — validates and preserves selected targets for attack/spell automation.
+- **Death Timer** — manages Shadowdark death timers while death itself uses Foundry's native Dead status.
+- **Detailed Wounds** — GM-managed body-location wounds with automatic penalties for player characters.
+- **Editable Quantity** — inventory quantity editing with direct controls.
+- **Equipment Hands** — validates equipped weapons, shields, and hand-occupying gear against available hands.
+- **Token Equipment Display** — shows held equipment and Quickdraw gear around player tokens.
+- **Focus Tracker** — tracks active Focus spells, capacity, maintenance checks, and loss state.
+- **Initiative** — grouped hostile initiative while preserving individual player initiatives.
+- **Morale Automation** — hostile-force morale, morale leader support, Fleeing, and morale immunity.
+- **Targeted Spell DC Effects** — lets targets impose spellcasting DCs through Active Effects.
+- **Torch Attack** — uses supported Shadowdark attack APIs for torch attacks.
+- **Corpse Token Automation** — replaces dead NPC token art while preserving/restoring token state.
+- **Token Shadows** — configurable canvas shadows beneath tokens.
 
-### Group procedures
+## Group Management
 
-- **Group Sheet**: adds a party/group actor sheet for members, hirelings and mounts, shared inventory, active torch tracking, configurable tab backgrounds and activity columns, Traveling, Camping, and ration-aware party resting.
-- **Camping Tasks**: provides Bed Down, Cook, Craft, Entertain, Scavenge, Hunt, Keep Watch, and Predict tasks with DCs, tooltips, icons, and drag-and-drop member assignment.
-- **Shared Scene Environment**: the active Scene owns the encounter environment profile, terrain, danger level, day/night context, and encounter-table selection.
-- **Unified Group Time**: Group procedures track elapsed seconds while Foundry world time remains the only absolute clock.
-- **Marching / Role Context**: supports marching order, Front/Middle/Rear positions, Scout, Light Bearer, and ordered camp-watch slots.
-- **Group Exploration Encounters**: encounter cadence and due checks are part of the existing Traveling workflow rather than a standalone Encounter Engine.
-- **Group Resting Interruptions**: the existing Rest Party flow advances through required encounter checks before consuming rations or granting rest benefits and can pause/resume after an encounter.
-- **Encounter Staging**: resolved encounters can be previewed and deliberately deployed into the active Scene with optional Foundry Combat handoff.
-- **GM Member Status**: a compact GM-only status icon on each existing Group member card opens read-only HP/AC/death/wounds/Focus/light/effect details.
-- **Time Passes**: synchronized presentation-only splash/progress utility. It no longer rolls or resolves encounters.
+- **Group Sheet** — members, active party, hirelings, mounts, shared inventory, Traveling, Camping, and party resources.
+- **Camping Tasks** — Bed Down, Cook, Craft, Entertain, Scavenge, Hunt, Keep Watch, and Predict.
+- **Shared Scene Environment** — terrain, danger, day/night, environment profile, and encounter table belong to the active Scene context.
+- **Unified Group Time** — Group procedures store elapsed procedure time while Foundry world time remains the only absolute clock.
+- **Marching / Role Context** — Front, Middle, Rear, Scout, Light Bearer, and ordered camp watches.
+- **Group Exploration Encounters** — encounter cadence/checks are part of Traveling.
+- **Group Resting Interruptions** — Rest Party resolves required encounter checks before benefits/resources finalize.
+- **Encounter Staging** — preview-first deployment into the Scene with optional Foundry Combat handoff.
+- **GM Member Status** — compact GM-only status affordance for HP/AC/death/wounds/Focus/light/effects.
+- **Time Passes** — synchronized presentation-only splash/progress utility.
 
-### Presentation and inventory utilities
+## Production GM Screen
 
-- **Paper Chat**: provides twelve paper-inspired chat themes and a GM visual editor for theme-specific message styling.
-- **Quickdraw**: marks eligible inventory items as Quickdraw, sorts each inventory group with Quickdraw items first, and supports fixed or actor-based limit expressions such as `3`, `max(1, @dex.mod)`, or `max(1, @dex.mod + gear("bandolier", 2))`.
+MK-Shadowdark includes a **separate GM-only GM Screen** alongside Group Management.
+
+Open it from the **shield button in Token Scene Controls**, or through the module API:
+
+```js
+const mk = game.modules.get("mk-shadowdark")?.api;
+mk.gmScreen.open();
+mk.gmScreen.toggle();
+```
+
+The GM Screen is a native Foundry ApplicationV2 surface. It is not a replacement for the Group Sheet and it does not own duplicate gameplay state.
+
+Its production layout contains:
+
+- a persistent active-party/status rail
+- a persistent procedure/pressure summary
+- a central contextual workspace
+
+Available workspaces include:
+
+- **Overview** — Group, procedure, Scene, danger, encounter pressure, Resting, Combat, and Morale at a glance.
+- **Exploration** — turns, encounter cadence, due checks, Scene encounter context, and Traveling shortcut.
+- **Resting** — current rest status, elapsed rest turns, checks remaining, interruption state, Resume Rest, and staging shortcut.
+- **Encounter** — latest resolved Group encounter and staging access.
+- **Combat** — current Foundry Combat round/turn/combatants and MK Morale overview.
+- **Environment** — current Scene terrain, danger, day/night, and encounter table context.
+- **Rules** — compact GM Quick Rules for procedure turns, encounter checks, morale, and resting.
+
+The GM Screen reads canonical state from Group, Scene environment, internal encounter services, Encounter Staging, Foundry Combat, Morale, and the prepared GM member-status model. It does not store a second party, procedure clock, encounter, combat, morale, wound, or Focus model.
 
 ---
 
 # Group Sheet and Procedure Architecture
 
-The native MK-Shadowdark **Group Sheet** is the main party/session operating surface.
+The native MK-Shadowdark **Group Sheet** remains the authoritative party/procedure workspace.
 
-Create an Actor and choose **Group** in the Actor creation dialog. The module creates the Group as a normal Foundry Actor using the MK-Shadowdark Group sheet and flags rather than adding another core Actor document type.
+Create an Actor and choose **Group** in the Actor creation dialog. MK-Shadowdark creates a normal Foundry Actor using the Group sheet and module flags rather than introducing another core Actor document type.
 
-The current Group Sheet structure is intentionally stable. Its main areas remain:
+The Group Sheet structure is intentionally stable. Its main areas remain:
 
 - party / roster member cards
 - Traveling
@@ -83,17 +114,17 @@ The current Group Sheet structure is intentionally stable. Its main areas remain
 - Hirelings
 - Mounts
 
-Newer procedure systems extend those existing areas or use contextual dialogs/chat-card actions. MK-Shadowdark does not add a second GM dashboard for Group procedures.
+The production GM Screen exists **beside** this interface. New GM overview tools must not require redesigning or replacing the Group Sheet.
 
 ## Active party and roster
 
-The Group maintains a roster plus an active-party subset. Procedure assignments, Group roles, watches, encounter context, and Group summaries use active members as the canonical party membership source.
+The Group maintains a roster plus an active-party subset. Procedure assignments, roles, watches, encounter context, Group summaries, and the GM Screen party rail use active members as the canonical party source.
 
-When active-party membership changes, stale role/watch/marching assignments are normalized automatically.
+When active membership changes, stale marching/role/watch assignments are normalized.
 
 ## Procedure state
 
-The internal Group procedure state supports:
+The Group procedure service supports:
 
 ```text
 exploration
@@ -102,9 +133,9 @@ combat
 downtime
 ```
 
-This state is shared infrastructure for time, encounters, rest, and later automation. It is not another visible Group navigation system.
+This is infrastructure shared by Group procedures and the GM Screen. It is not a second visible navigation system.
 
-## One owner per procedure domain
+## One owner per domain
 
 ```text
 WHO?       Group active members / roles / watches
@@ -113,38 +144,41 @@ WHEN?      Group elapsed procedure time + Foundry world time
 STATE?     Group procedure state
 WHAT?      Internal encounter service
 STAGE?     Encounter staging service
+COMBAT?    Foundry Combat + MK initiative/morale
+VIEW?      Group Management + GM Screen
 ```
 
 Important invariants:
 
 - Foundry world time is the only absolute clock.
 - Group stores elapsed procedure time, not a second world clock.
-- Scene encounter environment belongs to the Scene, not a duplicate Group profile.
-- Encounter intervals always mean **procedure turns**.
+- Scene encounter environment belongs to Scene state.
+- Encounter intervals always mean procedure turns.
 - Exploration and Resting decide when encounter checks are due.
-- Encounter formulas, tables, reaction, and resolution have one internal implementation.
+- Encounter formulas/tables/reaction/resolution have one internal implementation.
 - Time Passes is presentation-only.
 - Encounter staging creates no documents before explicit **Deploy**.
+- GM Screen presentation never becomes a duplicate gameplay-state owner.
 
 ---
 
 # Encounter Intervals Are Turns
 
-The most important cadence rule is:
+The core cadence rule is:
 
 > **Every encounter interval means a number of procedure turns.**
 
-An interval is never interpreted as “rounds/hours” and is not itself a number of hours.
+An interval is never interpreted as a mixed “rounds/hours” value and is not itself a number of hours.
 
-The procedure defines how long one turn represents:
+Procedure turn lengths:
 
-- **Exploration turn:** 6 minutes / 360 seconds by default.
-- **Resting turn:** 1 hour.
+- **Exploration:** 6 minutes / 360 seconds per turn.
+- **Resting:** 1 hour per turn.
 
-The default Shadowdark danger cadence is:
+Default danger cadence:
 
 | Danger | Encounter check cadence |
-| --- | ---: |
+| --- | --- |
 | Unsafe | Every 3 turns |
 | Risky | Every 2 turns |
 | Deadly | Every 1 turn |
@@ -157,17 +191,17 @@ The default occurrence check is **1d6**, with an encounter on **1**.
 
 Random encounter timing is integrated directly into **Group Traveling**.
 
-The Group derives completed exploration turns from the unified Exploration elapsed time and calculates how many checks are due from the active Scene's danger interval.
+The Group derives completed Exploration turns from unified elapsed Exploration time and calculates how many checks are due from the active Scene's danger interval.
 
 With the default 6-minute Exploration turn:
 
-- Unsafe: checks after turns 3, 6, 9, ...
-- Risky: checks after turns 2, 4, 6, ...
-- Deadly: checks every turn
+- Unsafe checks after turns 3, 6, 9, ...
+- Risky checks after turns 2, 4, 6, ...
+- Deadly checks every turn
 
-If a large time advance crosses more than one check boundary, MK-Shadowdark preserves the exact number of due checks rather than silently collapsing them into one.
+If a time advance crosses multiple check boundaries, MK-Shadowdark preserves the exact number of due checks rather than collapsing them into one.
 
-The existing Traveling workflow receives a compact encounter-context strip. GMs can configure the Scene encounter context and process due checks there; there is no separate Encounter Engine scene-control application.
+The GM can inspect/process the same due state from Group Traveling or the production GM Screen. Both route to the same Group encounter service.
 
 ## Scene encounter context
 
@@ -181,18 +215,18 @@ The active Scene is the source of truth for:
 - effective encounter table
 - encounter interval/formula
 
-The Group does not duplicate this environment data into separate Travel or Rest profiles.
+The Group and GM Screen do not duplicate these values into separate profiles.
 
 ## Encounter-table selection
 
-The effective encounter table is selected in this order:
+The effective table is selected in this order:
 
-1. explicit Scene encounter-table override
+1. explicit Scene table override
 2. matching profile terrain + effective day/night table
 3. profile terrain `any` table
 4. world fallback encounter table
 
-If no valid table is configured, the Group reports the configuration problem before consuming a due encounter check.
+If no valid table is configured, a due encounter check is not silently consumed.
 
 ---
 
@@ -206,7 +240,7 @@ A normal Group rest lasts:
 - **1 hour per resting turn**
 - **8 hours total**
 
-Required encounter checks happen chronologically before rest benefits are finalized.
+Required encounter checks happen chronologically before rest benefits finalize.
 
 | Danger | Checks during an 8-turn rest |
 | --- | --- |
@@ -216,68 +250,58 @@ Required encounter checks happen chronologically before rest benefits are finali
 
 ## Rest order of operations
 
-1. GM confirms the active resting party and planned ration use.
-2. Group enters the Resting procedure and resets the current resting timeline.
+1. GM confirms the active resting party and intended ration use.
+2. Group enters Resting and starts the current rest timeline.
 3. Group/Foundry time advances to the next required check turn.
-4. The internal encounter service performs the occurrence check and resolves the encounter if triggered.
-5. If no encounter occurs, the rest continues to the next check.
-6. If an encounter occurs, the rest pauses immediately.
-7. The GM resolves the interruption and explicitly presses **Resume Rest** to continue the same rest.
-8. After all required checks are clear and the full eight hours have elapsed, planned rations and rest benefits are applied.
+4. The internal encounter service performs the occurrence check and resolves an encounter when triggered.
+5. If there is no encounter, resting continues.
+6. If an encounter occurs, resting pauses immediately.
+7. The GM resolves the interruption and explicitly uses **Resume Rest** from Group Management or the GM Screen.
+8. After all required checks and the full eight hours complete, planned resources and benefits finalize.
 
-### Resource safety
+An interrupted rest consumes **0 planned rations** and grants **0 completed-rest benefits** until successful completion.
 
-An interrupted rest consumes **0 planned rations** and grants **0 rest benefits** until it is explicitly resumed and successfully completed.
-
-Rations are consumed once on successful completion. Rest benefits are tracked per participant so a partial benefit-application failure can be continued without double-resting members that already completed.
-
-Camp-watch assignments are available as procedure context but do not currently alter encounter odds automatically.
+Camp-watch assignments are available as procedure context but do not automatically modify encounter odds.
 
 ---
 
 # Internal Encounter Resolution
 
-The old standalone **Encounter Engine Phase 1** UI has been retired.
+The **old standalone Encounter Engine UI is retired**.
 
 There is no separate:
 
-- Token/Scene Control Encounter button
+- Encounter Scene Control button
 - standalone Encounter dialog
-- RollTable directory **Resolve Encounter** context action
-- independent encounter timeline
-- automatic Time Passes → Encounter Engine resolution path
+- RollTable directory Resolve Encounter action
+- independent encounter clock
+- Time Passes → Encounter Engine auto-resolution path
 
-Encounter rules remain centralized as an internal service used by Group Exploration and Resting.
+Encounter rules remain centralized as an internal service consumed by Group Exploration, Group Resting, GM Screen actions, and encounter chat-card workflows.
 
 A resolved encounter can include:
 
-- encounter Actor / creature result
+- Actor / creature result
 - number appearing
 - terrain / danger / day-night / table context
 - starting distance
 - activity
 - awareness
 - reaction and disposition
-- optional expanded intent
+- optional intent
 - treasure indication
 - morale guidance
 
-The full encounter card is GM-only by default. **Reveal to Players** creates the public version without GM-only detail.
+The full encounter card is GM-only by default. **Reveal to Players** creates a public version without GM-only details.
 
 ## Default Shadowdark encounter fields
 
-The default profile uses:
-
 - starting distance: 1 Close, 2–4 Near, 5–6 Far on 1d6
-- creature activity on the Shadowdark 2d6 activity table
-- awareness from fiction, hiding, and detection checks
-- reaction on 2d6, optionally with one interacting character's CHA modifier where requested
-- 50% wandering-monster treasure indication
+- creature activity: Shadowdark 2d6 activity table
+- awareness: fiction/hiding/detection procedure
+- reaction: 2d6, optionally with one interacting character's CHA modifier where requested
+- treasure: 50% wandering-monster indication
 - morale guidance based on the resolved creature/count
-
-Optional expanded intent and surprise-dice procedures remain profile capabilities but are not required by the core Group workflow.
-
-## Encounter table result text
 
 Text RollTable results may use forms such as:
 
@@ -287,99 +311,63 @@ Text RollTable results may use forms such as:
 3 Bandits (Day)
 ```
 
-The parser supports:
-
-- a leading count or dice formula
-- creature/result label
-- optional `(Day)`, `(Night)`, or `(Any)` suffix
-
-Direct world/Compendium Actor results are preferred because they give the staging service a reliable Actor UUID.
-
-Optional encounter metadata may still be stored in `flags.mk-shadowdark.encounter` on direct Actor/results where applicable:
-
-```json
-{
-  "numberFormula": "2d6",
-  "activity": "Guarding",
-  "intent": "Watch the party from cover",
-  "reactionMode": "fixed",
-  "fixedReaction": "Hostile",
-  "disposition": "hostile",
-  "treasure": false,
-  "moraleImmune": false
-}
-```
+Direct world/Compendium Actor results are preferred for reliable staging Actor resolution.
 
 ---
 
 # Encounter Staging
 
-A resolved GM encounter card includes **Stage Encounter**.
-
-The staging workflow is deliberately explicit:
+A resolved GM encounter card includes **Stage Encounter**, and the production GM Screen can route the latest Group encounter into the same staging service.
 
 ```text
 Encounter card -> Options -> Preview -> Deploy
 ```
 
-No Actor import, Token creation, or Combat creation happens during preview.
+No Actor import, Token creation, or Combat creation happens during Preview.
 
-## Staging options
+Staging supports:
 
-The GM can choose:
+- count adjustment
+- reference: originating Group token, selected token, or Scene center
+- direction
+- compact cluster / line / ring formation
+- grid spacing
+- hidden / visible deployment
+- optional Close/Near/Far distance offset suggestion
+- optional Foundry Combat handoff
 
-- **Count** — defaults to resolved number appearing but can be deliberately changed.
-- **Reference** — originating Group token when available, selected token, or Scene center.
-- **Direction** — center, north, east, south, or west.
-- **Formation** — compact cluster, line, or ring.
-- **Spacing** — approximate grid-cell spacing.
-- **Visibility** — hidden or visible.
-- **Distance offset** — optionally use resolved Close/Near/Far as a placement suggestion.
-- **Combat handoff** — optionally add the deployed TokenDocuments to Foundry Combat.
+World Actors are reused. Compendium Actors can be previewed without import and are imported only after explicit Deploy. If a safe Actor source cannot be resolved, no tokens are created.
 
-Close/Near/Far is only an approximate staging suggestion. The staging service does not claim to understand walls, line of sight, pathing, cover, or exact tactical geometry.
+When **Add to Combat** is selected, the created TokenDocuments enter Foundry Combat through supported document APIs. MK-Shadowdark does not automatically roll initiative or start the round.
 
-## Actor handling
-
-- World Actors are reused directly.
-- A unique world Actor name may be used as a conservative fallback.
-- Compendium Actors can be previewed without import.
-- A Compendium Actor is imported only after **Deploy** is confirmed.
-- Imported staging Actors are marked with their source UUID and reused later.
-- If no safe Actor source can be resolved, MK-Shadowdark shows a manual staging preview and creates no tokens.
-
-## Combat handoff
-
-When **Add to Combat** is selected, deployed TokenDocuments enter Foundry's normal Combat lifecycle.
-
-MK-Shadowdark does **not** automatically roll initiative or start a combat round. Grouped Initiative and Morale Automation continue through their normal hooks.
-
-A Resting encounter remains interrupted after staging; the GM must still explicitly press **Resume Rest** once the interruption is actually resolved.
+A Resting encounter remains interrupted until the GM explicitly resumes the rest.
 
 ---
 
 # GM Member Status
 
-The permanent Group member-card layout remains unchanged except for one compact **GM-only status icon** in the card corner.
+The permanent Group member-card layout remains effectively unchanged apart from one compact **GM-only status affordance**.
 
-Clicking the icon opens a read-only contextual summary of:
+The same prepared member-status model is used by the production GM Screen party rail.
+
+It summarizes:
 
 - current/max HP
 - AC
 - native Dead state
-- MK Death Timer turns when active
-- Detailed Wounds totals and affected locations
+- MK Death Timer turns
+- Detailed Wounds totals/severity
 - active Focus sessions and pending Focus loss
 - active Shadowdark light sources
 - active, non-suppressed Actor effects/statuses
 
-The icon uses a presentation-only severity classification:
+Presentation severity:
 
 - **Normal** — no notable warning state
-- **Attention** — ordinary wounds, active Focus, or active effects worth reviewing
+- **Attention** — ordinary wounds, Focus, or effects worth reviewing
 - **Critical** — 0 HP, Dead/death timer, Critical/Destroyed wound, or pending Focus loss
 
-The status dialog reads canonical character/feature state on demand. No copy of that status is persisted on the Group Actor, and players do not receive the GM-only status control.
+No copy of this character state is persisted on the Group or GM Screen.
 
 ---
 
@@ -387,16 +375,14 @@ The status dialog reads canonical character/feature state on demand. No copy of 
 
 MK-Shadowdark includes combat-aware Shadowdark morale automation.
 
-At combat start, the primary active GM snapshots the hostile NPC force. That starting force remains the baseline for the combat even if combatants are later added or removed.
+At combat start, the primary active GM snapshots the hostile NPC force. That starting force remains the morale baseline even if combatants are later added/removed.
 
 ## Trigger
 
-Morale is checked once when the hostile force reaches its threshold:
+- **Multiple hostile NPCs:** morale checks when living members fall to half or fewer of the starting force.
+- **Solo hostile NPC:** morale checks at half HP or lower while still alive.
 
-- **Multiple hostile NPCs:** when living members fall to half or fewer of the starting force.
-- **Solo hostile NPC:** when the creature is at half HP or lower while still alive.
-
-Morale evaluation is synchronized to the start of the hostile side's turn rather than firing in the middle of damage resolution.
+Morale evaluation is synchronized to the hostile side's turn rather than firing in the middle of damage resolution.
 
 ## Roll
 
@@ -406,15 +392,9 @@ Morale evaluation is synchronized to the start of the hostile side's turn rather
 
 ## Morale leader
 
-A GM can mark one hostile NPC token as the **Morale Leader** from the Token HUD.
+The GM can mark one hostile NPC token as **Morale Leader** from the Token HUD.
 
-If an eligible living leader exists when morale triggers:
-
-- the leader makes one morale check
-- on success, the hostile force holds
-- on failure, the remaining morale-eligible hostile force is marked **Fleeing**
-
-Without a leader, each morale-eligible surviving hostile NPC rolls individually and failures are marked **Fleeing**.
+If an eligible living leader exists, the leader rolls for the force. On failure, remaining morale-eligible enemies are marked **Fleeing**. Without a leader, eligible survivors roll individually.
 
 ## Morale immunity
 
@@ -422,7 +402,9 @@ Use the predefined effect:
 
 **Immune to morale checks**
 
-It sets the canonical MK-Shadowdark morale-immunity actor state and excludes that actor from morale rolls and Fleeing application.
+It sets the canonical MK morale-immunity state and excludes that actor from morale rolls/Fleeing application.
+
+The GM Screen displays current Foundry Combat and MK Morale context without replacing the Combat Tracker or creating another morale model.
 
 ---
 
@@ -430,50 +412,43 @@ It sets the canonical MK-Shadowdark morale-immunity actor state and excludes tha
 
 **Time Passes is presentation-only.**
 
-It provides the synchronized splash/progress presentation through the module socket. Unified Group time advancement can optionally reuse that presentation.
+It provides synchronized splash/progress presentation through the module socket. Unified Group time advancement can optionally reuse that presentation.
 
 Time Passes does **not**:
 
-- prompt for 1d6/2d6/3d6 encounter rolls
+- prompt for encounter dice
 - roll encounter dice
 - decide whether an encounter occurs
-- create encounter-roll chat messages
+- create encounter-check chat messages
 - resolve encounters
 - maintain or advance a competing world-time clock
 
-Encounter timing belongs to Group Exploration/Resting and the unified Group time service.
+Encounter timing belongs to Group Exploration/Resting and unified Group time.
 
 ---
 
 # Damage Traits
 
-Create or use a Shadowdark **Property** item such as `Fire`, then select that Property on a weapon, spell, or NPC attack. On a target NPC's embedded NPC Feature, open **Effects**, choose **Add Damage Trait**, select Resistance, Immunity, or Vulnerability, and select the matching Property. **Resistance** halves damage and rounds down with a minimum of 1, **Immunity** prevents all damage, and **Vulnerability** doubles damage. Immunity takes precedence; resistance and vulnerability cancel when both match. Auto Damage aggregates transferred effects from every NPC Feature and shows the calculation on the chat card. Matching uses the Property UUID, so both source and target must reference the same Property item.
+Create or use a Shadowdark **Property** item such as `Fire`, then select that Property on a weapon, spell, or NPC attack. On a target NPC Feature, add a Damage Trait effect and choose Resistance, Immunity, or Vulnerability with the matching Property.
 
-Spell and NPC attack sheets expose a **Properties** selector. Every NPC Feature sheet has an **Effects** tab for damage traits, predefined effects, and ordinary Active Effects. Damage-trait effects are created with Transfer enabled and apply to the NPC that owns the Feature; disabling the effect or Transfer disables the trait. Existing Traits-tab assignments and older actor-level Creature Properties automatically migrate into transferring Active Effects. World Properties must be created separately through Foundry's Items directory. The feature also works with weapon Properties selected through Shadowdark's native weapon sheet.
+- **Resistance** halves matching damage, rounding down with a minimum of 1.
+- **Immunity** prevents matching damage.
+- **Vulnerability** doubles matching damage.
+- Immunity takes precedence; matching Resistance + Vulnerability cancel.
 
-The predefined **Magical Attacks** effect makes weapon and NPC attacks from an actor count as magical. Add it directly to the actor or to an embedded Effect item such as Holy Weapon; disabling or expiring that effect restores normal attacks. Permanently magical weapons and attacks with a Magic/Magical Property also count as magical.
-
-The predefined Effect **Only Damaged by Magical Sources** prevents Auto Damage from reducing the protected actor's HP when the source is nonmagical. Spells, scrolls, wands, magical attacks, permanently magical weapons, and attacks with a Magic/Magical Property count as magical. Add the predefined effect to an Effect item embedded on any NPC or player character.
-
-The predefined **Immune to morale checks** effect uses:
-
-```text
-flags.mk-shadowdark.encounter.moraleImmune = true
-```
-
-and is consumed by Morale Automation.
+The predefined **Magical Attacks** effect makes weapon/NPC attacks count as magical. The predefined **Only Damaged by Magical Sources** effect blocks nonmagical-source Auto Damage. The predefined **Immune to morale checks** effect is consumed by Morale Automation.
 
 ---
 
 # Paper Chat
 
-Choose a Paper Chat theme from the module settings. GMs can use the paintbrush control in the Chat tab or its pop-out, then right-click a message element to edit its typography, colors, imagery, border, width, height, spacing, radius, or alignment. Each saved override applies only to the selected theme and synchronizes to all clients. The optional **Apply Theme to Character Sheets** setting applies the selected background and supporting palette to the content below the tabs and the active tab itself, preserving the character sheet's header and inactive navigation.
+Paper Chat provides twelve paper-inspired chat themes plus a GM visual editor. Theme-specific typography, colors, images, borders, sizing, spacing, radius, and alignment can be customized and synchronized to clients.
 
 ---
 
 # Quickdraw Limit Expressions
 
-The Quickdraw limit is evaluated separately for each character. Supported examples:
+Quickdraw limits are evaluated per character. Examples:
 
 ```text
 3
@@ -482,57 +457,54 @@ max(1, @dex.mod + gear("bandolier", 2))
 3 + gear("potion belt", 3)
 ```
 
-- `@dex.mod` is shorthand for the character's DEX modifier. Other numeric roll-data paths such as `@abilities.str.mod` and full actor paths such as `@system.level.value` are also supported.
-- `gear("name")` counts matching carried, non-stashed item quantities using a case-insensitive partial name match.
-- `gear("name", slots)` multiplies each matching item quantity by the supplied slot value. For example, one `Bandolier` with quantity 1 makes `gear("bandolier", 2)` add 2 slots; quantity 2 adds 4 slots.
-- Multiple gear bonuses can be combined, such as `max(1, @dex.mod + gear("bandolier", 2) + gear("potion belt", 3))`.
-- The inventory sidebar includes a native-style Quick card showing only current/total selections; hover over or focus the card to see the actor, Base, and gear source breakdown.
-- Supported operators are `+`, `-`, `*`, `/`, `%`, and `^`. Supported functions are `min`, `max`, `floor`, `ceil`, `round`, `trunc`, `abs`, and `clamp`.
-- The result is rounded down to a whole number. `0` means unlimited. Invalid expressions fall back to `3` and write a warning to the console.
+- `@dex.mod` and other numeric actor roll-data paths are supported.
+- `gear("name")` counts matching carried, non-stashed item quantities.
+- `gear("name", slots)` multiplies matching quantity by the supplied slot bonus.
+- Supported operators: `+`, `-`, `*`, `/`, `%`, `^`.
+- Supported functions include `min`, `max`, `floor`, `ceil`, `round`, `trunc`, `abs`, and `clamp`.
+- Result is rounded down. `0` means unlimited. Invalid expressions fall back to `3`.
 
 ---
 
 # Token Equipment Display
 
-The Token Equipment Display uses the same equipped, stashed, handedness, shield, and hand-occupying rules as Equipment Hands. It refreshes when actor items are created, updated, deleted, or transferred.
+Token Equipment Display uses the same equipped/stashed/handedness rules as Equipment Hands.
 
-- One-handed items appear on the left and right sides. Shields prefer the left and weapons prefer the right; right-click a held icon to swap its hand assignment.
-- Two-handed weapons appear in both hand slots; the secondary occupancy icon is grayed out.
-- Carried Quickdraw items appear as smaller icons and are omitted from the Quickdraw row while held or stashed.
-- Left-clicking can open the item sheet, use or roll the item through Shadowdark, or do nothing. Shift-click skips prompts where the system supports it.
-- World settings control everyone/owner/GM visibility, optional icon frames, border thickness and colors, independent held/Quickdraw opacity and scale, Quickdraw icon padding, anchors, and X and Y offsets.
+- one-handed gear appears on left/right hand sides
+- two-handed gear occupies both displayed hand slots, with the secondary occupancy icon grayed out
+- held/stashed gear is omitted from the Quickdraw row
+- item icons can open/use/roll items according to module settings
+- visibility, opacity, scale, anchors, offsets, borders, and Quickdraw presentation are configurable
 
 ---
 
 # Focus Tracker
 
-Focus Tracker integrates with the native Shadowdark 4.x spell-casting methods. A successful spell with a Focus duration starts a tracked session; failed maintenance checks end it, and a critical failure also marks the spell as lost for the day.
+Focus Tracker integrates with Shadowdark 4.x spellcasting. Successful Focus spells start tracked sessions; failed maintenance checks end Focus, and critical failures can also mark the spell lost for the day.
 
-- Start-of-turn and damage reminders are whispered to the caster's owners and active GMs.
-- Chat actions can roll the native Focus check, ignore an optional damage prompt, end Focus, or reopen the source spell.
-- Active Focus sessions appear as compact custom icons in the MK-Shadowdark summary bar and in the token's top-left conditions/effects area, with a sheet-header fallback when the summary bar is disabled.
-- The default simultaneous Focus capacity is configurable from the Focus Tracker settings screen.
-- The module API is available at `game.modules.get("mk-shadowdark").api.focus`.
+The public API is available at:
 
-Group GM Member Status consumes this canonical Focus state instead of storing another copy.
+```js
+game.modules.get("mk-shadowdark").api.focus
+```
+
+The Group/GM member-status model consumes canonical Focus state rather than storing another copy.
 
 ---
 
 # Targeted Spell DC Effects
 
-To make spells targeting any creature require DC 18, add an Active Effect to that actor with this change:
+A target can impose a spellcasting DC with an Active Effect change such as:
 
 | Key | Mode | Value |
 | --- | --- | --- |
 | `system.roll.spell.dc` | Any | `18` |
 
-You can also select the predefined **Targeted Spell DC** effect, which starts at DC 18; edit its value for a different DC. When a caster targets that token, the spellcasting dialog uses the configured DC and displays it in the heading. The Effect item must be embedded on the targeted actor and its effect must be enabled. The Change mode and v13 Transfer setting are ignored for this target-DC key, so a default **New Effect** works. The effect works on any actor type, including player characters and NPCs. If a spell targets several protected actors, the highest applicable DC is used.
+The predefined **Targeted Spell DC** effect starts at DC 18 and can be edited. When multiple protected targets are selected, the highest applicable DC is used.
 
 ---
 
 # Internal / Macro APIs
-
-MK-Shadowdark exposes small module APIs so features and advanced macros can consume canonical state without parsing UI HTML.
 
 ```js
 const mk = game.modules.get("mk-shadowdark")?.api;
@@ -554,80 +526,68 @@ mk.timePasses
 mk.focus
 mk.morale
 mk.tokenEquipment
+mk.gmScreen
 ```
 
-The compatibility `mk.encounters` surface is now **headless**. It exposes internal check/resolve services, not the retired standalone Encounter dialog.
+The compatibility `mk.encounters` surface is headless. It exposes encounter services, not the retired standalone Encounter dialog.
 
-Example headless occurrence check:
-
-```js
-const result = await mk.encounterService.check();
-console.log(result.check, result.isEncounter, result.context);
-```
-
-Example headless resolution:
+Examples:
 
 ```js
-const result = await mk.encounterService.resolve({
-  tableUuid: "RollTable.YOUR_TABLE_ID"
-});
-console.log(result.encounter, result.reason);
-```
+const check = await mk.encounterService.check();
+const resolved = await mk.encounterService.resolve({ tableUuid: "RollTable.YOUR_TABLE_ID" });
 
-Example staging preview without document creation:
-
-```js
 const preview = await mk.encounterStaging.preview(encounterData, {
   formation: "cluster",
   visibility: "hidden",
   addToCombat: false
 });
+
+mk.gmScreen.open();
 ```
 
-Prefer these service APIs over reading private flags or Group DOM state directly.
+Prefer canonical service APIs over private flags or rendered DOM state.
 
 ---
 
 # Troubleshooting
 
+## The GM Screen button is missing
+
+The production GM Screen is GM-only. Use the **Token Scene Controls** and look for the shield button. The same screen can be opened with `game.modules.get("mk-shadowdark").api.gmScreen.open()` after the module is ready.
+
 ## A Group encounter check is due but cannot run
 
-Verify that the active Scene's Group Encounter context resolves a valid RollTable. Use **Encounter Context** in Group Traveling to configure the current Scene.
+Verify the active Scene resolves a valid encounter RollTable through the Group Encounter / Scene Context configuration.
 
 ## Rest Party pauses with a configuration warning
 
-The current danger requires encounter checks but the active Scene has no valid encounter RollTable. Configure the Scene encounter context and continue the same rest.
+The current danger requires encounter checks but the Scene has no valid encounter table. Configure the Scene context and continue the same rest.
 
 ## Rest Party says Resume Rest
 
-The rest was interrupted. Resolve the encounter/interruption, then explicitly press **Resume Rest**. Staging the encounter does not automatically resume the procedure.
+The rest was interrupted. Resolve the encounter/interruption, then explicitly press **Resume Rest** from Group Management or the GM Screen.
 
 ## Stage Encounter cannot deploy
 
-The resolved encounter could not be mapped safely to a world or Compendium Actor. MK-Shadowdark intentionally creates no tokens in that case; use the manual preview as the staging reference.
+The encounter could not be mapped safely to a world or Compendium Actor. MK-Shadowdark intentionally creates no tokens in that case.
 
 ## Morale does not trigger
 
-Verify that:
-
-- combat has started
-- the relevant NPCs are hostile
-- the primary active GM is connected
-- the hostile force has reached its threshold
-- morale has not already been checked for that starting force
-- the creature is not using **Immune to morale checks**
+Verify that combat has started, the NPCs are hostile, the primary active GM is connected, the hostile force reached its threshold, morale was not already checked, and the creature is not morale-immune.
 
 ## Equipment icons are missing
 
-Verify that the item is actually held/equipped according to Shadowdark data and that Token Equipment Display visibility/settings allow the current user to see it.
+Verify the item is actually held/equipped according to Shadowdark data and Token Equipment Display visibility/settings allow the current user to see it.
 
 ---
 
 ## Notes
 
 - Settings are grouped in Foundry's module settings menu.
-- Base Management was removed from MK-Shadowdark; old API calls receive a compatibility warning.
-- The standalone Encounter Engine UI and the separate GM Screen Mock prototype are retired; Group is the supported party/procedure surface.
+- Base Management was removed from MK-Shadowdark; old compatibility API calls warn instead of creating the removed actor type.
+- The standalone Encounter Engine UI and the old GM Screen Mock prototype are retired.
+- **Group Management and the production GM Screen are both supported and coexist.**
 - Bundled Camping activity icons are from [Game-icons.net](https://game-icons.net/) under CC BY 3.0.
 
 ## License

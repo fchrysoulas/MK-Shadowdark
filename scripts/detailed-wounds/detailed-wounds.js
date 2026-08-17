@@ -1,9 +1,15 @@
 import { onCharacterSheetRender } from "../libs/sheet-render-adapter.js";
+import {
+  WOUND_MIGRATION_VERSION,
+  migrateLegacyWoundData,
+  normalizeCurrentWoundData
+} from "./detailed-wounds-migration.js";
 
 (() => {
   const MODULE_ID = "mk-shadowdark";
   const SUBMODULE = "Detailed Wounds";
   const SETTING_ENABLED = "detailedWoundsEnabled";
+  const SETTING_MIGRATION_VERSION = "detailedWoundsMigrationVersion";
   const FLAG_KEY = "detailedWounds";
   const EFFECT_FLAG = "woundPenalties";
   const TAB_ID = "tab-mk-wounds";
@@ -42,6 +48,16 @@ import { onCharacterSheetRender } from "../libs/sheet-render-adapter.js";
         type: Boolean,
         default: true,
         onChange: refreshOpenActorSheets
+      });
+    }
+
+    if (!game.settings.settings.has(`${MODULE_ID}.${SETTING_MIGRATION_VERSION}`)) {
+      game.settings.register(MODULE_ID, SETTING_MIGRATION_VERSION, {
+        name: "Detailed Wounds Migration Version",
+        scope: "world",
+        config: false,
+        type: Number,
+        default: 0
       });
     }
 
@@ -255,7 +271,7 @@ import { onCharacterSheetRender } from "../libs/sheet-render-adapter.js";
     await roll.toMessage(
       {
         speaker: ChatMessage.getSpeaker({ actor }),
-        flavor: `Random Wound: ${escapeHtml(actor.name)} — ${locationRoll}. ${escapeHtml(location.label)} / ${severity.label} (severity ${severityResult})`
+        flavor: `Random Wound: ${escapeHtml(actor.name)} - ${locationRoll}. ${escapeHtml(location.label)} / ${severity.label} (severity ${severityResult})`
       },
       { rollMode: publicMode }
     );
@@ -401,46 +417,7 @@ import { onCharacterSheetRender } from "../libs/sheet-render-adapter.js";
   }
 
   function normalizeData(raw) {
-    const source = foundry.utils.deepClone(raw ?? {});
-    const data = { version: 2, locations: {} };
-
-    for (const location of LOCATIONS) {
-      data.locations[location.key] = normalizeLocation(source.locations?.[location.key]);
-    }
-
-    // Version 1 had a separate abdomen location. Preserve its most serious
-    // status when migrating to the consolidated torso location.
-    const abdomen = normalizeLocation(source.locations?.abdomen);
-    const torso = data.locations.torso;
-    const abdomenStatus = getStatus(abdomen.status);
-    const torsoStatus = getLocationStatus(data, "torso");
-    data.locations.torso = {
-      status: (abdomenStatus.rank > torsoStatus.rank ? abdomenStatus : torsoStatus).key,
-      hits: torso.hits + abdomen.hits
-    };
-
-    return data;
-  }
-
-  function normalizeLocation(value) {
-    const status = getLegacyStatus(value);
-    const hits = Array.isArray(value)
-      ? value.length
-      : Math.max(0, Number(value?.hits) || (status.key === "ok" ? 0 : 1));
-
-    return { status: status.key, hits };
-  }
-
-  function getLegacyStatus(value) {
-    if (value && !Array.isArray(value) && typeof value === "object" && getStatus(value.status)) {
-      return getStatus(value.status);
-    }
-
-    if (!Array.isArray(value) || !value.length) return STATUSES[0];
-
-    const severityRanks = { minor: 2, moderate: 2, severe: 3, critical: 3 };
-    const highestRank = value.reduce((rank, wound) => Math.max(rank, severityRanks[wound?.severity] ?? 1), 1);
-    return STATUSES.find(status => status.rank === highestRank) ?? STATUSES[0];
+    return normalizeCurrentWoundData(raw);
   }
 
   function getLocationStatus(data, location) {
@@ -472,6 +449,56 @@ import { onCharacterSheetRender } from "../libs/sheet-render-adapter.js";
     }
   }
 
+  function isMigrationAuthority() {
+    const activeGms = (game.users ?? [])
+      .filter(user => user.active && user.isGM)
+      .sort((left, right) => String(left.id).localeCompare(String(right.id)));
+    const authority = activeGms[0];
+    return authority ? game.user?.id === authority.id : game.user?.isGM === true;
+  }
+
+  async function migrateDetailedWounds() {
+    if (!isMigrationAuthority()) return { migrated: 0, errors: 0, skipped: true };
+
+    const currentVersion = Number(getSetting(SETTING_MIGRATION_VERSION, 0)) || 0;
+    if (currentVersion >= WOUND_MIGRATION_VERSION) {
+      return { migrated: 0, errors: 0, skipped: true };
+    }
+
+    let migrated = 0;
+    let errors = 0;
+
+    for (const actor of game.actors ?? []) {
+      try {
+        if (!isPlayerActor(actor)) {
+          await syncWoundPenaltyEffect(actor);
+          continue;
+        }
+
+        const raw = actor.getFlag(MODULE_ID, FLAG_KEY);
+        const { data, needsWrite } = migrateLegacyWoundData(raw);
+        const hasStoredData = raw !== undefined && raw !== null;
+
+        if (hasStoredData && needsWrite) {
+          await actor.setFlag(MODULE_ID, FLAG_KEY, data);
+          migrated += 1;
+        }
+
+        await syncWoundPenaltyEffect(actor, data);
+      } catch (error) {
+        errors += 1;
+        console.error(`${MODULE_ID} v${getModuleVersion()} | ${SUBMODULE} | migration error`, actor?.name, error);
+      }
+    }
+
+    if (errors === 0) {
+      await game.settings.set(MODULE_ID, SETTING_MIGRATION_VERSION, WOUND_MIGRATION_VERSION);
+      if (migrated > 0) log(`migrated ${migrated} actor wound record(s)`);
+    }
+
+    return { migrated, errors, skipped: false };
+  }
+
   function refreshOpenActorSheets() {
     try {
       for (const app of Object.values(ui.windows ?? {})) {
@@ -498,7 +525,9 @@ import { onCharacterSheetRender } from "../libs/sheet-render-adapter.js";
     console.log(`${MODULE_ID} v${getModuleVersion()} | ${SUBMODULE} |`, ...args);
   }
 
-  Hooks.once("ready", () => {
+  Hooks.once("ready", async () => {
+    await migrateDetailedWounds();
+
     const mod = game.modules.get(MODULE_ID);
     if (mod) {
       mod.api = mod.api ?? {};
@@ -511,16 +540,9 @@ import { onCharacterSheetRender } from "../libs/sheet-render-adapter.js";
           : [],
         worsen: (actor, location) => worsenLocationStatus(actor, location),
         improve: (actor, location) => improveLocationStatus(actor, location),
-        rollRandom: actor => rollRandomWound(actor)
+        rollRandom: actor => rollRandomWound(actor),
+        migrateLegacyData: () => migrateDetailedWounds()
       };
-    }
-
-    if (game.user?.isGM) {
-      for (const actor of game.actors ?? []) {
-        syncWoundPenaltyEffect(actor).catch(error => {
-          console.error(`${MODULE_ID} v${getModuleVersion()} | ${SUBMODULE} | penalty sync error`, error);
-        });
-      }
     }
   });
 })();

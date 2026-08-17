@@ -13,10 +13,11 @@ const CHARACTER_SHEET_RENDER_HOOKS = Object.freeze([
 ]);
 
 function scheduleNextFrame(callback) {
-  if (typeof window?.requestAnimationFrame === "function") {
-    return window.requestAnimationFrame(callback);
+  const browserWindow = globalThis.window;
+  if (typeof browserWindow?.requestAnimationFrame === "function") {
+    return browserWindow.requestAnimationFrame(callback);
   }
-  return window.setTimeout(callback, 0);
+  return globalThis.setTimeout(callback, 0);
 }
 
 const coordinator = new SheetRenderCoordinator({

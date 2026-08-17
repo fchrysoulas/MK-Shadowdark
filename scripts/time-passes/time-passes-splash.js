@@ -1,13 +1,9 @@
-import {
-  createTimePassesSplashEvent,
-  isTimePassesSplashEvent,
-} from "./time-passes-socket.js";
-
 const MODULE_ID = "mk-shadowdark";
 const SUBMODULE = "Time Passes Splash";
-const SOCKET_CHANNEL = `module.${MODULE_ID}`;
+const FLAG_KEY = "timePassesSplash";
 
-let socketListenerInstalled = false;
+let chatListenerInstalled = false;
+const seenMessageIds = new Set();
 
 function log(...args) {
   console.log(`${MODULE_ID} | ${SUBMODULE} |`, ...args);
@@ -198,21 +194,23 @@ function showSplash(payload = {}) {
   return wrap;
 }
 
-function installSocketListenerOnce() {
-  if (socketListenerInstalled || !game?.socket?.on) return;
-  socketListenerInstalled = true;
+function installChatListenerOnce() {
+  if (chatListenerInstalled || !globalThis.Hooks?.on) return;
+  chatListenerInstalled = true;
 
-  game.socket.on(SOCKET_CHANNEL, event => {
+  Hooks.on("createChatMessage", message => {
     try {
-      if (!isTimePassesSplashEvent(event)) return;
-      if (event.senderId && event.senderId === game.user?.id) return;
-      showSplash(event.payload);
+      const payload = message?.getFlag?.(MODULE_ID, FLAG_KEY);
+      if (!payload) return;
+      if (message.id && seenMessageIds.has(message.id)) return;
+      if (message.id) seenMessageIds.add(message.id);
+      showSplash(payload);
     } catch (handlerError) {
-      console.error(`${MODULE_ID} | ${SUBMODULE} | socket handler error:`, handlerError);
+      console.error(`${MODULE_ID} | ${SUBMODULE} | chat handler error:`, handlerError);
     }
   });
 
-  log("Socket listener installed.");
+  log("Chat listener installed.");
 }
 
 async function broadcastSplash(payload) {
@@ -221,13 +219,122 @@ async function broadcastSplash(payload) {
     return false;
   }
 
-  const event = createTimePassesSplashEvent(payload, game.user?.id ?? null);
-  showSplash(event.payload);
-  game.socket?.emit?.(SOCKET_CHANNEL, event);
+  const message = await ChatMessage.create({
+    speaker: ChatMessage.getSpeaker(),
+    style: globalThis.CONST?.CHAT_MESSAGE_STYLES?.OTHER
+      ?? globalThis.CONST?.CHAT_MESSAGE_TYPES?.OTHER
+      ?? 0,
+    content: '<span style="display:none">mk-time-passes</span>',
+    flags: { [MODULE_ID]: { [FLAG_KEY]: payload } },
+  });
+
+  setTimeout(() => {
+    message?.delete?.().catch(() => {});
+  }, 3000);
   return true;
 }
 
-async function presentTimePasses(options = {}) {
+function normalizeDiceCount(value, fallback = 1) {
+  const count = Number(value);
+  if (Number.isInteger(count) && count >= 1 && count <= 3) return count;
+  return Math.min(3, Math.max(1, Number(fallback) || 1));
+}
+
+function configuredDiceCount() {
+  const match = String(setting("timePassesRollFormula", "1d6")).match(/^([123])d6$/i);
+  return normalizeDiceCount(match?.[1], 1);
+}
+
+function rollContainsResult(roll, faces, target) {
+  try {
+    const DieTerm = globalThis.foundry?.dice?.terms?.Die;
+    for (const term of roll?.terms ?? []) {
+      const isDie = DieTerm
+        ? term instanceof DieTerm
+        : Array.isArray(term?.results) && Number.isFinite(Number(term?.faces));
+      if (!isDie || Number(term.faces) !== Number(faces)) continue;
+      if (term.results.some(result => Number(result?.result) === Number(target))) return true;
+    }
+  } catch (_error) {
+  }
+  return false;
+}
+
+function buildEncounterCuePayload(options = {}) {
+  return {
+    title: String(
+      options.encounterText
+      ?? setting("timePassesEncounterText", "ENCOUNTER!")
+    ),
+    durationMs: Math.max(
+      200,
+      Number(
+        options.encounterDurationMs
+        ?? setting("timePassesEncounterDurationMs", 2000)
+      ) || 2000
+    ),
+    showProgress: false,
+    fontFamily: String(
+      options.fontFamily
+      ?? setting("timePassesFontFamily", "var(--font-primary, serif)")
+    ) || "var(--font-primary, serif)",
+    titleFontSizePx: Number(
+      options.titleFontSizePx
+      ?? setting("timePassesTitleFontSizePx", 44)
+    ) || 44,
+    showSkull: Boolean(
+      options.encounterShowSkull
+      ?? setting("timePassesEncounterShowSkull", true)
+    ),
+    skullPath: String(
+      options.skullPath
+      ?? setting("timePassesSkullIconPath", "icons/svg/skull.svg")
+    ),
+    skullSizePx: Number(
+      options.skullSizePx
+      ?? setting("timePassesSkullSizePx", 34)
+    ) || 34,
+  };
+}
+
+async function promptDiceCount(defaultCount = configuredDiceCount()) {
+  const selected = normalizeDiceCount(defaultCount, 1);
+  return Dialog.wait({
+    title: "Time Passes - Dice",
+    content: `
+      <form>
+        <p>How many d6 should be rolled as time passes?</p>
+        <p class="notes">A result of 1 shows the encounter cue, but never automates an encounter.</p>
+      </form>
+    `,
+    buttons: {
+      one: {
+        icon: '<i class="fas fa-dice-one"></i>',
+        label: "1d6",
+        callback: () => 1,
+      },
+      two: {
+        icon: '<i class="fas fa-dice-two"></i>',
+        label: "2d6",
+        callback: () => 2,
+      },
+      three: {
+        icon: '<i class="fas fa-dice-three"></i>',
+        label: "3d6",
+        callback: () => 3,
+      },
+      cancel: {
+        icon: '<i class="fas fa-times"></i>',
+        label: "Cancel",
+        callback: () => null,
+      },
+    },
+    default: selected === 3 ? "three" : selected === 2 ? "two" : "one",
+    close: () => null,
+  }, { width: 430 });
+}
+
+async function timePasses(options = {}) {
   if (!game.user?.isGM) {
     ui?.notifications?.warn?.("Only the GM can trigger Time Passes.");
     return null;
@@ -235,18 +342,38 @@ async function presentTimePasses(options = {}) {
 
   if (!setting("timePassesEnabled", true)) return null;
 
+  let diceCount = options.diceCount;
+  if (diceCount === undefined) {
+    diceCount = await promptDiceCount(configuredDiceCount());
+    if (!diceCount) return null;
+  }
+  diceCount = normalizeDiceCount(diceCount, configuredDiceCount());
+
   const payload = buildTimePassesPayload(options);
   const presented = await broadcastSplash(payload);
+  await new Promise(resolve => setTimeout(resolve, payload.durationMs));
+
+  const roll = await new Roll(`${diceCount}d6`).evaluate();
+  const rollMode = globalThis.CONST?.DICE_ROLL_MODES?.PUBLIC ?? "publicroll";
+  const flavor = String(options.rollFlavor ?? setting("timePassesRollFlavor", "⏳"));
+  await roll.toMessage(
+    { speaker: ChatMessage.getSpeaker(), flavor },
+    { rollMode }
+  );
+
+  const encounterCueShown = rollContainsResult(roll, 6, 1);
+  if (encounterCueShown) {
+    await broadcastSplash(buildEncounterCuePayload(options));
+  }
 
   return {
     presented: Boolean(presented),
     payload,
+    roll,
+    diceCount,
+    encounterCueShown,
   };
 }
-
-// Compatibility alias for callers that used the old API. Time Passes is now
-// presentation-only: it never rolls encounter dice and never mutates time.
-const timePasses = presentTimePasses;
 
 function exposeTimePassesApi() {
   const module = game.modules?.get?.(MODULE_ID);
@@ -254,13 +381,16 @@ function exposeTimePassesApi() {
 
   module.api ??= {};
   module.api.timePasses = {
-    version: 2,
-    presentationOnly: true,
+    version: 3,
+    standaloneRoll: true,
+    encounterLinked: false,
     timePasses,
-    present: presentTimePasses,
+    roll: timePasses,
     showSplash,
     broadcastSplash,
     buildPayload: buildTimePassesPayload,
+    buildEncounterCuePayload,
+    promptDiceCount,
   };
 
   return module.api.timePasses;
@@ -268,9 +398,9 @@ function exposeTimePassesApi() {
 
 function registerTimePasses() {
   Hooks.once("ready", () => {
-    installSocketListenerOnce();
+    installChatListenerOnce();
     exposeTimePassesApi();
-    log("Ready (presentation only).");
+    log("Ready (standalone roll; encounter-independent).");
   });
 }
 
@@ -278,12 +408,15 @@ registerTimePasses();
 
 export {
   MODULE_ID,
-  SOCKET_CHANNEL,
+  FLAG_KEY,
   buildTimePassesPayload,
   showSplash,
-  installSocketListenerOnce,
+  installChatListenerOnce,
   broadcastSplash,
-  presentTimePasses,
+  normalizeDiceCount,
+  rollContainsResult,
+  buildEncounterCuePayload,
+  promptDiceCount,
   timePasses,
   exposeTimePassesApi,
   registerTimePasses,

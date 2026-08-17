@@ -48,6 +48,16 @@ test("GM Screen has party, pressure, and contextual workspaces", () => {
   }
 });
 
+test("GM Screen exposes the standalone Time Passes dice selector", () => {
+  assert.match(template, /data-time-passes-dice/);
+  assert.match(template, /<option value="1">1d6<\/option>/);
+  assert.match(template, /<option value="2">2d6<\/option>/);
+  assert.match(template, /<option value="3">3d6<\/option>/);
+  assert.match(template, /data-action="timePasses"/);
+  assert.match(runtime, /const rollTimePasses = api\?\.roll \?\? api\?\.timePasses/);
+  assert.match(runtime, /rollTimePasses\(\{ diceCount \}\)/);
+});
+
 test("GM Screen does not persist duplicate gameplay state", () => {
   const combined = `${runtime}\n${viewModel}`;
   assert.doesNotMatch(combined, /\.setFlag\s*\(/);

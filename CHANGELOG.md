@@ -1,5 +1,17 @@
 # Changelog
 
+## 1.9.12
+
+- Restored the v1.6.0 Time Passes flow in the GM Screen with a 1d6/2d6/3d6 selector, synchronized opening splash, public roll, and the original visual ENCOUNTER! skull cue when any die shows 1.
+- Kept the Time Passes result-of-1 cue presentation-only: it does not schedule, resolve, stage, or create encounters and never calls the Group encounter service.
+- Fully separated Group Time from Time Passes so Group Exploration and Resting use only their own procedure-time and encounter mechanisms.
+
+## 1.9.11
+
+- Added a production GM Screen alongside Group Management, with active-party status, procedure pressure, exploration, resting, encounter staging, combat, environment, and quick-rules workspaces backed by existing services.
+- Added Group-first procedure state, unified time, marching-order, exploration-role, camp-watch, Scene environment, exploration encounter, interrupted rest, encounter staging, and GM member-status services without changing the restored Group Sheet structure.
+- Retired the standalone Encounter Engine UI in favor of the shared headless encounter service used by Group Exploration and Resting.
+
 ## 1.9.10
 
 - Restored the complete v1.6.0 Group Sheet command dashboard, including its Party sidebar cards and controls, compact workspace, responsive layout, and bottom Active Torches bar.

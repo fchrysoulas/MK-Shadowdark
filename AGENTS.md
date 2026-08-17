@@ -88,7 +88,7 @@ Guidance for AI agents working in this repository.
 - Detailed Wounds applies only to Player actors. Keep the ten-location GM-managed board, severity progression, and its single consolidated penalty effect off NPC sheets.
 - Death Timer uses Shadowdark's Dead status and Foundry Active Effect `img`/status data. Healing removes both Death Timer and Dead.
 - Equipment Hands and Token Equipment Display must share equipped, stashed, handedness, shield, and `Occupies One Hand` rules.
-- Time Passes broadcasts through ChatMessage flags. Any selected d6 showing 1 triggers an encounter, including multi-die formulas.
+- Time Passes broadcasts its v1.6-style splash through ChatMessage flags and offers a standalone 1d6/2d6/3d6 public roll from the GM Screen. Any rolled 1 displays the old ENCOUNTER! skull splash as a visual cue only. Never connect it to Group Time, encounter scheduling, resolution, staging, or the Encounter service.
 
 ## Validation
 

@@ -116,57 +116,12 @@ function buildAdvanceResult({
   };
 }
 
-function normalizeTimePassesPresentation(value) {
-  if (value === true) return {};
-  if (!value || typeof value !== "object" || Array.isArray(value)) return null;
-  return { ...value };
-}
-
-async function presentGroupTimeAdvance(actor, transition, presentation) {
-  const options = normalizeTimePassesPresentation(presentation);
-  if (!options) return null;
-
-  const api = globalThis.game?.modules?.get?.(MODULE_ID)?.api?.timePasses;
-  const present = api?.present ?? api?.timePasses;
-  if (typeof present !== "function") {
-    return {
-      requested: true,
-      presented: false,
-      reason: "time-passes-unavailable",
-    };
-  }
-
-  try {
-    const result = await present({
-      ...options,
-      groupActorUuid: String(actor?.uuid ?? ""),
-      procedure: transition.procedure,
-      seconds: transition.seconds,
-      reason: transition.reason,
-    });
-
-    return {
-      requested: true,
-      presented: Boolean(result?.presented ?? result),
-      reason: "",
-    };
-  } catch (error) {
-    console.warn(`${MODULE_ID} | Group Time | Time Passes presentation failed.`, error);
-    return {
-      requested: true,
-      presented: false,
-      reason: "time-passes-error",
-    };
-  }
-}
-
 async function advanceGroupTime(actor, seconds, {
   procedure = undefined,
   syncWorldTime = true,
   user = globalThis.game?.user,
   reason = "",
   notify = true,
-  presentation = false,
 } = {}) {
   if (!actor?.update) {
     throw new TypeError("A Group Actor document is required to advance Group time.");
@@ -245,9 +200,6 @@ async function advanceGroupTime(actor, seconds, {
     syncWorldTime,
     reason,
   });
-
-  const presentationResult = await presentGroupTimeAdvance(actor, transition, presentation);
-  if (presentationResult) transition.presentation = presentationResult;
 
   globalThis.Hooks?.callAll?.(GROUP_TIME_ADVANCED_HOOK, actor, transition);
   return transition;
@@ -346,8 +298,6 @@ export {
   getGroupTimeState,
   getGroupElapsedTime,
   ensureGroupTimeState,
-  normalizeTimePassesPresentation,
-  presentGroupTimeAdvance,
   advanceGroupTime,
   resetGroupTime,
   exposeGroupTimeApi,

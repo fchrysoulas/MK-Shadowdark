@@ -111,6 +111,31 @@
   align-items: center;
 }
 
+.mk-gm-time-passes {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding-right: 6px;
+  border-right: 1px solid var(--mk-gm-border);
+}
+
+.mk-gm-time-passes label {
+  color: var(--mk-gm-muted);
+  font-size: 9px;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.mk-gm-time-passes select {
+  width: 58px;
+  height: 30px;
+  border: 1px solid var(--mk-gm-border);
+  border-radius: 4px;
+  background: #17191b;
+  color: var(--mk-gm-text);
+}
+
 .mk-gm-header-actions button {
   min-height: 30px;
   padding: 4px 8px;

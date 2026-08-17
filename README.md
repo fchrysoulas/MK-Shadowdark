@@ -63,7 +63,7 @@ The old **MK-Shadowdark GM Screen Mock** prototype is not a dependency and is no
 - **Group Resting Interruptions** — Rest Party resolves required encounter checks before benefits/resources finalize.
 - **Encounter Staging** — preview-first deployment into the Scene with optional Foundry Combat handoff.
 - **GM Member Status** — compact GM-only status affordance for HP/AC/death/wounds/Focus/light/effects.
-- **Time Passes** — synchronized presentation-only splash/progress utility.
+- **Time Passes** — a GM Screen 1d6/2d6/3d6 selector, standalone public roll, and synchronized v1.6 visual cues with no encounter automation.
 
 ## Production GM Screen
 
@@ -156,7 +156,7 @@ Important invariants:
 - Encounter intervals always mean procedure turns.
 - Exploration and Resting decide when encounter checks are due.
 - Encounter formulas/tables/reaction/resolution have one internal implementation.
-- Time Passes is presentation-only.
+- Time Passes owns only its standalone GM roll and visual cues; Group Time and encounter cadence never call it.
 - Encounter staging creates no documents before explicit **Deploy**.
 - GM Screen presentation never becomes a duplicate gameplay-state owner.
 
@@ -410,20 +410,11 @@ The GM Screen displays current Foundry Combat and MK Morale context without repl
 
 # Time Passes
 
-**Time Passes is presentation-only.**
+Time Passes restores the v1.6.0 standalone GM flow. In the GM Screen, choose **1d6**, **2d6**, or **3d6**, then press **Time Passes**. The synchronized splash/progress display appears for all clients and the selected dice are published as a public chat roll after the splash completes. If any selected d6 shows **1**, the original synchronized **ENCOUNTER!** skull splash is displayed.
 
-It provides synchronized splash/progress presentation through the module socket. Unified Group time advancement can optionally reuse that presentation.
+The result-of-1 behavior is a visual cue only. It does not schedule, resolve, stage, or create an encounter, and it never calls the Encounter service. Encounter timing belongs exclusively to Group Exploration and Resting.
 
-Time Passes does **not**:
-
-- prompt for encounter dice
-- roll encounter dice
-- decide whether an encounter occurs
-- create encounter-check chat messages
-- resolve encounters
-- maintain or advance a competing world-time clock
-
-Encounter timing belongs to Group Exploration/Resting and unified Group time.
+Group Time is fully separate and does not invoke Time Passes for rolls or presentation.
 
 ---
 

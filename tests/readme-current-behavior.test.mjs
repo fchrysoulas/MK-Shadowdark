@@ -43,11 +43,14 @@ test("README retires standalone Encounter Engine entry points", async () => {
   assert.doesNotMatch(readme, /Token controls:.*Encounter/i);
 });
 
-test("README documents Time Passes as presentation-only", async () => {
+test("README documents standalone Time Passes dice without encounter automation", async () => {
   const readme = await readReadme();
 
-  assert.match(readme, /Time Passes is presentation-only/i);
-  assert.match(readme, /does \*\*not\*\*:[\s\S]*roll encounter dice/i);
+  assert.match(readme, /choose \*\*1d6\*\*, \*\*2d6\*\*, or \*\*3d6\*\*/i);
+  assert.match(readme, /public chat roll after the splash completes/i);
+  assert.match(readme, /If any selected d6 shows \*\*1\*\*.*original synchronized \*\*ENCOUNTER!\*\* skull splash/i);
+  assert.match(readme, /result-of-1 behavior is a visual cue only/i);
+  assert.match(readme, /Group Time is fully separate and does not invoke Time Passes/i);
   assert.doesNotMatch(readme, /Time Passes performs its own encounter check/i);
   assert.doesNotMatch(readme, /Automatic Time Passes encounter resolution/i);
 });

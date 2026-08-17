@@ -27,6 +27,17 @@
     </div>
 
     <div class="mk-gm-header-actions">
+      <div class="mk-gm-time-passes" aria-label="Time Passes dice roll">
+        <label for="mk-gm-time-passes-dice">Dice</label>
+        <select id="mk-gm-time-passes-dice" data-time-passes-dice title="Number of d6 to roll">
+          <option value="1">1d6</option>
+          <option value="2">2d6</option>
+          <option value="3">3d6</option>
+        </select>
+        <button type="button" data-action="timePasses" title="Show Time Passes and roll the selected dice">
+          <i class="fas fa-hourglass-half"></i> Time Passes
+        </button>
+      </div>
       <button type="button" data-action="refresh" title="Refresh GM Screen"><i class="fas fa-rotate"></i></button>
       <button type="button" data-action="openGroup" {{#unless hasGroups}}disabled{{/unless}}><i class="fas fa-users-gear"></i> Group Management</button>
     </div>

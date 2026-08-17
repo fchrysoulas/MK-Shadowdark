@@ -126,6 +126,21 @@ async function actionOpenCombat() {
   return globalThis.game?.combat ?? null;
 }
 
+async function actionTimePasses(_event, target) {
+  const selector = target?.closest?.(".mk-gm-time-passes")
+    ?.querySelector?.("[data-time-passes-dice]");
+  const diceCount = Math.min(3, Math.max(1, Number(selector?.value) || 1));
+  const api = globalThis.game?.modules?.get?.(MODULE_ID)?.api?.timePasses;
+  const rollTimePasses = api?.roll ?? api?.timePasses;
+
+  if (typeof rollTimePasses !== "function") {
+    globalThis.ui?.notifications?.warn?.("Time Passes is unavailable.");
+    return null;
+  }
+
+  return rollTimePasses({ diceCount });
+}
+
 function applicationClasses() {
   const api = globalThis.foundry?.applications?.api;
   return {
@@ -164,6 +179,7 @@ class MKGMscreen extends ApplicationBase {
       resumeRest: actionResumeRest,
       stageLatestEncounter: actionStageLatestEncounter,
       openCombat: actionOpenCombat,
+      timePasses: actionTimePasses,
     },
   };
 

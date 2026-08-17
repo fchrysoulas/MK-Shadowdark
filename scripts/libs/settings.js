@@ -191,28 +191,28 @@
     {
       key: "timePasses",
       title: "Time Passes",
-      hint: "Configure the Time Passes splash, encounter presentation, and roll.",
+      hint: "Configure the standalone Time Passes roll and its synchronized visual cues.",
       icon: "fas fa-clock",
       settings: [
         "timePassesEnabled", "timePassesPreText", "timePassesEncounterText", "timePassesPreDurationMs",
         "timePassesEncounterDurationMs", "timePassesPreShowProgress", "timePassesRollFormula", "timePassesRollFlavor",
-        "timePassesFontFamily", "timePassesTitleFontSizePx", "timePassesEncounterShowSkull", "timePassesSkullIconPath",
-        "timePassesSkullSizePx"
+        "timePassesFontFamily", "timePassesTitleFontSizePx", "timePassesEncounterShowSkull",
+        "timePassesSkullIconPath", "timePassesSkullSizePx"
       ]
     },
     {
       key: "encounterEngine",
       title: "Encounter Engine",
-      hint: "Configure encounter resolution, table selection, Time Passes integration, and GM presentation.",
+      hint: "Configure the Group Exploration and Resting encounter service, table selection, and GM presentation.",
       icon: "fas fa-dice-d20",
       settings: [
-        "encounterEngineEnabled", "encounterEngineAutoTimePasses", "encounterEngineDefaultProfile",
+        "encounterEngineEnabled", "encounterEngineDefaultProfile",
         "encounterEngineDefaultTableUuid", "encounterEngineWhisperToGm", "encounterEngineShowDice3d"
       ],
       sections: [
         {
           title: "General",
-          settings: ["encounterEngineEnabled", "encounterEngineAutoTimePasses"]
+          settings: ["encounterEngineEnabled"]
         },
         {
           title: "Table Selection",
@@ -1600,7 +1600,7 @@
 
     registerSetting("timePassesEnabled", {
       name: "Time Passes | Enabled",
-      hint: "If enabled, the GM can trigger a time passes splash and roll for an encounter.",
+      hint: "If enabled, the GM can show the synchronized Time Passes splash and make a standalone dice roll.",
       scope: "world",
       config: true,
       type: Boolean,
@@ -1617,8 +1617,8 @@
     });
 
     registerSetting("timePassesEncounterText", {
-      name: "Time Passes | Encounter Text",
-      hint: "Text shown on the encounter splash screen when the roll triggers an encounter.",
+      name: "Time Passes | Encounter Cue Text",
+      hint: "Text shown in the visual encounter cue when any rolled d6 shows 1.",
       scope: "world",
       config: true,
       type: String,
@@ -1640,8 +1640,8 @@
     });
 
     registerSetting("timePassesEncounterDurationMs", {
-      name: "Time Passes | Encounter Duration (ms)",
-      hint: "Duration of the encounter splash screen in milliseconds.",
+      name: "Time Passes | Encounter Cue Duration (ms)",
+      hint: "Duration of the visual encounter cue shown when any rolled d6 shows 1.",
       scope: "world",
       config: true,
       type: Number,
@@ -1663,8 +1663,8 @@
     });
 
     registerSetting("timePassesRollFormula", {
-      name: "Time Passes | Roll Formula",
-      hint: "Dice formula to roll after the progress bar completes. Default 1d6.",
+      name: "Time Passes | Default Dice",
+      hint: "Default standalone roll when Time Passes prompts outside the GM Screen. Supported values are 1d6, 2d6, and 3d6.",
       scope: "world",
       config: true,
       type: String,
@@ -1704,8 +1704,8 @@
     });
 
     registerSetting("timePassesEncounterShowSkull", {
-      name: "Time Passes | Encounter Shows Skull Icon",
-      hint: "If enabled, the encounter splash includes a skull icon inline with the text.",
+      name: "Time Passes | Encounter Cue Shows Skull",
+      hint: "Show the original skull icon in the visual encounter cue.",
       scope: "world",
       config: true,
       type: Boolean,
@@ -1713,8 +1713,8 @@
     });
 
     registerSetting("timePassesSkullIconPath", {
-      name: "Time Passes | Skull Icon Path",
-      hint: "File path for the skull icon.",
+      name: "Time Passes | Encounter Cue Skull Path",
+      hint: "Image used by the visual encounter cue.",
       scope: "world",
       config: true,
       type: String,
@@ -1723,8 +1723,8 @@
     });
 
     registerSetting("timePassesSkullSizePx", {
-      name: "Time Passes | Skull Icon Size (px)",
-      hint: "Pixel size of the skull icon. Default 34.",
+      name: "Time Passes | Encounter Cue Skull Size (px)",
+      hint: "Pixel size of the visual encounter cue skull.",
       scope: "world",
       config: true,
       type: Number,

@@ -1,7 +1,5 @@
 const MODULE_ID = "mk-shadowdark";
 const SUBMODULE = "Chat Reporting";
-const STYLESHEET_ID = "mk-shadowdark-chat-reporting-styles";
-const STYLESHEET_PATH = `modules/${MODULE_ID}/styles/chat-reporting.css`;
 
 const ACTOR_SHEET_RENDER_HOOKS = [
   "renderActorSheet",
@@ -9,8 +7,6 @@ const ACTOR_SHEET_RENDER_HOOKS = [
   "renderShadowdarkActorSheetV2",
   "renderActorSheetShadowdark"
 ];
-
-ensureStylesheet();
 
 Hooks.once("init", () => log("initialized"));
 
@@ -82,23 +78,6 @@ export async function reportLuckChange(actor, gainedLuck, remaining, pulpMode = 
   });
 }
 
-function ensureStylesheet() {
-  if (document.getElementById(STYLESHEET_ID)) return;
-
-  const existing = Array.from(document.querySelectorAll('link[rel="stylesheet"][href]'))
-    .find(link => link.href.includes(`/modules/${MODULE_ID}/styles/chat-reporting.css`));
-  if (existing) {
-    existing.id = STYLESHEET_ID;
-    return;
-  }
-
-  const link = document.createElement("link");
-  link.id = STYLESHEET_ID;
-  link.rel = "stylesheet";
-  link.href = toFoundryRoute(STYLESHEET_PATH);
-  document.head.append(link);
-}
-
 function getLuckRemaining(actor) {
   const luck = foundry.utils.getProperty(actor, "system.luck") ?? {};
   const remaining = Number(luck.remaining ?? 0);
@@ -148,16 +127,6 @@ function getRootElement(html) {
 function getSheetForm(root) {
   if (root.matches?.("form.shadowdark.sheet.player, form")) return root;
   return root.querySelector?.("form.shadowdark.sheet.player, form") ?? root;
-}
-
-function toFoundryRoute(path) {
-  const clean = String(path ?? "").replace(/^\/+/, "");
-  try {
-    if (foundry.utils.getRoute) return foundry.utils.getRoute(clean);
-  } catch (_error) {
-    // Use the host-root fallback.
-  }
-  return `/${clean}`;
 }
 
 function escapeHtml(value) {

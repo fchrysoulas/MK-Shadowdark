@@ -11,6 +11,11 @@ import {
 } from "./helpers.js";
 import { createEncounterServiceApi } from "./service.js";
 import {
+  buildEncounterStagingPreview,
+  deployEncounterStaging,
+  openEncounterStagingDialog,
+} from "./staging.js";
+import {
   bindEncounterCard,
   renderEncounterCard,
   rerollEncounterField,
@@ -71,12 +76,19 @@ function exposeApi() {
 
   module.api ??= {};
   const service = createEncounterServiceApi();
+  const staging = Object.freeze({
+    preview: buildEncounterStagingPreview,
+    deploy: deployEncounterStaging,
+    openDialog: openEncounterStagingDialog,
+  });
 
   module.api.encounterService = service;
+  module.api.encounterStaging = staging;
   module.api.encounters = {
     version: 3,
     headless: true,
     service,
+    staging,
     getContext: service.getContext,
     check: service.check,
     resolve: service.resolve,
@@ -92,6 +104,7 @@ function exposeApi() {
 
   game.mkShadowdark ??= {};
   game.mkShadowdark.encounterService = service;
+  game.mkShadowdark.encounterStaging = staging;
   game.mkShadowdark.encounters = module.api.encounters;
 
   return module.api.encounters;
@@ -100,7 +113,7 @@ function exposeApi() {
 Hooks.once("init", relabelLegacyEncounterSettings);
 
 // Encounter cards are still used by Group Exploration/Resting. Keep their
-// interactive GM/reveal behavior, but remove every standalone encounter entry point.
+// interactive GM/reveal/staging behavior without reintroducing standalone entry points.
 Hooks.on("renderChatMessage", bindEncounterCard);
 
 Hooks.once("ready", () => {

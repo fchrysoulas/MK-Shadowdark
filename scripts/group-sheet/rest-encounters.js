@@ -372,6 +372,10 @@ async function continueGroupRest(actor, {
       workflow = await setGroupRestWorkflow(actor, workflow);
 
       if (serviceResult.encounter) {
+        serviceResult.encounter.groupContext = {
+          groupActorUuid: String(actor.uuid ?? ""),
+          procedure: "resting",
+        };
         await createEncounterMessage(serviceResult.encounter, { whisper: true });
       }
 

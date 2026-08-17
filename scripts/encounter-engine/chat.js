@@ -12,6 +12,7 @@ import {
   rollTotal,
   rollTreasure,
 } from "./resolver.js";
+import { openEncounterStagingDialog } from "./staging.js";
 
 function encounterDisplay(data) {
   const encounter = data.encounter ?? {};
@@ -40,6 +41,20 @@ function row(label, value, field, { publicCard = false, detail = "" } = {}) {
   `;
 }
 
+function stagingSummary(data, { publicCard = false } = {}) {
+  const staging = data?.staging;
+  if (publicCard || !staging?.deployed) return "";
+
+  return `
+    <div class="mk-sd-encounter-context">
+      <span><i class="fas fa-location-dot"></i> Staged ${escapeHtml(staging.count ?? 0)} in ${escapeHtml(staging.sceneName ?? "Scene")}</span>
+      <span><i class="fas fa-people-group"></i> ${escapeHtml(staging.formation ?? "cluster")}</span>
+      <span><i class="fas ${staging.hidden ? "fa-eye-slash" : "fa-eye"}"></i> ${staging.hidden ? "Hidden" : "Visible"}</span>
+      ${staging.combat ? '<span><i class="fas fa-swords"></i> Added to Combat</span>' : ""}
+    </div>
+  `;
+}
+
 export function renderEncounterCard(data, { publicCard = false } = {}) {
   const periodLabel = data.period === "night" ? "Night" : "Day";
   const disposition = String(data.disposition ?? "neutral");
@@ -56,6 +71,7 @@ export function renderEncounterCard(data, { publicCard = false } = {}) {
 
   const controls = publicCard ? "" : `
     <div class="mk-sd-encounter-controls">
+      <button type="button" data-action="stage"><i class="fas fa-location-dot"></i> ${data.staging?.deployed ? "Stage Again" : "Stage Encounter"}</button>
       <button type="button" data-action="reveal"><i class="fas fa-eye"></i> Reveal to Players</button>
       <button type="button" data-action="reroll-field" data-field="number"><i class="fas fa-users"></i> Reroll Number</button>
       <button type="button" data-action="reroll-field" data-field="encounter"><i class="fas fa-rotate"></i> Reroll Creature</button>
@@ -93,6 +109,7 @@ export function renderEncounterCard(data, { publicCard = false } = {}) {
         ${publicCard ? "" : row("Morale", escapeHtml(data.morale?.label ?? "DC 15 WIS"), null, { publicCard, detail: moraleDetail })}
       </div>
 
+      ${stagingSummary(data, { publicCard })}
       ${controls}
 
       <footer class="mk-sd-encounter-footer">
@@ -160,6 +177,7 @@ export async function rerollEncounterField(message, field) {
         draw,
         options,
       });
+      rebuilt.groupContext = deepClone(data.groupContext ?? null);
       await updateEncounterMessage(message, rebuilt);
       return rebuilt;
     }
@@ -190,6 +208,7 @@ export async function rerollEncounterField(message, field) {
       return null;
   }
 
+  delete data.staging;
   data.generatedAt = Date.now();
   await updateEncounterMessage(message, data);
   return data;
@@ -214,6 +233,7 @@ export async function rerollEntireEncounter(message) {
     draw,
     options: oldData.resolutionOptions ?? {},
   });
+  data.groupContext = deepClone(oldData.groupContext ?? null);
 
   await updateEncounterMessage(message, data);
   return data;
@@ -248,6 +268,16 @@ export function bindEncounterCard(app, html) {
       if (action === "reveal") await revealEncounter(message, data);
       else if (action === "reroll-all") await rerollEntireEncounter(message);
       else if (action === "reroll-field") await rerollEncounterField(message, button.dataset.field);
+      else if (action === "stage") {
+        const deployment = await openEncounterStagingDialog(data, {
+          sourceMessageId: message.id,
+        });
+        if (deployment?.deployed && deployment.summary) {
+          const nextData = deepClone(data);
+          nextData.staging = deepClone(deployment.summary);
+          await updateEncounterMessage(message, nextData);
+        }
+      }
     } catch (actionError) {
       error("Encounter chat action failed", actionError);
       ui.notifications.error(`Encounter action failed: ${actionError.message}`);

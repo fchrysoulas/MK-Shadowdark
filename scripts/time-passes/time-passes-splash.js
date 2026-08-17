@@ -6,7 +6,6 @@ import {
 const MODULE_ID = "mk-shadowdark";
 const SUBMODULE = "Time Passes Splash";
 const SOCKET_CHANNEL = `module.${MODULE_ID}`;
-const LEGACY_ENCOUNTER_BRIDGE_MARK = Symbol.for("mk-shadowdark.encounter-engine.time-passes-wrapped");
 
 let socketListenerInstalled = false;
 
@@ -249,11 +248,6 @@ async function presentTimePasses(options = {}) {
 // presentation-only: it never rolls encounter dice and never mutates time.
 const timePasses = presentTimePasses;
 
-// The legacy Encounter Engine checks this symbol before installing its old
-// Time Passes wrapper. Marking the presentation-only function prevents that
-// bridge from being installed while #62 removes the standalone entry points.
-timePasses[LEGACY_ENCOUNTER_BRIDGE_MARK] = true;
-
 function exposeTimePassesApi() {
   const module = game.modules?.get?.(MODULE_ID);
   if (!module) return null;
@@ -285,7 +279,6 @@ registerTimePasses();
 export {
   MODULE_ID,
   SOCKET_CHANNEL,
-  LEGACY_ENCOUNTER_BRIDGE_MARK,
   buildTimePassesPayload,
   showSplash,
   installSocketListenerOnce,

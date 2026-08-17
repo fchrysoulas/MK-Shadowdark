@@ -15,7 +15,6 @@ globalThis.game = {
 globalThis.ui = { notifications: { warn: () => {} } };
 
 const {
-  LEGACY_ENCOUNTER_BRIDGE_MARK,
   buildTimePassesPayload,
   presentTimePasses,
   timePasses,
@@ -113,9 +112,8 @@ function installPresentationRuntime({ enabled = true } = {}) {
   };
 }
 
-test("legacy timePasses alias is explicitly presentation-only and blocks the old encounter bridge", () => {
+test("legacy timePasses alias remains presentation-only", () => {
   assert.equal(timePasses, presentTimePasses);
-  assert.equal(timePasses[LEGACY_ENCOUNTER_BRIDGE_MARK], true);
 });
 
 test("payload builder accepts old preText/preDuration options but contains no encounter roll state", () => {

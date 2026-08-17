@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.9.8
+
+- Reworked the Group Sheet dashboard to use its native template structure and behavior, preserving the Party rail and drag-and-drop task zones without a reconstructed layout layer.
+- Added versioned, idempotent migrations for legacy Damage Traits and morale-immunity data so existing worlds adopt the current Active Effect and actor-state formats safely.
+- Moved Equipment Hands runtime bookkeeping off Actor documents and tightened equipment-change detection to avoid unnecessary updates and persistent transient state.
+
 ## 1.9.7
 
 - Updated Focus Tracker to use the Shadowdark 4 casting flow exclusively, with guarded migration of legacy focus state and capacity overrides.

@@ -1,0 +1,13 @@
+{
+  "name": "mk-shadowdark",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "syntax": "node tools/check-syntax.mjs",
+    "lint": "eslint scripts tests tools",
+    "test": "node --test tests"
+  },
+  "devDependencies": {
+    "eslint": "^9.0.0"
+  }
+}

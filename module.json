@@ -2,7 +2,7 @@
   "id": "mk-shadowdark",
   "title": "MK-Shadowdark",
   "description": "Quality-of-life extras and expansions for the Shadowdark RPG system.",
-  "version": "1.9.6",
+  "version": "1.9.7",
   "compatibility": {
     "minimum": "13",
     "verified": "14"

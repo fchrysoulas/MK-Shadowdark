@@ -1,5 +1,14 @@
 # Changelog
 
+## 1.9.7
+
+- Updated Focus Tracker to use the Shadowdark 4 casting flow exclusively, with guarded migration of legacy focus state and capacity overrides.
+- Stabilized Corpse Token and Detailed Wounds data with explicit, bounded legacy migrations that preserve current-schema state.
+- Moved torch attacks into a dedicated Shadowdark 4-native feature and updated Targeted Spell DC to use public spell hooks with live target changes.
+- Unified character-sheet render coordination to avoid duplicate feature work and reduce unnecessary Quickdraw inventory processing.
+- Centralized feature settings, predefined-effect identifiers, and equipment hand classification so runtime consumers share one authoritative definition.
+- Hardened module bootstrap loading, removed redundant stylesheet injection, and preserved Group Sheet compatibility while renaming its implementation class.
+
 ## 1.9.6
 
 - Attack and spell roll windows now prompt for a valid canvas target, display the current target selection live, and preserve all selected targets for automation.

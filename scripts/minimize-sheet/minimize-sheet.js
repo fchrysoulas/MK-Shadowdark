@@ -1,27 +1,13 @@
+import { onCharacterSheetRender } from "../libs/sheet-render-adapter.js";
+
 (() => {
   const MODULE_ID = "mk-shadowdark";
   const SUBMODULE = "Minimize Sheet";
-  const ACTOR_SHEET_RENDER_HOOKS = [
-    "renderActorSheet",
-    "renderActorSheetSD",
-    "renderPlayerSheetSD",
-    "renderShadowdarkActorSheet",
-    "renderShadowdarkActorSheetV2",
-    "renderActorSheetShadowdark"
-  ];
   const sheetHeightStates = new WeakMap();
 
   Hooks.once("init", () => log("initialized"));
 
-  for (const hookName of ACTOR_SHEET_RENDER_HOOKS) {
-    Hooks.on(hookName, (app, html) => {
-      try {
-        onRenderActorSheet(app, html);
-      } catch (error) {
-        console.error(`${MODULE_ID} v${getModuleVersion()} | ${SUBMODULE} | render error`, error);
-      }
-    });
-  }
+  onCharacterSheetRender("Minimize Sheet", onRenderActorSheet, { priority: 40 });
 
   function onRenderActorSheet(app, html) {
     const root = getRootElement(html);

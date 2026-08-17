@@ -1,3 +1,4 @@
+import { onCharacterSheetRender } from "../libs/sheet-render-adapter.js";
 import { evaluateQuickdrawLimitDetails } from "./quickdraw-limit.js";
 
 // Renders and manages Quickdraw controls on Shadowdark actor sheets.
@@ -7,15 +8,6 @@ import { evaluateQuickdrawLimitDetails } from "./quickdraw-limit.js";
   const STYLESHEET_ID = "mk-shadowdark-quickdraw-styles";
   const STYLESHEET_PATH = `modules/${MODULE_ID}/styles/quickdraw-icons.css`;
   const FLAG_KEY = "quickdraw";
-  const ACTOR_SHEET_RENDER_HOOKS = [
-    "renderActorSheet",
-    "renderActorSheetSD",
-    "renderPlayerSheetSD",
-    "renderShadowdarkActorSheet",
-    "renderShadowdarkActorSheetV2",
-    "renderActorSheetShadowdark"
-  ];
-  const renderRetryTimers = new WeakMap();
   const invalidLimitExpressionsWarned = new Set();
 
   ensureStylesheet();
@@ -661,29 +653,11 @@ import { evaluateQuickdrawLimitDetails } from "./quickdraw-limit.js";
     if (!$html?.length) return;
 
     processSheet(app, $html);
-    scheduleRenderRetries(app, $html);
-  }
-
-  function scheduleRenderRetries(app, fallbackHtml) {
-    const existingTimers = renderRetryTimers.get(app) ?? [];
-    existingTimers.forEach(timer => window.clearTimeout(timer));
-
-    const timers = [50, 250].map(delay => window.setTimeout(() => {
-      const currentHtml = asJQuery(app?.element);
-      const $html = currentHtml?.length ? currentHtml : fallbackHtml;
-      if (!$html?.length) return;
-
-      processSheet(app, $html);
-    }, delay));
-
-    renderRetryTimers.set(app, timers);
   }
 
   Hooks.once("init", () => {
     console.log(`${MODULE_ID} | ${SUBMODULE} | loaded (settings registered in settings.js)`);
   });
 
-  for (const hookName of ACTOR_SHEET_RENDER_HOOKS) {
-    Hooks.on(hookName, onRender);
-  }
+  onCharacterSheetRender("Quickdraw", onRender, { priority: 20 });
 })();

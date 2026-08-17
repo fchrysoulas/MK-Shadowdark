@@ -1,3 +1,5 @@
+import { onCharacterSheetRender } from "../libs/sheet-render-adapter.js";
+
 (() => {
   const MODULE_ID = "mk-shadowdark";
   const SUBMODULE = "Detailed Wounds";
@@ -46,20 +48,7 @@
     log("initialized");
   });
 
-  const RENDER_HOOKS = [
-    "renderActorSheet",
-    "renderActorSheetV2",
-    "renderShadowdarkActorSheet",
-    "renderShadowdarkActorSheetV2",
-    "renderActorSheetShadowdark"
-  ];
-
-  for (const hookName of RENDER_HOOKS) {
-    Hooks.on(hookName, (app, html) => {
-      injectWoundsTabSafely(app, html);
-      queueMicrotask(() => injectWoundsTabSafely(app, html));
-    });
-  }
+  onCharacterSheetRender("Detailed Wounds", injectWoundsTabSafely, { priority: 30 });
 
   function injectWoundsTabSafely(app, html) {
     try {

@@ -1,3 +1,10 @@
+import {
+  equipmentChangeTouchesClassification,
+  getItemHandUse,
+  hasEquipmentPathChange,
+  isStashed
+} from "../libs/equipment.js";
+
 (() => {
   const MODULE_ID = "mk-shadowdark";
   const SUBMODULE = "Token Equipment";
@@ -61,16 +68,6 @@
     }
   }
 
-  function toBool(value) {
-    if (value === true || value === false) return value;
-    if (typeof value === "string") {
-      const normalized = value.trim().toLowerCase();
-      if (["true", "1", "yes", "on"].includes(normalized)) return true;
-      if (["false", "0", "no", "off", ""].includes(normalized)) return false;
-    }
-    return Boolean(value);
-  }
-
   function isPlayerActor(actor) {
     if (!actor) return false;
     return actor.type === "Player" || actor.system?.isPC === true;
@@ -83,14 +80,6 @@
     return true;
   }
 
-  function isStashed(item) {
-    return toBool(item?.system?.stashed);
-  }
-
-  function isEquipped(item) {
-    return toBool(item?.system?.equipped);
-  }
-
   function itemSort(left, right) {
     const sortDifference = Number(left?.sort ?? left?.item?.sort ?? 0)
       - Number(right?.sort ?? right?.item?.sort ?? 0);
@@ -101,50 +90,13 @@
     return leftName.localeCompare(rightName, game.i18n?.lang, { sensitivity: "base" });
   }
 
-  function getEquipmentHandsApi() {
-    return game.modules.get(MODULE_ID)?.api?.equipmentHands ?? null;
-  }
-
-  function fallbackHandEntry(item) {
-    if (!isEquipped(item) || isStashed(item)) return null;
-
-    const type = String(item?.type ?? "").toLowerCase();
-    const isWeapon = type === "weapon";
-    const isShield = Boolean(item?.system?.isAShield)
-      || (type === "armor" && /\bshield\b/i.test(String(item?.name ?? "")));
-    if (!isWeapon && !isShield) return null;
-
-    const handedness = String(item?.system?.handedness ?? "").toLowerCase();
-    const twoHanded = isWeapon && (
-      handedness === "2h"
-      || (!String(item?.system?.damage?.oneHanded ?? "").trim()
-        && Boolean(String(item?.system?.damage?.twoHanded ?? "").trim()))
-    );
-
-    return {
-      item,
-      id: item.id,
-      name: item.name,
-      hands: twoHanded ? 2 : 1,
-      isWeapon,
-      isShield,
-      isTwoHanded: twoHanded
-    };
+  function ignoreStashedItems() {
+    return Boolean(setting("equipmentHandsIgnoreStashed", true));
   }
 
   function getHeldEntries(actor) {
-    const api = getEquipmentHandsApi();
-
-    try {
-      if (typeof api?.buildHandsReport === "function") {
-        return [...(api.buildHandsReport(actor)?.entries ?? [])].sort(itemSort);
-      }
-    } catch (error) {
-      warn("Could not read the Equipment Hands report; using the fallback classifier.", error);
-    }
-
     return Array.from(actor?.items ?? [])
-      .map(fallbackHandEntry)
+      .map(item => getItemHandUse(item, null, { ignoreStashed: ignoreStashedItems() }))
       .filter(Boolean)
       .sort(itemSort);
   }
@@ -572,22 +524,31 @@
     return item?.parent?.documentName === "Actor" ? item.parent : null;
   }
 
-  function actorChangesMayAffectEquipment(changes) {
-    if (!changes) return false;
+  function itemChangesMayAffectOverlay(changes) {
+    if (equipmentChangeTouchesClassification(changes)) return true;
 
-    try {
-      const serialized = JSON.stringify(changes);
-      return [
-        "\"items\"",
-        "\"ownership\"",
-        "\"equipped\"",
-        "\"stashed\"",
-        "\"handedness\"",
-        `"${QUICKDRAW_FLAG}"`
-      ].some(fragment => serialized.includes(fragment));
-    } catch (_error) {
-      return false;
-    }
+    return [
+      "img",
+      "name",
+      "sort",
+      `flags.${MODULE_ID}.${QUICKDRAW_FLAG}`,
+      `flags.${MODULE_ID}.${HAND_SIDE_FLAG}`
+    ].some(path => hasEquipmentPathChange(changes, path));
+  }
+
+  function tokenChangesMayAffectOverlay(changes) {
+    return [
+      "width",
+      "height",
+      "actorId",
+      "actorLink",
+      "texture.scaleX",
+      "texture.scaleY"
+    ].some(path => hasEquipmentPathChange(changes, path));
+  }
+
+  function actorChangesMayAffectEquipment(changes) {
+    return ["items", "ownership"].some(path => hasEquipmentPathChange(changes, path));
   }
 
   Hooks.once("ready", () => {
@@ -611,7 +572,8 @@
   Hooks.on("canvasReady", refreshAll);
   Hooks.on("drawToken", renderTokenOverlay);
 
-  Hooks.on("updateToken", tokenDocument => {
+  Hooks.on("updateToken", (tokenDocument, changes) => {
+    if (!tokenChangesMayAffectOverlay(changes)) return;
     const token = tokenDocument?.object;
     if (token) renderTokenOverlay(token);
   });
@@ -627,7 +589,9 @@
   });
 
   Hooks.on("createItem", item => scheduleActorRefresh(ownedActorForItem(item)));
-  Hooks.on("updateItem", item => scheduleActorRefresh(ownedActorForItem(item)));
+  Hooks.on("updateItem", (item, changes) => {
+    if (itemChangesMayAffectOverlay(changes)) scheduleActorRefresh(ownedActorForItem(item));
+  });
   Hooks.on("deleteItem", item => scheduleActorRefresh(ownedActorForItem(item)));
   Hooks.on("updateActor", (actor, changes) => {
     if (actorChangesMayAffectEquipment(changes)) scheduleActorRefresh(actor);

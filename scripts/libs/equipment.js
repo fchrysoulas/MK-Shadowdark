@@ -52,28 +52,17 @@ export function hasEquipmentPathChange(changes, path) {
   try {
     if (globalThis.foundry?.utils?.hasProperty?.(changes, path)) return true;
   } catch (_error) {
-    // Fall through.
+    // Fall through to the plain-object path check.
   }
 
   const parts = String(path).split(".");
   let current = changes;
   for (const part of parts) {
-    if (!current || typeof current !== "object" || !hasOwn(current, part)) {
-      current = undefined;
-      break;
-    }
+    if (!current || typeof current !== "object" || !hasOwn(current, part)) return false;
     current = current[part];
   }
-  if (current !== undefined) return true;
 
-  // Preserve the defensive compatibility behavior used by Equipment Hands for
-  // flattened or unusual embedded-update shapes.
-  const leaf = parts.at(-1);
-  try {
-    return JSON.stringify(changes).includes(`"${leaf}"`);
-  } catch (_error) {
-    return false;
-  }
+  return true;
 }
 
 export function equipmentChangeTouchesClassification(changes) {

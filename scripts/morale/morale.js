@@ -1,4 +1,12 @@
 import { PREDEFINED_EFFECT_KEYS } from "../libs/predefined-effects.js";
+import {
+  MORALE_MIGRATION_SETTING,
+  MORALE_MIGRATION_VERSION,
+  hasLegacyTokenMoraleImmunity,
+  hasLegacyTokenMoraleImmunityField,
+  needsMoraleMigration,
+  withoutLegacyTokenMoraleImmunity
+} from "./morale-migration.js";
 
 // MK-Shadowdark - Morale Automation
 // Tracks all hostile NPC combatants as one force for Shadowdark morale.
@@ -137,10 +145,15 @@ import { PREDEFINED_EFFECT_KEYS } from "../libs/predefined-effects.js";
     return !(isHostileCombatant(previous) && sameInitiative(previous, current));
   }
 
+  function effectFlagPath(effectKey) {
+    const key = String(effectKey ?? "");
+    const prefix = `flags.${MODULE_ID}.`;
+    return key.startsWith(prefix) ? key.slice(prefix.length) : null;
+  }
+
   function actorEffectValue(actor, effectKey) {
     const key = String(effectKey ?? "");
-    const flagPrefix = `flags.${MODULE_ID}.`;
-    const flagPath = key.startsWith(flagPrefix) ? key.slice(flagPrefix.length) : null;
+    const flagPath = effectFlagPath(key);
 
     if (flagPath) {
       try {
@@ -168,7 +181,6 @@ import { PREDEFINED_EFFECT_KEYS } from "../libs/predefined-effects.js";
 
   function isMoraleImmune(combatant) {
     if (!combatant) return true;
-    if (tokenMoraleData(combatant.token).immune === true) return true;
     return actorEffectValue(combatant.actor, PREDEFINED_EFFECT_KEYS.MORALE_IMMUNE) === true;
   }
 
@@ -258,6 +270,14 @@ import { PREDEFINED_EFFECT_KEYS } from "../libs/predefined-effects.js";
     if (Array.isArray(combat.combatants.contents)) return combat.combatants.contents;
     if (typeof combat.combatants.values === "function") return [...combat.combatants.values()];
     return [];
+  }
+
+  function collectionValues(collection) {
+    if (!collection) return [];
+    if (Array.isArray(collection)) return collection;
+    if (Array.isArray(collection.contents)) return collection.contents;
+    if (typeof collection.values === "function") return [...collection.values()];
+    return Array.from(collection);
   }
 
   function getCombatant(combat, id) {
@@ -720,12 +740,77 @@ import { PREDEFINED_EFFECT_KEYS } from "../libs/predefined-effects.js";
     return true;
   }
 
+  async function setActorMoraleImmune(actor, immune = true) {
+    if (!actor) return false;
+    const flagPath = effectFlagPath(PREDEFINED_EFFECT_KEYS.MORALE_IMMUNE);
+    if (!flagPath) return false;
+
+    if (immune === true) {
+      if (!actor.setFlag) return false;
+      await actor.setFlag(MODULE_ID, flagPath, true);
+      return true;
+    }
+
+    if (actor.unsetFlag) {
+      await actor.unsetFlag(MODULE_ID, flagPath);
+      return true;
+    }
+    return false;
+  }
+
   async function setImmune(token, immune = true) {
     if (!game.user?.isGM) return false;
     const doc = tokenDocument(token);
-    if (!doc) return false;
-    const current = tokenMoraleData(doc);
-    await writeTokenMoraleData(doc, { ...current, immune: immune === true });
+    return setActorMoraleImmune(doc?.actor, immune);
+  }
+
+  function getStoredMoraleMigrationVersion() {
+    return setting(MORALE_MIGRATION_SETTING, 0);
+  }
+
+  async function migrateLegacyTokenMoraleImmunity() {
+    if (!isAuthority()) return false;
+    if (!needsMoraleMigration(getStoredMoraleMigrationVersion())) return false;
+
+    let migrated = 0;
+    let failures = 0;
+
+    for (const scene of collectionValues(game.scenes)) {
+      for (const tokenDoc of collectionValues(scene?.tokens)) {
+        const legacy = tokenMoraleData(tokenDoc);
+        if (!hasLegacyTokenMoraleImmunityField(legacy)) continue;
+
+        try {
+          if (hasLegacyTokenMoraleImmunity(legacy)) {
+            const changed = await setActorMoraleImmune(tokenDoc?.actor, true);
+            if (!changed) throw new Error("Token has no actor available for morale immunity migration.");
+          }
+
+          const next = withoutLegacyTokenMoraleImmunity(legacy);
+          if (Object.keys(next).length > 0) {
+            await writeTokenMoraleData(tokenDoc, next);
+          } else if (tokenDoc?.unsetFlag) {
+            await tokenDoc.unsetFlag(MODULE_ID, TOKEN_FLAG);
+          } else {
+            throw new Error("Token flag API is unavailable for morale immunity cleanup.");
+          }
+          migrated += 1;
+        } catch (error) {
+          failures += 1;
+          warn(`Could not migrate legacy morale immunity for token ${tokenDoc?.name ?? tokenDoc?.id ?? "unknown"}`, error);
+        }
+      }
+    }
+
+    if (failures > 0) {
+      warn(`Morale migration left ${failures} token(s) incomplete; the world migration version was not advanced.`);
+      return false;
+    }
+
+    await game.settings.set(MODULE_ID, MORALE_MIGRATION_SETTING, MORALE_MIGRATION_VERSION);
+    if (migrated > 0) {
+      console.log(`${MODULE_ID} v${moduleVersion()} | ${SUBMODULE} | Migrated legacy morale immunity on ${migrated} token(s).`);
+    }
     return true;
   }
 
@@ -774,10 +859,14 @@ import { PREDEFINED_EFFECT_KEYS } from "../libs/predefined-effects.js";
 
   Hooks.once("ready", () => {
     exposeApi();
-    if (!enabled() || !isAuthority()) return;
-    for (const combat of game.combats ?? []) {
-      if (isStartedCombat(combat)) void ensureSnapshot(combat);
-    }
+    if (!isAuthority()) return;
+
+    void migrateLegacyTokenMoraleImmunity().then(() => {
+      if (!enabled()) return;
+      for (const combat of game.combats ?? []) {
+        if (isStartedCombat(combat)) void ensureSnapshot(combat);
+      }
+    });
   });
 
   Hooks.on("createCombatant", combatant => {

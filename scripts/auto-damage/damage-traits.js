@@ -1,4 +1,11 @@
 import { PREDEFINED_EFFECT_KEYS } from "../libs/predefined-effects.js";
+import {
+  DAMAGE_TRAIT_MODES,
+  DAMAGE_TRAITS_MIGRATION_SETTING,
+  DAMAGE_TRAITS_MIGRATION_VERSION,
+  needsDamageTraitsMigration,
+  normalizeDamageTraitRecords
+} from "./damage-traits-migration.js";
 
 (() => {
   const MODULE_ID = "mk-shadowdark";
@@ -13,7 +20,7 @@ import { PREDEFINED_EFFECT_KEYS } from "../libs/predefined-effects.js";
 
   const ITEM_TYPES = new Set(["Spell", "NPC Attack", "NPC Special Attack"]);
   const RENDER_MARKER = "mkDamageTraitsRendered";
-  const TRAIT_MODES = new Set(["resistance", "immunity", "vulnerability"]);
+  const TRAIT_MODES = new Set(DAMAGE_TRAIT_MODES);
   const ACTIVE_FEATURE_EFFECT_TABS = new Set();
 
   function getModuleVersion() {
@@ -46,17 +53,6 @@ import { PREDEFINED_EFFECT_KEYS } from "../libs/predefined-effects.js";
     return String(div.textContent ?? "").replace(/\s+/g, " ").trim();
   }
 
-  function normalizeTraitMode(entry) {
-    const mode = String(entry?.mode ?? "").trim().toLowerCase();
-    if (TRAIT_MODES.has(mode)) return mode;
-    if (mode === "nonmagical-immunity") return "immunity";
-
-    // Migrate the short-lived symbolic resistance formats. Numeric flat DR
-    // entries and descriptive traits are removed from damage-trait storage.
-    if (["%", "&"].includes(String(entry?.reduction ?? "").trim())) return "resistance";
-    return null;
-  }
-
   function traitModeLabel(mode) {
     const normalized = TRAIT_MODES.has(mode) ? mode : "resistance";
     return normalized.charAt(0).toUpperCase() + normalized.slice(1);
@@ -75,28 +71,14 @@ import { PREDEFINED_EFFECT_KEYS } from "../libs/predefined-effects.js";
       || hasMagicalProperty(properties);
   }
 
-  function normalizeTraits(value) {
-    if (!Array.isArray(value)) return [];
-
-    const records = new Map();
-    for (const entry of value) {
-      const uuid = typeof entry === "string" ? entry : entry?.uuid;
-      if (!uuid) continue;
-      const mode = normalizeTraitMode(typeof entry === "string" ? {} : entry);
-      if (!mode) continue;
-      records.set(String(uuid), {
-        uuid: String(uuid),
-        mode
-      });
-    }
-    return [...records.values()];
+  function getLegacyFeatureTraitFlag(feature) {
+    return feature?.getFlag?.(MODULE_ID, FEATURE_TRAITS_FLAG)
+      ?? feature?.flags?.[MODULE_ID]?.[FEATURE_TRAITS_FLAG];
   }
 
   function getLegacyFeatureTraits(feature) {
     const nativeUuids = Array.from(feature?.system?.properties ?? []).filter(Boolean).map(String);
-    const flagValue = feature?.getFlag?.(MODULE_ID, FEATURE_TRAITS_FLAG)
-      ?? feature?.flags?.[MODULE_ID]?.[FEATURE_TRAITS_FLAG];
-    const flagRecords = normalizeTraits(flagValue);
+    const flagRecords = normalizeDamageTraitRecords(getLegacyFeatureTraitFlag(feature));
     const nativeSet = new Set(nativeUuids);
     return flagRecords.filter(record => nativeSet.has(record.uuid));
   }
@@ -119,18 +101,19 @@ import { PREDEFINED_EFFECT_KEYS } from "../libs/predefined-effects.js";
     return [...records.values()];
   }
 
-  function getFeatureTraits(feature, { activeOnly = true, includeLegacy = true } = {}) {
-    const records = new Map(effectTraitRecords(feature?.effects, { activeOnly })
-      .map(record => [`${record.uuid}:${record.mode}`, record]));
-    if (includeLegacy) {
-      for (const record of getLegacyFeatureTraits(feature)) {
-        records.set(`${record.uuid}:${record.mode}`, record);
-      }
-    }
-    return [...records.values()];
+  function getFeatureTraits(feature, { activeOnly = true } = {}) {
+    return effectTraitRecords(feature?.effects, { activeOnly });
   }
 
-  function actorTraitEffects(actor) {
+  function collectionValues(collection) {
+    if (!collection) return [];
+    if (Array.isArray(collection)) return collection;
+    if (Array.isArray(collection.contents)) return collection.contents;
+    if (typeof collection.values === "function") return [...collection.values()];
+    return Array.from(collection);
+  }
+
+  function collectActorEffects(actor, { transferringItemEffectsOnly = false } = {}) {
     const effects = new Set();
     const addEffects = collection => {
       for (const effect of collectionValues(collection)) effects.add(effect);
@@ -143,28 +126,18 @@ import { PREDEFINED_EFFECT_KEYS } from "../libs/predefined-effects.js";
     } catch (_error) {
       // Foundry v13 does not expose allApplicableEffects consistently.
     }
+
     for (const item of collectionValues(actor?.items)) {
       for (const effect of collectionValues(item?.effects)) {
-        if (effect?.transfer === true) effects.add(effect);
+        if (!transferringItemEffectsOnly || effect?.transfer === true) effects.add(effect);
       }
     }
+
     return [...effects];
   }
 
   function getActorTraits(actor) {
-    const legacyEmbedded = collectionValues(actor?.items)
-      .filter(item => item?.type === "NPC Feature")
-      .flatMap(getLegacyFeatureTraits);
-    const effects = effectTraitRecords(actorTraitEffects(actor));
-    const legacy = normalizeTraits(
-      actor?.getFlag?.(MODULE_ID, ACTOR_TRAITS_FLAG)
-      ?? actor?.flags?.[MODULE_ID]?.[ACTOR_TRAITS_FLAG]
-    );
-    const records = new Map();
-    for (const record of [...effects, ...legacyEmbedded, ...legacy]) {
-      records.set(`${record.uuid}:${record.mode}`, record);
-    }
-    return [...records.values()];
+    return effectTraitRecords(collectActorEffects(actor, { transferringItemEffectsOnly: true }));
   }
 
   async function resolveProperty(uuid) {
@@ -183,33 +156,8 @@ import { PREDEFINED_EFFECT_KEYS } from "../libs/predefined-effects.js";
     return properties.filter(Boolean);
   }
 
-  function collectionValues(collection) {
-    if (!collection) return [];
-    if (Array.isArray(collection)) return collection;
-    if (Array.isArray(collection.contents)) return collection.contents;
-    if (typeof collection.values === "function") return [...collection.values()];
-    return Array.from(collection);
-  }
-
-  function actorEffects(actor) {
-    const effects = new Set();
-    const addEffects = collection => {
-      for (const effect of collectionValues(collection)) effects.add(effect);
-    };
-
-    addEffects(actor?.appliedEffects);
-    addEffects(actor?.effects);
-    try {
-      addEffects(actor?.allApplicableEffects?.());
-    } catch (_error) {
-      // Foundry v13 does not expose allApplicableEffects consistently.
-    }
-    for (const item of collectionValues(actor?.items)) addEffects(item?.effects);
-    return [...effects];
-  }
-
   function hasTruthyEffectChange(actor, key) {
-    return actorEffects(actor).some(effect => (
+    return collectActorEffects(actor).some(effect => (
       !effect.disabled
       && !effect.isSuppressed
       && Array.from(effect.changes ?? []).some(change => (
@@ -353,8 +301,8 @@ import { PREDEFINED_EFFECT_KEYS } from "../libs/predefined-effects.js";
   }
 
   async function addTraitEffects(feature, records) {
-    const normalized = normalizeTraits(records);
-    const existing = new Set(getFeatureTraits(feature, { activeOnly: false, includeLegacy: false })
+    const normalized = normalizeDamageTraitRecords(records);
+    const existing = new Set(getFeatureTraits(feature, { activeOnly: false })
       .map(record => `${record.uuid}:${record.mode}`));
     const additions = normalized.filter(record => !existing.has(`${record.uuid}:${record.mode}`));
     if (!additions.length) return [];
@@ -550,16 +498,30 @@ import { PREDEFINED_EFFECT_KEYS } from "../libs/predefined-effects.js";
     return collectionValues(game.users).find(user => user?.active && user?.isGM)?.id === game.user.id;
   }
 
+  function getStoredMigrationVersion() {
+    try {
+      return game.settings.get(MODULE_ID, DAMAGE_TRAITS_MIGRATION_SETTING);
+    } catch (_error) {
+      return 0;
+    }
+  }
+
   async function migrateDamageTraitsToEffects() {
-    if (!isPrimaryActiveGM()) return;
+    if (!isPrimaryActiveGM()) return false;
+    if (!needsDamageTraitsMigration(getStoredMigrationVersion())) return false;
+
+    let failures = 0;
+    let migratedActors = 0;
 
     for (const actor of collectionValues(game.actors).filter(entry => entry?.type === "NPC")) {
       const legacyValue = actor?.getFlag?.(MODULE_ID, ACTOR_TRAITS_FLAG)
         ?? actor?.flags?.[MODULE_ID]?.[ACTOR_TRAITS_FLAG];
-      const legacy = normalizeTraits(legacyValue);
+      const legacy = normalizeDamageTraitRecords(legacyValue);
 
       try {
+        let actorChanged = false;
         let legacyFeature = null;
+
         if (legacy.length) {
           legacyFeature = collectionValues(actor.items).find(item => (
             item?.type === "NPC Feature" && item.name === "Creature Properties"
@@ -571,23 +533,48 @@ import { PREDEFINED_EFFECT_KEYS } from "../libs/predefined-effects.js";
             }]);
           }
           await addTraitEffects(legacyFeature, legacy);
+          actorChanged = true;
+        }
+
+        if (legacyValue !== undefined && legacyValue !== null) {
           await actor.unsetFlag(MODULE_ID, ACTOR_TRAITS_FLAG);
+          actorChanged = true;
         }
 
         for (const feature of collectionValues(actor.items).filter(item => item?.type === "NPC Feature")) {
+          const featureFlag = getLegacyFeatureTraitFlag(feature);
+          if (featureFlag === undefined || featureFlag === null) continue;
+
           const records = getLegacyFeatureTraits(feature);
-          if (!records.length) continue;
-          await addTraitEffects(feature, records);
-          const migratedUuids = new Set(records.map(record => record.uuid));
-          const retainedProperties = Array.from(feature.system?.properties ?? [])
-            .filter(uuid => !migratedUuids.has(String(uuid)));
-          await feature.update({ "system.properties": retainedProperties });
+          if (records.length) {
+            await addTraitEffects(feature, records);
+            const migratedUuids = new Set(records.map(record => record.uuid));
+            const retainedProperties = Array.from(feature.system?.properties ?? [])
+              .filter(uuid => !migratedUuids.has(String(uuid)));
+            await feature.update({ "system.properties": retainedProperties });
+          }
+
           await feature.unsetFlag(MODULE_ID, FEATURE_TRAITS_FLAG);
+          actorChanged = true;
         }
+
+        if (actorChanged) migratedActors += 1;
       } catch (error) {
+        failures += 1;
         warn(`Could not migrate damage traits to Active Effects for ${actor.name}`, error);
       }
     }
+
+    if (failures > 0) {
+      warn(`Damage Traits migration left ${failures} NPC actor(s) incomplete; the world migration version was not advanced.`);
+      return false;
+    }
+
+    await game.settings.set(MODULE_ID, DAMAGE_TRAITS_MIGRATION_SETTING, DAMAGE_TRAITS_MIGRATION_VERSION);
+    if (migratedActors > 0) {
+      console.log(`${MODULE_ID} v${getModuleVersion()} | ${SUBMODULE} | Migrated legacy damage traits on ${migratedActors} NPC actor(s).`);
+    }
+    return true;
   }
 
   function dialogRoot(html) {

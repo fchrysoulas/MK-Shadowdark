@@ -74,9 +74,14 @@ test("proposed updates classify the pending item state", () => {
   assert.equal(getItemHandUse(sword, proposed)?.hands, 1);
 });
 
-test("classification change detection ignores unrelated updates", () => {
+test("classification change detection accepts only canonical equipment paths", () => {
   assert.equal(equipmentChangeTouchesClassification({ "system.equipped": true }), true);
+  assert.equal(equipmentChangeTouchesClassification({ system: { stashed: true } }), true);
   assert.equal(equipmentChangeTouchesClassification({ system: { damage: { twoHanded: "1d8" } } }), true);
+  assert.equal(equipmentChangeTouchesClassification({ system: { properties: [] } }), true);
+
   assert.equal(equipmentChangeTouchesClassification({ img: "icons/example.webp" }), false);
   assert.equal(equipmentChangeTouchesClassification({ system: { quantity: 2 } }), false);
+  assert.equal(equipmentChangeTouchesClassification({ legacy: { equipped: true } }), false);
+  assert.equal(equipmentChangeTouchesClassification({ metadata: { properties: [] } }), false);
 });

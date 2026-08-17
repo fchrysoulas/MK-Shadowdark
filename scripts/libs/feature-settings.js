@@ -151,6 +151,13 @@ Hooks.once("init", () => {
     type: Number,
     default: 0
   });
+  registerSetting("damageTraitsMigrationVersion", {
+    name: "Damage Traits Migration Version",
+    scope: "world",
+    config: false,
+    type: Number,
+    default: 0
+  });
 
   registerSetting("initiativeGroupEnemies", {
     name: "Initiative | Group Enemy Initiative",
@@ -204,6 +211,13 @@ Hooks.once("init", () => {
     config: true,
     type: Boolean,
     default: false
+  });
+  registerSetting("moraleMigrationVersion", {
+    name: "Morale Migration Version",
+    scope: "world",
+    config: false,
+    type: Number,
+    default: 0
   });
 
   registerSetting("corpseTokenEnabled", {

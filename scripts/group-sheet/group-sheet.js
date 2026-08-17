@@ -1,4 +1,5 @@
 import { registerEnvironmentContextService } from "../libs/environment-context.js";
+import { registerGroupAssignmentsService } from "./assignments.js";
 import { registerGroupSheet } from "./registration.js";
 import { registerGroupProcedureService } from "./procedure.js";
 import { registerGroupTimeService } from "./time.js";
@@ -22,9 +23,20 @@ export {
   advanceGroupTime,
   resetGroupTime,
 } from "./time.js";
+export {
+  GROUP_ASSIGNMENTS_CHANGED_HOOK,
+  EXPLORATION_POSITIONS,
+  EXPLORATION_ROLES,
+  getGroupAssignments,
+  setMarchingOrder,
+  setPositionMembers,
+  setExplorationRole,
+  setCampWatches,
+} from "./assignments.js";
 export { registerGroupSheet };
 
 Hooks.once("init", registerGroupSheet);
 registerGroupProcedureService();
 registerEnvironmentContextService();
 registerGroupTimeService();
+registerGroupAssignmentsService();

@@ -1,6 +1,7 @@
 import { registerEnvironmentContextService } from "../libs/environment-context.js";
 import { registerGroupAssignmentsService } from "./assignments.js";
 import { registerGroupExplorationEncounterService } from "./exploration-encounters.js";
+import { registerGroupMemberStatus } from "./member-status.js";
 import { registerGroupRestEncounterService } from "./rest-encounters.js";
 import { registerGroupSheet } from "./registration.js";
 import { registerGroupProcedureService } from "./procedure.js";
@@ -44,6 +45,10 @@ export {
   processDueExplorationEncounters,
 } from "./exploration-encounters.js";
 export {
+  buildGroupMemberStatus,
+  openGroupMemberStatus,
+} from "./member-status.js";
+export {
   REST_TURN_SECONDS,
   REST_TOTAL_TURNS,
   GROUP_REST_WORKFLOW_HOOK,
@@ -61,4 +66,5 @@ registerEnvironmentContextService();
 registerGroupTimeService();
 registerGroupAssignmentsService();
 registerGroupExplorationEncounterService();
+registerGroupMemberStatus();
 registerGroupRestEncounterService();

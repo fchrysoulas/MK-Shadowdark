@@ -1,0 +1,126 @@
+.mk-group-member .mk-member-gm-status {
+  position: absolute;
+  top: 7px;
+  left: 7px;
+  z-index: 2;
+  display: inline-grid;
+  place-items: center;
+  width: 22px;
+  height: 22px;
+  min-width: 22px;
+  min-height: 22px;
+  padding: 0;
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  border-radius: 50%;
+  background: rgba(20, 20, 20, 0.9);
+  color: var(--mk-group-muted, #9b9b9b);
+  cursor: pointer;
+  line-height: 1;
+}
+
+.mk-group-member .mk-member-gm-status:hover {
+  border-color: rgba(255, 255, 255, 0.42);
+  background: rgba(35, 35, 35, 0.96);
+  color: #fff;
+}
+
+.mk-group-member .mk-member-gm-status.is-attention {
+  border-color: rgba(230, 185, 85, 0.72);
+  color: #e6b955;
+}
+
+.mk-group-member .mk-member-gm-status.is-critical {
+  border-color: rgba(255, 99, 120, 0.82);
+  color: #ff6378;
+  box-shadow: 0 0 0 2px rgba(255, 99, 120, 0.1);
+}
+
+.mk-group-member .mk-member-gm-status i {
+  font-size: 11px;
+}
+
+.mk-group-member .mk-member-gm-status span {
+  position: absolute;
+  top: -5px;
+  right: -6px;
+  display: inline-grid;
+  place-items: center;
+  min-width: 13px;
+  height: 13px;
+  padding: 0 3px;
+  border: 1px solid rgba(0, 0, 0, 0.7);
+  border-radius: 999px;
+  background: #dedede;
+  color: #111;
+  font-size: 8px;
+  font-weight: 900;
+  line-height: 1;
+}
+
+.mk-group-member .mk-member-gm-status.is-attention span {
+  background: #e6b955;
+}
+
+.mk-group-member .mk-member-gm-status.is-critical span {
+  background: #ff6378;
+}
+
+.mk-gm-member-status-dialog header {
+  margin-bottom: 12px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.12);
+}
+
+.mk-gm-member-status-dialog header h2,
+.mk-gm-member-status-dialog header p,
+.mk-gm-member-status-dialog section h3,
+.mk-gm-member-status-dialog section p {
+  margin: 0;
+}
+
+.mk-gm-member-status-dialog header p {
+  margin-top: 4px;
+  opacity: 0.8;
+}
+
+.mk-gm-status-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.mk-gm-status-grid section {
+  padding: 9px 10px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 4px;
+  background: rgba(255, 255, 255, 0.035);
+}
+
+.mk-gm-status-grid section h3 {
+  margin-bottom: 7px;
+  font-size: 13px;
+  font-weight: 900;
+  text-transform: uppercase;
+}
+
+.mk-gm-status-grid section p + p {
+  margin-top: 4px;
+}
+
+.mk-gm-status-grid ul {
+  margin: 7px 0 0 18px;
+  padding: 0;
+}
+
+.mk-gm-status-grid li + li {
+  margin-top: 3px;
+}
+
+.mk-gm-status-effects {
+  grid-column: 1 / -1;
+}
+
+.mk-gm-status-empty {
+  opacity: 0.55;
+  font-style: italic;
+}

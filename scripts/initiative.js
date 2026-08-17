@@ -1,3 +1,8 @@
+import {
+  advancePastGroupedCombatants,
+  sameInitiative
+} from "./initiative-helpers.js";
+
 // MK-Shadowdark - Grouped Enemy Initiative
 // Players retain their individual native Shadowdark initiative rolls.
 // Hostile NPCs roll once using the hostile creature with the highest DEX modifier.
@@ -130,16 +135,11 @@
   function sortGroupedEnemyTie(left, right, nativeResult) {
     if (!enabled()) return nativeResult;
 
-    const numericInitiative = value => {
-      if (value === null || value === undefined || value === "") return null;
-      const number = Number(value);
-      return Number.isFinite(number) ? number : null;
-    };
-
-    const leftInitiative = numericInitiative(left?.initiative);
-    const rightInitiative = numericInitiative(right?.initiative);
-    if (leftInitiative === null || rightInitiative === null) return nativeResult;
-    if (leftInitiative !== rightInitiative) return nativeResult;
+    const leftInitiative = left?.initiative;
+    const rightInitiative = right?.initiative;
+    if (leftInitiative === null || leftInitiative === undefined || leftInitiative === "") return nativeResult;
+    if (rightInitiative === null || rightInitiative === undefined || rightInitiative === "") return nativeResult;
+    if (!sameInitiative(left, right)) return nativeResult;
 
     const leftIsEnemy = isHostileNpc(left);
     const rightIsEnemy = isHostileNpc(right);
@@ -149,49 +149,23 @@
     return leftIsEnemy ? -1 : 1;
   }
 
-  function sameInitiative(left, right) {
-    const leftValue = left?.initiative;
-    const rightValue = right?.initiative;
-    if (leftValue === null || leftValue === undefined || leftValue === "") return false;
-    if (rightValue === null || rightValue === undefined || rightValue === "") return false;
-    const leftInitiative = Number(leftValue);
-    const rightInitiative = Number(rightValue);
-    return Number.isFinite(leftInitiative)
-      && Number.isFinite(rightInitiative)
-      && leftInitiative === rightInitiative;
-  }
-
   async function nextGroupedEnemyTurn(combat, originalNextTurn) {
     if (!enabled() || !game.user?.isGM || combat?.round === 0) {
       return originalNextTurn.call(combat);
     }
 
-    const turn = combat.turn ?? -1;
-    const current = combat.turns?.[turn];
+    const current = combat?.combatant ?? combat?.turns?.[combat?.turn ?? -1] ?? null;
     if (!isHostileNpc(current)) return originalNextTurn.call(combat);
 
-    let nextTurn = turn + 1;
-    while (nextTurn < combat.turns.length) {
-      const candidate = combat.turns[nextTurn];
-      if (isHostileNpc(candidate) && sameInitiative(current, candidate)) {
-        nextTurn += 1;
-        continue;
-      }
-      if (combat.settings?.skipDefeated && candidate?.isDefeated) {
-        nextTurn += 1;
-        continue;
-      }
-      break;
-    }
-
-    if (nextTurn >= combat.turns.length) return combat.nextRound();
-
-    const advanceTime = combat.getTimeDelta(combat.round, combat.turn, combat.round, nextTurn);
-    const updateData = { round: combat.round, turn: nextTurn };
-    const updateOptions = { direction: 1, worldTime: { delta: advanceTime } };
-    Hooks.callAll("combatTurn", combat, updateData, updateOptions);
-    await combat.update(updateData, updateOptions);
-    return combat;
+    // Always let Foundry perform each transition so Combat lifecycle events,
+    // world-time deltas, movement-history handling, sounds, and module hooks
+    // remain owned by core. If core lands on another hostile in the same
+    // shared initiative slot, immediately advance through core again.
+    return advancePastGroupedCombatants(combat, current, {
+      advanceTurn: () => originalNextTurn.call(combat),
+      isGroupedCombatant: isHostileNpc,
+      sameGroup: sameInitiative
+    });
   }
 
   async function rollEnemySide(combat, options = {}) {

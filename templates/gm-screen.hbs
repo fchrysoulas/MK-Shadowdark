@@ -38,7 +38,7 @@
     <div><span>Terrain</span><strong>{{environment.terrain}}</strong></div>
     <div><span>Danger</span><strong>{{environment.dangerLabel}}</strong></div>
     <div><span>Period</span><strong>{{environment.period}}</strong></div>
-    <div><span>Encounter</span><strong>Every {{environment.intervalTurns}} turn{{#unless environment.intervalTurns}}s{{/unless}}</strong></div>
+    <div><span>Encounter</span><strong>Every {{environment.intervalTurns}} {{environment.intervalUnit}}</strong></div>
     {{#if combat.active}}
     <div class="is-combat"><span>Combat</span><strong>Round {{combat.round}}</strong></div>
     {{/if}}
@@ -102,7 +102,7 @@
                 <div><dt>Procedure</dt><dd>{{procedure}}</dd></div>
                 <div><dt>Scene</dt><dd>{{scene.name}}</dd></div>
                 <div><dt>Terrain</dt><dd>{{environment.terrain}}</dd></div>
-                <div><dt>Danger</dt><dd>{{environment.dangerLabel}} · every {{environment.intervalTurns}} turns</dd></div>
+                <div><dt>Danger</dt><dd>{{environment.dangerLabel}} · every {{environment.intervalTurns}} {{environment.intervalUnit}}</dd></div>
                 <div><dt>Period</dt><dd>{{environment.period}}</dd></div>
                 <div><dt>Table</dt><dd>{{#if environment.tableConfigured}}Configured{{else}}Not configured{{/if}}</dd></div>
               </dl>
@@ -117,7 +117,7 @@
               <div class="mk-gm-big-stats">
                 <div><span>Exploration Turns</span><strong>{{exploration.completedTurns}}</strong></div>
                 <div><span>Due Checks</span><strong>{{exploration.dueChecks}}</strong></div>
-                <div><span>Next Check</span><strong>Turn {{exploration.intervalTurns}}</strong></div>
+                <div><span>Next Check</span><strong>{{exploration.nextCheckLabel}}</strong></div>
               </div>
               <div class="mk-gm-panel-actions">
                 <button type="button" data-action="processDueEncounters" {{#unless exploration.canCheck}}disabled{{/unless}}><i class="fas fa-dice"></i> Check Due</button>
@@ -171,10 +171,11 @@
             <div class="mk-gm-big-stats four-col">
               <div><span>Turns</span><strong>{{exploration.completedTurns}}</strong></div>
               <div><span>Turn Length</span><strong>{{exploration.turnMinutes}}m</strong></div>
-              <div><span>Cadence</span><strong>{{exploration.intervalTurns}} turns</strong></div>
+              <div><span>Cadence</span><strong>{{exploration.intervalTurns}} {{exploration.intervalUnit}}</strong></div>
               <div><span>Due</span><strong>{{exploration.dueChecks}}</strong></div>
             </div>
             <dl class="mk-gm-data-list">
+              <div><dt>Next Check</dt><dd>{{exploration.nextCheckLabel}}</dd></div>
               <div><dt>Terrain</dt><dd>{{exploration.terrain}}</dd></div>
               <div><dt>Period</dt><dd>{{exploration.period}}</dd></div>
               <div><dt>Danger</dt><dd>{{exploration.dangerLabel}}</dd></div>
@@ -279,7 +280,7 @@
               <div><dt>Terrain</dt><dd>{{environment.terrain}}</dd></div>
               <div><dt>Danger</dt><dd>{{environment.dangerLabel}}</dd></div>
               <div><dt>Period</dt><dd>{{environment.period}}</dd></div>
-              <div><dt>Encounter Cadence</dt><dd>Every {{environment.intervalTurns}} procedure turns</dd></div>
+              <div><dt>Encounter Cadence</dt><dd>Every {{environment.intervalTurns}} procedure {{environment.intervalUnit}}</dd></div>
               <div><dt>Encounter Table</dt><dd>{{#if environment.tableConfigured}}Configured{{else}}Not configured{{/if}}</dd></div>
             </dl>
             <div class="mk-gm-panel-actions"><button type="button" data-action="configureEnvironment" {{#unless hasGroups}}disabled{{/unless}}><i class="fas fa-sliders"></i> Edit Scene Encounter Context</button></div>

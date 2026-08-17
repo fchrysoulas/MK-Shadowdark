@@ -1,7 +1,10 @@
 import { getGroupData } from "../group-sheet/activities.js";
 import { isGroupActor, resolveActorFromUuid } from "../group-sheet/actors.js";
 import { getGroupAssignments } from "../group-sheet/assignments.js";
-import { buildExplorationEncounterViewData } from "../group-sheet/exploration-encounters.js";
+import {
+  buildExplorationEncounterViewData,
+  getExplorationEncounterState,
+} from "../group-sheet/exploration-encounters.js";
 import { buildGroupMemberStatus } from "../group-sheet/member-status.js";
 import { getGroupProcedureState } from "../group-sheet/procedure.js";
 import { getGroupRestState } from "../group-sheet/rest-encounters.js";
@@ -72,6 +75,14 @@ function formatDuration(seconds) {
   if (hours > 0) return `${hours}h ${minutes}m`;
   if (minutes > 0) return `${minutes}m`;
   return `${total}s`;
+}
+
+function formatExplorationNextCheck(state) {
+  const dueChecks = Math.max(0, Number(state?.dueChecks ?? 0) || 0);
+  if (dueChecks > 0) return dueChecks === 1 ? "Due now" : `Due now (${dueChecks})`;
+
+  const nextCheckTurn = Math.max(1, Number(state?.nextCheckTurn ?? 1) || 1);
+  return `Turn ${nextCheckTurn}`;
 }
 
 function actorImage(actor) {
@@ -267,6 +278,7 @@ async function buildGmScreenViewModel({
   const resolvedWorkspace = normalizeWorkspace(workspace);
   const environment = resolveSceneEnvironmentContext(scene);
   const combatView = buildCombatView(combat);
+  const intervalTurns = Math.max(1, Number(environment?.encounter?.interval ?? 1) || 1);
 
   const base = {
     workspace: resolvedWorkspace,
@@ -293,7 +305,8 @@ async function buildGmScreenViewModel({
       dangerLevel: String(environment?.dangerLevel ?? "unsafe"),
       dangerLabel: String(environment?.danger?.label ?? environment?.dangerLevel ?? "Unsafe"),
       period: String(environment?.period ?? "day"),
-      intervalTurns: Math.max(1, Number(environment?.encounter?.interval ?? 1) || 1),
+      intervalTurns,
+      intervalUnit: intervalTurns === 1 ? "turn" : "turns",
       tableUuid: String(environment?.tableUuid ?? ""),
       tableConfigured: Boolean(environment?.tableUuid),
     },
@@ -312,7 +325,16 @@ async function buildGmScreenViewModel({
 
   const procedure = getGroupProcedureState(groupActor);
   const elapsedSeconds = getGroupElapsedTime(groupActor, procedure);
-  const exploration = await buildExplorationEncounterViewData(groupActor, { isGm: true });
+  const explorationView = await buildExplorationEncounterViewData(groupActor, { isGm: true });
+  const explorationState = getExplorationEncounterState(groupActor);
+  const exploration = {
+    ...explorationView,
+    nextCheckTurn: explorationState.nextCheckTurn,
+    turnsUntilNextCheck: explorationState.turnsUntilNextCheck,
+    nextCheckDue: explorationState.dueChecks > 0,
+    nextCheckLabel: formatExplorationNextCheck(explorationState),
+    intervalUnit: explorationState.intervalTurns === 1 ? "turn" : "turns",
+  };
   const rest = getGroupRestState(groupActor, { context: environment });
   const latestEncounter = buildLatestEncounterView(groupActor, messages);
 
@@ -345,6 +367,7 @@ export {
   getGroupActors,
   resolveGmScreenGroup,
   formatDuration,
+  formatExplorationNextCheck,
   buildPartyView,
   buildAssignmentsView,
   buildCombatView,

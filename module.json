@@ -2,7 +2,7 @@
   "id": "mk-shadowdark",
   "title": "MK-Shadowdark",
   "description": "Quality-of-life extras and expansions for the Shadowdark RPG system.",
-  "version": "1.9.12",
+  "version": "1.9.13",
   "compatibility": {
     "minimum": "13",
     "verified": "14"
@@ -54,7 +54,18 @@
     "scripts/initiative/initiative.js",
     "scripts/morale/morale.js",
     "scripts/encounter-engine/encounter-engine.js",
+    "scripts/gm-screen/presentation-preferences.js",
     "scripts/gm-screen/gm-screen.js",
+    "scripts/gm-screen/live-refresh.js",
+    "scripts/gm-screen/assignment-controls.js",
+    "scripts/gm-screen/encounter-controls.js",
+    "scripts/gm-screen/encounter-history.js",
+    "scripts/gm-screen/rest-controls.js",
+    "scripts/gm-screen/morale-controls.js",
+    "scripts/gm-screen/quick-rules.js",
+    "scripts/gm-screen/environment-controls.js",
+    "scripts/gm-screen/light-pressure.js",
+    "scripts/gm-screen/presentation-controls.js",
     "scripts/mk-shadowdark.js"
   ],
   "styles": [
@@ -72,6 +83,10 @@
     "styles/group-member-status.css",
     "styles/group-sheet-dashboard.css",
     "styles/gm-screen.css",
+    "styles/gm-screen-encounter-controls.css",
+    "styles/gm-screen-encounter-history.css",
+    "styles/gm-screen-light-pressure.css",
+    "styles/gm-screen-presentation.css",
     "styles/quickdraw-icons.css",
     "styles/encounter-engine.css",
     "styles/summary-bar.css",

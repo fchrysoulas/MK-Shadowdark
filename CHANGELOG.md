@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.9.13
+
+- Expanded the production GM Screen with operational procedure-time, marching-order, exploration-role, camp-watch, resting, morale, combat, and Scene environment controls backed by the canonical Group services.
+- Added canonical encounter-card parity, recent encounter history, active-party light pressure, profile-derived quick rules, corrected encounter-pressure labels, and direct encounter actions to the GM Screen.
+- Added live document refresh and bounded client-side GM Screen presentation preferences while preserving the standalone Time Passes selector and keeping Group Time independent from Time Passes presentation.
+
 ## 1.9.12
 
 - Restored the v1.6.0 Time Passes flow in the GM Screen with a 1d6/2d6/3d6 selector, synchronized opening splash, public roll, and the original visual ENCOUNTER! skull cue when any die shows 1.

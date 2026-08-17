@@ -5,7 +5,7 @@
   "scripts": {
     "syntax": "node tools/check-syntax.mjs",
     "lint": "eslint scripts tests tools",
-    "test": "node --test"
+    "test": "node tools/diagnose-tests.mjs"
   },
   "devDependencies": {
     "eslint": "^9.0.0"

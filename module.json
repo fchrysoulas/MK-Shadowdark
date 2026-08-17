@@ -39,6 +39,7 @@
     "scripts/focus-spell-tracker/focus-spell-tracker.js",
     "scripts/targeted-spell-dc/targeted-spell-dc.js",
     "scripts/targeting-assistant/targeting-assistant.js",
+    "scripts/torch-attack/torch-attack.js",
     "scripts/corpse-token/corpse-token.js",
     "scripts/death-timer/death-timer.js",
     "scripts/editable-quantity/editable-qty.js",

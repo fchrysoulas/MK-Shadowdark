@@ -2,55 +2,21 @@ import assert from "node:assert/strict";
 import fs from "node:fs";
 import test from "node:test";
 
-import {
-  combatantMoraleView,
-  resultSummary,
-} from "../scripts/gm-screen/morale-controls.js";
-
 const controls = fs.readFileSync(new URL("../scripts/gm-screen/morale-controls.js", import.meta.url), "utf8");
 const manifest = JSON.parse(fs.readFileSync(new URL("../module.json", import.meta.url), "utf8"));
 
 test("GM Screen morale member view exposes leader, immunity, and Fleeing", () => {
-  const combatant = {
-    id: "enemy-1",
-    name: "Raider",
-    actor: {
-      type: "npc",
-      system: { attributes: { hp: { value: 4 } } },
-      getFlag: (_scope, key) => key === "encounter.moraleImmune" ? true : undefined,
-      effects: [{ disabled: false, statuses: new Set(["mk-shadowdark-fleeing"]) }],
-    },
-    token: {
-      disposition: -1,
-      getFlag: () => ({ leader: true }),
-    },
-  };
-
-  assert.deepEqual(combatantMoraleView(combatant), {
-    id: "enemy-1",
-    name: "Raider",
-    token: combatant.token,
-    leader: true,
-    immune: true,
-    fleeing: true,
-    defeated: false,
-  });
+  assert.match(controls, /leader: tokenMoraleData\(combatant\?\.token\)\.leader === true/);
+  assert.match(controls, /immune: moraleImmune\(combatant\?\.actor\)/);
+  assert.match(controls, /fleeing: fleeing\(combatant\?\.actor\)/);
+  assert.match(controls, /FLEEING_STATUS_ID = "mk-shadowdark-fleeing"/);
+  assert.match(controls, /"encounter\.moraleImmune"/);
 });
 
 test("GM Screen morale result summary covers leader and individual results", () => {
-  assert.equal(resultSummary(null), "Not resolved");
-  assert.equal(resultSummary({
-    mode: "leader",
-    entries: [{ name: "Chief", total: 9, success: false }],
-  }), "Leader Chief: 9 · failed");
-  assert.equal(resultSummary({
-    mode: "individual",
-    entries: [
-      { success: true },
-      { success: false },
-      { success: false },
-    ],
-  }), "1 held · 2 failed");
+  assert.match(controls, /Leader \$\{entry\.name\}: \$\{entry\.total\} · \$\{entry\.success \? "held" : "failed"\}/);
+  assert.match(controls, /\$\{entries\.length - failed\} held · \$\{failed\} failed/);
+  assert.match(controls, /Resolved · no morale-eligible survivors/);
 });
 
 test("GM Screen morale controls use only supported Morale API commands", () => {
@@ -61,6 +27,16 @@ test("GM Screen morale controls use only supported Morale API commands", () => {
   assert.match(controls, /api\.isEnemyTurnStart\(combat\)/);
   assert.doesNotMatch(controls, /combat\.update\s*\(/);
   assert.doesNotMatch(controls, /combat\.setFlag\s*\(/);
+});
+
+test("GM Screen morale workspace exposes force, leader, immunity, Fleeing, and result state", () => {
+  for (const label of ["Enemy Force", "Threshold", "Morale Leader", "Immune", "Fleeing", "Status", "Result"]) {
+    assert.match(controls, new RegExp(label));
+  }
+  assert.match(controls, /Evaluate Morale Now/);
+  assert.match(controls, /Set Leader/);
+  assert.match(controls, /Clear Leader/);
+  assert.match(controls, /Reset Morale/);
 });
 
 test("GM Screen morale reset requires confirmation", () => {

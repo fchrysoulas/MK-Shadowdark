@@ -1,42 +1,50 @@
 // MK-Shadowdark - Additional Shadowdark predefined effects
+const MODULE_ID = "mk-shadowdark";
+
+export const PREDEFINED_EFFECT_IDS = Object.freeze({
+  ONLY_MAGICAL_DAMAGE_SOURCES: "onlyMagicalDamageSources",
+  MAGICAL_ATTACKS: "magicalAttacks",
+  TARGETED_SPELL_DC: "targetedSpellDc",
+  MORALE_IMMUNE: "moraleImmune"
+});
+
+export const PREDEFINED_EFFECT_KEYS = Object.freeze({
+  ONLY_MAGICAL_DAMAGE_SOURCES: "system.damage.immunity.nonmagical",
+  MAGICAL_ATTACKS: "system.damage.source.magical",
+  TARGETED_SPELL_DC: "system.roll.spell.dc",
+  MORALE_IMMUNE: `flags.${MODULE_ID}.encounter.moraleImmune`
+});
+
 (() => {
   "use strict";
 
-  const MODULE_ID = "mk-shadowdark";
   const SUBMODULE = "Predefined Effects";
 
-  const EFFECT_KEYS = Object.freeze({
-    onlyMagicalDamageSources: "system.damage.immunity.nonmagical",
-    magicalAttacks: "system.damage.source.magical",
-    targetedSpellDc: "system.roll.spell.dc",
-    moraleImmune: `flags.${MODULE_ID}.encounter.moraleImmune`
-  });
-
   const PREDEFINED_EFFECTS = Object.freeze({
-    onlyMagicalDamageSources: {
+    [PREDEFINED_EFFECT_IDS.ONLY_MAGICAL_DAMAGE_SOURCES]: {
       defaultValue: 1,
-      effectKey: EFFECT_KEYS.onlyMagicalDamageSources,
+      effectKey: PREDEFINED_EFFECT_KEYS.ONLY_MAGICAL_DAMAGE_SOURCES,
       img: "modules/mk-shadowdark/assets/icons/effects/only-magical-damage.svg",
       mode: "CONST.ACTIVE_EFFECT_MODES.OVERRIDE",
       transfer: true
     },
-    magicalAttacks: {
+    [PREDEFINED_EFFECT_IDS.MAGICAL_ATTACKS]: {
       defaultValue: 1,
-      effectKey: EFFECT_KEYS.magicalAttacks,
+      effectKey: PREDEFINED_EFFECT_KEYS.MAGICAL_ATTACKS,
       img: "modules/mk-shadowdark/assets/icons/effects/magical-attacks.svg",
       mode: "CONST.ACTIVE_EFFECT_MODES.OVERRIDE",
       transfer: true
     },
-    targetedSpellDc: {
+    [PREDEFINED_EFFECT_IDS.TARGETED_SPELL_DC]: {
       defaultValue: 18,
-      effectKey: EFFECT_KEYS.targetedSpellDc,
+      effectKey: PREDEFINED_EFFECT_KEYS.TARGETED_SPELL_DC,
       img: "modules/mk-shadowdark/assets/icons/effects/targeted-spell-dc.svg",
       mode: "CONST.ACTIVE_EFFECT_MODES.OVERRIDE",
       transfer: true
     },
-    moraleImmune: {
+    [PREDEFINED_EFFECT_IDS.MORALE_IMMUNE]: {
       defaultValue: true,
-      effectKey: EFFECT_KEYS.moraleImmune,
+      effectKey: PREDEFINED_EFFECT_KEYS.MORALE_IMMUNE,
       img: "icons/svg/shield.svg",
       mode: "CONST.ACTIVE_EFFECT_MODES.CUSTOM",
       transfer: true
@@ -44,10 +52,10 @@
   });
 
   const EFFECT_TRANSLATIONS = Object.freeze({
-    [EFFECT_KEYS.onlyMagicalDamageSources]: "Only Damaged by Magical Sources",
-    [EFFECT_KEYS.magicalAttacks]: "Magical Attacks",
-    [EFFECT_KEYS.targetedSpellDc]: "Targeted Spell DC",
-    [EFFECT_KEYS.moraleImmune]: "Immune to morale checks"
+    [PREDEFINED_EFFECT_KEYS.ONLY_MAGICAL_DAMAGE_SOURCES]: "Only Damaged by Magical Sources",
+    [PREDEFINED_EFFECT_KEYS.MAGICAL_ATTACKS]: "Magical Attacks",
+    [PREDEFINED_EFFECT_KEYS.TARGETED_SPELL_DC]: "Targeted Spell DC",
+    [PREDEFINED_EFFECT_KEYS.MORALE_IMMUNE]: "Immune to morale checks"
   });
 
   function moduleVersion() {
@@ -87,8 +95,8 @@
   }
 
   Hooks.on("applyActiveEffect", (_actor, change, _current, _delta, changes) => {
-    if (change?.key !== EFFECT_KEYS.moraleImmune) return;
-    if (isTruthy(change.value)) changes[EFFECT_KEYS.moraleImmune] = true;
+    if (change?.key !== PREDEFINED_EFFECT_KEYS.MORALE_IMMUNE) return;
+    if (isTruthy(change.value)) changes[PREDEFINED_EFFECT_KEYS.MORALE_IMMUNE] = true;
   });
 
   Hooks.once("init", registerPredefinedEffects);

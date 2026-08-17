@@ -102,7 +102,7 @@ test("Environment edits use the canonical Scene environment service and do not r
 
 test("Environment workspace exposes profile, terrain, danger, period, and table override controls", () => {
   for (const name of ["profileId", "terrain", "dangerLevel", "period", "tableUuid"]) {
-    assert.match(runtime, new RegExp(`name=\\?"${name}\\?"`));
+    assert.match(runtime, new RegExp(`name="${name}"`));
   }
   assert.match(runtime, /Active Profile/);
   assert.match(runtime, /Effective Terrain/);

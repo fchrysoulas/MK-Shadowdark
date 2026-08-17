@@ -1,0 +1,15 @@
+.mk-gm-screen.is-party-rail-collapsed .mk-gm-screen-layout {
+  grid-template-columns: 0 minmax(0, 1fr);
+}
+
+.mk-gm-screen.is-party-rail-collapsed .mk-gm-party-rail {
+  overflow: hidden;
+  border-right: 0;
+  visibility: hidden;
+}
+
+.mk-gm-header-actions [data-mk-presentation-action] {
+  width: 30px;
+  min-width: 30px;
+  padding: 4px;
+}

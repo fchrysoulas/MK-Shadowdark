@@ -1,3 +1,5 @@
+import { PREDEFINED_EFFECT_KEYS } from "../libs/predefined-effects.js";
+
 // MK-Shadowdark - Morale Automation
 // Tracks all hostile NPC combatants as one force for Shadowdark morale.
 (() => {
@@ -135,15 +137,21 @@
     return !(isHostileCombatant(previous) && sameInitiative(previous, current));
   }
 
-  function actorEncounterFlag(actor, key) {
-    try {
-      const data = actor?.getFlag?.(MODULE_ID, "encounter");
-      if (data && Object.prototype.hasOwnProperty.call(data, key)) return data[key];
-    } catch (_error) {
-      // Fall through to source data.
+  function actorEffectValue(actor, effectKey) {
+    const key = String(effectKey ?? "");
+    const flagPrefix = `flags.${MODULE_ID}.`;
+    const flagPath = key.startsWith(flagPrefix) ? key.slice(flagPrefix.length) : null;
+
+    if (flagPath) {
+      try {
+        const value = actor?.getFlag?.(MODULE_ID, flagPath);
+        if (value !== undefined) return value;
+      } catch (_error) {
+        // Fall through to prepared/source data.
+      }
     }
-    return getProperty(actor, `flags.${MODULE_ID}.encounter.${key}`)
-      ?? getProperty(actor?._source, `flags.${MODULE_ID}.encounter.${key}`);
+
+    return getProperty(actor, key) ?? getProperty(actor?._source, key);
   }
 
   function tokenMoraleData(tokenDoc) {
@@ -161,7 +169,7 @@
   function isMoraleImmune(combatant) {
     if (!combatant) return true;
     if (tokenMoraleData(combatant.token).immune === true) return true;
-    return actorEncounterFlag(combatant.actor, "moraleImmune") === true;
+    return actorEffectValue(combatant.actor, PREDEFINED_EFFECT_KEYS.MORALE_IMMUNE) === true;
   }
 
   function isExplicitLeader(combatant) {

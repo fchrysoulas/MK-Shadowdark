@@ -5,8 +5,6 @@ import { getRestMode, onRest } from "../libs/resting.js";
 (() => {
   const MODULE_ID = "mk-shadowdark";
   const SUBMODULE = "Summary Bar";
-  const STYLESHEET_ID = "mk-shadowdark-summary-bar-styles";
-  const STYLESHEET_PATH = `modules/${MODULE_ID}/styles/summary-bar.css`;
 
   const SETTINGS = Object.freeze({
     ENABLED: "characterSheetTweaksSummaryBar",
@@ -26,28 +24,10 @@ import { getRestMode, onRest } from "../libs/resting.js";
   const SHORTCUT_FLAG = "summaryBarShortcuts";
   const VALID_ELEMENTS = new Set(["LVL", "HP", "AC", "XP", "LUCK", "REST", "DT", "SLOTS", "STR", "DEX", "CON", "INT", "WIS", "CHA", "|"]);
   const ABILITY_ELEMENTS = new Set(["STR", "DEX", "CON", "INT", "WIS", "CHA"]);
-  ensureStylesheet();
 
   Hooks.once("init", () => log("initialized"));
 
   onCharacterSheetRender("Summary Bar", onRenderActorSheet, { priority: 20 });
-
-  function ensureStylesheet() {
-    if (document.getElementById(STYLESHEET_ID)) return;
-
-    const existing = Array.from(document.querySelectorAll('link[rel="stylesheet"][href]'))
-      .find(link => link.href.includes(`/modules/${MODULE_ID}/styles/summary-bar.css`));
-    if (existing) {
-      existing.id = STYLESHEET_ID;
-      return;
-    }
-
-    const link = document.createElement("link");
-    link.id = STYLESHEET_ID;
-    link.rel = "stylesheet";
-    link.href = toFoundryRoute(STYLESHEET_PATH);
-    document.head.append(link);
-  }
 
   function onRenderActorSheet(app, html, data) {
     const root = getRootElement(html);
@@ -754,16 +734,6 @@ import { getRestMode, onRest } from "../libs/resting.js";
     } catch (_err) {
       return fallback;
     }
-  }
-
-  function toFoundryRoute(path) {
-    const clean = String(path ?? "").replace(/^\/+/, "");
-    try {
-      if (foundry.utils.getRoute) return foundry.utils.getRoute(clean);
-    } catch (_error) {
-      // Use the host-root fallback.
-    }
-    return `/${clean}`;
   }
 
   function getValue(document, path) {

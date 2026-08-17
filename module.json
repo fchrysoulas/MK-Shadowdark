@@ -55,6 +55,7 @@
     "scripts/morale/morale.js",
     "scripts/encounter-engine/encounter-engine.js",
     "scripts/gm-screen/gm-screen.js",
+    "scripts/gm-screen/live-refresh.js",
     "scripts/mk-shadowdark.js"
   ],
   "styles": [

@@ -1,3 +1,4 @@
+import { onCharacterSheetRender } from "../libs/sheet-render-adapter.js";
 import { planLegacyFocusMigration } from "./focus-migration.js";
 
 // Tracks Shadowdark 4.x Focus spells, checks, chat actions, and token status effects.
@@ -1450,22 +1451,7 @@ import { planLegacyFocusMigration } from "./focus-migration.js";
     log("Ready", { foundry: game.version, shadowdark: game.system.version });
   });
 
-  const actorRenderHooks = [
-    "renderActorSheet",
-    "renderActorSheetSD",
-    "renderPlayerSheetSD",
-    "renderShadowdarkActorSheet",
-    "renderShadowdarkActorSheetV2",
-    "renderActorSheetShadowdark"
-  ];
-
-  for (const hook of actorRenderHooks) {
-    Hooks.on(hook, (app, html) => {
-      renderActorFocus(app, html);
-      window.setTimeout(() => renderActorFocus(app, html), 0);
-      window.setTimeout(() => renderActorFocus(app, html), 125);
-    });
-  }
+  onCharacterSheetRender("Focus Tracker", renderActorFocus, { priority: 30 });
 
   Hooks.on("renderChatMessage", (message, html) => attachChatListeners(message, html));
   Hooks.on("updateCombat", (combat, changes) => onCombatUpdate(combat, changes));

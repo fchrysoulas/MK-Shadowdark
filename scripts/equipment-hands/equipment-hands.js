@@ -1,3 +1,5 @@
+import { onCharacterSheetRender } from "../libs/sheet-render-adapter.js";
+
 (() => {
   const MODULE_ID = "mk-shadowdark";
   const SUBMODULE = "Equipment Hands";
@@ -526,10 +528,7 @@
     }
   }
 
-  Hooks.on("renderActorSheet", onRenderActorSheet);
-  Hooks.on("renderShadowdarkActorSheet", onRenderActorSheet);
-  Hooks.on("renderShadowdarkActorSheetV2", onRenderActorSheet);
-  Hooks.on("renderActorSheetShadowdark", onRenderActorSheet);
+  onCharacterSheetRender("Equipment Hands", onRenderActorSheet, { priority: 60 });
 
   Hooks.once("ready", () => {
     const mod = game.modules.get(MODULE_ID);

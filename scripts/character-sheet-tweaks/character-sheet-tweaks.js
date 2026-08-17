@@ -1,3 +1,5 @@
+import { onCharacterSheetRender } from "../libs/sheet-render-adapter.js";
+
 (() => {
   const MODULE_ID = "mk-shadowdark";
   const SUBMODULE = "Character Sheet Tweaks";
@@ -8,13 +10,6 @@
     DEBUG: "characterSheetTweaksDebug"
   });
 
-  const ACTOR_SHEET_RENDER_HOOKS = [
-    "renderActorSheet",
-    "renderShadowdarkActorSheet",
-    "renderShadowdarkActorSheetV2",
-    "renderActorSheetShadowdark"
-  ];
-
   const ITEM_SHEET_RENDER_HOOKS = [
     "renderItemSheet",
     "renderShadowdarkItemSheet",
@@ -24,15 +19,7 @@
 
   Hooks.once("init", () => log("initialized"));
 
-  for (const hookName of ACTOR_SHEET_RENDER_HOOKS) {
-    Hooks.on(hookName, (app, html) => {
-      try {
-        onRenderActorSheet(app, html);
-      } catch (err) {
-        console.error(`${MODULE_ID} v${getModuleVersion()} | ${SUBMODULE} | render error`, err);
-      }
-    });
-  }
+  onCharacterSheetRender("Character Sheet Tweaks", onRenderActorSheet, { priority: 10 });
 
   for (const hookName of ITEM_SHEET_RENDER_HOOKS) {
     Hooks.on(hookName, (app, html) => {

@@ -1,3 +1,4 @@
+import { onCharacterSheetRender } from "../libs/sheet-render-adapter.js";
 import { reportLuckChange } from "../chat-reporting/chat-reporting.js";
 import { getRestMode, onRest } from "../libs/resting.js";
 
@@ -25,27 +26,11 @@ import { getRestMode, onRest } from "../libs/resting.js";
   const SHORTCUT_FLAG = "summaryBarShortcuts";
   const VALID_ELEMENTS = new Set(["LVL", "HP", "AC", "XP", "LUCK", "REST", "DT", "SLOTS", "STR", "DEX", "CON", "INT", "WIS", "CHA", "|"]);
   const ABILITY_ELEMENTS = new Set(["STR", "DEX", "CON", "INT", "WIS", "CHA"]);
-  const ACTOR_SHEET_RENDER_HOOKS = [
-    "renderActorSheet",
-    "renderActorSheetSD",
-    "renderPlayerSheetSD",
-    "renderShadowdarkActorSheet",
-    "renderShadowdarkActorSheetV2",
-    "renderActorSheetShadowdark"
-  ];
   ensureStylesheet();
 
   Hooks.once("init", () => log("initialized"));
 
-  for (const hookName of ACTOR_SHEET_RENDER_HOOKS) {
-    Hooks.on(hookName, (app, html, data) => {
-      try {
-        onRenderActorSheet(app, html, data);
-      } catch (err) {
-        console.error(`${MODULE_ID} v${getModuleVersion()} | ${SUBMODULE} | render error`, err);
-      }
-    });
-  }
+  onCharacterSheetRender("Summary Bar", onRenderActorSheet, { priority: 20 });
 
   function ensureStylesheet() {
     if (document.getElementById(STYLESHEET_ID)) return;

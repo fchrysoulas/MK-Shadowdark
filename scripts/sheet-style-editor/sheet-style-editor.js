@@ -1,3 +1,5 @@
+import { onCharacterSheetRender } from "../libs/sheet-render-adapter.js";
+
 (() => {
   const MODULE_ID = "mk-shadowdark";
   const SUBMODULE = "Sheet Style Editor";
@@ -29,14 +31,6 @@
     sectionSize: "characterSheetTweaksSectionFontSize",
     navigationSize: "characterSheetTweaksNavigationFontSize"
   });
-  const ACTOR_SHEET_RENDER_HOOKS = [
-    "renderActorSheet",
-    "renderActorSheetSD",
-    "renderPlayerSheetSD",
-    "renderShadowdarkActorSheet",
-    "renderShadowdarkActorSheetV2",
-    "renderActorSheetShadowdark"
-  ];
 
   let activeMenu = null;
   let cssUpdateQueue = Promise.resolve();
@@ -70,15 +64,7 @@
     Hooks.on(hookName, addStyleEditorHeaderButton);
   }
 
-  for (const hookName of ACTOR_SHEET_RENDER_HOOKS) {
-    Hooks.on(hookName, (app, html) => {
-      try {
-        onRenderActorSheet(app, html);
-      } catch (error) {
-        console.error(`${MODULE_ID} | ${SUBMODULE} | render error`, error);
-      }
-    });
-  }
+  onCharacterSheetRender("Sheet Style Editor", onRenderActorSheet, { priority: 50 });
 
   document.addEventListener("pointerdown", event => {
     if (activeMenu && !activeMenu.contains(event.target)) closeContextMenu();

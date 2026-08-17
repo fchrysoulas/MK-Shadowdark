@@ -35,16 +35,16 @@ test("persisted Group Sheet ID remains compatible with existing actors", () => {
 });
 
 test("legacy render-hook alias remains available during the class rename", () => {
-  const behavior = source("scripts/group-sheet/dashboard-behavior.js");
-  assert.match(behavior, /Hooks\.on\(["']renderActorSheet["'],\s*onRenderGroupSheet\)/);
-  assert.match(behavior, /Hooks\.on\(["']renderMKGroupSheet["'],\s*onRenderGroupSheet\)/);
-  assert.match(behavior, /Hooks\.on\(["']renderSDXGroupSheet["'],\s*onRenderGroupSheet\)/);
+  const layout = source("scripts/group-sheet/dashboard-layout.js");
+  assert.match(layout, /Hooks\.on\(["']renderActorSheet["'],\s*onRenderGroupSheet\)/);
+  assert.match(layout, /Hooks\.on\(["']renderMKGroupSheet["'],\s*onRenderGroupSheet\)/);
+  assert.match(layout, /Hooks\.on\(["']renderSDXGroupSheet["'],\s*onRenderGroupSheet\)/);
 });
 
 test("Group Sheet implementation file set remains present", () => {
   assert.equal(fs.existsSync(GROUP_DIR), true);
-  for (const file of ["sheet.js", "registration.js", "group-sheet.js", "constants.js", "dashboard-behavior.js"]) {
+  for (const file of ["sheet.js", "registration.js", "group-sheet.js", "constants.js", "dashboard-layout.js"]) {
     assert.equal(fs.existsSync(path.join(GROUP_DIR, file)), true, `${file} should exist`);
   }
-  assert.equal(fs.existsSync(path.join(GROUP_DIR, "dashboard-layout.js")), false);
+  assert.equal(fs.existsSync(path.join(GROUP_DIR, "dashboard-behavior.js")), false);
 });

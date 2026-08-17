@@ -39,6 +39,7 @@ Guidance for AI agents working in this repository.
 - When adding scripts, styles, templates, languages, or runtime assets, update `module.json` and confirm the referenced path is included in the release package.
 - Put third-party asset attribution beside the relevant asset family. Effect icon attribution belongs in `assets/icons/effects/ATTRIBUTION.md`; Camping icon attribution belongs in `assets/icons/camping/ATTRIBUTION.md`.
 - Keep Group Sheet changes coordinated across `templates/group-sheet.hbs`, `styles/group-sheet.css`, `styles/group-sheet-dashboard.css`, `scripts/group-sheet.js`, and the relevant modules under `scripts/group-sheet/`.
+- Preserve the v1.6.0 Group Sheet command dashboard structure and styling, including its generated Party sidebar cards and controls, horizontal narrow-width rail, and bottom Active Torches bar.
 
 ## Active Effects, Properties, And Damage
 

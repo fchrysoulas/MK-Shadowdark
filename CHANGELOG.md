@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.9.10
+
+- Restored the complete v1.6.0 Group Sheet command dashboard, including its Party sidebar cards and controls, compact workspace, responsive layout, and bottom Active Torches bar.
+
 ## 1.9.8
 
 - Reworked the Group Sheet dashboard to use its native template structure and behavior, preserving the Party rail and drag-and-drop task zones without a reconstructed layout layer.

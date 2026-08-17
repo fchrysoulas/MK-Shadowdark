@@ -1,5 +1,5 @@
 import { registerGroupSheet } from "./registration.js";
-import "./dashboard-behavior.js";
+import "./dashboard-layout.js";
 
 export { createGroupActor, MKGroupSheet } from "./sheet.js";
 export { registerGroupSheet };

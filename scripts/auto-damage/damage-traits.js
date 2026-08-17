@@ -1,10 +1,10 @@
+import { PREDEFINED_EFFECT_KEYS } from "../libs/predefined-effects.js";
+
 (() => {
   const MODULE_ID = "mk-shadowdark";
   const SUBMODULE = "Damage Traits";
   const ACTOR_TRAITS_FLAG = "damageTraits";
   const FEATURE_TRAITS_FLAG = "npcFeatureTraits";
-  const ONLY_MAGICAL_DAMAGE_KEY = "system.damage.immunity.nonmagical";
-  const MAGICAL_ATTACKS_KEY = "system.damage.source.magical";
   const TRAIT_EFFECT_KEYS = Object.freeze({
     resistance: "system.damage.resistance.property",
     immunity: "system.damage.immunity.property",
@@ -220,11 +220,11 @@
   }
 
   function hasOnlyMagicalDamageEffect(actor) {
-    return hasTruthyEffectChange(actor, ONLY_MAGICAL_DAMAGE_KEY);
+    return hasTruthyEffectChange(actor, PREDEFINED_EFFECT_KEYS.ONLY_MAGICAL_DAMAGE_SOURCES);
   }
 
   function hasMagicalAttacksEffect(actor) {
-    return hasTruthyEffectChange(actor, MAGICAL_ATTACKS_KEY);
+    return hasTruthyEffectChange(actor, PREDEFINED_EFFECT_KEYS.MAGICAL_ATTACKS);
   }
 
   function registerDamageTraitTranslations() {

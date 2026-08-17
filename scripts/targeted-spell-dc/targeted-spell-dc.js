@@ -1,3 +1,4 @@
+import { PREDEFINED_EFFECT_KEYS } from "../libs/predefined-effects.js";
 import { selectHighestSpellDcCandidate } from "./targeted-spell-dc-logic.js";
 
 // Applies target-owned Active Effect spell DC overrides to Shadowdark spell
@@ -9,7 +10,6 @@ import { selectHighestSpellDcCandidate } from "./targeted-spell-dc-logic.js";
 
   const MODULE_ID = "mk-shadowdark";
   const SUBMODULE = "Targeted Spell DC";
-  const EFFECT_KEY = "system.roll.spell.dc";
   const TARGETS_CHANGED_HOOK = "mkShadowdarkTargetingChanged";
   const ORIGINAL_HEADING = Symbol.for(`${MODULE_ID}.targetedSpellDc.originalHeading`);
   const ORIGINAL_DC = Symbol.for(`${MODULE_ID}.targetedSpellDc.originalDc`);
@@ -70,7 +70,7 @@ import { selectHighestSpellDcCandidate } from "./targeted-spell-dc-logic.js";
       if (effect.disabled || effect.isSuppressed) continue;
 
       for (const change of effect.changes ?? []) {
-        if (change.key !== EFFECT_KEY) continue;
+        if (change.key !== PREDEFINED_EFFECT_KEYS.TARGETED_SPELL_DC) continue;
 
         const dc = resolveNumber(change.value, actor);
         if (dc === null || dc < 0) continue;

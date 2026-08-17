@@ -132,7 +132,8 @@ export async function createEncounterMessage(data, options = {}) {
   });
 }
 
-async function updateEncounterMessage(message, data) {
+export async function updateEncounterMessage(message, data) {
+  if (!message?.update || !data) return null;
   await message.update({
     content: renderEncounterCard(data),
     [`flags.${MODULE_ID}.${CHAT_FLAG}`]: data,
@@ -140,18 +141,40 @@ async function updateEncounterMessage(message, data) {
   return message;
 }
 
-async function revealEncounter(message, data) {
+export async function revealEncounterMessage(message, data = undefined) {
+  if (!message) return null;
+  const encounterData = data ?? message.getFlag?.(MODULE_ID, CHAT_FLAG);
+  if (!encounterData) return null;
+
   return ChatMessage.create({
     speaker: message.speaker ?? ChatMessage.getSpeaker(),
     style: globalThis.CONST?.CHAT_MESSAGE_STYLES?.OTHER ?? globalThis.CONST?.CHAT_MESSAGE_TYPES?.OTHER ?? 0,
-    content: renderEncounterCard(data, { publicCard: true }),
+    content: renderEncounterCard(encounterData, { publicCard: true }),
     whisper: [],
     flags: {
       [MODULE_ID]: {
-        encounterEnginePublic: { sourceMessageId: message.id, schema: data.schema ?? 2 },
+        encounterEnginePublic: { sourceMessageId: message.id, schema: encounterData.schema ?? 2 },
       },
     },
   });
+}
+
+export async function stageEncounterMessage(message) {
+  if (!message) return null;
+  const data = message.getFlag?.(MODULE_ID, CHAT_FLAG);
+  if (!data) return null;
+
+  const deployment = await openEncounterStagingDialog(data, {
+    sourceMessageId: String(message.id ?? ""),
+  });
+
+  if (deployment?.deployed && deployment.summary) {
+    const nextData = deepClone(data);
+    nextData.staging = deepClone(deployment.summary);
+    await updateEncounterMessage(message, nextData);
+  }
+
+  return deployment;
 }
 
 export async function rerollEncounterField(message, field) {
@@ -263,21 +286,11 @@ export function bindEncounterCard(app, html) {
 
     try {
       const action = button.dataset.action;
-      const data = message.getFlag(MODULE_ID, CHAT_FLAG);
 
-      if (action === "reveal") await revealEncounter(message, data);
+      if (action === "reveal") await revealEncounterMessage(message);
       else if (action === "reroll-all") await rerollEntireEncounter(message);
       else if (action === "reroll-field") await rerollEncounterField(message, button.dataset.field);
-      else if (action === "stage") {
-        const deployment = await openEncounterStagingDialog(data, {
-          sourceMessageId: message.id,
-        });
-        if (deployment?.deployed && deployment.summary) {
-          const nextData = deepClone(data);
-          nextData.staging = deepClone(deployment.summary);
-          await updateEncounterMessage(message, nextData);
-        }
-      }
+      else if (action === "stage") await stageEncounterMessage(message);
     } catch (actionError) {
       error("Encounter chat action failed", actionError);
       ui.notifications.error(`Encounter action failed: ${actionError.message}`);

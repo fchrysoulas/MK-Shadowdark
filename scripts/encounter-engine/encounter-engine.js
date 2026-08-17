@@ -8,7 +8,6 @@ import {
   activeGmIds,
   availableRollTables,
   deepClone,
-  determinePeriod,
   error,
   escapeHtml,
   getProfile,
@@ -18,20 +17,16 @@ import {
   normalizeProfiles,
   readDialogForm,
   renderGroupedOptions,
-  resolveUuid,
   setSceneEncounterContext,
   setting,
-  tableUuidForContext,
   terrainNames,
   warn,
 } from "./helpers.js";
 import {
-  buildEncounterData,
-  dangerDefinition,
-  drawEncounterResult,
-  evaluateRoll,
-  rollTotal,
-} from "./resolver.js";
+  createEncounterServiceApi,
+  checkEncounterService,
+  resolveEncounterService,
+} from "./service.js";
 import {
   bindEncounterCard,
   createEncounterMessage,
@@ -334,38 +329,34 @@ export async function checkEncounter(options = {}) {
 
   if (!setting(SETTINGS.enabled, true)) return null;
 
-  const profiles = getProfiles();
-  const sceneContext = getSceneEncounterContext();
-  const profileRef = getProfile(options.profileId ?? sceneContext.profileId, profiles);
-  const profile = profileRef.data;
-  const danger = dangerDefinition(
-    profile,
-    String(options.dangerLevel ?? sceneContext.dangerLevel ?? profile.defaultDangerLevel ?? "unsafe")
-  );
-  const formula = String(danger.data.formula ?? "1d6");
-  const encounterOn = Array.isArray(danger.data.encounterOn) ? danger.data.encounterOn.map(Number) : [1];
-  const roll = await evaluateRoll(formula, "Random Encounter Check");
-  const total = rollTotal(roll, 0);
-  const isEncounter = encounterOn.includes(total);
-  const check = {
-    dangerLevel: danger.id,
-    label: String(danger.data.label ?? danger.id),
-    interval: Number(danger.data.interval ?? 1),
-    formula,
-    total,
-    encounterOn,
-    isEncounter,
-  };
+  const serviceResult = await checkEncounterService({
+    ...options,
+    user: game.user,
+  });
+  if (!serviceResult.check) return null;
 
-  const message = await createEncounterCheckMessage(check);
-  if (!isEncounter) return { check, message, encounter: null };
+  const message = await createEncounterCheckMessage(serviceResult.check);
+  if (!serviceResult.isEncounter) {
+    return {
+      check: serviceResult.check,
+      message,
+      encounter: null,
+      context: serviceResult.context,
+    };
+  }
 
   const encounter = await resolveEncounter({
     ...options,
-    dangerLevel: danger.id,
+    dangerLevel: serviceResult.check.dangerLevel,
     source: options.source ?? "encounterCheck",
   });
-  return { check, message, encounter };
+
+  return {
+    check: serviceResult.check,
+    message,
+    encounter,
+    context: serviceResult.context,
+  };
 }
 
 export async function resolveEncounter(options = {}) {
@@ -376,52 +367,49 @@ export async function resolveEncounter(options = {}) {
 
   if (!setting(SETTINGS.enabled, true)) return null;
 
-  const profiles = getProfiles();
-  const sceneContext = getSceneEncounterContext();
-  const profileRef = getProfile(options.profileId ?? sceneContext.profileId, profiles);
-  const profile = profileRef.data;
-  const terrain = String(options.terrain ?? sceneContext.terrain ?? profile.defaultTerrain ?? "Default");
-  const dangerLevel = String(options.dangerLevel ?? sceneContext.dangerLevel ?? profile.defaultDangerLevel ?? "unsafe");
-  const requestedPeriod = String(options.period ?? sceneContext.period ?? "auto");
-  const period = determinePeriod(profile, requestedPeriod);
-  const explicitTableUuid = String(options.tableUuid ?? sceneContext.tableUuid ?? "");
-  const tableUuid = tableUuidForContext(profile, terrain, period, explicitTableUuid);
-
-  if (!tableUuid) {
-    if (options.promptIfMissing !== false) {
-      return openEncounterDialog({ ...options, profileId: profileRef.id, terrain, dangerLevel, period: requestedPeriod });
-    }
-    ui.notifications.warn("No encounter RollTable is configured for this profile, terrain, and time.");
-    return null;
-  }
-
-  const table = await resolveUuid(tableUuid);
-  if (!table || table.documentName !== "RollTable") {
-    ui.notifications.error(`Encounter RollTable could not be resolved: ${tableUuid}`);
-    return null;
-  }
-
-  const draw = await drawEncounterResult(tableUuid, profile, period);
-  if (!draw?.encounter) {
-    ui.notifications.warn(`The encounter table ${table.name} returned no result.`);
-    return null;
-  }
-
-  const data = await buildEncounterData({
-    profileId: profileRef.id,
-    profile,
-    terrain,
-    dangerLevel,
-    requestedPeriod,
-    period,
-    tableUuid,
-    tableName: table.name,
-    draw,
-    options,
+  const serviceResult = await resolveEncounterService({
+    ...options,
+    user: game.user,
   });
 
+  if (serviceResult.reason) {
+    if (serviceResult.reason === "missing-table") {
+      if (options.promptIfMissing !== false) {
+        const context = serviceResult.context ?? {};
+        return openEncounterDialog({
+          ...options,
+          profileId: context.profileId,
+          terrain: context.terrain,
+          dangerLevel: context.dangerLevel,
+          period: context.requestedPeriod,
+        });
+      }
+      ui.notifications.warn("No encounter RollTable is configured for this profile, terrain, and time.");
+      return null;
+    }
+
+    if (serviceResult.reason === "invalid-table") {
+      ui.notifications.error(`Encounter RollTable could not be resolved: ${serviceResult.context?.tableUuid ?? ""}`);
+      return null;
+    }
+
+    if (serviceResult.reason === "empty-table") {
+      ui.notifications.warn(`The encounter table ${serviceResult.context?.tableUuid ?? ""} returned no result.`);
+      return null;
+    }
+
+    return null;
+  }
+
+  const data = serviceResult.encounter;
+  if (!data) return null;
+
   const message = await createEncounterMessage(data, { whisper: options.whisper });
-  return { data, message };
+  return {
+    data,
+    message,
+    context: serviceResult.context,
+  };
 }
 
 let sceneControlDialogPromise = null;
@@ -522,8 +510,11 @@ function exposeApi() {
   if (!module) return;
 
   module.api ??= {};
+  const service = createEncounterServiceApi();
+  module.api.encounterService = service;
   module.api.encounters = {
     version: 2,
+    service,
     check: checkEncounter,
     resolve: resolveEncounter,
     openDialog: openEncounterDialog,
@@ -538,6 +529,7 @@ function exposeApi() {
   };
 
   game.mkShadowdark ??= {};
+  game.mkShadowdark.encounterService = service;
   game.mkShadowdark.encounters = module.api.encounters;
 }
 

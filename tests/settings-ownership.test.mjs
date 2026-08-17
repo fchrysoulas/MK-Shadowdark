@@ -69,6 +69,7 @@ test("shared feature registry owns all migrated setting keys", () => {
     "moraleVisibility",
     "moraleTokenHudControls",
     "moraleDebug",
+    "moraleMigrationVersion",
     "corpseTokenEnabled",
     "corpseTokenImage",
     "corpseTokenMigrationVersion",

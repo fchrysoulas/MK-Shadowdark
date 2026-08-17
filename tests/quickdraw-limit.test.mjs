@@ -75,7 +75,10 @@ test("detail evaluation reports actor and gear sources", () => {
 
 test("invalid expressions fail instead of executing arbitrary JavaScript", () => {
   const actor = makeActor();
-  assert.throws(() => evaluateQuickdrawLimit("process.exit()", actor), /Unsupported Quickdraw function|Unexpected token/);
+  assert.throws(
+    () => evaluateQuickdrawLimit("process.exit()", actor),
+    /Unsupported character|Unsupported Quickdraw function|Unexpected token/
+  );
   assert.throws(() => evaluateQuickdrawLimit("1; globalThis.hacked = true", actor), /Unsupported character/);
   assert.throws(() => evaluateQuickdrawLimit('gear("missing", -1)', actor), /cannot be negative/);
 });

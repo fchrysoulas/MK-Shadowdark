@@ -45,8 +45,8 @@ test("legacy Damage Traits records normalize into current trait modes", () => {
 test("normal Damage Traits runtime reads Active Effects only", () => {
   const runtime = source("scripts/auto-damage/damage-traits.js");
 
-  const featureReader = runtime.match(/function getFeatureTraits[\s\S]*?\n  }/u)?.[0] ?? "";
-  const actorReader = runtime.match(/function getActorTraits[\s\S]*?\n  }/u)?.[0] ?? "";
+  const featureReader = runtime.match(/function getFeatureTraits[\s\S]*?\n  \}/u)?.[0] ?? "";
+  const actorReader = runtime.match(/function getActorTraits[\s\S]*?\n  \}/u)?.[0] ?? "";
 
   assert.match(featureReader, /effectTraitRecords/);
   assert.doesNotMatch(featureReader, /getLegacyFeatureTraits|FEATURE_TRAITS_FLAG|includeLegacy/);

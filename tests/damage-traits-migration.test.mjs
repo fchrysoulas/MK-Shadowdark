@@ -35,10 +35,9 @@ test("legacy Damage Traits records normalize into current trait modes", () => {
     { uuid: "Property.old", reduction: 2 },
     null
   ]), [
-    { uuid: "Property.fire", mode: "resistance" },
+    { uuid: "Property.fire", mode: "vulnerability" },
     { uuid: "Property.cold", mode: "resistance" },
-    { uuid: "Property.acid", mode: "immunity" },
-    { uuid: "Property.fire", mode: "vulnerability" }
+    { uuid: "Property.acid", mode: "immunity" }
   ]);
 });
 

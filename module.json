@@ -57,6 +57,7 @@
     "scripts/gm-screen/gm-screen.js",
     "scripts/gm-screen/live-refresh.js",
     "scripts/gm-screen/assignment-controls.js",
+    "scripts/gm-screen/encounter-controls.js",
     "scripts/mk-shadowdark.js"
   ],
   "styles": [
@@ -74,6 +75,7 @@
     "styles/group-member-status.css",
     "styles/group-sheet-dashboard.css",
     "styles/gm-screen.css",
+    "styles/gm-screen-encounter-controls.css",
     "styles/quickdraw-icons.css",
     "styles/encounter-engine.css",
     "styles/summary-bar.css",

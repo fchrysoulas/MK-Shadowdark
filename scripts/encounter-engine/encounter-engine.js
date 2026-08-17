@@ -1,5 +1,4 @@
 import {
-  DEFAULT_PROFILE_ID,
   DEFAULT_PROFILES,
   MODULE_ID,
   SETTINGS,
@@ -18,7 +17,6 @@ import {
   log,
   normalizeProfiles,
   readDialogForm,
-  registerSetting,
   renderGroupedOptions,
   resolveUuid,
   setSceneEncounterContext,
@@ -486,71 +484,6 @@ function addRollTableContextOptions(_html, options) {
   });
 }
 
-function registerSettings() {
-  registerSetting(SETTINGS.enabled, {
-    name: "Encounter Engine | Enabled",
-    hint: "Enables the Shadowdark encounter resolver, chat card, scene control, and API.",
-    scope: "world",
-    config: false,
-    type: Boolean,
-    default: true,
-  });
-
-  registerSetting(SETTINGS.autoTimePasses, {
-    name: "Encounter Engine | Resolve Time Passes Encounters",
-    hint: "When Time Passes produces an encounter, immediately run the Encounter Engine using the current scene profile.",
-    scope: "world",
-    config: false,
-    type: Boolean,
-    default: true,
-  });
-
-  registerSetting(SETTINGS.defaultTable, {
-    name: "Encounter Engine | Default Encounter Table UUID",
-    hint: "Fallback world or compendium RollTable UUID used when the active profile has no matching terrain and time table.",
-    scope: "world",
-    config: false,
-    type: String,
-    default: "",
-  });
-
-  registerSetting(SETTINGS.defaultProfile, {
-    name: "Encounter Engine | Default Profile ID",
-    hint: "Profile ID used by scenes that do not have their own encounter context.",
-    scope: "world",
-    config: false,
-    type: String,
-    default: DEFAULT_PROFILE_ID,
-  });
-
-  registerSetting(SETTINGS.whisper, {
-    name: "Encounter Engine | GM-only Chat Card",
-    hint: "Whispers the full encounter card to active GMs. The card can then be revealed to players without morale information.",
-    scope: "world",
-    config: false,
-    type: Boolean,
-    default: true,
-  });
-
-  registerSetting(SETTINGS.showDice3d, {
-    name: "Encounter Engine | Show 3D Procedure Dice",
-    hint: "Shows encounter procedure dice to GMs when Dice So Nice is active.",
-    scope: "world",
-    config: false,
-    type: Boolean,
-    default: false,
-  });
-
-  registerSetting(SETTINGS.profiles, {
-    name: "Encounter Engine Profiles",
-    hint: "JSON storage for Encounter Profiles. Use the Edit Profiles button in the Encounter Engine dialog.",
-    scope: "world",
-    config: false,
-    type: String,
-    default: JSON.stringify(DEFAULT_PROFILES, null, 2),
-  });
-}
-
 function installTimePassesIntegration() {
   if (!setting(SETTINGS.autoTimePasses, true)) return;
 
@@ -607,11 +540,6 @@ function exposeApi() {
   game.mkShadowdark ??= {};
   game.mkShadowdark.encounters = module.api.encounters;
 }
-
-Hooks.once("init", () => {
-  registerSettings();
-  log("Settings registered.");
-});
 
 Hooks.on("getSceneControlButtons", addSceneControl);
 Hooks.on("getRollTableDirectoryEntryContext", addRollTableContextOptions);

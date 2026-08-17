@@ -13,7 +13,6 @@
   const FLEEING_STATUS_ID = "mk-shadowdark-fleeing";
   const FLEEING_STATUS_NAME = "Fleeing";
   const FLEEING_STATUS_ICON = "icons/svg/terror.svg";
-  const FEATURE_SETTINGS_TEMPLATE = `modules/${MODULE_ID}/templates/feature-settings.hbs`;
 
   const SETTINGS = Object.freeze({
     ENABLED: "moraleEnabled",
@@ -747,137 +746,6 @@
     right.append(leaderControl);
   }
 
-  function registerSettings() {
-    const FormApplicationBase = globalThis.foundry?.appv1?.api?.FormApplication;
-    const useMenu = Boolean(FormApplicationBase);
-
-    const definitions = {
-      [SETTINGS.ENABLED]: {
-        name: "Morale | Enabled",
-        hint: "Tracks all hostile NPCs as one combat-start force. Morale is checked only at the start of the enemies' turn. At half strength, a living leader rolls once for the force; without a leader, each remaining NPC checks individually. Solo enemies check at half HP.",
-        scope: "world",
-        type: Boolean,
-        default: true
-      },
-      [SETTINGS.VISIBILITY]: {
-        name: "Morale | Roll Visibility",
-        hint: "Choose whether morale results are public or whispered to GMs.",
-        scope: "world",
-        type: String,
-        default: "public",
-        choices: {
-          public: "Public",
-          gm: "GM only"
-        }
-      },
-      [SETTINGS.TOKEN_HUD]: {
-        name: "Morale | Token HUD Controls",
-        hint: "Adds a GM Token HUD button for marking the force leader.",
-        scope: "world",
-        type: Boolean,
-        default: true
-      },
-      [SETTINGS.DEBUG]: {
-        name: "Morale | Debug Mode",
-        hint: "Logs morale snapshots, enemy-turn triggers, rolls, and Fleeing applications to the browser console.",
-        scope: "world",
-        type: Boolean,
-        default: false
-      }
-    };
-
-    for (const [key, definition] of Object.entries(definitions)) {
-      if (game.settings.settings.has(`${MODULE_ID}.${key}`)) continue;
-      game.settings.register(MODULE_ID, key, {
-        ...definition,
-        config: !useMenu
-      });
-    }
-
-    if (!useMenu) return;
-
-    function descriptor(key) {
-      const definition = game.settings.settings.get(`${MODULE_ID}.${key}`);
-      const value = game.settings.get(MODULE_ID, key);
-      const choices = typeof definition.choices === "function" ? definition.choices() : definition.choices;
-      return {
-        key,
-        name: String(definition.name).replace(/^.*?(?:\s\|\s|:\s*)/, ""),
-        hint: String(definition.hint ?? ""),
-        value,
-        isBoolean: definition.type === Boolean,
-        isNumber: definition.type === Number,
-        isSelect: Boolean(choices && Object.keys(choices).length),
-        isRange: false,
-        isFilePicker: false,
-        isTextarea: false,
-        isColor: false,
-        inputType: definition.type === Number ? "number" : "text",
-        dataType: definition.type === Number ? "Number" : "String",
-        range: {},
-        options: choices
-          ? Object.entries(choices).map(([optionValue, label]) => ({
-              value: optionValue,
-              label,
-              selected: String(optionValue) === String(value)
-            }))
-          : []
-      };
-    }
-
-    class MoraleSettingsForm extends FormApplicationBase {
-      static get defaultOptions() {
-        return foundry.utils.mergeObject(super.defaultOptions, {
-          id: `${MODULE_ID}-morale-settings`,
-          title: "MK-Shadowdark | Morale",
-          template: FEATURE_SETTINGS_TEMPLATE,
-          width: 680,
-          height: "auto",
-          resizable: true,
-          closeOnSubmit: true
-        });
-      }
-
-      getData() {
-        return {
-          title: "Morale",
-          hint: "Automate Shadowdark DC 15 WIS morale checks at the start of the enemy turn and mark failed enemies as Fleeing.",
-          sections: [
-            {
-              title: "Automation",
-              settings: [descriptor(SETTINGS.ENABLED)]
-            },
-            {
-              title: "Presentation and Controls",
-              settings: [descriptor(SETTINGS.VISIBILITY), descriptor(SETTINGS.TOKEN_HUD), descriptor(SETTINGS.DEBUG)]
-            }
-          ]
-        };
-      }
-
-      async _updateObject(_event, formData) {
-        for (const key of Object.values(SETTINGS)) {
-          const definition = game.settings.settings.get(`${MODULE_ID}.${key}`);
-          if (!definition) continue;
-          let value = formData[key];
-          if (definition.type === Boolean) value = value === true || value === "true" || value === "on" || value === 1;
-          else if (definition.type === Number) value = Number(value);
-          else value = String(value ?? "");
-          await game.settings.set(MODULE_ID, key, value);
-        }
-      }
-    }
-
-    game.settings.registerMenu(MODULE_ID, "moraleSettings", {
-      name: "Morale",
-      label: "Configure",
-      hint: "Configure automatic hostile-force morale checks, visibility, and Token HUD controls.",
-      icon: "fas fa-flag",
-      type: MoraleSettingsForm,
-      restricted: true
-    });
-  }
-
   function exposeApi() {
     const mod = game.modules.get(MODULE_ID);
     if (!mod) return;
@@ -894,10 +762,7 @@
     };
   }
 
-  Hooks.once("init", () => {
-    registerFleeingStatus();
-    registerSettings();
-  });
+  Hooks.once("init", registerFleeingStatus);
 
   Hooks.once("ready", () => {
     exposeApi();

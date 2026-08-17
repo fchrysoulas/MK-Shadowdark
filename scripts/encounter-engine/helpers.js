@@ -38,11 +38,6 @@ export function setting(key, fallback) {
   }
 }
 
-export function registerSetting(key, data) {
-  if (settingExists(key)) return;
-  game.settings.register(MODULE_ID, key, data);
-}
-
 export function deepClone(value) {
   if (value === undefined || value === null) return value;
   if (globalThis.foundry?.utils?.deepClone) return foundry.utils.deepClone(value);

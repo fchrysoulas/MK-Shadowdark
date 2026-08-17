@@ -64,6 +64,16 @@ test("README documents Group Exploration, Resting, staging, morale, and GM statu
   assert.match(readme, /Encounter card -> Options -> Preview -> Deploy/);
 });
 
+test("README documents production GM Screen alongside Group Management", async () => {
+  const readme = await readReadme();
+
+  assert.match(readme, /Group Management.*GM Screen|GM Screen.*Group Management/is);
+  assert.match(readme, /separate GM-only GM Screen/i);
+  assert.match(readme, /shield button in Token Scene Controls/i);
+  assert.match(readme, /mk\.gmScreen\.open\(\)/);
+  assert.match(readme, /Group Management and the production GM Screen are both supported and coexist/i);
+});
+
 test("README does not require the retired GM Screen Mock", async () => {
   const readme = await readReadme();
 

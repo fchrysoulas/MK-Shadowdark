@@ -121,7 +121,7 @@
               </div>
               <div class="mk-gm-panel-actions">
                 <button type="button" data-action="processDueEncounters" {{#unless exploration.canCheck}}disabled{{/unless}}><i class="fas fa-dice"></i> Check Due</button>
-                {{#if latestEncounter}}<button type="button" data-action="stageLatestEncounter"><i class="fas fa-location-dot"></i> Stage Latest</button>{{/if}}
+                {{#if latestEncounter}}<button type="button" data-mk-encounter-action="stage" data-message-id="{{latestEncounter.messageId}}"><i class="fas fa-location-dot"></i> Stage Latest</button>{{/if}}
               </div>
               {{else}}
               <div class="mk-gm-empty">Select a Group to inspect encounter pressure.</div>
@@ -207,7 +207,7 @@
             {{#if resting.interrupted}}<div class="mk-gm-alert"><i class="fas fa-triangle-exclamation"></i> Rest is interrupted and benefits/rations remain pending.</div>{{/if}}
             <div class="mk-gm-panel-actions">
               {{#if resting.interrupted}}<button type="button" data-action="resumeRest"><i class="fas fa-play"></i> Resume Rest</button>{{/if}}
-              {{#if latestEncounter}}<button type="button" data-action="stageLatestEncounter"><i class="fas fa-location-dot"></i> Stage Latest Encounter</button>{{/if}}
+              {{#if latestEncounter}}<button type="button" data-mk-encounter-action="stage" data-message-id="{{latestEncounter.messageId}}"><i class="fas fa-location-dot"></i> Stage Latest Encounter</button>{{/if}}
               <button type="button" data-action="openGroup"><i class="fas fa-bed"></i> Group Camping</button>
             </div>
             {{else}}
@@ -224,17 +224,29 @@
               <strong>{{latestEncounter.count}} × {{latestEncounter.label}}</strong>
               <span class="is-{{latestEncounter.disposition}}">{{latestEncounter.disposition}}</span>
             </div>
-            <dl class="mk-gm-data-list">
-              <div><dt>Terrain</dt><dd>{{latestEncounter.terrain}}</dd></div>
-              <div><dt>Danger</dt><dd>{{latestEncounter.danger}}</dd></div>
-              <div><dt>Period</dt><dd>{{latestEncounter.period}}</dd></div>
-              <div><dt>Distance</dt><dd>{{latestEncounter.distance}}</dd></div>
-              <div><dt>Activity</dt><dd>{{latestEncounter.activity}}</dd></div>
-              <div><dt>Reaction</dt><dd>{{latestEncounter.reaction}}</dd></div>
-              <div><dt>Staging</dt><dd>{{#if latestEncounter.staged}}Already staged{{else}}Not staged{{/if}}</dd></div>
+            <div class="mk-gm-encounter-context-line">
+              <span><i class="fas fa-table-list"></i> {{latestEncounter.data.tableName}}</span>
+              <span><i class="fas fa-layer-group"></i> {{latestEncounter.data.profileName}}</span>
+              <span><i class="fas fa-mountain-sun"></i> {{latestEncounter.terrain}}</span>
+              <span><i class="fas fa-skull-crossbones"></i> {{latestEncounter.danger}}</span>
+              <span><i class="fas fa-clock"></i> {{latestEncounter.period}}</span>
+            </div>
+            <dl class="mk-gm-data-list mk-gm-encounter-details">
+              <div><dt>Number</dt><dd class="mk-gm-encounter-field"><span>{{latestEncounter.count}}{{#if latestEncounter.data.encounter.numberFormula}} · {{latestEncounter.data.encounter.numberFormula}}{{/if}}</span><button type="button" data-mk-encounter-action="reroll-field" data-field="number" data-message-id="{{latestEncounter.messageId}}" title="Reroll Number"><i class="fas fa-rotate"></i></button></dd></div>
+              <div><dt>Creature</dt><dd class="mk-gm-encounter-field"><span>{{latestEncounter.label}}</span><button type="button" data-mk-encounter-action="reroll-field" data-field="encounter" data-message-id="{{latestEncounter.messageId}}" title="Reroll Creature"><i class="fas fa-rotate"></i></button></dd></div>
+              <div><dt>Distance</dt><dd class="mk-gm-encounter-field"><span>{{latestEncounter.distance}}</span><button type="button" data-mk-encounter-action="reroll-field" data-field="distance" data-message-id="{{latestEncounter.messageId}}" title="Reroll Distance"><i class="fas fa-rotate"></i></button></dd></div>
+              <div><dt>Activity</dt><dd class="mk-gm-encounter-field"><span>{{latestEncounter.activity}}</span><button type="button" data-mk-encounter-action="reroll-field" data-field="activity" data-message-id="{{latestEncounter.messageId}}" title="Reroll Activity"><i class="fas fa-rotate"></i></button></dd></div>
+              <div><dt>Awareness</dt><dd class="mk-gm-encounter-field"><span>{{latestEncounter.data.awareness.label}}</span>{{#if latestEncounter.data.awareness.optional}}<button type="button" data-mk-encounter-action="reroll-field" data-field="awareness" data-message-id="{{latestEncounter.messageId}}" title="Reroll Awareness"><i class="fas fa-rotate"></i></button>{{/if}}</dd></div>
+              <div><dt>Reaction</dt><dd class="mk-gm-encounter-field"><span>{{latestEncounter.reaction}} · {{latestEncounter.disposition}}</span><button type="button" data-mk-encounter-action="reroll-field" data-field="reaction" data-message-id="{{latestEncounter.messageId}}" title="Reroll Reaction"><i class="fas fa-rotate"></i></button></dd></div>
+              {{#if latestEncounter.data.intent}}<div><dt>Intent</dt><dd class="mk-gm-encounter-field"><span>{{latestEncounter.data.intent.label}}</span><button type="button" data-mk-encounter-action="reroll-field" data-field="intent" data-message-id="{{latestEncounter.messageId}}" title="Reroll Intent"><i class="fas fa-rotate"></i></button></dd></div>{{/if}}
+              <div><dt>Treasure</dt><dd class="mk-gm-encounter-field"><span>{{latestEncounter.data.treasure.label}}</span><button type="button" data-mk-encounter-action="reroll-field" data-field="treasure" data-message-id="{{latestEncounter.messageId}}" title="Reroll Treasure"><i class="fas fa-rotate"></i></button></dd></div>
+              <div><dt>Morale</dt><dd>{{latestEncounter.data.morale.label}}{{#if latestEncounter.data.morale.trigger}} · {{latestEncounter.data.morale.trigger}}{{/if}}</dd></div>
+              <div><dt>Staging</dt><dd>{{#if latestEncounter.staged}}Staged {{latestEncounter.data.staging.count}} in {{latestEncounter.data.staging.sceneName}} · {{latestEncounter.data.staging.formation}}{{#if latestEncounter.data.staging.combat}} · Combat{{/if}}{{else}}Not staged{{/if}}</dd></div>
             </dl>
-            <div class="mk-gm-panel-actions">
-              <button type="button" data-action="stageLatestEncounter"><i class="fas fa-location-dot"></i> {{#if latestEncounter.staged}}Stage Again{{else}}Stage Encounter{{/if}}</button>
+            <div class="mk-gm-panel-actions mk-gm-encounter-actions">
+              <button type="button" data-mk-encounter-action="stage" data-message-id="{{latestEncounter.messageId}}"><i class="fas fa-location-dot"></i> {{#if latestEncounter.staged}}Stage Again{{else}}Stage Encounter{{/if}}</button>
+              <button type="button" data-mk-encounter-action="reveal" data-message-id="{{latestEncounter.messageId}}"><i class="fas fa-eye"></i> Reveal to Players</button>
+              <button type="button" data-mk-encounter-action="reroll-all" data-message-id="{{latestEncounter.messageId}}"><i class="fas fa-dice-d20"></i> Reroll All</button>
             </div>
             {{else}}
             <div class="mk-gm-empty">No resolved encounter card exists for this Group yet.</div>

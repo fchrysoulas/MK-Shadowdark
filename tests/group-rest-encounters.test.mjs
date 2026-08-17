@@ -26,6 +26,7 @@ function makeMember({ uuid = "Actor.member-1", hp = 1, hpMax = 5, rations = 2 } 
   const actor = {
     id: uuid.split(".").at(-1),
     uuid,
+    documentName: "Actor",
     name: "Resting Hero",
     type: "Player",
     system: {
@@ -194,10 +195,7 @@ function installRuntime({ member, group, tableConfigured = true } = {}) {
       error: () => {},
     },
   };
-  globalThis.ChatMessage = {
-    getSpeaker: () => ({}),
-    create: async () => ({ id: "message-1" }),
-  };
+  globalThis.ChatMessage = undefined;
 
   return {
     restore() {

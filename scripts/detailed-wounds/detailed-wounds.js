@@ -38,32 +38,6 @@ import {
     { key: "destroyed", label: "Destroyed", rank: 4 }
   ]);
 
-  Hooks.once("init", () => {
-    if (!game.settings.settings.has(`${MODULE_ID}.${SETTING_ENABLED}`)) {
-      game.settings.register(MODULE_ID, SETTING_ENABLED, {
-        name: "Detailed Wounds | Enabled",
-        hint: "Adds a Wounds tab to Shadowdark player character sheets for tracking body-location status.",
-        scope: "world",
-        config: true,
-        type: Boolean,
-        default: true,
-        onChange: refreshOpenActorSheets
-      });
-    }
-
-    if (!game.settings.settings.has(`${MODULE_ID}.${SETTING_MIGRATION_VERSION}`)) {
-      game.settings.register(MODULE_ID, SETTING_MIGRATION_VERSION, {
-        name: "Detailed Wounds Migration Version",
-        scope: "world",
-        config: false,
-        type: Number,
-        default: 0
-      });
-    }
-
-    log("initialized");
-  });
-
   onCharacterSheetRender("Detailed Wounds", injectWoundsTabSafely, { priority: 30 });
 
   function injectWoundsTabSafely(app, html) {
@@ -497,17 +471,6 @@ import {
     }
 
     return { migrated, errors, skipped: false };
-  }
-
-  function refreshOpenActorSheets() {
-    try {
-      for (const app of Object.values(ui.windows ?? {})) {
-        const actor = app?.actor ?? (app?.object?.documentName === "Actor" ? app.object : null);
-        if (actor) app.render(false);
-      }
-    } catch (err) {
-      console.error(`${MODULE_ID} v${getModuleVersion()} | ${SUBMODULE} | refresh error`, err);
-    }
   }
 
   function escapeHtml(value) {

@@ -204,6 +204,7 @@ function configureSidebar(app, form) {
   if (!sidebar || sidebar.dataset.mkNativeDashboardBound === "true") return;
   sidebar.dataset.mkNativeDashboardBound = "true";
   sidebar.dataset.partyMemberDropzone = "true";
+  sidebar.removeAttribute("aria-hidden");
   sidebar.setAttribute("aria-label", "Party roster");
 
   setCollapsed(app, form, readCollapsed(app));

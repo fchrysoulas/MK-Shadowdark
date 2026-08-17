@@ -1,5 +1,5 @@
 import { MODULE_ID } from "./constants.js";
-import { resolveActorFromUuid } from "./actors.js";
+import { isGroupActor, resolveActorFromUuid } from "./actors.js";
 
 const STATUS_SEVERITIES = Object.freeze(["normal", "attention", "critical"]);
 const WOUND_LEVELS = Object.freeze(["ok", "wound", "critical", "destroyed"]);
@@ -209,7 +209,6 @@ function buildGroupMemberStatus(actor) {
   const notableCount = (
     wounds.total
     + focus.total
-    + focus.pendingLoss
     + effects.length
     + (deathTimer.active || dead ? 1 : 0)
   );
@@ -244,6 +243,30 @@ function severityLabel(severity) {
   if (severity === "critical") return "Critical attention";
   if (severity === "attention") return "Review recommended";
   return "No notable warning";
+}
+
+function statusButtonTitle(status) {
+  const count = status.notableCount;
+  const suffix = count > 0
+    ? ` · ${count} notable ${count === 1 ? "item" : "items"}`
+    : "";
+  return `GM Status: ${severityLabel(status.severity)}${suffix}`;
+}
+
+function statusButtonHtml(status) {
+  return `
+    <button
+      type="button"
+      class="mk-member-gm-status is-${escapeHtml(status.severity)}"
+      data-action="open-gm-member-status"
+      data-actor-uuid="${escapeHtml(status.actorUuid)}"
+      title="${escapeHtml(statusButtonTitle(status))}"
+      aria-label="${escapeHtml(statusButtonTitle(status))}"
+    >
+      <i class="fas fa-circle-info" aria-hidden="true"></i>
+      ${status.notableCount > 0 ? `<span>${escapeHtml(status.notableCount)}</span>` : ""}
+    </button>
+  `;
 }
 
 function listOrEmpty(entries, renderEntry) {
@@ -323,6 +346,71 @@ async function openGroupMemberStatus(actorOrUuid) {
   }, { width: 620, resizable: true });
 }
 
+function getRootElement(html) {
+  if (!html) return null;
+  if (globalThis.HTMLElement && html instanceof HTMLElement) return html;
+  if (globalThis.HTMLElement && html?.[0] instanceof HTMLElement) return html[0];
+  return html?.[0] ?? html;
+}
+
+async function renderGroupMemberStatusControls(app, html) {
+  if (!globalThis.game?.user?.isGM || !isGroupActor(app?.actor)) return 0;
+
+  const root = getRootElement(html);
+  if (!root?.querySelectorAll) return 0;
+
+  const cards = Array.from(root.querySelectorAll(".mk-group-member[data-actor-uuid]"));
+  let injected = 0;
+
+  for (const card of cards) {
+    card.querySelector?.("[data-action='open-gm-member-status']")?.remove?.();
+
+    const actorUuid = String(card.dataset?.actorUuid ?? "");
+    if (!actorUuid) continue;
+
+    const actor = await resolveActorFromUuid(actorUuid);
+    if (!actor) continue;
+
+    const status = buildGroupMemberStatus(actor);
+    card.insertAdjacentHTML?.("afterbegin", statusButtonHtml(status));
+    const button = card.querySelector?.("[data-action='open-gm-member-status']");
+    if (!button) continue;
+
+    button.addEventListener?.("click", event => {
+      event.preventDefault?.();
+      event.stopPropagation?.();
+      openGroupMemberStatus(actorUuid).catch(error => {
+        console.error(`${MODULE_ID} | Group Member Status | Could not open GM member status.`, error);
+        globalThis.ui?.notifications?.error?.(`GM member status failed: ${error.message}`);
+      });
+    });
+    injected += 1;
+  }
+
+  return injected;
+}
+
+function exposeGroupMemberStatusApi() {
+  const module = globalThis.game?.modules?.get?.(MODULE_ID);
+  if (!module) return null;
+
+  module.api ??= {};
+  module.api.groupMemberStatus = {
+    build: buildGroupMemberStatus,
+    open: openGroupMemberStatus,
+  };
+  return module.api.groupMemberStatus;
+}
+
+function registerGroupMemberStatus() {
+  globalThis.Hooks?.once?.("ready", exposeGroupMemberStatusApi);
+  globalThis.Hooks?.on?.("renderActorSheet", (app, html) => {
+    renderGroupMemberStatusControls(app, html).catch(error => {
+      console.warn(`${MODULE_ID} | Group Member Status | Render injection failed.`, error);
+    });
+  });
+}
+
 export {
   STATUS_SEVERITIES,
   WOUND_LEVELS,
@@ -339,4 +427,7 @@ export {
   buildGroupMemberStatus,
   renderGroupMemberStatus,
   openGroupMemberStatus,
+  renderGroupMemberStatusControls,
+  exposeGroupMemberStatusApi,
+  registerGroupMemberStatus,
 };

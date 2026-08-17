@@ -31,7 +31,10 @@ function tokenUuid(token) {
 }
 
 function gridSize() {
-  const value = Number(canvas?.grid?.size ?? canvas?.dimensions?.size);
+  const value = Number(
+    globalThis.canvas?.grid?.size
+      ?? globalThis.canvas?.dimensions?.size
+  );
   return Number.isFinite(value) && value > 0 ? value : 100;
 }
 
@@ -87,6 +90,7 @@ async function shakeTokenUuid(uuid, options = {}) {
 }
 
 function installTokenShakeSocket() {
+  const game = globalThis.game;
   if (socketInstalled || !game?.socket?.on) return;
   socketInstalled = true;
 
@@ -98,6 +102,7 @@ function installTokenShakeSocket() {
 }
 
 async function broadcastTokenShake(token, options = {}) {
+  const game = globalThis.game;
   const uuid = tokenUuid(token);
   if (uuid && game?.socket?.emit) {
     game.socket.emit(SOCKET_CHANNEL, {

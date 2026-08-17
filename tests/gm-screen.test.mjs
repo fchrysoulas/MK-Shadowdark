@@ -40,6 +40,26 @@ test("GM Screen consumes canonical Group, Scene, encounter, and morale services"
   assert.match(runtime, /openEncounterStagingDialog\(latest\.data/);
 });
 
+test("GM Screen procedure and elapsed pressure values are operational controls", () => {
+  assert.match(runtime, /GROUP_PROCEDURE_STATES/);
+  assert.match(runtime, /setGroupProcedureState\(group, next/);
+  assert.match(runtime, /advanceGroupTime\(group, seconds/);
+  assert.match(runtime, /resetGroupTime\(group, procedure/);
+  assert.match(runtime, /getExplorationEncounterState\(group\)\.turnSeconds/);
+  assert.match(runtime, /REST_TURN_SECONDS/);
+  assert.match(runtime, /presentation: true/);
+  assert.match(runtime, /bindPressureControls\(this\)/);
+  assert.match(runtime, /Change Group procedure/);
+  assert.match(runtime, /Advance or reset Group procedure time/);
+});
+
+test("GM Screen only offers one-turn advancement where a canonical duration exists", () => {
+  assert.match(runtime, /procedure === "exploration"/);
+  assert.match(runtime, /procedure === "resting"/);
+  assert.match(runtime, /This procedure has no canonical generic turn duration/);
+  assert.match(runtime, /Use an explicit custom amount/);
+});
+
 test("GM Screen has party, pressure, and contextual workspaces", () => {
   assert.match(template, /mk-gm-party-rail/);
   assert.match(template, /mk-gm-pressure-strip/);

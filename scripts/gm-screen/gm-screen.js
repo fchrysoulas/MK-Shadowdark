@@ -1,14 +1,29 @@
 import { resolveActorFromUuid } from "../group-sheet/actors.js";
 import {
+  getExplorationEncounterState,
   openExplorationEncounterContextDialog,
   processDueExplorationEncounters,
 } from "../group-sheet/exploration-encounters.js";
 import { openGroupMemberStatus } from "../group-sheet/member-status.js";
-import { continueGroupRest } from "../group-sheet/rest-encounters.js";
+import {
+  GROUP_PROCEDURE_STATES,
+  getGroupProcedureState,
+  setGroupProcedureState,
+} from "../group-sheet/procedure.js";
+import {
+  REST_TURN_SECONDS,
+  continueGroupRest,
+} from "../group-sheet/rest-encounters.js";
+import {
+  advanceGroupTime,
+  getGroupElapsedTime,
+  resetGroupTime,
+} from "../group-sheet/time.js";
 import { openEncounterStagingDialog } from "../encounter-engine/staging.js";
 import {
   buildGmScreenViewModel,
   findLatestEncounterMessage,
+  formatDuration,
   normalizeWorkspace,
   resolveGmScreenGroup,
 } from "./view-model.js";
@@ -27,8 +42,39 @@ function canUseGmScreen() {
   return Boolean(globalThis.game?.user?.isGM);
 }
 
+function notifyNoGroup() {
+  globalThis.ui?.notifications?.warn?.("No MK-Shadowdark Group is available.");
+}
+
+function procedureLabel(procedure) {
+  const value = String(procedure ?? "downtime");
+  return value.charAt(0).toUpperCase() + value.slice(1);
+}
+
+function dialogRoot(html) {
+  if (html?.querySelector) return html;
+  if (html?.[0]?.querySelector) return html[0];
+  return null;
+}
+
+function dialogValue(html, selector) {
+  const root = dialogRoot(html);
+  const direct = root?.querySelector?.(selector)?.value;
+  if (direct !== undefined) return direct;
+  return html?.find?.(selector)?.val?.();
+}
+
 async function selectedGroup(app) {
   return resolveGmScreenGroup(app?.groupActorUuid ?? "");
+}
+
+function canonicalTurnSeconds(group, procedure) {
+  if (!group) return null;
+  if (procedure === "exploration") {
+    return getExplorationEncounterState(group).turnSeconds;
+  }
+  if (procedure === "resting") return REST_TURN_SECONDS;
+  return null;
 }
 
 async function actionWorkspace(_event, target) {
@@ -49,7 +95,7 @@ async function actionRefresh() {
 async function actionOpenGroup() {
   const group = await selectedGroup(this);
   if (!group) {
-    globalThis.ui?.notifications?.warn?.("No MK-Shadowdark Group is available.");
+    notifyNoGroup();
     return null;
   }
   group.sheet?.render?.(true);
@@ -65,6 +111,171 @@ async function actionOpenMember(_event, target) {
 
 async function actionInspectMember(_event, target) {
   return openGroupMemberStatus(String(target?.dataset?.actorUuid ?? ""));
+}
+
+async function actionChangeProcedure() {
+  const group = await selectedGroup(this);
+  if (!group) {
+    notifyNoGroup();
+    return null;
+  }
+
+  const current = getGroupProcedureState(group);
+  const options = GROUP_PROCEDURE_STATES
+    .map(state => `<option value="${state}" ${state === current ? "selected" : ""}>${procedureLabel(state)}</option>`)
+    .join("");
+
+  const next = await Dialog.wait({
+    title: "Group Procedure",
+    content: `
+      <form class="mk-gm-procedure-dialog">
+        <p>Choose the canonical procedure for <strong>${group.name ?? "Group"}</strong>.</p>
+        <div class="form-group">
+          <label>Procedure</label>
+          <select name="procedure">${options}</select>
+        </div>
+        <p class="hint">Changing procedure does not itself start a Rest, encounter, or Combat workflow.</p>
+      </form>
+    `,
+    buttons: {
+      apply: {
+        icon: '<i class="fas fa-check"></i>',
+        label: "Apply",
+        callback: html => dialogValue(html, '[name="procedure"]') ?? null,
+      },
+      cancel: {
+        icon: '<i class="fas fa-times"></i>',
+        label: "Cancel",
+        callback: () => null,
+      },
+    },
+    default: "apply",
+    close: () => null,
+  });
+
+  if (!next || next === current) return null;
+
+  const result = await setGroupProcedureState(group, next, {
+    reason: "gm-screen",
+  });
+  await this.render({ force: true });
+  return result;
+}
+
+async function actionTimeControls() {
+  const group = await selectedGroup(this);
+  if (!group) {
+    notifyNoGroup();
+    return null;
+  }
+
+  const procedure = getGroupProcedureState(group);
+  const elapsed = getGroupElapsedTime(group, procedure);
+  const turnSeconds = canonicalTurnSeconds(group, procedure);
+  const buttons = {};
+
+  if (turnSeconds) {
+    buttons.turn = {
+      icon: '<i class="fas fa-forward-step"></i>',
+      label: `+1 Turn (${formatDuration(turnSeconds)})`,
+      callback: () => ({ action: "turn" }),
+    };
+  }
+
+  buttons.custom = {
+    icon: '<i class="fas fa-clock"></i>',
+    label: "Advance Custom",
+    callback: html => ({
+      action: "custom",
+      amount: dialogValue(html, '[name="timeAmount"]'),
+      unit: dialogValue(html, '[name="timeUnit"]'),
+    }),
+  };
+  buttons.reset = {
+    icon: '<i class="fas fa-arrow-rotate-left"></i>',
+    label: "Reset Timer",
+    callback: () => ({ action: "reset" }),
+  };
+  buttons.cancel = {
+    icon: '<i class="fas fa-times"></i>',
+    label: "Cancel",
+    callback: () => null,
+  };
+
+  const choice = await Dialog.wait({
+    title: `${procedureLabel(procedure)} Time`,
+    content: `
+      <form class="mk-gm-time-dialog">
+        <p><strong>${group.name ?? "Group"}</strong> · ${procedureLabel(procedure)} · elapsed <strong>${formatDuration(elapsed)}</strong>.</p>
+        ${turnSeconds
+          ? `<p>Canonical procedure turn: <strong>${formatDuration(turnSeconds)}</strong>.</p>`
+          : "<p>This procedure has no canonical generic turn duration. Use an explicit custom amount.</p>"}
+        <div class="form-group">
+          <label>Custom amount</label>
+          <div class="form-fields">
+            <input type="number" name="timeAmount" value="1" min="1" step="1">
+            <select name="timeUnit">
+              <option value="seconds">Seconds</option>
+              <option value="minutes" selected>Minutes</option>
+              <option value="hours">Hours</option>
+            </select>
+          </div>
+        </div>
+        <p class="hint">Time advances through the canonical Group Time service and remains synchronized with Foundry world time.</p>
+      </form>
+    `,
+    buttons,
+    default: turnSeconds ? "turn" : "custom",
+    close: () => null,
+  });
+
+  if (!choice) return null;
+
+  if (choice.action === "reset") {
+    const confirmed = await Dialog.confirm({
+      title: `Reset ${procedureLabel(procedure)} Timer`,
+      content: `<p>Reset the <strong>${procedureLabel(procedure)}</strong> elapsed timer for <strong>${group.name ?? "Group"}</strong> to zero?</p>`,
+      yes: () => true,
+      no: () => false,
+      defaultYes: false,
+    });
+    if (!confirmed) return null;
+
+    const result = await resetGroupTime(group, procedure, {
+      reason: "gm-screen",
+    });
+    await this.render({ force: true });
+    return result;
+  }
+
+  let seconds = turnSeconds;
+  if (choice.action === "custom") {
+    const amount = Number(choice.amount);
+    const multiplier = {
+      seconds: 1,
+      minutes: 60,
+      hours: 3600,
+    }[String(choice.unit ?? "minutes")];
+
+    seconds = amount * multiplier;
+    if (!Number.isInteger(amount) || amount <= 0 || !Number.isInteger(seconds) || seconds <= 0) {
+      globalThis.ui?.notifications?.warn?.("Enter a positive whole custom time amount.");
+      return null;
+    }
+  }
+
+  if (!Number.isInteger(seconds) || seconds <= 0) {
+    globalThis.ui?.notifications?.warn?.("This procedure has no canonical turn duration. Use Custom Time.");
+    return null;
+  }
+
+  const result = await advanceGroupTime(group, seconds, {
+    procedure,
+    reason: choice.action === "turn" ? "gm-screen-turn" : "gm-screen-custom",
+    presentation: true,
+  });
+  await this.render({ force: true });
+  return result;
 }
 
 async function actionConfigureEnvironment() {
@@ -124,6 +335,93 @@ async function actionOpenCombat() {
     await sidebar.activateTab("combat");
   }
   return globalThis.game?.combat ?? null;
+}
+
+function pressureCell(root, label) {
+  const cells = root?.querySelectorAll?.(".mk-gm-pressure-strip > div") ?? [];
+  return Array.from(cells).find(cell => (
+    String(cell.querySelector?.("span")?.textContent ?? "").trim().toLowerCase() === label.toLowerCase()
+  )) ?? null;
+}
+
+function installPressureControl(cell, {
+  label,
+  title,
+  icon,
+  onClick,
+}) {
+  if (!cell || typeof onClick !== "function") return false;
+
+  const value = String(cell.querySelector?.("strong")?.textContent ?? "").trim();
+  const labelElement = cell.querySelector?.("span");
+  cell.replaceChildren();
+  if (labelElement) cell.append(labelElement);
+  else {
+    const span = globalThis.document?.createElement?.("span");
+    if (span) {
+      span.textContent = label;
+      cell.append(span);
+    }
+  }
+
+  const button = globalThis.document?.createElement?.("button");
+  const strong = globalThis.document?.createElement?.("strong");
+  const marker = globalThis.document?.createElement?.("i");
+  if (!button || !strong || !marker) return false;
+
+  button.type = "button";
+  button.className = "mk-gm-pressure-control";
+  button.title = title;
+  button.setAttribute("aria-label", title);
+  button.style.display = "flex";
+  button.style.alignItems = "center";
+  button.style.justifyContent = "space-between";
+  button.style.gap = "6px";
+  button.style.width = "100%";
+  button.style.minWidth = "0";
+  button.style.padding = "0";
+  button.style.border = "0";
+  button.style.background = "transparent";
+  button.style.textAlign = "left";
+
+  strong.textContent = value;
+  strong.style.minWidth = "0";
+  marker.className = icon;
+  marker.style.flex = "0 0 auto";
+  marker.style.fontSize = "10px";
+  marker.style.color = "var(--mk-gm-muted)";
+
+  button.append(strong, marker);
+  button.addEventListener("click", event => {
+    event.preventDefault();
+    event.stopPropagation();
+    void onClick();
+  });
+  cell.append(button);
+  return true;
+}
+
+function bindPressureControls(app) {
+  const root = app?.element?.querySelector ? app.element : app?.element?.[0];
+  if (!root?.querySelector) return false;
+
+  const procedure = pressureCell(root, "Procedure");
+  const elapsed = pressureCell(root, "Elapsed");
+
+  installPressureControl(procedure, {
+    label: "Procedure",
+    title: "Change Group procedure",
+    icon: "fas fa-chevron-down",
+    onClick: () => actionChangeProcedure.call(app),
+  });
+  installPressureControl(elapsed, {
+    label: "Elapsed",
+    title: "Advance or reset Group procedure time",
+    icon: "fas fa-clock-rotate-left",
+    onClick: () => actionTimeControls.call(app),
+  });
+
+  return true;
 }
 
 function applicationClasses() {
@@ -199,6 +497,11 @@ class MKGMscreen extends ApplicationBase {
       ...view,
       denied: false,
     };
+  }
+
+  _onRender(context, options) {
+    super._onRender?.(context, options);
+    bindPressureControls(this);
   }
 }
 
@@ -334,6 +637,10 @@ export {
   CONTROL_TOOL_ID,
   MKGMscreen,
   canUseGmScreen,
+  canonicalTurnSeconds,
+  actionChangeProcedure,
+  actionTimeControls,
+  bindPressureControls,
   getGmScreen,
   openGmScreen,
   closeGmScreen,

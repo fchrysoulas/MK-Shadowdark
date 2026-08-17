@@ -1120,134 +1120,6 @@ async function checkSingleToken(tokenOrDocument) {
   }
 }
 
-function registerSettings() {
-  game.settings.register(MODULE_ID, SETTINGS.enabled, {
-    name: "Corpse Token: Enabled",
-    hint: "Automatically changes NPC tokens to a corpse image when their Shadowdark HP reaches 0 or lower.",
-    scope: "world",
-    config: false,
-    type: Boolean,
-    default: DEFAULTS[SETTINGS.enabled]
-  });
-
-  game.settings.register(MODULE_ID, SETTINGS.corpseImage, {
-    name: "Corpse Token: Image",
-    hint: "Select the image used for dead NPC tokens. No corpse token is applied until an image is selected.",
-    scope: "world",
-    config: false,
-    type: String,
-    filePicker: "image",
-    default: DEFAULTS[SETTINGS.corpseImage],
-    onChange: () => {
-      missingCorpseImageWarningShown = false;
-      imageAlphaBoundsCache.clear();
-    }
-  });
-
-  game.settings.register(MODULE_ID, SETTINGS.onlyNpcs, {
-    name: "Corpse Token: NPCs Only",
-    hint: "Only NPC actor tokens are changed. Player character tokens are ignored.",
-    scope: "world",
-    config: false,
-    type: Boolean,
-    default: DEFAULTS[SETTINGS.onlyNpcs]
-  });
-
-  game.settings.register(MODULE_ID, SETTINGS.width, {
-    name: "Corpse Token: Width",
-    hint: "Token width after corpse conversion.",
-    scope: "world",
-    config: false,
-    type: Number,
-    range: { min: 0.25, max: 6, step: 0.25 },
-    default: DEFAULTS[SETTINGS.width]
-  });
-
-  game.settings.register(MODULE_ID, SETTINGS.height, {
-    name: "Corpse Token: Height",
-    hint: "Token height after corpse conversion.",
-    scope: "world",
-    config: false,
-    type: Number,
-    range: { min: 0.25, max: 6, step: 0.25 },
-    default: DEFAULTS[SETTINGS.height]
-  });
-
-  game.settings.register(MODULE_ID, SETTINGS.scale, {
-    name: "Corpse Token: Texture Scale",
-    hint: "Texture scale for the corpse image. 0.7 means 70% of the 1x1 token space.",
-    scope: "world",
-    config: false,
-    type: Number,
-    range: { min: 0.1, max: 2, step: 0.05 },
-    default: DEFAULTS[SETTINGS.scale]
-  });
-
-  game.settings.register(MODULE_ID, SETTINGS.alignVisualBottom, {
-    name: "Corpse Token: Align Opaque Image Bottom",
-    hint: "When enabled, the actual opaque bottom of the corpse PNG is placed on the original standing/falling point. This compensates for texture scale and transparent image padding.",
-    scope: "world",
-    config: false,
-    type: Boolean,
-    default: DEFAULTS[SETTINGS.alignVisualBottom]
-  });
-
-  game.settings.register(MODULE_ID, SETTINGS.yOffset, {
-    name: "Corpse Token: Vertical Offset",
-    hint: "Fine-tunes corpse placement in pixels. Positive values move the corpse down; negative values move it up.",
-    scope: "world",
-    config: false,
-    type: Number,
-    range: { min: -200, max: 200, step: 1 },
-    default: DEFAULTS[SETTINGS.yOffset]
-  });
-
-  game.settings.register(MODULE_ID, SETTINGS.applyDelayMs, {
-    name: "Corpse Token: Apply Delay (ms)",
-    hint: "Waits this many milliseconds after HP reaches 0 before replacing the token, allowing the HP/death update cycle to settle first.",
-    scope: "world",
-    config: false,
-    type: Number,
-    range: { min: 0, max: 5000, step: 50 },
-    default: DEFAULTS[SETTINGS.applyDelayMs]
-  });
-
-  game.settings.register(MODULE_ID, SETTINGS.postChatMessage, {
-    name: "Corpse Token: Post Chat Message",
-    hint: "Posts a small chat message when tokens are changed to corpse images.",
-    scope: "world",
-    config: false,
-    type: Boolean,
-    default: DEFAULTS[SETTINGS.postChatMessage]
-  });
-
-  game.settings.register(MODULE_ID, SETTINGS.scanOnCanvasReady, {
-    name: "Corpse Token: Scan Scene On Load",
-    hint: "When enabled, the GM scans the active scene for already-dead NPC tokens whenever the canvas is ready.",
-    scope: "world",
-    config: false,
-    type: Boolean,
-    default: DEFAULTS[SETTINGS.scanOnCanvasReady]
-  });
-
-  game.settings.register(MODULE_ID, SETTINGS.autoRestoreWhenHealed, {
-    name: "Corpse Token: Auto Restore When Healed",
-    hint: "When enabled, a corpse token is restored if its NPC HP rises above 0. Disabled by default.",
-    scope: "world",
-    config: false,
-    type: Boolean,
-    default: DEFAULTS[SETTINGS.autoRestoreWhenHealed]
-  });
-
-  game.settings.register(MODULE_ID, SETTINGS.migrationVersion, {
-    name: "Corpse Token Migration Version",
-    scope: "world",
-    config: false,
-    type: Number,
-    default: DEFAULTS[SETTINGS.migrationVersion]
-  });
-}
-
 function attachApi() {
   const module = game.modules.get(MODULE_ID);
   if (!module) return;
@@ -1326,8 +1198,9 @@ function registerHooks() {
   log("Automation registered.");
 }
 
-Hooks.once("init", () => {
-  registerSettings();
+Hooks.on("mkShadowdarkCorpseImageSettingChanged", () => {
+  missingCorpseImageWarningShown = false;
+  imageAlphaBoundsCache.clear();
 });
 
 Hooks.once("ready", async () => {

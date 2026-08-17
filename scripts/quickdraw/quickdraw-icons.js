@@ -5,39 +5,8 @@ import { evaluateQuickdrawLimitDetails } from "./quickdraw-limit.js";
 (() => {
   const MODULE_ID = "mk-shadowdark";
   const SUBMODULE = "Quickdraw";
-  const STYLESHEET_ID = "mk-shadowdark-quickdraw-styles";
-  const STYLESHEET_PATH = `modules/${MODULE_ID}/styles/quickdraw-icons.css`;
   const FLAG_KEY = "quickdraw";
   const invalidLimitExpressionsWarned = new Set();
-
-  ensureStylesheet();
-
-  function ensureStylesheet() {
-    if (document.getElementById(STYLESHEET_ID)) return;
-
-    const existing = Array.from(document.querySelectorAll('link[rel="stylesheet"][href]'))
-      .find(link => link.href.includes(`/modules/${MODULE_ID}/styles/quickdraw-icons.css`));
-    if (existing) {
-      existing.id = STYLESHEET_ID;
-      return;
-    }
-
-    const link = document.createElement("link");
-    link.id = STYLESHEET_ID;
-    link.rel = "stylesheet";
-    link.href = toFoundryRoute(STYLESHEET_PATH);
-    document.head.append(link);
-  }
-
-  function toFoundryRoute(path) {
-    const clean = String(path ?? "").replace(/^\/+/, "");
-    try {
-      if (foundry.utils.getRoute) return foundry.utils.getRoute(clean);
-    } catch (_error) {
-      // Use the host-root fallback.
-    }
-    return `/${clean}`;
-  }
 
   function isDebugEnabled() {
     try {
@@ -439,10 +408,8 @@ import { evaluateQuickdrawLimitDetails } from "./quickdraw-limit.js";
    * groups, and spell lists remain untouched because rows come from the
    * inventory root only.
    */
-  function sortInventoryGroups(html, app) {
+  function sortInventoryGroups(html, app, rows = getInventoryRows(html)) {
     if (!isAutoSortEnabled()) return;
-
-    const rows = getInventoryRows(html);
     if (!rows?.length) return;
 
     const groups = new Map();
@@ -460,9 +427,11 @@ import { evaluateQuickdrawLimitDetails } from "./quickdraw-limit.js";
     });
 
     for (const [parent, entries] of groups.entries()) {
-      const parent$ = $(parent);
       const sorted = entries.slice().sort(compareInventoryEntries);
+      const orderChanged = sorted.some((entry, index) => entry.rowEl !== entries[index]?.rowEl);
+      if (!orderChanged) continue;
 
+      const parent$ = $(parent);
       for (const ent of sorted) parent$.append(ent.rowEl);
     }
   }
@@ -558,8 +527,7 @@ import { evaluateQuickdrawLimitDetails } from "./quickdraw-limit.js";
     dlog("quickdraw card", { current, limit, sources: details.sources });
   }
 
-  function injectQuickdrawToggles(app, html) {
-    const rows = getInventoryRows(html);
+  function injectQuickdrawToggles(app, html, rows = getInventoryRows(html)) {
     if (!rows?.length) return;
 
     rows.closest("ol.SD-list.item-list, ul.SD-list.item-list").removeClass("mk-has-quickdraw-column");
@@ -611,8 +579,6 @@ import { evaluateQuickdrawLimitDetails } from "./quickdraw-limit.js";
       row.closest("ol.SD-list.item-list, ul.SD-list.item-list").addClass("mk-has-quickdraw-column");
     }
 
-    sortInventoryGroups(html, app);
-
     dlog("quickdraw summary", {
       actor: app.actor?.name,
       limit: getLimit(app.actor),
@@ -621,8 +587,7 @@ import { evaluateQuickdrawLimitDetails } from "./quickdraw-limit.js";
     });
   }
 
-  function refreshQuickdrawRowState(app, html) {
-    const rows = getInventoryRows(html);
+  function refreshQuickdrawRowState(app, rows) {
     if (!rows?.length) return;
 
     for (const rowEl of rows) {
@@ -638,10 +603,12 @@ import { evaluateQuickdrawLimitDetails } from "./quickdraw-limit.js";
   }
 
   function processSheet(app, html) {
+    const rows = getInventoryRows(html);
+
     applyHighlightScope(html);
-    refreshQuickdrawRowState(app, html);
-    if (isQuickdrawIconEnabled()) injectQuickdrawToggles(app, html);
-    else sortInventoryGroups(html, app);
+    refreshQuickdrawRowState(app, rows);
+    if (isQuickdrawIconEnabled()) injectQuickdrawToggles(app, html, rows);
+    sortInventoryGroups(html, app, rows);
     renderQuickdrawSummaryCard(app, html);
   }
 

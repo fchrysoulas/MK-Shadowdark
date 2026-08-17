@@ -383,6 +383,10 @@ async function processDueExplorationEncounters(actor, {
     let latestLabel = "No encounter";
     if (serviceResult.reason) latestLabel = `Check failed: ${serviceResult.reason}`;
     else if (serviceResult.isEncounter && serviceResult.encounter) {
+      serviceResult.encounter.groupContext = {
+        groupActorUuid: String(actor.uuid ?? ""),
+        procedure: "exploration",
+      };
       latestLabel = `Encounter: ${serviceResult.encounter.encounter?.label ?? "Resolved"}`;
       await createEncounterMessage(serviceResult.encounter, { whisper: true });
     } else if (serviceResult.isEncounter) {

@@ -151,6 +151,13 @@ Hooks.once("init", () => {
     type: Number,
     default: 0
   });
+  registerSetting("damageTraitsMigrationVersion", {
+    name: "Damage Traits Migration Version",
+    scope: "world",
+    config: false,
+    type: Number,
+    default: 0
+  });
 
   registerSetting("initiativeGroupEnemies", {
     name: "Initiative | Group Enemy Initiative",

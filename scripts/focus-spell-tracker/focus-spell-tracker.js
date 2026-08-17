@@ -1,4 +1,6 @@
-// Tracks Shadowdark Focus spells, checks, chat actions, and token status effects.
+import { planLegacyFocusMigration } from "./focus-migration.js";
+
+// Tracks Shadowdark 4.x Focus spells, checks, chat actions, and token status effects.
 (() => {
   "use strict";
 
@@ -26,6 +28,7 @@
   });
 
   const processedSocketEvents = new Set();
+  let nativeAdaptersInstalled = false;
 
   function moduleVersion() {
     const mod = game.modules.get(MODULE_ID);
@@ -67,16 +70,6 @@
   function getProperty(object, path) {
     if (globalThis.foundry?.utils?.getProperty) return globalThis.foundry.utils.getProperty(object, path);
     return String(path).split(".").reduce((current, key) => current?.[key], object);
-  }
-
-  function setProperty(object, path, value) {
-    if (globalThis.foundry?.utils?.setProperty) return globalThis.foundry.utils.setProperty(object, path, value);
-    const parts = String(path).split(".");
-    const final = parts.pop();
-    let current = object;
-    for (const part of parts) current = current[part] ??= {};
-    current[final] = value;
-    return true;
   }
 
   function escapeHtml(value) {
@@ -143,7 +136,7 @@
       const value = actor.getFlag?.(scope, key);
       if (value !== undefined) return value;
     } catch (_err) {
-      // Fall back to source data for inactive legacy scopes.
+      // Inactive legacy module scopes can throw through getFlag().
     }
 
     return getProperty(actor, `flags.${scope}.${key}`)
@@ -170,7 +163,6 @@
         await actor.setFlag(MODULE_ID, FLAG_KEY, normalized);
       }
 
-      // A successful write also completes migration from the standalone scope.
       try {
         if (readActorFlag(actor, LEGACY_MODULE_ID, FLAG_KEY) !== undefined) {
           await actor.unsetFlag?.(LEGACY_MODULE_ID, FLAG_KEY);
@@ -178,6 +170,7 @@
       } catch (_err) {
         // Legacy cleanup is best-effort and must not block Focus tracking.
       }
+
       await syncFocusStatusEffect(actor, normalized);
       return true;
     } catch (error) {
@@ -224,6 +217,51 @@
       // Legacy cleanup is best-effort.
     }
     return value;
+  }
+
+  async function migrateLegacyFocusFlags() {
+    if (!isAuthority()) return { migrated: 0, errors: 0, skipped: true };
+
+    let migrated = 0;
+    let errors = 0;
+
+    for (const actor of game.actors ?? []) {
+      const currentState = readActorFlag(actor, MODULE_ID, FLAG_KEY);
+      const legacyState = readActorFlag(actor, LEGACY_MODULE_ID, FLAG_KEY);
+      const currentCapacity = readActorFlag(actor, MODULE_ID, CAPACITY_FLAG);
+      const legacyCapacity = readActorFlag(actor, LEGACY_MODULE_ID, CAPACITY_FLAG);
+      const plan = planLegacyFocusMigration({
+        currentState,
+        legacyState,
+        currentCapacity,
+        legacyCapacity
+      });
+
+      if (!plan.hasLegacy) continue;
+
+      try {
+        if (plan.stateToWrite !== undefined) {
+          const normalized = normalizeState(plan.stateToWrite);
+          if (normalized.sessions.length) await actor.setFlag(MODULE_ID, FLAG_KEY, normalized);
+          else await actor.unsetFlag?.(MODULE_ID, FLAG_KEY);
+        }
+
+        if (plan.capacityToWrite !== undefined) {
+          const capacity = Math.max(1, Math.floor(Number(plan.capacityToWrite) || 1));
+          await actor.setFlag(MODULE_ID, CAPACITY_FLAG, capacity);
+        }
+
+        if (plan.removeLegacyState) await actor.unsetFlag?.(LEGACY_MODULE_ID, FLAG_KEY);
+        if (plan.removeLegacyCapacity) await actor.unsetFlag?.(LEGACY_MODULE_ID, CAPACITY_FLAG);
+        migrated += 1;
+      } catch (error) {
+        errors += 1;
+        warn(`Could not migrate legacy Focus flags for ${actor.name ?? actor.id}`, error);
+      }
+    }
+
+    if (migrated > 0) log(`Migrated standalone Focus flags for ${migrated} actor(s).`);
+    return { migrated, errors, skipped: false };
   }
 
   function canOperateActor(actor) {
@@ -565,9 +603,7 @@
 
   function findPendingCheck(session, checkId = null) {
     if (!session?.pendingChecks?.length) return null;
-    if (checkId) {
-      return session.pendingChecks.find(check => check.id === checkId) ?? null;
-    }
+    if (checkId) return session.pendingChecks.find(check => check.id === checkId) ?? null;
     return session.pendingChecks[0];
   }
 
@@ -577,9 +613,7 @@
     if (!session) return false;
 
     const check = findPendingCheck(session, checkId);
-    if (check) {
-      session.pendingChecks = session.pendingChecks.filter(entry => entry.id !== check.id);
-    }
+    if (check) session.pendingChecks = session.pendingChecks.filter(entry => entry.id !== check.id);
 
     session.lastCheck = {
       result: "success",
@@ -639,10 +673,7 @@
     await setState(actor, state);
     refreshActorUi(actor);
 
-    if (details.remind !== false) {
-      await createReminderMessage(actor, session, check);
-    }
-
+    if (details.remind !== false) await createReminderMessage(actor, session, check);
     return check;
   }
 
@@ -1008,8 +1039,6 @@
         ?.filter(token => token.actor?.uuid === actor?.uuid || token.actor?.id === actor?.id)
         ?.forEach(token => token.refresh?.());
 
-      // Only rerender a Token HUD that is already open and still bound to a
-      // valid Token.
       const tokenHud = canvas?.hud?.token;
       if (tokenHud?.rendered && tokenHud.object?.bounds) tokenHud.render?.(false);
     } catch (_err) {
@@ -1102,8 +1131,7 @@
     if (!Number.isFinite(next) || next >= hp.value) return;
 
     const amount = hp.value - next;
-    const payload = makeDamagePayload(actor, amount);
-    dispatchDamagePayload(payload);
+    dispatchDamagePayload(makeDamagePayload(actor, amount));
   }
 
   function isFocusCheckOptions(options) {
@@ -1112,25 +1140,6 @@
       || options?.cast?.focus
       || options?.[CONTEXT_KEY]
     );
-  }
-
-  async function buildV3CastContext(actor, args) {
-    const itemId = args[0];
-    const options = args[1] ?? {};
-    const sourceItem = actor?.items?.get(itemId) ?? null;
-    if (!sourceItem) return null;
-
-    return {
-      generation: 3,
-      actor,
-      sourceItem,
-      spell: sourceItem,
-      isFocusSpell: focusDuration(sourceItem),
-      isFocusCheck: isFocusCheckOptions(options),
-      checkId: options?.[CONTEXT_KEY] ?? null,
-      startedAt: Date.now(),
-      messageIdsBefore: new Set(game.messages?.contents?.map(message => message.id) ?? [])
-    };
   }
 
   async function buildV4CastContext(model, args) {
@@ -1146,6 +1155,7 @@
     } catch (_err) {
       // Leave unresolved.
     }
+
     if (config.itemUuid) {
       try {
         sourceItem = await fromUuid(config.itemUuid);
@@ -1157,7 +1167,6 @@
     sourceItem ??= spell;
 
     return {
-      generation: 4,
       actor,
       sourceItem,
       spell,
@@ -1170,6 +1179,7 @@
   }
 
   function matchingNewRollMessage(context) {
+    if (!context) return null;
     const messages = [...(game.messages?.contents ?? [])].reverse();
     for (const message of messages) {
       if (context.messageIdsBefore.has(message.id)) continue;
@@ -1184,29 +1194,6 @@
       if (shadowdarkFlags?.isRoll || message.rolls?.length || shadowdarkFlags?.rolls) return message;
     }
     return null;
-  }
-
-  function digestV3Result(result, context) {
-    if (!result) return { completed: false, success: null, critical: null };
-
-    const main = result?.rolls?.main;
-    const critical = main?.critical ?? null;
-    if (main?.success === true) return { completed: true, success: true, critical };
-    if (main?.success === false) return { completed: true, success: false, critical };
-
-    const total = Number(main?.roll?.total ?? main?.total);
-    const tier = Number(
-      getProperty(result, "item.system.tier")
-      ?? getProperty(context.sourceItem, "system.tier")
-    );
-    const baseDifficulty = Number(result?.baseDifficulty ?? 10);
-    const target = Number.isFinite(tier) ? tier + baseDifficulty : null;
-
-    if (Number.isFinite(total) && Number.isFinite(target)) {
-      return { completed: true, success: total >= target, critical };
-    }
-
-    return { completed: Boolean(matchingNewRollMessage(context)), success: null, critical };
   }
 
   function digestV4Result(result, context) {
@@ -1282,11 +1269,8 @@
   async function handleCastResult(context, result) {
     if (!enabled() || !context?.isFocusSpell) return;
 
-    let digest = context.generation === 3
-      ? digestV3Result(result, context)
-      : digestV4Result(result, context);
-
-    if (context.generation === 4 && result === false && !digest.completed) {
+    let digest = digestV4Result(result, context);
+    if (result === false && !digest.completed) {
       await new Promise(resolve => window.setTimeout(resolve, 75));
       digest = digestV4Result(result, context);
     }
@@ -1294,9 +1278,7 @@
     if (!digest.completed || digest.success === null) return;
 
     if (!context.isFocusCheck) {
-      if (digest.success) {
-        await startFocusFromContext(context, digest.critical === "success");
-      }
+      if (digest.success) await startFocusFromContext(context, digest.critical === "success");
       return;
     }
 
@@ -1306,7 +1288,6 @@
       : null;
 
     session ??= state.sessions.find(entry => sessionMatchesContext(entry, context));
-
     if (!session && state.sessions.length === 1) session = state.sessions[0];
 
     if (!session) {
@@ -1338,8 +1319,7 @@
 
   function capacityReachedForInitialCast(context) {
     if (!context?.isFocusSpell || context.isFocusCheck) return false;
-    const sessions = getSessions(context.actor);
-    return sessions.length >= getActorCapacity(context.actor);
+    return getSessions(context.actor).length >= getActorCapacity(context.actor);
   }
 
   function blockCapacityNotice(context) {
@@ -1349,17 +1329,15 @@
     );
   }
 
-  function wrapCastMethod(prototype, methodName, generation) {
-    if (!prototype || typeof prototype[methodName] !== "function") return false;
-    const original = prototype[methodName];
+  function wrapV4CastMethod(prototype) {
+    if (!prototype || typeof prototype.castSpell !== "function") return false;
+    const original = prototype.castSpell;
     if (original[WRAPPED]) return false;
 
     const wrapped = async function(...args) {
       let context = null;
       try {
-        context = generation === 3
-          ? await buildV3CastContext(this, args)
-          : await buildV4CastContext(this, args);
+        context = await buildV4CastContext(this, args);
       } catch (error) {
         warn("Could not build native cast context", error);
       }
@@ -1382,22 +1360,15 @@
 
     Object.defineProperty(wrapped, WRAPPED, { value: true });
     Object.defineProperty(wrapped, "name", { value: original.name, configurable: true });
-    prototype[methodName] = wrapped;
-    log(`Wrapped ${generation === 3 ? "Actor" : "Actor system"}.${methodName}`);
+    prototype.castSpell = wrapped;
+    log("Wrapped Shadowdark 4 Actor system.castSpell");
     return true;
-  }
-
-  function installV3Wrapper() {
-    const prototype = CONFIG.Actor?.documentClass?.prototype;
-    const player = wrapCastMethod(prototype, "castSpell", 3);
-    const npc = wrapCastMethod(prototype, "castNPCSpell", 3);
-    return player || npc;
   }
 
   function collectV4ModelPrototypes() {
     const prototypes = new Set();
-
     const dataModels = CONFIG.Actor?.dataModels;
+
     if (dataModels && typeof dataModels === "object") {
       for (const modelClass of Object.values(dataModels)) {
         if (modelClass?.prototype) prototypes.add(modelClass.prototype);
@@ -1408,26 +1379,33 @@
       if (actor?.system?.constructor?.prototype) prototypes.add(actor.system.constructor.prototype);
     }
 
-    for (const token of canvas?.tokens?.placeables ?? []) {
-      if (token.actor?.system?.constructor?.prototype) prototypes.add(token.actor.system.constructor.prototype);
-    }
-
     return prototypes;
   }
 
-  function installV4Wrappers() {
-    let installed = false;
-    for (const prototype of collectV4ModelPrototypes()) {
-      installed = wrapCastMethod(prototype, "castSpell", 4) || installed;
-    }
-    return installed;
-  }
+  function installV4WrappersOnce() {
+    if (nativeAdaptersInstalled) return false;
 
-  function installNativeAdapters() {
-    if (game.system?.id !== "shadowdark") return;
-    const v3 = installV3Wrapper();
-    const v4 = installV4Wrappers();
-    log("Native adapters installed", { v3, v4, systemVersion: game.system.version });
+    const prototypes = collectV4ModelPrototypes();
+    let wrappedAny = false;
+    let foundCastMethod = false;
+
+    for (const prototype of prototypes) {
+      if (typeof prototype?.castSpell !== "function") continue;
+      foundCastMethod = true;
+      wrappedAny = wrapV4CastMethod(prototype) || wrappedAny;
+    }
+
+    nativeAdaptersInstalled = true;
+    if (!foundCastMethod) {
+      warn("No Shadowdark 4 Actor system.castSpell prototype was available at ready.");
+    }
+
+    log("Shadowdark 4 native Focus adapter initialized", {
+      wrapped: wrappedAny,
+      prototypes: prototypes.size,
+      systemVersion: game.system.version
+    });
+    return wrappedAny;
   }
 
   function exposeApi() {
@@ -1444,7 +1422,8 @@
       rollFocusCheck: (actor, sessionId = null, options = {}) => rollFocusCheck(actor, sessionId, options),
       markCheckDue: (actor, sessionId, reason = "distraction", details = {}) => markCheckDue(actor, sessionId, reason, details),
       openSource: (actor, sessionId = null) => openSessionSource(actor, sessionId),
-      syncTokenIcons: () => syncAllFocusStatusEffects()
+      syncTokenIcons: () => syncAllFocusStatusEffects(),
+      migrateLegacyFlags: () => migrateLegacyFocusFlags()
     };
   }
 
@@ -1453,13 +1432,14 @@
     log("Initialized");
   });
 
-  Hooks.once("ready", () => {
+  Hooks.once("ready", async () => {
     if (game.system?.id !== "shadowdark") {
       warn("Disabled because the active system is not Shadowdark.");
       return;
     }
 
-    installNativeAdapters();
+    await migrateLegacyFocusFlags();
+    installV4WrappersOnce();
     exposeApi();
     void syncAllFocusStatusEffects();
 
@@ -1481,7 +1461,6 @@
 
   for (const hook of actorRenderHooks) {
     Hooks.on(hook, (app, html) => {
-      installV4Wrappers();
       renderActorFocus(app, html);
       window.setTimeout(() => renderActorFocus(app, html), 0);
       window.setTimeout(() => renderActorFocus(app, html), 125);
@@ -1492,11 +1471,9 @@
   Hooks.on("updateCombat", (combat, changes) => onCombatUpdate(combat, changes));
   Hooks.on("preUpdateActor", (actor, changes) => onPreUpdateActor(actor, changes));
   Hooks.on("createActor", actor => {
-    installV4Wrappers();
     if (isAuthority(actor)) void syncFocusStatusEffect(actor);
   });
   Hooks.on("canvasReady", () => {
-    installV4Wrappers();
     void syncAllFocusStatusEffects();
   });
 })();

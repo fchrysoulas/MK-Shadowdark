@@ -1,6 +1,7 @@
 import { registerEnvironmentContextService } from "../libs/environment-context.js";
 import { registerGroupAssignmentsService } from "./assignments.js";
 import { registerGroupExplorationEncounterService } from "./exploration-encounters.js";
+import { registerGroupRestEncounterService } from "./rest-encounters.js";
 import { registerGroupSheet } from "./registration.js";
 import { registerGroupProcedureService } from "./procedure.js";
 import { registerGroupTimeService } from "./time.js";
@@ -42,6 +43,16 @@ export {
   getExplorationEncounterState,
   processDueExplorationEncounters,
 } from "./exploration-encounters.js";
+export {
+  REST_TURN_SECONDS,
+  REST_TOTAL_TURNS,
+  GROUP_REST_WORKFLOW_HOOK,
+  calculateRestCheckTurns,
+  getGroupRestState,
+  startGroupRest,
+  continueGroupRest,
+  finalizeGroupRest,
+} from "./rest-encounters.js";
 export { registerGroupSheet };
 
 Hooks.once("init", registerGroupSheet);
@@ -50,3 +61,4 @@ registerEnvironmentContextService();
 registerGroupTimeService();
 registerGroupAssignmentsService();
 registerGroupExplorationEncounterService();
+registerGroupRestEncounterService();

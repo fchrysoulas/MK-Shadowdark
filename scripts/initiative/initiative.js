@@ -11,7 +11,6 @@ import {
 
   const MODULE_ID = "mk-shadowdark";
   const SUBMODULE = "Initiative";
-  const FEATURE_SETTINGS_TEMPLATE = `modules/${MODULE_ID}/templates/feature-settings.hbs`;
   const PATCH_MARK = Symbol.for(`${MODULE_ID}.initiative.rollInitiativePatch`);
 
   const SETTINGS = Object.freeze({
@@ -274,102 +273,6 @@ import {
     });
   }
 
-  function registerSettings() {
-    const FormApplicationBase = globalThis.foundry?.appv1?.api?.FormApplication;
-    const definitions = {
-      [SETTINGS.ENABLED]: {
-        name: "Initiative | Group Enemy Initiative",
-        hint: "Players keep their individual native initiative rolls. Hostile NPCs roll once using the hostile creature with the highest DEX modifier and all act in that shared enemy slot.",
-        scope: "world",
-        type: Boolean,
-        default: true
-      },
-      [SETTINGS.DEBUG]: {
-        name: "Initiative | Debug Mode",
-        hint: "Logs grouped enemy initiative details to the browser console.",
-        scope: "world",
-        type: Boolean,
-        default: false
-      }
-    };
-
-    for (const [key, definition] of Object.entries(definitions)) {
-      if (game.settings.settings.has(`${MODULE_ID}.${key}`)) continue;
-      game.settings.register(MODULE_ID, key, {
-        ...definition,
-        config: !FormApplicationBase
-      });
-    }
-
-    if (!FormApplicationBase) return;
-
-    function descriptor(key) {
-      const definition = game.settings.settings.get(`${MODULE_ID}.${key}`);
-      const value = game.settings.get(MODULE_ID, key);
-      return {
-        key,
-        name: String(definition.name).replace(/^.*?(?:\s\|\s|:\s*)/, ""),
-        hint: String(definition.hint ?? ""),
-        value,
-        isBoolean: definition.type === Boolean,
-        isNumber: false,
-        isSelect: false,
-        isRange: false,
-        isFilePicker: false,
-        isTextarea: false,
-        isColor: false,
-        inputType: "text",
-        dataType: "String",
-        range: {},
-        options: []
-      };
-    }
-
-    class InitiativeSettingsForm extends FormApplicationBase {
-      static get defaultOptions() {
-        return foundry.utils.mergeObject(super.defaultOptions, {
-          id: `${MODULE_ID}-initiative-settings`,
-          title: "MK-Shadowdark | Initiative",
-          template: FEATURE_SETTINGS_TEMPLATE,
-          width: 680,
-          height: "auto",
-          resizable: true,
-          closeOnSubmit: true
-        });
-      }
-
-      getData() {
-        return {
-          title: "Initiative",
-          hint: "Keep player initiative individual while grouping hostile NPCs into one GM initiative slot.",
-          sections: [{
-            title: "Automation",
-            settings: [descriptor(SETTINGS.ENABLED), descriptor(SETTINGS.DEBUG)]
-          }]
-        };
-      }
-
-      async _updateObject(_event, formData) {
-        for (const key of Object.values(SETTINGS)) {
-          const value = formData[key] === true
-            || formData[key] === "true"
-            || formData[key] === "on"
-            || formData[key] === 1;
-          await game.settings.set(MODULE_ID, key, value);
-        }
-      }
-    }
-
-    game.settings.registerMenu(MODULE_ID, "initiativeSettings", {
-      name: "Initiative",
-      label: "Configure",
-      hint: "Configure grouped hostile-NPC initiative.",
-      icon: "fas fa-list-ol",
-      type: InitiativeSettingsForm,
-      restricted: true
-    });
-  }
-
   function exposeApi() {
     const mod = game.modules.get(MODULE_ID);
     if (!mod) return;
@@ -380,7 +283,6 @@ import {
     };
   }
 
-  Hooks.once("init", registerSettings);
   Hooks.once("ready", () => {
     installPatch();
     exposeApi();

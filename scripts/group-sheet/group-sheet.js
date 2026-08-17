@@ -1,3 +1,4 @@
+import { registerEnvironmentContextService } from "../libs/environment-context.js";
 import { registerGroupSheet } from "./registration.js";
 import { registerGroupProcedureService } from "./procedure.js";
 import "./dashboard-behavior.js";
@@ -16,3 +17,4 @@ export { registerGroupSheet };
 
 Hooks.once("init", registerGroupSheet);
 registerGroupProcedureService();
+registerEnvironmentContextService();

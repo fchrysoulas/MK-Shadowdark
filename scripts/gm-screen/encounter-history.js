@@ -1,4 +1,5 @@
 import { APP_ID } from "./gm-screen.js";
+import { executeEncounterAction } from "./encounter-controls.js";
 import {
   collectionValues,
   messageEncounterData,
@@ -203,6 +204,23 @@ function bindHistorySelection(application, workspace) {
   });
 }
 
+function bindEncounterActions(application, workspace) {
+  workspace.querySelectorAll("[data-mk-encounter-action]").forEach(button => {
+    button.addEventListener("click", async event => {
+      event.preventDefault();
+      event.stopPropagation();
+      button.disabled = true;
+      try {
+        await executeEncounterAction(application, button, {
+          latestEncounter: { messageId: button.dataset.messageId },
+        });
+      } finally {
+        button.disabled = false;
+      }
+    });
+  });
+}
+
 async function decorateEncounterHistory(application, element) {
   if (!gmScreenApplication(application) || !globalThis.game?.user?.isGM) return false;
   const root = element?.querySelector ? element : null;
@@ -216,6 +234,7 @@ async function decorateEncounterHistory(application, element) {
   application.encounterMessageId = history.selectedMessageId;
   workspace.innerHTML = renderEncounterInspector(history);
   bindHistorySelection(application, workspace);
+  bindEncounterActions(application, workspace);
   return true;
 }
 
@@ -236,6 +255,8 @@ export {
   buildEncounterHistory,
   historyLabel,
   renderEncounterInspector,
+  bindHistorySelection,
+  bindEncounterActions,
   decorateEncounterHistory,
   registerGmScreenEncounterHistory,
 };

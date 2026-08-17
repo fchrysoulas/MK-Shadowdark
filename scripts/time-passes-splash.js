@@ -1,9 +1,13 @@
+import {
+  createTimePassesSplashEvent,
+  isTimePassesSplashEvent
+} from "./time-passes-socket.js";
+
 (() => {
   const MODULE_ID = "mk-shadowdark";
   const SUBMODULE = "Time Passes Splash";
-  const FLAG_KEY = "timePassesSplash";
-  const HOOK_FLAG = "__mkTimePassesSplashHookInstalled";
-  const SEEN_FLAG = "__mkTimePassesSplashSeenIds";
+  const SOCKET_CHANNEL = `module.${MODULE_ID}`;
+  let socketListenerInstalled = false;
 
   function log(...args) {
     console.log(`${MODULE_ID} | ${SUBMODULE} |`, ...args);
@@ -135,41 +139,35 @@
     }, durationMs);
   }
 
-  function installChatListenerOnce() {
-    if (window[HOOK_FLAG]) return;
-    window[HOOK_FLAG] = true;
-    window[SEEN_FLAG] = window[SEEN_FLAG] ?? new Set();
+  function installSocketListenerOnce() {
+    if (socketListenerInstalled || !game?.socket?.on) return;
+    socketListenerInstalled = true;
 
-    Hooks.on("createChatMessage", msg => {
+    game.socket.on(SOCKET_CHANNEL, event => {
       try {
-        if (!msg) return;
-        const payload = msg.getFlag?.(MODULE_ID, FLAG_KEY);
-        if (!payload) return;
-
-        const seen = window[SEEN_FLAG];
-        if (seen.has(msg.id)) return;
-        seen.add(msg.id);
-
-        showSplash(payload);
+        if (!isTimePassesSplashEvent(event)) return;
+        if (event.senderId && event.senderId === game.user?.id) return;
+        showSplash(event.payload);
       } catch (handlerError) {
-        console.error(`${MODULE_ID} | ${SUBMODULE} | handler error:`, handlerError);
+        console.error(`${MODULE_ID} | ${SUBMODULE} | socket handler error:`, handlerError);
       }
     });
 
-    log("Chat listener installed.");
+    log("Socket listener installed.");
   }
 
   async function broadcastSplash(payload) {
-    const msg = await ChatMessage.create({
-      speaker: ChatMessage.getSpeaker(),
-      style: globalThis.CONST?.CHAT_MESSAGE_STYLES?.OTHER ?? globalThis.CONST?.CHAT_MESSAGE_TYPES?.OTHER ?? 0,
-      content: `<span style="display:none">mk-time-passes</span>`,
-      flags: { [MODULE_ID]: { [FLAG_KEY]: payload } },
-    });
+    if (!game.user?.isGM) {
+      ui?.notifications?.warn?.("Only the GM can broadcast Time Passes.");
+      return false;
+    }
 
-    setTimeout(() => {
-      msg?.delete?.().catch(() => {});
-    }, 3000);
+    const event = createTimePassesSplashEvent(payload, game.user?.id ?? null);
+
+    // Render immediately for the sender, then notify every other connected client.
+    showSplash(event.payload);
+    game.socket?.emit?.(SOCKET_CHANNEL, event);
+    return true;
   }
 
   function rollHasAnyDieResult(roll, faces, target) {
@@ -291,7 +289,7 @@
   }
 
   Hooks.once("ready", () => {
-    installChatListenerOnce();
+    installSocketListenerOnce();
 
     const mod = game.modules.get(MODULE_ID);
     if (mod) {

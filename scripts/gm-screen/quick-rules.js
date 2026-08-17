@@ -200,11 +200,11 @@ function renderQuickRules(rules) {
 function injectQuickRules(application, element) {
   if (!gmScreenApplication(application) || !globalThis.game?.user?.isGM) return false;
   const root = element?.querySelector ? element : null;
-  const host = root?.querySelector?.("[data-mk-gm-quick-rules-host]");
-  if (!host) return false;
+  const workspace = root?.querySelector?.('[data-workspace-panel="rules"]');
+  if (!workspace) return false;
 
   const context = resolveSceneEnvironmentContext();
-  host.innerHTML = renderQuickRules(buildQuickRules(context));
+  workspace.innerHTML = renderQuickRules(buildQuickRules(context));
   return true;
 }
 

@@ -1,5 +1,6 @@
 import { registerEnvironmentContextService } from "../libs/environment-context.js";
 import { registerGroupAssignmentsService } from "./assignments.js";
+import { registerGroupExplorationEncounterService } from "./exploration-encounters.js";
 import { registerGroupSheet } from "./registration.js";
 import { registerGroupProcedureService } from "./procedure.js";
 import { registerGroupTimeService } from "./time.js";
@@ -33,6 +34,14 @@ export {
   setExplorationRole,
   setCampWatches,
 } from "./assignments.js";
+export {
+  DEFAULT_EXPLORATION_TURN_SECONDS,
+  GROUP_EXPLORATION_ENCOUNTER_HOOK,
+  getExplorationTurnSeconds,
+  calculateExplorationEncounterSchedule,
+  getExplorationEncounterState,
+  processDueExplorationEncounters,
+} from "./exploration-encounters.js";
 export { registerGroupSheet };
 
 Hooks.once("init", registerGroupSheet);
@@ -40,3 +49,4 @@ registerGroupProcedureService();
 registerEnvironmentContextService();
 registerGroupTimeService();
 registerGroupAssignmentsService();
+registerGroupExplorationEncounterService();

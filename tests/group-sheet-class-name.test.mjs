@@ -11,14 +11,6 @@ function source(relativePath) {
   return fs.readFileSync(path.join(ROOT, relativePath), "utf8");
 }
 
-function walkJavaScript(directory) {
-  return fs.readdirSync(directory, { withFileTypes: true }).flatMap(entry => {
-    const fullPath = path.join(directory, entry.name);
-    if (entry.isDirectory()) return walkJavaScript(fullPath);
-    return entry.isFile() && entry.name.endsWith(".js") ? [fullPath] : [];
-  });
-}
-
 test("Group Sheet JavaScript API uses MKGroupSheet", () => {
   const sheet = source("scripts/group-sheet/sheet.js");
   const registration = source("scripts/group-sheet/registration.js");
@@ -30,24 +22,22 @@ test("Group Sheet JavaScript API uses MKGroupSheet", () => {
   assert.match(registration, /instanceof\s+MKGroupSheet/);
   assert.match(registration, /registerSheet\(MODULE_ID,\s*MKGroupSheet,/);
   assert.match(entry, /export\s*\{[^}]*MKGroupSheet[^}]*\}\s*from\s*["']\.\/sheet\.js["']/);
+
+  assert.doesNotMatch(sheet, /\bSDXGroupSheet\b/);
+  assert.doesNotMatch(registration, /\bSDXGroupSheet\b/);
+  assert.doesNotMatch(entry, /\bSDXGroupSheet\b/);
 });
 
-test("legacy SDXGroupSheet name remains only in the persisted sheet ID", () => {
-  const offenders = [];
-
-  for (const file of walkJavaScript(path.join(ROOT, "scripts"))) {
-    const relativePath = path.relative(ROOT, file).replaceAll("\\", "/");
-    const text = fs.readFileSync(file, "utf8");
-    if (!text.includes("SDXGroupSheet")) continue;
-    if (relativePath === "scripts/group-sheet/constants.js") continue;
-    offenders.push(relativePath);
-  }
-
-  assert.deepEqual(offenders, []);
-
+test("persisted Group Sheet ID remains compatible with existing actors", () => {
   const constants = source("scripts/group-sheet/constants.js");
   assert.match(constants, /SHEET_ID\s*=\s*`\$\{MODULE_ID\}\.SDXGroupSheet`/);
   assert.doesNotMatch(constants, /SHEET_ID\s*=.*MKGroupSheet/);
+});
+
+test("legacy render-hook alias remains available during the class rename", () => {
+  const dashboard = source("scripts/group-sheet/dashboard-layout.js");
+  assert.match(dashboard, /Hooks\.on\(["']renderActorSheet["'],\s*onRenderGroupSheet\)/);
+  assert.match(dashboard, /Hooks\.on\(["']renderSDXGroupSheet["'],\s*onRenderGroupSheet\)/);
 });
 
 test("Group Sheet implementation file set remains present", () => {

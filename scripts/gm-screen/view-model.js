@@ -127,25 +127,30 @@ async function buildPartyView(groupActor) {
 
 function buildAssignmentsView(groupActor) {
   if (!groupActor) return {
+    order: [],
     front: [],
     middle: [],
     rear: [],
-    scout: [],
-    lightBearer: [],
+    scout: "",
+    lightBearer: "",
     watches: [],
   };
 
   const assignments = getGroupAssignments(groupActor);
-  const positions = assignments?.exploration?.positions ?? {};
-  const roles = assignments?.exploration?.roles ?? {};
+  const exploration = assignments?.exploration ?? {};
+  const positions = exploration.positions ?? {};
+  const roles = exploration.roles ?? {};
 
   return {
+    order: [...(exploration.order ?? [])],
     front: [...(positions.front ?? [])],
     middle: [...(positions.middle ?? [])],
     rear: [...(positions.rear ?? [])],
-    scout: [...(roles.scout ?? [])],
-    lightBearer: [...(roles.lightBearer ?? [])],
+    scout: String(roles.scout ?? ""),
+    lightBearer: String(roles.lightBearer ?? ""),
     watches: (assignments?.camping?.watches ?? []).map((watch, index) => ({
+      id: String(watch?.id ?? `watch-${index + 1}`),
+      label: String(watch?.label ?? `Watch ${index + 1}`),
       index: index + 1,
       actorUuids: [...(watch?.actorUuids ?? [])],
     })),

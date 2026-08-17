@@ -3,6 +3,10 @@ import {
   snapshotTargetUuids,
   storedTargetUuids
 } from "./auto-damage-targets.js";
+import {
+  broadcastTokenShake,
+  installTokenShakeSocket
+} from "./token-shake.js";
 
 (() => {
   const MODULE_ID = "mk-shadowdark";
@@ -121,36 +125,9 @@ import {
     }
   }
 
-  async function shakeToken(token, {
-    distanceFactor = 0.1,
-    steps = 6,
-    stepDuration = 50
-  } = {}) {
+  async function shakeToken(token, options = {}) {
     try {
-      if (!canvas?.grid) return;
-
-      const doc = token.document ?? token;
-      if (!doc) return;
-
-      const baseX = doc.x ?? 0;
-      const baseY = doc.y ?? 0;
-      const grid = canvas.grid.size || 100;
-      const maxOffset = grid * distanceFactor;
-
-      const doMove = async (x, y) => {
-        await doc.update(
-          { x, y },
-          { animate: true, duration: stepDuration }
-        );
-      };
-
-      for (let i = 0; i < steps; i++) {
-        const dx = (Math.random() * 2 - 1) * maxOffset;
-        const dy = (Math.random() * 2 - 1) * maxOffset;
-        await doMove(baseX + dx, baseY + dy);
-      }
-
-      await doMove(baseX, baseY);
+      await broadcastTokenShake(token, options);
     } catch (err) {
       console.error(
         `${MODULE_ID} | ${SUBMODULE} v${getModuleVersion()} | Error shaking token`,
@@ -615,9 +592,6 @@ import {
       if (PROCESSING_MESSAGES.has(message.id)) return;
       if (hasAutoDamageProcessed(message)) return;
 
-      // Capture targeting synchronously, before the first await in the damage
-      // workflow. Shadowdark's rollConfig targetUuid is preferred; otherwise
-      // the author's current target set becomes the immutable fallback.
       const targetUuids = getTargetSnapshot(message);
       let damageDisplay = null;
 
@@ -681,9 +655,6 @@ import {
       }
 
       PROCESSING_MESSAGES.add(message.id);
-
-      // Persist the exact first-observation snapshot before any configured
-      // delay. An empty array is meaningful and prevents later retargeting.
       await persistTargetSnapshot(message, targetUuids);
 
       try {
@@ -759,6 +730,7 @@ import {
   });
 
   Hooks.once("ready", () => {
+    installTokenShakeSocket();
     adLog("ready; hooks active; primary active GM applies damage");
   });
 

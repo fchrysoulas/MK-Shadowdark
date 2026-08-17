@@ -414,7 +414,7 @@
         : trigger.threshold.toFixed(1);
       return `${trigger.currentHp} / ${trigger.maxHp} HP (half HP: ${threshold})`;
     }
-    return `${trigger.current} / ${trigger.initialCount ?? trigger.initial} enemies remain`;
+    return `${trigger.current} / ${trigger.initial} enemies remain`;
   }
 
   function effectHasStatus(effect, statusId) {

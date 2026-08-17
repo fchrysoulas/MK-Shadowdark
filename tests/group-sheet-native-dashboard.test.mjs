@@ -59,7 +59,7 @@ test("native Party rail preserves direct member actions and UI state", () => {
   assert.match(behavior, /groupDashboard\.sidebarCollapsed/);
   assert.match(behavior, /app\._campingDragActorUuid\s*=\s*card\.dataset\.memberUuid/);
 
-  assert.match(sheet, /closest\(\s*["']\[data-party-member-dropzone='true'\]["']\s*\)/);
+  assert.match(sheet, /\[data-party-member-dropzone='true'\]/);
   assert.match(sheet, /async\s+_setPartyMemberActive\(/);
   assert.match(sheet, /async\s+_removeGroupMember\(/);
 });

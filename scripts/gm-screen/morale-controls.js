@@ -53,16 +53,34 @@ function tokenMoraleData(token) {
   }
 }
 
+function getProperty(object, path) {
+  if (globalThis.foundry?.utils?.getProperty) {
+    return globalThis.foundry.utils.getProperty(object, path);
+  }
+  return String(path ?? "").split(".").reduce((current, key) => current?.[key], object);
+}
+
+function effectFlagPath(effectKey) {
+  const key = String(effectKey ?? "");
+  const prefix = `flags.${MODULE_ID}.`;
+  return key.startsWith(prefix) ? key.slice(prefix.length) : null;
+}
+
 function moraleImmune(actor) {
-  try {
-    const flag = actor?.getFlag?.(MODULE_ID, "encounter.moraleImmune");
-    if (flag !== undefined) return flag === true;
-  } catch (_error) {
-    // Fall through to prepared/source data.
+  const key = PREDEFINED_EFFECT_KEYS.MORALE_IMMUNE;
+  const flagPath = effectFlagPath(key);
+
+  if (flagPath) {
+    try {
+      const flag = actor?.getFlag?.(MODULE_ID, flagPath);
+      if (flag !== undefined) return flag === true;
+    } catch (_error) {
+      // Fall through to prepared/source data.
+    }
   }
 
-  return actor?.flags?.[MODULE_ID]?.encounter?.moraleImmune === true
-    || actor?.system?.[PREDEFINED_EFFECT_KEYS.MORALE_IMMUNE] === true;
+  return getProperty(actor, key) === true
+    || getProperty(actor?._source, key) === true;
 }
 
 function effectStatuses(effect) {
@@ -360,6 +378,8 @@ registerGmScreenMoraleControls();
 export {
   FLEEING_STATUS_ID,
   gmScreenApplication,
+  getProperty,
+  effectFlagPath,
   tokenMoraleData,
   moraleImmune,
   fleeing,

@@ -60,6 +60,7 @@
     "scripts/gm-screen/encounter-controls.js",
     "scripts/gm-screen/rest-controls.js",
     "scripts/gm-screen/morale-controls.js",
+    "scripts/gm-screen/quick-rules.js",
     "scripts/mk-shadowdark.js"
   ],
   "styles": [

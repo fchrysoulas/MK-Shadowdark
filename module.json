@@ -54,6 +54,7 @@
     "scripts/initiative/initiative.js",
     "scripts/morale/morale.js",
     "scripts/encounter-engine/encounter-engine.js",
+    "scripts/gm-screen/gm-screen.js",
     "scripts/mk-shadowdark.js"
   ],
   "styles": [
@@ -70,6 +71,7 @@
     "styles/group-sheet.css",
     "styles/group-member-status.css",
     "styles/group-sheet-dashboard.css",
+    "styles/gm-screen.css",
     "styles/quickdraw-icons.css",
     "styles/encounter-engine.css",
     "styles/summary-bar.css",

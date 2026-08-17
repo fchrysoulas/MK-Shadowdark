@@ -62,6 +62,7 @@
     "scripts/gm-screen/morale-controls.js",
     "scripts/gm-screen/quick-rules.js",
     "scripts/gm-screen/environment-controls.js",
+    "scripts/gm-screen/light-pressure.js",
     "scripts/mk-shadowdark.js"
   ],
   "styles": [
@@ -80,6 +81,7 @@
     "styles/group-sheet-dashboard.css",
     "styles/gm-screen.css",
     "styles/gm-screen-encounter-controls.css",
+    "styles/gm-screen-light-pressure.css",
     "styles/quickdraw-icons.css",
     "styles/encounter-engine.css",
     "styles/summary-bar.css",

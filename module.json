@@ -61,6 +61,7 @@
     "scripts/gm-screen/rest-controls.js",
     "scripts/gm-screen/morale-controls.js",
     "scripts/gm-screen/quick-rules.js",
+    "scripts/gm-screen/environment-controls.js",
     "scripts/mk-shadowdark.js"
   ],
   "styles": [

@@ -224,6 +224,49 @@ async function rollDistrictPoiFromSource(districtType, {
   };
 }
 
+function districtTypesFromSource(table) {
+  const values = [];
+  for (const result of collectionValues(table?.results)) {
+    const value = resultField(result, "Type");
+    if (value && !values.some(existing => normalize(existing) === normalize(value))) values.push(value);
+  }
+  return values;
+}
+
+function settlementSourceStatus(tables = globalThis.game?.tables) {
+  const names = findCoreSettlementNameTable(tables);
+  const type = findCoreSettlementTypeTable(tables);
+  const districts = findCoreDistrictsTable(tables);
+  const alignment = findCoreAlignmentTable(tables);
+  const missing = [];
+
+  if (!names) missing.push("Settlement Name");
+  if (!type) missing.push("Settlement Type");
+  if (!districts) missing.push("Districts");
+  if (!alignment) missing.push("Alignment");
+
+  const districtPoiTables = new Map();
+  if (districts) {
+    for (const districtType of districtTypesFromSource(districts)) {
+      const poiTable = findCoreDistrictPoiTable(districtType, tables);
+      if (poiTable) districtPoiTables.set(districtType, poiTable);
+      else missing.push(`${districtType} Point of Interest`);
+    }
+  }
+
+  return {
+    available: missing.length === 0,
+    missing,
+    tables: {
+      names,
+      type,
+      districts,
+      alignment,
+      districtPoiTables,
+    },
+  };
+}
+
 function tableProvenance(table) {
   if (!table) return null;
   const metadata = sourceTableFlag(table) ?? {};
@@ -260,5 +303,7 @@ export {
   rollAlignmentFromSource,
   districtTypeFromSourceRoll,
   rollDistrictPoiFromSource,
+  districtTypesFromSource,
+  settlementSourceStatus,
   tableProvenance,
 };

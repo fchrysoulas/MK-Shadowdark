@@ -31,6 +31,7 @@
     "scripts/chat-style-editor/chat-style-editor.js",
     "scripts/libs/predefined-effects.js",
     "scripts/libs/dialog-v2.js",
+    "scripts/compatibility/automated-animations.js",
     "scripts/auto-damage/damage-traits.js",
     "scripts/auto-damage/auto-apply-damage.js",
     "scripts/character-sheet-tweaks/character-sheet-tweaks.js",

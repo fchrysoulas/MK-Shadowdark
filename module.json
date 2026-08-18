@@ -68,6 +68,7 @@
     "scripts/gm-screen/light-pressure.js",
     "scripts/gm-screen/presentation-controls.js",
     "scripts/gm-screen/exploration-creation-controls.js",
+    "scripts/source-tables/source-table-importer.js",
     "scripts/mk-shadowdark.js"
   ],
   "styles": [

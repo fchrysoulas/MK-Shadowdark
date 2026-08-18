@@ -55,6 +55,27 @@ function findByTitle(tables, title) {
   return tables.find(table => String(table.title).toLowerCase() === title.toLowerCase());
 }
 
+function asImportedRollTables(tables) {
+  return tables.map(table => ({
+    ...table,
+    flags: {
+      "mk-shadowdark": {
+        sourceTable: {
+          bookId: table.bookId,
+          bookTitle: table.bookTitle,
+          key: table.key,
+          pages: [...(table.pages ?? [])],
+          formulaRaw: table.formulaRaw,
+          formula: table.formula,
+          columns: [...(table.columns ?? [])],
+          sourceKind: table.sourceKind,
+          warnings: [...(table.warnings ?? [])],
+        },
+      },
+    },
+  }));
+}
+
 test("structured Core helper splits capital-led phrases without copying source values into code", () => {
   assert.deepEqual(splitCapitalPhrases("Tall Whistles Owes someone", 3), [
     "Tall",
@@ -90,10 +111,11 @@ test("supported Core parser exposes separate Settlement Name and Type columns", 
   assert.equal(type.results[0].text, "Settlement Type: Hamlet | Dice: 2d4");
 });
 
-test("existing Settlement source resolver now matches tables parsed from dense Core transcription", () => {
+test("existing Settlement source resolver matches the actual imported RollTable flag shape", () => {
   const parsed = parseSupportedSourceTables(SYNTHETIC_CORE, { filename: "shadowdark-core-rules-v4-9.md" });
-  assert.equal(findCoreSettlementNameTable(parsed.tables)?.title, "SETTLEMENT NAME");
-  assert.equal(findCoreSettlementTypeTable(parsed.tables)?.title, "TYPE");
+  const imported = asImportedRollTables(parsed.tables);
+  assert.equal(findCoreSettlementNameTable(imported)?.title, "SETTLEMENT NAME");
+  assert.equal(findCoreSettlementTypeTable(imported)?.title, "TYPE");
 });
 
 test("supported Core parser structures NPC Qualities, Occupation matrix, and ancestry name columns", () => {

@@ -27,6 +27,7 @@ import {
   normalizeWorkspace,
   resolveGmScreenGroup,
 } from "./view-model.js";
+import { confirmGmDialog, waitForGmDialog } from "../libs/dialog-v2.js";
 
 const MODULE_ID = "mk-shadowdark";
 const APP_ID = "mk-shadowdark-gm-screen";
@@ -52,6 +53,7 @@ function procedureLabel(procedure) {
 }
 
 function dialogRoot(html) {
+  if (html?.form?.querySelector) return html.form;
   if (html?.querySelector) return html;
   if (html?.[0]?.querySelector) return html[0];
   return null;
@@ -125,31 +127,33 @@ async function actionChangeProcedure() {
     .map(state => `<option value="${state}" ${state === current ? "selected" : ""}>${procedureLabel(state)}</option>`)
     .join("");
 
-  const next = await Dialog.wait({
+  const next = await waitForGmDialog({
     title: "Group Procedure",
     content: `
-      <form class="mk-gm-procedure-dialog">
+      <div class="mk-gm-procedure-dialog">
         <p>Choose the canonical procedure for <strong>${group.name ?? "Group"}</strong>.</p>
         <div class="form-group">
           <label>Procedure</label>
           <select name="procedure">${options}</select>
         </div>
         <p class="hint">Changing procedure does not itself start a Rest, encounter, or Combat workflow.</p>
-      </form>
+      </div>
     `,
-    buttons: {
-      apply: {
+    buttons: [
+      {
+        action: "apply",
         icon: '<i class="fas fa-check"></i>',
         label: "Apply",
-        callback: html => dialogValue(html, '[name="procedure"]') ?? null,
+        default: true,
+        callback: (_event, button) => dialogValue(button, '[name="procedure"]') ?? null,
       },
-      cancel: {
+      {
+        action: "cancel",
         icon: '<i class="fas fa-times"></i>',
         label: "Cancel",
         callback: () => null,
       },
-    },
-    default: "apply",
+    ],
     close: () => null,
   });
 
@@ -172,40 +176,45 @@ async function actionTimeControls() {
   const procedure = getGroupProcedureState(group);
   const elapsed = getGroupElapsedTime(group, procedure);
   const turnSeconds = canonicalTurnSeconds(group, procedure);
-  const buttons = {};
+  const buttons = [];
 
   if (turnSeconds) {
-    buttons.turn = {
+    buttons.push({
+      action: "turn",
       icon: '<i class="fas fa-forward-step"></i>',
       label: `+1 Turn (${formatDuration(turnSeconds)})`,
       callback: () => ({ action: "turn" }),
-    };
+    });
   }
 
-  buttons.custom = {
+  buttons.push({
+    action: "custom",
     icon: '<i class="fas fa-clock"></i>',
     label: "Advance Custom",
-    callback: html => ({
+    default: !turnSeconds,
+    callback: (_event, button) => ({
       action: "custom",
-      amount: dialogValue(html, '[name="timeAmount"]'),
-      unit: dialogValue(html, '[name="timeUnit"]'),
+      amount: dialogValue(button, '[name="timeAmount"]'),
+      unit: dialogValue(button, '[name="timeUnit"]'),
     }),
-  };
-  buttons.reset = {
+  });
+  buttons.push({
+    action: "reset",
     icon: '<i class="fas fa-arrow-rotate-left"></i>',
     label: "Reset Timer",
     callback: () => ({ action: "reset" }),
-  };
-  buttons.cancel = {
+  });
+  buttons.push({
+    action: "cancel",
     icon: '<i class="fas fa-times"></i>',
     label: "Cancel",
     callback: () => null,
-  };
+  });
 
-  const choice = await Dialog.wait({
+  const choice = await waitForGmDialog({
     title: `${procedureLabel(procedure)} Time`,
     content: `
-      <form class="mk-gm-time-dialog">
+      <div class="mk-gm-time-dialog">
         <p><strong>${group.name ?? "Group"}</strong> · ${procedureLabel(procedure)} · elapsed <strong>${formatDuration(elapsed)}</strong>.</p>
         ${turnSeconds
           ? `<p>Canonical procedure turn: <strong>${formatDuration(turnSeconds)}</strong>.</p>`
@@ -222,22 +231,20 @@ async function actionTimeControls() {
           </div>
         </div>
         <p class="hint">Time advances through the canonical Group Time service and remains synchronized with Foundry world time.</p>
-      </form>
+      </div>
     `,
     buttons,
-    default: turnSeconds ? "turn" : "custom",
     close: () => null,
   });
 
   if (!choice) return null;
 
   if (choice.action === "reset") {
-    const confirmed = await Dialog.confirm({
+    const confirmed = await confirmGmDialog({
       title: `Reset ${procedureLabel(procedure)} Timer`,
       content: `<p>Reset the <strong>${procedureLabel(procedure)}</strong> elapsed timer for <strong>${group.name ?? "Group"}</strong> to zero?</p>`,
-      yes: () => true,
-      no: () => false,
-      defaultYes: false,
+      yes: { label: "Reset" },
+      no: { label: "Cancel", default: true },
     });
     if (!confirmed) return null;
 
@@ -297,12 +304,11 @@ async function actionResumeRest() {
   const group = await selectedGroup(this);
   if (!group) return null;
 
-  const confirmed = await Dialog.confirm({
+  const confirmed = await confirmGmDialog({
     title: "Resume Interrupted Rest",
     content: "<p>Confirm that the interruption has been resolved and continue the existing Group rest from its current turn?</p>",
-    yes: () => true,
-    no: () => false,
-    defaultYes: false,
+    yes: { label: "Continue" },
+    no: { label: "Cancel", default: true },
   });
   if (!confirmed) return null;
 

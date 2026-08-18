@@ -607,6 +607,132 @@
   color: #ddd;
 }
 
+/* ApplicationV2 dialogs render outside .mk-gm-screen, so they need their own theme scope. */
+.mk-gm-dialog {
+  --mk-gm-bg: #0b0c0d;
+  --mk-gm-panel: #141618;
+  --mk-gm-panel-2: #1b1e21;
+  --mk-gm-border: rgba(255, 255, 255, 0.16);
+  --mk-gm-text: #e2e2df;
+  --mk-gm-muted: #aeb3b6;
+  --mk-gm-accent: #b82f45;
+  color: var(--mk-gm-text);
+  color-scheme: dark;
+}
+
+.mk-gm-dialog .window-content {
+  padding: 12px;
+  overflow: auto;
+  background: var(--mk-gm-panel);
+  color: var(--mk-gm-text);
+}
+
+.mk-gm-dialog .mk-gm-create-document-form,
+.mk-gm-dialog .mk-gm-procedure-dialog,
+.mk-gm-dialog .mk-gm-time-dialog,
+.mk-gm-dialog .mk-gm-assignment-dialog,
+.mk-gm-dialog .mk-gm-watch-dialog,
+.mk-gm-dialog .mk-gm-rest-start-dialog {
+  display: grid;
+  gap: 10px;
+  margin: 0;
+}
+
+.mk-gm-dialog .form-group {
+  display: grid;
+  gap: 5px;
+  margin: 0;
+}
+
+.mk-gm-dialog .form-group > label,
+.mk-gm-dialog .mk-gm-data-list dt {
+  color: var(--mk-gm-muted);
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.mk-gm-dialog input,
+.mk-gm-dialog select,
+.mk-gm-dialog textarea {
+  border: 1px solid var(--mk-gm-border);
+  border-radius: 3px;
+  background: #0f1113;
+  color: var(--mk-gm-text);
+}
+
+.mk-gm-dialog input[type="text"],
+.mk-gm-dialog input[type="number"],
+.mk-gm-dialog select,
+.mk-gm-dialog textarea {
+  min-height: 30px;
+  padding: 5px 7px;
+}
+
+.mk-gm-dialog select option,
+.mk-gm-dialog select optgroup {
+  background: #141618;
+  color: var(--mk-gm-text);
+}
+
+.mk-gm-dialog .mk-gm-data-list {
+  display: grid;
+  gap: 1px;
+  margin: 0;
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.mk-gm-dialog .mk-gm-data-list > div {
+  display: grid;
+  grid-template-columns: minmax(145px, 0.9fr) minmax(0, 1.4fr);
+  gap: 10px;
+  padding: 7px 8px;
+  background: var(--mk-gm-panel-2);
+}
+
+.mk-gm-dialog .mk-gm-data-list dd {
+  margin: 0;
+  color: var(--mk-gm-text);
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.mk-gm-dialog .mk-gm-secondary,
+.mk-gm-dialog .notes,
+.mk-gm-dialog .hint {
+  margin: 0;
+  color: var(--mk-gm-muted);
+  font-size: 11px;
+  line-height: 1.35;
+}
+
+.mk-gm-dialog .dialog-buttons {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  padding: 8px 12px 12px;
+  border-top: 1px solid var(--mk-gm-border);
+  background: #101214;
+}
+
+.mk-gm-dialog .dialog-buttons button {
+  min-height: 30px;
+  border: 1px solid var(--mk-gm-border);
+  border-radius: 4px;
+  background: rgba(255, 255, 255, 0.07);
+  color: var(--mk-gm-text);
+}
+
+.mk-gm-dialog .dialog-buttons button:hover:not(:disabled) {
+  border-color: rgba(255, 255, 255, 0.34);
+  background: rgba(255, 255, 255, 0.14);
+}
+
+.mk-gm-dialog .mk-gm-alert {
+  margin-top: 0;
+}
+
 @media (max-width: 900px) {
   .mk-gm-screen-header {
     grid-template-columns: 1fr auto;

@@ -7,6 +7,7 @@ import {
 } from "../group-sheet/assignments.js";
 import { APP_ID } from "./gm-screen.js";
 import { resolveGmScreenGroup } from "./view-model.js";
+import { waitForGmDialog } from "../libs/dialog-v2.js";
 
 const MAX_WATCH_SLOTS = 8;
 
@@ -81,6 +82,7 @@ function orderRank(state, actorUuid, fallback) {
 }
 
 function dialogRoot(html) {
+  if (html?.form?.querySelector) return html.form;
   if (html?.querySelector) return html;
   if (html?.[0]?.querySelector) return html[0];
   return null;
@@ -111,7 +113,7 @@ function explorationDialogContent(state, party) {
   }).join("");
 
   return `
-    <form class="mk-gm-assignment-dialog">
+    <div class="mk-gm-assignment-dialog">
       <p class="notes">Set marching order and Front / Middle / Rear placement for the active party. Scout and Light Bearer are independent roles.</p>
       ${rows || '<p class="notes">No active party members.</p>'}
       <hr>
@@ -123,7 +125,7 @@ function explorationDialogContent(state, party) {
         <label>Light Bearer</label>
         <select name="lightBearer">${memberOptions(party, state?.exploration?.roles?.lightBearer)}</select>
       </div>
-    </form>
+    </div>
   `;
 }
 
@@ -175,22 +177,24 @@ async function openExplorationAssignmentsDialog(application, context) {
 
   const party = Array.isArray(context?.party) ? context.party : [];
   const state = getGroupAssignments(group);
-  const result = await Dialog.wait({
+  const result = await waitForGmDialog({
     title: "Marching Order & Exploration Roles",
     content: explorationDialogContent(state, party),
-    buttons: {
-      save: {
+    buttons: [
+      {
+        action: "save",
         icon: '<i class="fas fa-check"></i>',
         label: "Save Assignments",
-        callback: html => readExplorationDialog(html),
+        default: true,
+        callback: (_event, button) => readExplorationDialog(button.form),
       },
-      cancel: {
+      {
+        action: "cancel",
         icon: '<i class="fas fa-times"></i>',
         label: "Cancel",
         callback: () => null,
       },
-    },
-    default: "save",
+    ],
     close: () => null,
   });
 
@@ -235,10 +239,10 @@ function watchDialogContent(state, party) {
   }).join("");
 
   return `
-    <form class="mk-gm-watch-dialog">
+    <div class="mk-gm-watch-dialog">
       <p class="notes">Enable only the watch slots you want to use. Enabled slots are saved in top-to-bottom order.</p>
       ${rows}
-    </form>
+    </div>
   `;
 }
 
@@ -263,22 +267,24 @@ async function openCampWatchesDialog(application, context) {
 
   const party = Array.isArray(context?.party) ? context.party : [];
   const state = getGroupAssignments(group);
-  const result = await Dialog.wait({
+  const result = await waitForGmDialog({
     title: "Camp Watches",
     content: watchDialogContent(state, party),
-    buttons: {
-      save: {
+    buttons: [
+      {
+        action: "save",
         icon: '<i class="fas fa-check"></i>',
         label: "Save Watches",
-        callback: html => readWatchDialog(html),
+        default: true,
+        callback: (_event, button) => readWatchDialog(button.form),
       },
-      cancel: {
+      {
+        action: "cancel",
         icon: '<i class="fas fa-times"></i>',
         label: "Cancel",
         callback: () => null,
       },
-    },
-    default: "save",
+    ],
     close: () => null,
   });
 

@@ -1,3 +1,5 @@
+import { waitForGmDialog } from "../libs/dialog-v2.js";
+
 const SETTLEMENT_TYPES = Object.freeze({
   village: Object.freeze({
     id: "village",
@@ -138,6 +140,7 @@ function escapeHtml(value) {
 }
 
 function dialogRoot(html) {
+  if (html?.form?.querySelector) return html.form;
   if (html?.querySelector) return html;
   if (html?.[0]?.querySelector) return html[0];
   return null;
@@ -357,7 +360,7 @@ function defaultSettlementTypeForPoint(pointOfInterest) {
 function settlementOptionsDialogContent({ defaultType = "village" } = {}) {
   const typeKey = normalizeSettlementType(defaultType);
   return `
-    <form class="mk-gm-create-document-form mk-gm-settlement-options-form">
+    <div class="mk-gm-create-document-form mk-gm-settlement-options-form">
       <div class="form-group">
         <label>Settlement Type</label>
         <select name="settlementType">
@@ -372,38 +375,32 @@ function settlementOptionsDialogContent({ defaultType = "village" } = {}) {
         </select>
       </div>
       <p class="mk-gm-secondary">Shadowdark settlement generation records the district dice, but does not automate the physical dice-on-paper map layout.</p>
-    </form>
+    </div>
   `;
 }
 
 async function promptForSettlementOptions({ defaultType = "village" } = {}) {
-  const DialogClass = globalThis.Dialog;
-  if (!DialogClass?.wait) {
-    return {
-      type: normalizeSettlementType(defaultType),
-      alignmentMode: ALIGNMENT_MODE_OVERALL,
-    };
-  }
-
-  const result = await DialogClass.wait({
+  const result = await waitForGmDialog({
     title: "Expand Shadowdark Settlement",
     content: settlementOptionsDialogContent({ defaultType }),
-    buttons: {
-      generate: {
+    buttons: [
+      {
+        action: "generate",
         icon: '<i class="fas fa-city"></i>',
         label: "Generate",
-        callback: html => ({
-          type: normalizeSettlementType(dialogValue(html, "settlementType")),
-          alignmentMode: normalizeAlignmentMode(dialogValue(html, "alignmentMode")),
+        default: true,
+        callback: (_event, button) => ({
+          type: normalizeSettlementType(dialogValue(button, "settlementType")),
+          alignmentMode: normalizeAlignmentMode(dialogValue(button, "alignmentMode")),
         }),
       },
-      cancel: {
+      {
+        action: "cancel",
         icon: '<i class="fas fa-xmark"></i>',
         label: "Cancel",
         callback: () => null,
       },
-    },
-    default: "generate",
+    ],
     close: () => null,
   });
 
@@ -418,7 +415,7 @@ function settlementGeneratorDialogContent(settlement, originPoint = null) {
   const dieLabel = districtDieLabel(settlement);
 
   return `
-    <form class="mk-gm-create-document-form mk-gm-settlement-generator-form">
+    <div class="mk-gm-create-document-form mk-gm-settlement-generator-form">
       <div class="form-group">
         <label>Settlement Name</label>
         <input type="text" name="name" value="${escapeHtml(settlement.name)}" autofocus autocomplete="off">
@@ -447,7 +444,7 @@ function settlementGeneratorDialogContent(settlement, originPoint = null) {
           </section>
         `).join("")}
       </div>
-    </form>
+    </div>
   `;
 }
 
@@ -466,42 +463,43 @@ async function promptForShadowdarkSettlement({
     alignmentMode: options.alignmentMode,
   });
 
-  const DialogClass = globalThis.Dialog;
-  if (!DialogClass?.wait) return settlement;
-
   while (true) {
-    const result = await DialogClass.wait({
+    const result = await waitForGmDialog({
       title: "Shadowdark Settlement",
       content: settlementGeneratorDialogContent(settlement, originPoint),
-      buttons: {
-        create: {
+      buttons: [
+        {
+          action: "create",
           icon: '<i class="fas fa-plus"></i>',
           label: "Create",
-          callback: html => ({
+          default: true,
+          callback: (_event, button) => ({
             action: "create",
-            name: dialogValue(html, "name"),
+            name: dialogValue(button, "name"),
           }),
         },
-        rerollDistrict: {
+        {
+          action: "rerollDistrict",
           icon: '<i class="fas fa-building-circle-arrow-right"></i>',
           label: "Reroll District",
-          callback: html => ({
+          callback: (_event, button) => ({
             action: "rerollDistrict",
-            districtIndex: Number(dialogValue(html, "districtIndex")),
+            districtIndex: Number(dialogValue(button, "districtIndex")),
           }),
         },
-        rerollAll: {
+        {
+          action: "rerollAll",
           icon: '<i class="fas fa-dice"></i>',
           label: "Reroll Settlement",
           callback: () => ({ action: "rerollAll" }),
         },
-        cancel: {
+        {
+          action: "cancel",
           icon: '<i class="fas fa-xmark"></i>',
           label: "Cancel",
           callback: () => ({ action: "cancel" }),
         },
-      },
-      default: "create",
+      ],
       close: () => ({ action: "cancel" }),
     });
 

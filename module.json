@@ -2,7 +2,7 @@
   "id": "mk-shadowdark",
   "title": "MK-Shadowdark",
   "description": "Quality-of-life extras and expansions for the Shadowdark RPG system.",
-  "version": "1.9.13",
+  "version": "1.9.14",
   "compatibility": {
     "minimum": "13",
     "verified": "14"
@@ -30,6 +30,7 @@
     "scripts/paper-chat/paper-chat.js",
     "scripts/chat-style-editor/chat-style-editor.js",
     "scripts/libs/predefined-effects.js",
+    "scripts/libs/dialog-v2.js",
     "scripts/auto-damage/damage-traits.js",
     "scripts/auto-damage/auto-apply-damage.js",
     "scripts/character-sheet-tweaks/character-sheet-tweaks.js",

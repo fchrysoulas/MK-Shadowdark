@@ -5,6 +5,7 @@ import {
   readDialogForm,
   resolveUuid,
 } from "./helpers.js";
+import { waitForGmDialog } from "../libs/dialog-v2.js";
 
 const STAGING_SOURCE_FLAG = "encounterStagingSourceUuid";
 const STAGING_TOKEN_FLAG = "encounterStaging";
@@ -584,7 +585,7 @@ function stagingOptionsContent(data, availability, defaults) {
   const count = positiveInteger(defaults.count, data?.encounter?.count ?? 1);
   const distance = String(data?.distance?.label ?? "Unknown");
   return `
-    <form class="mk-sd-staging-options">
+    <div class="mk-sd-staging-options">
       <p class="notes">Stage the resolved encounter without rerolling it. Distance is a placement suggestion only; walls and tactical geometry are not interpreted.</p>
       <div class="form-group"><label>Encounter</label><div>${escapeHtml(data?.encounter?.label ?? "Unknown")} × ${escapeHtml(data?.encounter?.count ?? 1)}</div></div>
       <div class="form-group"><label>Resolved distance</label><div>${escapeHtml(distance)}</div></div>
@@ -614,7 +615,7 @@ function stagingOptionsContent(data, availability, defaults) {
       </div>
       <div class="form-group"><label>Use distance offset</label><input type="checkbox" name="useDistance" ${defaults.useDistance ? "checked" : ""}></div>
       <div class="form-group"><label>Add deployed tokens to Combat</label><input type="checkbox" name="addToCombat" ${defaults.addToCombat ? "checked" : ""}></div>
-    </form>
+    </div>
   `;
 }
 
@@ -701,62 +702,71 @@ function stagingPreviewContent(data, preview) {
 }
 
 async function chooseStagingOptions(data, defaults, availability) {
-  return Dialog.wait({
+  return waitForGmDialog({
     title: "Stage Encounter — Options",
     content: stagingOptionsContent(data, availability, defaults),
-    buttons: {
-      preview: {
+    buttons: [
+      {
+        action: "preview",
         icon: '<i class="fas fa-eye"></i>',
         label: "Preview",
-        callback: html => parseStagingOptions(html, data),
+        default: true,
+        callback: (_event, button) => parseStagingOptions(button.form, data),
       },
-      cancel: {
+      {
+        action: "cancel",
         icon: '<i class="fas fa-times"></i>',
         label: "Cancel",
         callback: () => null,
       },
-    },
-    default: "preview",
+    ],
     close: () => null,
-  }, { width: 560 });
+    position: { width: 560 },
+  });
 }
 
 async function confirmStagingPreview(data, preview) {
-  const buttons = {
-    back: {
+  const buttons = [
+    {
+      action: "back",
       icon: '<i class="fas fa-arrow-left"></i>',
       label: "Back",
       callback: () => "back",
     },
-  };
+  ];
 
   if (preview.canDeploy) {
-    buttons.deploy = {
+    buttons.push({
+      action: "deploy",
       icon: '<i class="fas fa-location-dot"></i>',
       label: "Deploy",
+      default: true,
       callback: () => "deploy",
-    };
+    });
   } else {
-    buttons.close = {
+    buttons.push({
+      action: "close",
       icon: '<i class="fas fa-check"></i>',
       label: "Close",
+      default: true,
       callback: () => "close",
-    };
+    });
   }
 
-  buttons.cancel = {
+  buttons.push({
+    action: "cancel",
     icon: '<i class="fas fa-times"></i>',
     label: "Cancel",
     callback: () => null,
-  };
+  });
 
-  return Dialog.wait({
+  return waitForGmDialog({
     title: `Stage Encounter — ${preview.canDeploy ? "Confirm Preview" : "Manual Preview"}`,
     content: stagingPreviewContent(data, preview),
     buttons,
-    default: preview.canDeploy ? "deploy" : "close",
     close: () => null,
-  }, { width: 620 });
+    position: { width: 620 },
+  });
 }
 
 async function openEncounterStagingDialog(data, {

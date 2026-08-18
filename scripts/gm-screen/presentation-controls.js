@@ -4,6 +4,7 @@ import {
   patchGmScreenPresentationPreferences,
   resetGmScreenPresentationPreferences,
 } from "./presentation-preferences.js";
+import { confirmGmDialog } from "../libs/dialog-v2.js";
 
 function gmScreenApplication(application) {
   return Boolean(
@@ -110,12 +111,11 @@ function bindPresentationButtons(application, root) {
   reset.addEventListener("click", async event => {
     event.preventDefault();
     event.stopPropagation();
-    const confirmed = await Dialog.confirm({
+    const confirmed = await confirmGmDialog({
       title: "Reset GM Screen Presentation",
       content: "<p>Reset the saved GM Screen workspace, selected Group, and party-rail presentation for this browser?</p>",
-      yes: () => true,
-      no: () => false,
-      defaultYes: false,
+      yes: { label: "Reset" },
+      no: { label: "Cancel", default: true },
     });
     if (!confirmed) return;
 

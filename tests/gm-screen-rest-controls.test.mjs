@@ -67,7 +67,7 @@ test("GM Screen begins and continues rest through canonical Group Rest services"
 test("interrupted rest requires explicit GM confirmation", () => {
   assert.match(controls, /Resume Interrupted Rest/);
   assert.match(controls, /Confirm that the interruption has been resolved/);
-  assert.match(controls, /defaultYes: false/);
+  assert.match(controls, /no: \{ label: "Cancel", default: true \}/);
 });
 
 test("GM Screen rest controls load after encounter and assignment controllers", () => {

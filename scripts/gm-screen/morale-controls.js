@@ -1,5 +1,6 @@
 import { PREDEFINED_EFFECT_KEYS } from "../libs/predefined-effects.js";
 import { APP_ID, refreshGmScreen } from "./gm-screen.js";
+import { confirmGmDialog, waitForGmDialog } from "../libs/dialog-v2.js";
 
 const MODULE_ID = "mk-shadowdark";
 const FLEEING_STATUS_ID = "mk-shadowdark-fleeing";
@@ -226,29 +227,27 @@ async function chooseLeader(view, combat) {
     return null;
   }
 
-  const value = await Dialog.wait({
+  const value = await waitForGmDialog({
     title: "Morale Leader",
     content: `
-      <form>
+      <div>
         <div class="form-group">
           <label>Leader</label>
           <select name="leader">${leaderOptions(view)}</select>
         </div>
         <p class="hint">Only one hostile morale leader is active at a time.</p>
-      </form>
+      </div>
     `,
-    buttons: {
-      set: {
+    buttons: [
+      {
+        action: "set",
         icon: '<i class="fas fa-crown"></i>',
         label: "Set Leader",
-        callback: html => html?.querySelector?.('[name="leader"]')?.value
-          ?? html?.[0]?.querySelector?.('[name="leader"]')?.value
-          ?? html?.find?.('[name="leader"]')?.val?.()
-          ?? null,
+        default: true,
+        callback: (_event, button) => button.form?.elements?.leader?.value ?? null,
       },
-      cancel: { icon: '<i class="fas fa-times"></i>', label: "Cancel", callback: () => null },
-    },
-    default: "set",
+      { action: "cancel", icon: '<i class="fas fa-times"></i>', label: "Cancel", callback: () => null },
+    ],
     close: () => null,
   });
   if (!value) return null;
@@ -278,12 +277,11 @@ async function evaluateMorale(combat) {
 async function resetMorale(combat) {
   const api = moraleApi();
   if (!api?.reset) return null;
-  const confirmed = await Dialog.confirm({
+  const confirmed = await confirmGmDialog({
     title: "Reset Morale State",
     content: "<p>Re-snapshot the hostile force for this Combat? Use this only for GM correction; it resets the morale threshold/check state.</p>",
-    yes: () => true,
-    no: () => false,
-    defaultYes: false,
+    yes: { label: "Reset" },
+    no: { label: "Cancel", default: true },
   });
   if (!confirmed) return null;
   return api.reset(combat);

@@ -29,6 +29,16 @@ function restoreGlobals(values) {
   }
 }
 
+function mockDialogV2(wait) {
+  globalThis.foundry = {
+    applications: {
+      api: {
+        DialogV2: { wait },
+      },
+    },
+  };
+}
+
 function randomSequence(values) {
   let index = 0;
   return () => values[index++ % values.length];
@@ -111,7 +121,7 @@ test("Location payload remains usable without generated content", () => {
 });
 
 test("Roll Again replaces the whole three-roll point of interest before creation", async () => {
-  const saved = saveGlobals("Dialog");
+  const saved = saveGlobals("foundry");
   const first = {
     descriptorRoll: 1,
     descriptor: "Crumbling",
@@ -137,7 +147,7 @@ test("Roll Again replaces the whole three-roll point of interest before creation
   ];
 
   try {
-    globalThis.Dialog = { wait: async () => responses.shift() };
+    mockDialogV2(async () => responses.shift());
     const result = await promptForShadowdarkLocation({
       rollPointOfInterest: () => (rollCalls++ === 0 ? first : second),
     });
@@ -153,13 +163,13 @@ test("Roll Again replaces the whole three-roll point of interest before creation
 });
 
 test("Create NPC writes through Foundry Actor implementation and opens the new sheet", async () => {
-  const saved = saveGlobals("game", "Dialog", "Actor", "ui");
+  const saved = saveGlobals("game", "foundry", "Actor", "ui");
   let createdData = null;
   let rendered = false;
 
   try {
     globalThis.game = { user: { isGM: true } };
-    globalThis.Dialog = { wait: async () => "Goblin Guide" };
+    mockDialogV2(async () => "Goblin Guide");
     globalThis.Actor = {
       implementation: {
         create: async data => {
@@ -179,7 +189,7 @@ test("Create NPC writes through Foundry Actor implementation and opens the new s
 });
 
 test("Create Location uses the current generated combination and opens the Journal", async () => {
-  const saved = saveGlobals("game", "Dialog", "JournalEntry", "CONST", "ui");
+  const saved = saveGlobals("game", "foundry", "JournalEntry", "CONST", "ui");
   let createdData = null;
   let rendered = false;
   const point = rollShadowdarkPointOfInterest({
@@ -188,7 +198,7 @@ test("Create Location uses the current generated combination and opens the Journ
 
   try {
     globalThis.game = { user: { isGM: true } };
-    globalThis.Dialog = { wait: async () => ({ action: "create", name: "Moonfall Ruin" }) };
+    mockDialogV2(async () => ({ action: "create", name: "Moonfall Ruin" }));
     globalThis.CONST = { JOURNAL_ENTRY_PAGE_FORMATS: { HTML: 1 } };
     globalThis.JournalEntry = {
       implementation: {
@@ -214,12 +224,12 @@ test("Create Location uses the current generated combination and opens the Journ
 });
 
 test("Cancelling a location generator creates nothing", async () => {
-  const saved = saveGlobals("game", "Dialog", "JournalEntry", "ui");
+  const saved = saveGlobals("game", "foundry", "JournalEntry", "ui");
   let createCalls = 0;
 
   try {
     globalThis.game = { user: { isGM: true } };
-    globalThis.Dialog = { wait: async () => ({ action: "cancel" }) };
+    mockDialogV2(async () => ({ action: "cancel" }));
     globalThis.JournalEntry = {
       implementation: {
         create: async () => {
@@ -239,12 +249,12 @@ test("Cancelling a location generator creates nothing", async () => {
 });
 
 test("Cancelling an NPC creation prompt creates nothing", async () => {
-  const saved = saveGlobals("game", "Dialog", "Actor", "ui");
+  const saved = saveGlobals("game", "foundry", "Actor", "ui");
   let createCalls = 0;
 
   try {
     globalThis.game = { user: { isGM: true } };
-    globalThis.Dialog = { wait: async () => null };
+    mockDialogV2(async () => null);
     globalThis.Actor = {
       implementation: {
         create: async () => {

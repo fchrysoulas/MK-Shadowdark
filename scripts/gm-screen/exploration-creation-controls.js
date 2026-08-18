@@ -5,6 +5,7 @@ import {
   isSettlementPoint,
   promptForShadowdarkSettlement,
 } from "./settlement-generator.js";
+import { waitForGmDialog } from "../libs/dialog-v2.js";
 
 const DEFAULT_NPC_NAME = "New NPC";
 const DEFAULT_LOCATION_NAME = "New Location";
@@ -101,6 +102,7 @@ function escapeHtml(value) {
 }
 
 function dialogRoot(html) {
+  if (html?.form?.querySelector) return html.form;
   if (html?.querySelector) return html;
   if (html?.[0]?.querySelector) return html[0];
   return null;
@@ -114,32 +116,31 @@ function dialogName(html) {
 }
 
 async function promptForName({ title, label, defaultName }) {
-  const DialogClass = globalThis.Dialog;
-  if (!DialogClass?.wait) return defaultName;
-
-  const result = await DialogClass.wait({
+  const result = await waitForGmDialog({
     title,
     content: `
-      <form class="mk-gm-create-document-form">
+      <div class="mk-gm-create-document-form">
         <div class="form-group">
           <label>${escapeHtml(label)}</label>
           <input type="text" name="name" value="${escapeHtml(defaultName)}" autofocus autocomplete="off">
         </div>
-      </form>
+      </div>
     `,
-    buttons: {
-      create: {
+    buttons: [
+      {
+        action: "create",
         icon: '<i class="fas fa-plus"></i>',
         label: "Create",
-        callback: html => dialogName(html),
+        default: true,
+        callback: (_event, button) => dialogName(button.form),
       },
-      cancel: {
+      {
+        action: "cancel",
         icon: '<i class="fas fa-xmark"></i>',
         label: "Cancel",
         callback: () => null,
       },
-    },
-    default: "create",
+    ],
     close: () => null,
   });
 
@@ -182,7 +183,7 @@ function rollShadowdarkPointOfInterest({ random = Math.random } = {}) {
 
 function locationGeneratorDialogContent(pointOfInterest) {
   return `
-    <form class="mk-gm-create-document-form mk-gm-location-generator-form">
+    <div class="mk-gm-create-document-form mk-gm-location-generator-form">
       <div class="form-group">
         <label>Location Name</label>
         <input type="text" name="name" value="${escapeHtml(pointOfInterest.suggestedName)}" autofocus autocomplete="off">
@@ -194,62 +195,58 @@ function locationGeneratorDialogContent(pointOfInterest) {
         <div><dt>Feature · d20 ${pointOfInterest.featureRoll}</dt><dd>${escapeHtml(pointOfInterest.feature)}</dd></div>
       </dl>
       ${isSettlementPoint(pointOfInterest) ? '<p class="mk-gm-secondary"><i class="fas fa-city"></i> This result can be expanded with the core Shadowdark settlement generator.</p>' : ""}
-    </form>
+    </div>
   `;
 }
 
 async function promptForShadowdarkLocation({
   rollPointOfInterest = rollShadowdarkPointOfInterest,
-} = {}) {
+  } = {}) {
   let pointOfInterest = rollPointOfInterest();
-  const DialogClass = globalThis.Dialog;
-  if (!DialogClass?.wait) {
-    return {
-      ...pointOfInterest,
-      mode: "location",
-      name: pointOfInterest.suggestedName,
-    };
-  }
 
   while (true) {
-    const buttons = {
-      create: {
+    const buttons = [
+      {
+        action: "create",
         icon: '<i class="fas fa-plus"></i>',
         label: "Create",
-        callback: html => ({
+        default: true,
+        callback: (_event, button) => ({
           action: "create",
-          name: dialogName(html),
+          name: dialogName(button.form),
         }),
       },
-    };
+    ];
 
     if (isSettlementPoint(pointOfInterest)) {
-      buttons.expand = {
+      buttons.push({
+        action: "expand",
         icon: '<i class="fas fa-city"></i>',
         label: "Expand Settlement",
-        callback: html => ({
+        callback: (_event, button) => ({
           action: "expand",
-          name: dialogName(html),
+          name: dialogName(button.form),
         }),
-      };
+      });
     }
 
-    buttons.reroll = {
+    buttons.push({
+      action: "reroll",
       icon: '<i class="fas fa-dice-d20"></i>',
       label: "Roll Again",
       callback: () => ({ action: "reroll" }),
-    };
-    buttons.cancel = {
+    });
+    buttons.push({
+      action: "cancel",
       icon: '<i class="fas fa-xmark"></i>',
       label: "Cancel",
       callback: () => ({ action: "cancel" }),
-    };
+    });
 
-    const result = await DialogClass.wait({
+    const result = await waitForGmDialog({
       title: "Create Shadowdark Location",
       content: locationGeneratorDialogContent(pointOfInterest),
       buttons,
-      default: "create",
       close: () => ({ action: "cancel" }),
     });
 

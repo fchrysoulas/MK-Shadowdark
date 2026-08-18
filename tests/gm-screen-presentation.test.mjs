@@ -57,7 +57,7 @@ test("GM Screen has explicit collapse and reset presentation controls", () => {
   assert.match(controls, /resetGmScreenPresentationPreferences\(\)/);
   assert.match(controls, /application\.workspace = "overview"/);
   assert.match(controls, /application\.partyRailCollapsed = false/);
-  assert.match(controls, /defaultYes: false/);
+  assert.match(controls, /no: \{ label: "Cancel", default: true \}/);
   assert.match(stylesheet, /is-party-rail-collapsed/);
 });
 

@@ -21,6 +21,7 @@ import {
   readDialogForm,
   resolveUuid,
 } from "../encounter-engine/helpers.js";
+import { waitForGmDialog } from "../libs/dialog-v2.js";
 
 const DEFAULT_EXPLORATION_TURN_SECONDS = 360;
 const GROUP_EXPLORATION_ENCOUNTER_HOOK = "mkShadowdarkGroupExplorationEncounter";
@@ -264,7 +265,7 @@ async function openExplorationEncounterContextDialog(actor) {
   `).join("");
 
   const content = `
-    <form class="mk-group-encounter-context-dialog">
+    <div class="mk-group-encounter-context-dialog">
       <p class="notes">Encounter cadence is measured in exploration turns. The default profile uses ${DEFAULT_EXPLORATION_TURN_SECONDS / 60} minutes per turn.</p>
       <div class="form-group"><label>Profile</label><select name="profileId">${profileOptions}</select></div>
       <div class="form-group"><label>Terrain</label><select name="terrain">${terrainOptions}</select></div>
@@ -282,18 +283,20 @@ async function openExplorationEncounterContextDialog(actor) {
         <select name="tableUuid">${renderGroupedOptions(tables, sceneContext.tableUuid)}</select>
       </div>
       <p class="hint">Current profile: ${escapeHtml(selectedProfile?.name ?? sceneContext.profileId)}. Changing encounter context starts the new turn cadence from the Group's current exploration progress.</p>
-    </form>
+    </div>
   `;
 
-  return Dialog.wait({
+  return waitForGmDialog({
     title: "Group Exploration Encounter Context",
     content,
-    buttons: {
-      save: {
+    buttons: [
+      {
+        action: "save",
         icon: '<i class="fas fa-save"></i>',
         label: "Save",
-        callback: async html => {
-          const form = readDialogForm(html);
+        default: true,
+        callback: async (_event, button) => {
+          const form = readDialogForm(button.form);
           const result = await setSceneEnvironmentContext({
             profileId: String(form.profileId ?? sceneContext.profileId),
             terrain: String(form.terrain ?? sceneContext.terrain),
@@ -305,15 +308,16 @@ async function openExplorationEncounterContextDialog(actor) {
           return result;
         },
       },
-      cancel: {
+      {
+        action: "cancel",
         icon: '<i class="fas fa-times"></i>',
         label: "Cancel",
         callback: () => null,
       },
-    },
-    default: "save",
+    ],
     close: () => null,
-  }, { width: 580 });
+    position: { width: 580 },
+  });
 }
 
 async function preflightEncounterTable(context) {

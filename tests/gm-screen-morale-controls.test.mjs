@@ -43,7 +43,7 @@ test("GM Screen morale workspace exposes force, leader, immunity, Fleeing, and r
 test("GM Screen morale reset requires confirmation", () => {
   assert.match(controls, /Reset Morale State/);
   assert.match(controls, /Re-snapshot the hostile force/);
-  assert.match(controls, /defaultYes: false/);
+  assert.match(controls, /no: \{ label: "Cancel", default: true \}/);
 });
 
 test("GM Screen morale controller refreshes on Combat token flag changes", () => {

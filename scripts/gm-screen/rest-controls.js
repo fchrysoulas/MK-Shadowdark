@@ -10,6 +10,7 @@ import {
 import { getRestMode } from "../libs/resting.js";
 import { APP_ID } from "./gm-screen.js";
 import { resolveGmScreenGroup } from "./view-model.js";
+import { confirmGmDialog, waitForGmDialog } from "../libs/dialog-v2.js";
 
 function gmScreenApplication(application) {
   return Boolean(
@@ -62,10 +63,10 @@ async function promptBeginRest(group, party) {
   const watches = watchSummary(group);
   const mode = getRestMode();
 
-  const rationInput = await Dialog.wait({
+  const rationInput = await waitForGmDialog({
     title: "Rest Active Party",
     content: `
-      <form class="mk-gm-rest-start-dialog">
+      <div class="mk-gm-rest-start-dialog">
         <p><strong>${participants.length}</strong> active party member${participants.length === 1 ? "" : "s"}; <strong>${availableRations}</strong> tracked ration${availableRations === 1 ? "" : "s"}.</p>
         <p>Rest duration: <strong>${REST_TOTAL_TURNS} turns / ${REST_TOTAL_TURNS} hours</strong>. Required encounter checks in the current danger: <strong>${state.requiredChecks}</strong>.</p>
         <p>Camp watches: <strong>${watches.slots}</strong> slot${watches.slots === 1 ? "" : "s"}, <strong>${watches.members}</strong> assigned member${watches.members === 1 ? "" : "s"}.</p>
@@ -75,24 +76,23 @@ async function promptBeginRest(group, party) {
           <input type="number" name="rations" value="${Math.min(participants.length, availableRations)}" min="0" max="${availableRations}" step="1" required>
         </div>
         <p class="hint">Rations and rest benefits are applied only after all required encounter checks complete without an unresolved interruption.</p>
-      </form>
+      </div>
     `,
-    buttons: {
-      rest: {
+    buttons: [
+      {
+        action: "rest",
         icon: '<i class="fas fa-bed"></i>',
         label: "Begin Rest",
-        callback: html => html?.querySelector?.('[name="rations"]')?.value
-          ?? html?.[0]?.querySelector?.('[name="rations"]')?.value
-          ?? html?.find?.('[name="rations"]')?.val?.()
-          ?? null,
+        default: true,
+        callback: (_event, button) => button.form?.elements?.rations?.value ?? null,
       },
-      cancel: {
+      {
+        action: "cancel",
         icon: '<i class="fas fa-times"></i>',
         label: "Cancel",
         callback: () => null,
       },
-    },
-    default: "rest",
+    ],
     close: () => null,
   });
 
@@ -113,12 +113,11 @@ async function promptBeginRest(group, party) {
 
 async function continueRest(group, state) {
   if (state.workflow.status === "interrupted") {
-    const confirmed = await Dialog.confirm({
+    const confirmed = await confirmGmDialog({
       title: "Resume Interrupted Rest",
       content: "<p>Confirm that the interruption has been resolved and continue the same rest from its current resting turn?</p>",
-      yes: () => true,
-      no: () => false,
-      defaultYes: false,
+      yes: { label: "Continue" },
+      no: { label: "Cancel", default: true },
     });
     if (!confirmed) return null;
   }

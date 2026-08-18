@@ -1,5 +1,6 @@
 import { MODULE_ID } from "./constants.js";
 import { isGroupActor, resolveActorFromUuid } from "./actors.js";
+import { waitForGmDialog } from "../libs/dialog-v2.js";
 
 const STATUS_SEVERITIES = Object.freeze(["normal", "attention", "critical"]);
 const WOUND_LEVELS = Object.freeze(["ok", "wound", "critical", "destroyed"]);
@@ -331,19 +332,22 @@ async function openGroupMemberStatus(actorOrUuid) {
   }
 
   const status = buildGroupMemberStatus(actor);
-  return Dialog.wait({
+  return waitForGmDialog({
     title: `GM Status — ${status.actorName}`,
     content: renderGroupMemberStatus(status),
-    buttons: {
-      close: {
+    buttons: [
+      {
+        action: "close",
         icon: '<i class="fas fa-check"></i>',
         label: "Close",
+        default: true,
         callback: () => status,
       },
-    },
-    default: "close",
+    ],
     close: () => status,
-  }, { width: 620, resizable: true });
+    position: { width: 620 },
+    window: { resizable: true },
+  });
 }
 
 function getRootElement(html) {

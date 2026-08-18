@@ -2,6 +2,7 @@ import {
   parseSourceTables,
   parseWesternMarkdownTables,
 } from "./parser.js";
+import { structureCoreDenseTables } from "./core-structured-tables.js";
 
 const CURSED_SCROLL_4_BOOK = Object.freeze({
   id: "cursed-scroll-4-river-of-night-v1-2",
@@ -11,6 +12,7 @@ const CURSED_SCROLL_4_BOOK = Object.freeze({
 });
 
 const WESTERN_BOOK_ID = "western-reaches-player-guide-v1";
+const CORE_BOOK_ID = "shadowdark-core-v4.9";
 
 function cleanText(value) {
   return String(value ?? "").trim();
@@ -42,19 +44,29 @@ function parseCursedScroll4Tables(text) {
   return parseWesternMarkdownTables(text).map(remapCursedScrollTable);
 }
 
+function rebuildWarnings(tables = []) {
+  return tables.flatMap(table => (
+    (table.warnings ?? []).map(warning => `${table.name}: ${warning}`)
+  ));
+}
+
 function parseSupportedSourceTables(text, { filename = "" } = {}) {
   if (!isCursedScroll4Source(text, filename)) {
-    return parseSourceTables(text, { filename });
+    const parsed = parseSourceTables(text, { filename });
+    if (parsed.book?.id !== CORE_BOOK_ID) return parsed;
+    const tables = structureCoreDenseTables(parsed.tables);
+    return {
+      ...parsed,
+      tables,
+      warnings: rebuildWarnings(tables),
+    };
   }
 
   const tables = parseCursedScroll4Tables(text);
-  const warnings = tables.flatMap(table => (
-    (table.warnings ?? []).map(warning => `${table.name}: ${warning}`)
-  ));
   return {
     book: CURSED_SCROLL_4_BOOK,
     tables,
-    warnings,
+    warnings: rebuildWarnings(tables),
   };
 }
 
@@ -63,5 +75,6 @@ export {
   isCursedScroll4Source,
   remapCursedScrollTable,
   parseCursedScroll4Tables,
+  rebuildWarnings,
   parseSupportedSourceTables,
 };

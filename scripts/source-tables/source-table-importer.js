@@ -1,7 +1,5 @@
-import {
-  SOURCE_BOOKS,
-  parseSourceTables,
-} from "./parser.js";
+import { SOURCE_BOOKS } from "./parser.js";
+import { parseSupportedSourceTables } from "./source-parser.js";
 
 const MODULE_ID = "mk-shadowdark";
 const ROOT_FOLDER_NAME = "MK Shadowdark Source Tables";
@@ -36,9 +34,9 @@ function runtimeDefaults() {
   };
 }
 
-function sourceFolderName(bookId) {
+function sourceFolderName(bookId, fallbackTitle = "") {
   const book = Object.values(SOURCE_BOOKS).find(candidate => candidate.id === bookId);
-  return book?.title ?? bookId;
+  return book?.title ?? String(fallbackTitle || bookId);
 }
 
 function collectionValues(collection) {
@@ -206,7 +204,7 @@ async function importParsedSources(parsedSources, runtime = runtimeDefaults()) {
       continue;
     }
     const sourceFolder = await ensureRollTableFolder(
-      sourceFolderName(parsed.book.id),
+      sourceFolderName(parsed.book.id, parsed.book.title),
       root?.id ?? root?._id ?? null,
       runtime,
     );
@@ -229,7 +227,7 @@ async function readSourceFiles(files) {
       continue;
     }
     const text = await file.text();
-    const parsed = parseSourceTables(text, { filename: file.name ?? "" });
+    const parsed = parseSupportedSourceTables(text, { filename: file.name ?? "" });
     parsed.filename = file.name ?? "";
     parsedSources.push(parsed);
     warnings.push(...parsed.warnings);
@@ -245,7 +243,7 @@ function filePickerContent() {
         <label>Source Markdown</label>
         <input type="file" name="sourceFiles" accept=".md,text/markdown,text/plain" multiple>
       </div>
-      <p class="hint">Supported: Shadowdark RPG Core v4.9 and Player's Guide to the Western Reaches V1.</p>
+      <p class="hint">Supported: Shadowdark RPG Core v4.9, Player's Guide to the Western Reaches V1, and Cursed Scroll 4: River of Night V1-2.</p>
     </form>
   `;
 }
@@ -357,7 +355,7 @@ function exposeSourceTableApi() {
   if (!mod) return null;
   mod.api = mod.api ?? {};
   mod.api.sourceTables = {
-    parseSource: parseSourceTables,
+    parseSource: parseSupportedSourceTables,
     readFiles: readSourceFiles,
     importParsedSources,
     openImporter: openSourceTableImporter,

@@ -3,16 +3,12 @@ import fs from "node:fs";
 import test from "node:test";
 
 import {
-  SHADOWDARK_POI_DESCRIPTORS,
-  SHADOWDARK_POI_FEATURES,
-  SHADOWDARK_POI_LOCATIONS,
   buildLocationDocumentData,
   buildNpcDocumentData,
   createExplorationLocation,
   createExplorationNpc,
   pointOfInterestSuggestedName,
   promptForShadowdarkLocation,
-  rollShadowdarkPointOfInterest,
 } from "../scripts/gm-screen/exploration-creation-controls.js";
 
 const runtime = fs.readFileSync(new URL("../scripts/gm-screen/exploration-creation-controls.js", import.meta.url), "utf8");
@@ -39,9 +35,23 @@ function mockDialogV2(wait) {
   };
 }
 
-function randomSequence(values) {
-  let index = 0;
-  return () => values[index++ % values.length];
+function syntheticPoint(overrides = {}) {
+  const point = {
+    descriptorRoll: 8,
+    descriptor: "Mossy",
+    locationRoll: 7,
+    location: "Shrine",
+    featureRoll: 9,
+    feature: "Unstable",
+    source: {
+      bookTitle: "Owned Synthetic Source",
+      pages: [27],
+      tableName: "Synthetic Points",
+    },
+    ...overrides,
+  };
+  point.suggestedName = pointOfInterestSuggestedName(point);
+  return point;
 }
 
 test("NPC creation payload uses the native Shadowdark NPC actor type", () => {
@@ -52,65 +62,30 @@ test("NPC creation payload uses the native Shadowdark NPC actor type", () => {
   assert.equal(buildNpcDocumentData("   ").name, "New NPC");
 });
 
-test("Shadowdark point of interest tables match the official 20-result columns", () => {
-  assert.deepEqual(SHADOWDARK_POI_DESCRIPTORS, [
-    "Crumbling", "Fortified", "New", "Overgrown", "Destroyed",
-    "Pristine", "Unnatural", "Haunted", "Infested", "Ancient",
-    "Primitive", "Illusory", "Occupied", "Abandoned", "Cursed",
-    "Temporary", "Disguised", "Enchanted", "Protected", "Benevolent",
-  ]);
-  assert.deepEqual(SHADOWDARK_POI_LOCATIONS, [
-    "Monster nest", "Cave", "Sinkhole", "Pond", "Grove",
-    "Rock formation", "Ruin", "Grave site", "Treasure cache", "Monument",
-    "Trap", "Dwelling", "Camp", "Holy site", "Tower",
-    "Keep", "Temple", "Castle", "Village", "City",
-  ]);
-  assert.deepEqual(SHADOWDARK_POI_FEATURES, [
-    "Magical hazards", "Rival adventuring party", "Recent cataclysm", "Underground tunnels", "Dangerous terrain",
-    "Unusual flora or fauna", "Strange weather", "Abundant resources", "Changes at night", "Unusual material",
-    "Hostages", "From another realm", "Tiny in size", "Shifting terrain", "Time flows strangely",
-    "Unusual shape", "Moves locations", "Devoid of resources", "Massive in size", "Home of a minor deity",
-  ]);
+test("point of interest suggested name is built from source-driven Descriptor and Location", () => {
+  assert.equal(pointOfInterestSuggestedName(syntheticPoint()), "Mossy Shrine");
 });
 
-test("Point of interest rolls Descriptor, Location, and Feature independently", () => {
-  const point = rollShadowdarkPointOfInterest({
-    random: randomSequence([0.35, 0.30, 0.40]),
-  });
-
-  assert.deepEqual(point, {
-    descriptorRoll: 8,
-    descriptor: "Haunted",
-    locationRoll: 7,
-    location: "Ruin",
-    featureRoll: 9,
-    feature: "Changes at night",
-    suggestedName: "Haunted Ruin",
-  });
-  assert.equal(pointOfInterestSuggestedName(point), "Haunted Ruin");
-});
-
-test("Location creation payload records the generated point of interest in an editable Journal page", () => {
-  const point = rollShadowdarkPointOfInterest({
-    random: randomSequence([0.35, 0.30, 0.40]),
-  });
-  const data = buildLocationDocumentData("Haunted Ruin", {
+test("Location creation payload records source-driven rolls in an editable Journal page", () => {
+  const point = syntheticPoint();
+  const data = buildLocationDocumentData("Mossy Shrine", {
     htmlFormat: 1,
     pointOfInterest: point,
   });
 
-  assert.equal(data.name, "Haunted Ruin");
+  assert.equal(data.name, "Mossy Shrine");
   assert.equal(data.pages.length, 1);
   assert.equal(data.pages[0].name, "Location");
   assert.equal(data.pages[0].type, "text");
   assert.equal(data.pages[0].text.format, 1);
-  assert.match(data.pages[0].text.content, /Haunted Ruin/);
+  assert.match(data.pages[0].text.content, /Mossy Shrine/);
+  assert.match(data.pages[0].text.content, /Owned Synthetic Source/);
   assert.match(data.pages[0].text.content, /d20 8/);
-  assert.match(data.pages[0].text.content, /Haunted/);
+  assert.match(data.pages[0].text.content, /Mossy/);
   assert.match(data.pages[0].text.content, /d20 7/);
-  assert.match(data.pages[0].text.content, /Ruin/);
+  assert.match(data.pages[0].text.content, /Shrine/);
   assert.match(data.pages[0].text.content, /d20 9/);
-  assert.match(data.pages[0].text.content, /Changes at night/);
+  assert.match(data.pages[0].text.content, /Unstable/);
   assert.match(data.pages[0].text.content, /GM Notes/);
 });
 
@@ -120,46 +95,53 @@ test("Location payload remains usable without generated content", () => {
   assert.equal(data.pages[0].text.content, "");
 });
 
-test("Roll Again replaces the whole three-roll point of interest before creation", async () => {
+test("Roll Again awaits and replaces the whole source-driven point of interest", async () => {
   const saved = saveGlobals("foundry");
-  const first = {
+  const first = syntheticPoint({
     descriptorRoll: 1,
-    descriptor: "Crumbling",
+    descriptor: "First",
     locationRoll: 1,
-    location: "Monster nest",
+    location: "Place",
     featureRoll: 1,
-    feature: "Magical hazards",
-    suggestedName: "Crumbling Monster Nest",
-  };
-  const second = {
+    feature: "Feature One",
+  });
+  const second = syntheticPoint({
     descriptorRoll: 20,
-    descriptor: "Benevolent",
+    descriptor: "Second",
     locationRoll: 20,
     location: "City",
     featureRoll: 20,
-    feature: "Home of a minor deity",
-    suggestedName: "Benevolent City",
-  };
+    feature: "Feature Two",
+  });
+  first.suggestedName = pointOfInterestSuggestedName(first);
+  second.suggestedName = pointOfInterestSuggestedName(second);
   let rollCalls = 0;
   const responses = [
     { action: "reroll" },
-    { action: "create", name: "The Kindly City" },
+    { action: "create", name: "The Second City" },
   ];
 
   try {
     mockDialogV2(async () => responses.shift());
     const result = await promptForShadowdarkLocation({
-      rollPointOfInterest: () => (rollCalls++ === 0 ? first : second),
+      rollPointOfInterest: async () => (rollCalls++ === 0 ? first : second),
     });
 
     assert.equal(rollCalls, 2);
-    assert.equal(result.name, "The Kindly City");
-    assert.equal(result.descriptor, "Benevolent");
+    assert.equal(result.name, "The Second City");
+    assert.equal(result.descriptor, "Second");
     assert.equal(result.location, "City");
-    assert.equal(result.feature, "Home of a minor deity");
+    assert.equal(result.feature, "Feature Two");
   } finally {
     restoreGlobals(saved);
   }
+});
+
+test("missing source is reported distinctly from user cancellation", async () => {
+  const result = await promptForShadowdarkLocation({
+    rollPointOfInterest: async () => null,
+  });
+  assert.deepEqual(result, { mode: "missing-source" });
 });
 
 test("Create NPC writes through Foundry Actor implementation and opens the new sheet", async () => {
@@ -188,17 +170,15 @@ test("Create NPC writes through Foundry Actor implementation and opens the new s
   }
 });
 
-test("Create Location uses the current generated combination and opens the Journal", async () => {
+test("Create Location uses the current imported combination and opens the Journal", async () => {
   const saved = saveGlobals("game", "foundry", "JournalEntry", "CONST", "ui");
   let createdData = null;
   let rendered = false;
-  const point = rollShadowdarkPointOfInterest({
-    random: randomSequence([0.35, 0.30, 0.40]),
-  });
+  const point = syntheticPoint();
 
   try {
     globalThis.game = { user: { isGM: true } };
-    mockDialogV2(async () => ({ action: "create", name: "Moonfall Ruin" }));
+    mockDialogV2(async () => ({ action: "create", name: "Moonfall Shrine" }));
     globalThis.CONST = { JOURNAL_ENTRY_PAGE_FORMATS: { HTML: 1 } };
     globalThis.JournalEntry = {
       implementation: {
@@ -210,14 +190,80 @@ test("Create Location uses the current generated combination and opens the Journ
     };
     globalThis.ui = { notifications: {} };
 
-    await createExplorationLocation({ rollPointOfInterest: () => point });
-    assert.equal(createdData.name, "Moonfall Ruin");
+    await createExplorationLocation({ rollPointOfInterest: async () => point });
+    assert.equal(createdData.name, "Moonfall Shrine");
     assert.equal(createdData.pages[0].type, "text");
     assert.equal(createdData.pages[0].text.format, 1);
-    assert.match(createdData.pages[0].text.content, /Haunted/);
-    assert.match(createdData.pages[0].text.content, /Ruin/);
-    assert.match(createdData.pages[0].text.content, /Changes at night/);
+    assert.match(createdData.pages[0].text.content, /Mossy/);
+    assert.match(createdData.pages[0].text.content, /Shrine/);
+    assert.match(createdData.pages[0].text.content, /Unstable/);
     assert.equal(rendered, true);
+  } finally {
+    restoreGlobals(saved);
+  }
+});
+
+test("missing Points of Interest source can create a blank Location without source data", async () => {
+  const saved = saveGlobals("game", "foundry", "JournalEntry", "CONST", "ui");
+  let createdData = null;
+  const responses = ["Blank Waystation"];
+
+  try {
+    globalThis.game = { user: { isGM: true } };
+    mockDialogV2(async () => responses.shift());
+    globalThis.CONST = { JOURNAL_ENTRY_PAGE_FORMATS: { HTML: 1 } };
+    globalThis.JournalEntry = {
+      implementation: {
+        create: async data => {
+          createdData = data;
+          return { sheet: { render() {} } };
+        },
+      },
+    };
+    globalThis.ui = { notifications: {} };
+
+    await createExplorationLocation({
+      rollPointOfInterest: async () => null,
+      promptMissingSource: async () => "blank",
+    });
+
+    assert.equal(createdData.name, "Blank Waystation");
+    assert.equal(createdData.pages[0].text.content, "");
+  } finally {
+    restoreGlobals(saved);
+  }
+});
+
+test("Import / Update retries source-driven Location generation after importing", async () => {
+  const saved = saveGlobals("game", "foundry", "JournalEntry", "CONST", "ui");
+  let rolls = 0;
+  let imports = 0;
+  let createdData = null;
+  const point = syntheticPoint();
+
+  try {
+    globalThis.game = { user: { isGM: true } };
+    mockDialogV2(async () => ({ action: "create", name: "Imported Shrine" }));
+    globalThis.CONST = { JOURNAL_ENTRY_PAGE_FORMATS: { HTML: 1 } };
+    globalThis.JournalEntry = {
+      implementation: {
+        create: async data => {
+          createdData = data;
+          return { sheet: { render() {} } };
+        },
+      },
+    };
+    globalThis.ui = { notifications: {} };
+
+    await createExplorationLocation({
+      rollPointOfInterest: async () => (++rolls === 1 ? null : point),
+      promptMissingSource: async () => "import",
+      importSources: async () => { imports += 1; },
+    });
+
+    assert.equal(imports, 1);
+    assert.equal(rolls, 2);
+    assert.equal(createdData.name, "Imported Shrine");
   } finally {
     restoreGlobals(saved);
   }
@@ -240,7 +286,9 @@ test("Cancelling a location generator creates nothing", async () => {
     };
     globalThis.ui = { notifications: {} };
 
-    const result = await createExplorationLocation();
+    const result = await createExplorationLocation({
+      rollPointOfInterest: async () => syntheticPoint(),
+    });
     assert.equal(result, null);
     assert.equal(createCalls, 0);
   } finally {
@@ -281,6 +329,14 @@ test("Exploration creation buttons are GM-only but do not require a selected Gro
   assert.doesNotMatch(runtime, /resolveGmScreenGroup/);
   assert.doesNotMatch(runtime, /groupActorUuid/);
   assert.doesNotMatch(runtime, /setFlag\s*\(/);
+});
+
+test("Create Location no longer embeds verbatim Points of Interest arrays", () => {
+  assert.doesNotMatch(runtime, /SHADOWDARK_POI_DESCRIPTORS/);
+  assert.doesNotMatch(runtime, /SHADOWDARK_POI_LOCATIONS/);
+  assert.doesNotMatch(runtime, /SHADOWDARK_POI_FEATURES/);
+  assert.match(runtime, /rollShadowdarkPointOfInterestFromSource/);
+  assert.match(runtime, /Import \/ Update Source Tables/);
 });
 
 test("Exploration creation controller remains loaded after presentation controls", () => {

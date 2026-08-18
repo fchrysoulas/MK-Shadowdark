@@ -5,80 +5,14 @@ import {
   isSettlementPoint,
   promptForShadowdarkSettlement,
 } from "./settlement-generator.js";
+import {
+  rollShadowdarkPointOfInterestFromSource,
+} from "./location-source-table.js";
 import { waitForGmDialog } from "../libs/dialog-v2.js";
 
 const DEFAULT_NPC_NAME = "New NPC";
 const DEFAULT_LOCATION_NAME = "New Location";
 const LOCATION_PAGE_NAME = "Location";
-
-const SHADOWDARK_POI_DESCRIPTORS = Object.freeze([
-  "Crumbling",
-  "Fortified",
-  "New",
-  "Overgrown",
-  "Destroyed",
-  "Pristine",
-  "Unnatural",
-  "Haunted",
-  "Infested",
-  "Ancient",
-  "Primitive",
-  "Illusory",
-  "Occupied",
-  "Abandoned",
-  "Cursed",
-  "Temporary",
-  "Disguised",
-  "Enchanted",
-  "Protected",
-  "Benevolent",
-]);
-
-const SHADOWDARK_POI_LOCATIONS = Object.freeze([
-  "Monster nest",
-  "Cave",
-  "Sinkhole",
-  "Pond",
-  "Grove",
-  "Rock formation",
-  "Ruin",
-  "Grave site",
-  "Treasure cache",
-  "Monument",
-  "Trap",
-  "Dwelling",
-  "Camp",
-  "Holy site",
-  "Tower",
-  "Keep",
-  "Temple",
-  "Castle",
-  "Village",
-  "City",
-]);
-
-const SHADOWDARK_POI_FEATURES = Object.freeze([
-  "Magical hazards",
-  "Rival adventuring party",
-  "Recent cataclysm",
-  "Underground tunnels",
-  "Dangerous terrain",
-  "Unusual flora or fauna",
-  "Strange weather",
-  "Abundant resources",
-  "Changes at night",
-  "Unusual material",
-  "Hostages",
-  "From another realm",
-  "Tiny in size",
-  "Shifting terrain",
-  "Time flows strangely",
-  "Unusual shape",
-  "Moves locations",
-  "Devoid of resources",
-  "Massive in size",
-  "Home of a minor deity",
-]);
 
 function gmScreenApplication(application) {
   return Boolean(
@@ -148,12 +82,6 @@ async function promptForName({ title, label, defaultName }) {
   return String(result).trim() || defaultName;
 }
 
-function rollD20(random = Math.random) {
-  const rolled = Number(random());
-  const bounded = Number.isFinite(rolled) ? Math.min(Math.max(rolled, 0), 0.999999999999) : 0;
-  return Math.floor(bounded * 20) + 1;
-}
-
 function titleCase(value) {
   return String(value ?? "").replace(/\b\w/g, character => character.toUpperCase());
 }
@@ -165,44 +93,40 @@ function pointOfInterestSuggestedName(pointOfInterest) {
   return `${descriptor} ${location}`.trim() || DEFAULT_LOCATION_NAME;
 }
 
-function rollShadowdarkPointOfInterest({ random = Math.random } = {}) {
-  const descriptorRoll = rollD20(random);
-  const locationRoll = rollD20(random);
-  const featureRoll = rollD20(random);
-  const result = {
-    descriptorRoll,
-    descriptor: SHADOWDARK_POI_DESCRIPTORS[descriptorRoll - 1],
-    locationRoll,
-    location: SHADOWDARK_POI_LOCATIONS[locationRoll - 1],
-    featureRoll,
-    feature: SHADOWDARK_POI_FEATURES[featureRoll - 1],
-  };
+async function rollShadowdarkPointOfInterest(options = {}) {
+  const result = await rollShadowdarkPointOfInterestFromSource(options);
+  if (!result) return null;
   result.suggestedName = pointOfInterestSuggestedName(result);
   return result;
 }
 
 function locationGeneratorDialogContent(pointOfInterest) {
+  const source = pointOfInterest?.source ?? {};
+  const sourceLabel = source.bookTitle
+    ? `${escapeHtml(source.bookTitle)}${source.pages?.length ? ` · PDF p. ${escapeHtml(source.pages.join(", "))}` : ""}`
+    : "Imported source RollTable";
   return `
     <div class="mk-gm-create-document-form mk-gm-location-generator-form">
       <div class="form-group">
         <label>Location Name</label>
         <input type="text" name="name" value="${escapeHtml(pointOfInterest.suggestedName)}" autofocus autocomplete="off">
       </div>
-      <p class="mk-gm-secondary">Shadowdark Point of Interest · three independent d20 rolls</p>
+      <p class="mk-gm-secondary">${sourceLabel} · three independent d20 rolls</p>
       <dl class="mk-gm-data-list">
         <div><dt>Descriptor · d20 ${pointOfInterest.descriptorRoll}</dt><dd>${escapeHtml(pointOfInterest.descriptor)}</dd></div>
         <div><dt>Location · d20 ${pointOfInterest.locationRoll}</dt><dd>${escapeHtml(pointOfInterest.location)}</dd></div>
         <div><dt>Feature · d20 ${pointOfInterest.featureRoll}</dt><dd>${escapeHtml(pointOfInterest.feature)}</dd></div>
       </dl>
-      ${isSettlementPoint(pointOfInterest) ? '<p class="mk-gm-secondary"><i class="fas fa-city"></i> This result can be expanded with the core Shadowdark settlement generator.</p>' : ""}
+      ${isSettlementPoint(pointOfInterest) ? '<p class="mk-gm-secondary"><i class="fas fa-city"></i> This result can be expanded with the Shadowdark settlement generator.</p>' : ""}
     </div>
   `;
 }
 
 async function promptForShadowdarkLocation({
   rollPointOfInterest = rollShadowdarkPointOfInterest,
-  } = {}) {
-  let pointOfInterest = rollPointOfInterest();
+} = {}) {
+  let pointOfInterest = await rollPointOfInterest();
+  if (!pointOfInterest) return { mode: "missing-source" };
 
   while (true) {
     const buttons = [
@@ -252,7 +176,8 @@ async function promptForShadowdarkLocation({
 
     if (!result || result.action === "cancel") return null;
     if (result.action === "reroll") {
-      pointOfInterest = rollPointOfInterest();
+      pointOfInterest = await rollPointOfInterest();
+      if (!pointOfInterest) return { mode: "missing-source" };
       continue;
     }
     if (result.action === "create" || result.action === "expand") {
@@ -265,6 +190,49 @@ async function promptForShadowdarkLocation({
   }
 }
 
+async function promptForMissingLocationSource() {
+  return waitForGmDialog({
+    title: "Points of Interest Source Required",
+    content: `
+      <div class="mk-gm-create-document-form">
+        <p>The Cursed Scroll 4: River of Night <strong>Points of Interest</strong> RollTable is not imported.</p>
+        <p class="hint">Import your owned <code>shadowdark-cursed-scroll-4.md</code> transcription to generate a source-driven location, or create a blank Location Journal.</p>
+      </div>
+    `,
+    buttons: [
+      {
+        action: "import",
+        icon: '<i class="fas fa-file-import"></i>',
+        label: "Import / Update Source Tables",
+        default: true,
+        callback: () => "import",
+      },
+      {
+        action: "blank",
+        icon: '<i class="fas fa-file-circle-plus"></i>',
+        label: "Create Blank Location",
+        callback: () => "blank",
+      },
+      {
+        action: "cancel",
+        icon: '<i class="fas fa-xmark"></i>',
+        label: "Cancel",
+        callback: () => "cancel",
+      },
+    ],
+    close: () => "cancel",
+  });
+}
+
+async function openSourceTableImporter() {
+  const api = globalThis.game?.modules?.get?.("mk-shadowdark")?.api?.sourceTables;
+  if (typeof api?.openImporter !== "function") {
+    globalThis.ui?.notifications?.warn?.("Source Table Importer is unavailable.");
+    return null;
+  }
+  return api.openImporter();
+}
+
 function buildNpcDocumentData(name = DEFAULT_NPC_NAME) {
   return {
     name: String(name || "").trim() || DEFAULT_NPC_NAME,
@@ -275,9 +243,14 @@ function buildNpcDocumentData(name = DEFAULT_NPC_NAME) {
 function buildLocationPageContent(pointOfInterest, name = DEFAULT_LOCATION_NAME, settlement = null) {
   if (settlement) return buildSettlementPageContent(settlement, pointOfInterest);
   if (!pointOfInterest) return "";
+  const source = pointOfInterest.source ?? {};
+  const sourceLine = source.bookTitle
+    ? `<p><strong>Source:</strong> ${escapeHtml(source.bookTitle)}${source.pages?.length ? ` · PDF p. ${escapeHtml(source.pages.join(", "))}` : ""}</p>`
+    : "";
   return `
     <h1>${escapeHtml(name)}</h1>
     <p><strong>Shadowdark Point of Interest</strong></p>
+    ${sourceLine}
     <table>
       <thead>
         <tr><th>Roll</th><th>Category</th><th>Result</th></tr>
@@ -346,27 +319,62 @@ async function createExplorationNpc() {
   return actor ?? null;
 }
 
+async function createBlankLocation() {
+  const name = await promptForName({
+    title: "Create Blank Location",
+    label: "Location Name",
+    defaultName: DEFAULT_LOCATION_NAME,
+  });
+  if (name === null) return null;
+  return { name, pointOfInterest: null, settlement: null };
+}
+
 async function createExplorationLocation({
   rollPointOfInterest = rollShadowdarkPointOfInterest,
   promptSettlement = promptForShadowdarkSettlement,
+  promptMissingSource = promptForMissingLocationSource,
+  importSources = openSourceTableImporter,
 } = {}) {
   if (!globalThis.game?.user?.isGM) {
     notifyGmOnly();
     return null;
   }
 
-  const pointOfInterest = await promptForShadowdarkLocation({ rollPointOfInterest });
+  let pointOfInterest = await promptForShadowdarkLocation({ rollPointOfInterest });
   if (pointOfInterest === null) return null;
 
   let settlement = null;
-  let documentName = pointOfInterest.name;
-  if (pointOfInterest.mode === "settlement") {
-    settlement = await promptSettlement({
-      originPoint: pointOfInterest,
-      defaultType: defaultSettlementTypeForPoint(pointOfInterest) ?? "village",
-    });
-    if (!settlement) return null;
-    documentName = settlement.name;
+  let documentName = "";
+
+  if (pointOfInterest?.mode === "missing-source") {
+    const choice = await promptMissingSource();
+    if (!choice || choice === "cancel") return null;
+    if (choice === "import") {
+      await importSources();
+      pointOfInterest = await promptForShadowdarkLocation({ rollPointOfInterest });
+      if (pointOfInterest === null) return null;
+      if (pointOfInterest?.mode === "missing-source") {
+        globalThis.ui?.notifications?.warn?.("Cursed Scroll 4 Points of Interest is still unavailable after import.");
+        return null;
+      }
+    } else if (choice === "blank") {
+      const blank = await createBlankLocation();
+      if (!blank) return null;
+      documentName = blank.name;
+      pointOfInterest = null;
+    }
+  }
+
+  if (pointOfInterest) {
+    documentName = pointOfInterest.name;
+    if (pointOfInterest.mode === "settlement") {
+      settlement = await promptSettlement({
+        originPoint: pointOfInterest,
+        defaultType: defaultSettlementTypeForPoint(pointOfInterest) ?? "village",
+      });
+      if (!settlement) return null;
+      documentName = settlement.name;
+    }
   }
 
   const JournalEntryClass = configuredDocumentClass(globalThis.JournalEntry);
@@ -445,7 +453,7 @@ function decorateExplorationCreationControls(application, element) {
       kind: "location",
       label: "Create Location",
       icon: "fa-map-location-dot",
-      title: "Roll a Shadowdark Point of Interest and create a Location Journal",
+      title: "Roll an imported Shadowdark Point of Interest and create a Location Journal",
     });
     actions.append(locationButton);
   }
@@ -467,21 +475,20 @@ export {
   DEFAULT_NPC_NAME,
   DEFAULT_LOCATION_NAME,
   LOCATION_PAGE_NAME,
-  SHADOWDARK_POI_DESCRIPTORS,
-  SHADOWDARK_POI_LOCATIONS,
-  SHADOWDARK_POI_FEATURES,
   gmScreenApplication,
   promptForName,
-  rollD20,
   pointOfInterestSuggestedName,
   rollShadowdarkPointOfInterest,
   locationGeneratorDialogContent,
   promptForShadowdarkLocation,
+  promptForMissingLocationSource,
+  openSourceTableImporter,
   buildNpcDocumentData,
   buildLocationPageContent,
   buildLocationDocumentData,
   configuredDocumentClass,
   createExplorationNpc,
+  createBlankLocation,
   createExplorationLocation,
   ensureActionRow,
   decorateExplorationCreationControls,

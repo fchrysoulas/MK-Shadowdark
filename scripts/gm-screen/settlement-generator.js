@@ -172,6 +172,11 @@ function settlementDiceFormula(type) {
   return `${config.diceCount}d${config.dieSides}`;
 }
 
+function districtDieLabel(settlement) {
+  const config = SETTLEMENT_TYPES[normalizeSettlementType(settlement?.type)];
+  return `d${config.dieSides}`;
+}
+
 function rollAlignment(random = Math.random) {
   const roll = rollDie(6, random);
   return {
@@ -219,24 +224,57 @@ function rollSettlementDistrict({
     pointsOfInterest,
     alignmentRoll: districtAlignment?.roll ?? null,
     alignment: districtAlignment?.alignment ?? null,
+    seatCandidate: false,
     seatOfGovernment: false,
   };
 }
 
 function markSeatOfGovernment(districts = []) {
   if (!districts.length) return [];
-  let seatIndex = 0;
-  for (let index = 1; index < districts.length; index += 1) {
-    if (Number(districts[index]?.districtRoll) > Number(districts[seatIndex]?.districtRoll)) {
-      seatIndex = index;
-    }
-  }
+  const maxRoll = Math.max(...districts.map(district => Number(district?.districtRoll) || 0));
+  const candidateIndexes = districts
+    .map((district, index) => ({ index, roll: Number(district?.districtRoll) || 0 }))
+    .filter(candidate => candidate.roll === maxRoll)
+    .map(candidate => candidate.index);
+  const uniqueSeatIndex = candidateIndexes.length === 1 ? candidateIndexes[0] : -1;
+
   return districts.map((district, index) => ({
     ...district,
     index,
     number: index + 1,
-    seatOfGovernment: index === seatIndex,
+    seatCandidate: candidateIndexes.includes(index),
+    seatOfGovernment: index === uniqueSeatIndex,
   }));
+}
+
+function governmentSeatSummary(settlement) {
+  const districts = settlement?.districts ?? [];
+  const seat = districts.find(district => district.seatOfGovernment);
+  if (seat) {
+    return {
+      tied: false,
+      seat,
+      candidates: [seat],
+      label: `District ${seat.number} · ${seat.districtType} · roll ${seat.districtRoll}`,
+    };
+  }
+
+  const candidates = districts.filter(district => district.seatCandidate);
+  if (candidates.length > 1) {
+    return {
+      tied: true,
+      seat: null,
+      candidates,
+      label: `Highest-roll tie: ${candidates.map(district => `District ${district.number} (${district.districtType}, ${district.districtRoll})`).join(" / ")} · GM chooses`,
+    };
+  }
+
+  return {
+    tied: false,
+    seat: null,
+    candidates: [],
+    label: "—",
+  };
 }
 
 function rollSettlementName(type, random = Math.random) {
@@ -373,10 +411,11 @@ async function promptForSettlementOptions({ defaultType = "village" } = {}) {
 }
 
 function settlementGeneratorDialogContent(settlement, originPoint = null) {
-  const seat = settlement?.districts?.find(district => district.seatOfGovernment);
+  const seatSummary = governmentSeatSummary(settlement);
   const alignment = settlement.alignmentMode === ALIGNMENT_MODE_OVERALL
     ? `${settlement.alignment} · d6 ${settlement.alignmentRoll}`
     : "Per district";
+  const dieLabel = districtDieLabel(settlement);
 
   return `
     <form class="mk-gm-create-document-form mk-gm-settlement-generator-form">
@@ -389,8 +428,9 @@ function settlementGeneratorDialogContent(settlement, originPoint = null) {
         <div><dt>Type</dt><dd>${escapeHtml(settlement.typeLabel)} · ${escapeHtml(settlement.diceFormula)}</dd></div>
         <div><dt>Name Roll</dt><dd>d8 ${settlement.nameRoll}</dd></div>
         <div><dt>Alignment</dt><dd>${escapeHtml(alignment)}</dd></div>
-        <div><dt>Seat of Government</dt><dd>${seat ? `District ${seat.number} · ${escapeHtml(seat.districtType)} · roll ${seat.districtRoll}` : "—"}</dd></div>
+        <div><dt>Seat of Government</dt><dd>${escapeHtml(seatSummary.label)}</dd></div>
       </dl>
+      ${seatSummary.tied ? '<div class="mk-gm-alert"><i class="fas fa-scale-balanced"></i> Shadowdark does not specify a tie-breaker for the highest district roll. Choose one of the tied candidates as the seat when using the settlement.</div>' : ""}
       <div class="form-group">
         <label>District to Reroll</label>
         <select name="districtIndex">
@@ -399,8 +439,8 @@ function settlementGeneratorDialogContent(settlement, originPoint = null) {
       </div>
       <div class="mk-gm-settlement-districts">
         ${settlement.districts.map(district => `
-          <section class="mk-gm-settlement-district ${district.seatOfGovernment ? "is-seat" : ""}">
-            <strong>District ${district.number}: ${escapeHtml(district.districtType)} · ${settlement.diceFormula.replace(/^\d+d/, "d") } ${district.districtRoll}${district.seatOfGovernment ? " · Seat of Government" : ""}</strong>
+          <section class="mk-gm-settlement-district ${district.seatOfGovernment ? "is-seat" : ""} ${district.seatCandidate && !district.seatOfGovernment ? "is-seat-candidate" : ""}">
+            <strong>District ${district.number}: ${escapeHtml(district.districtType)} · ${dieLabel} ${district.districtRoll}${district.seatOfGovernment ? " · Seat of Government" : ""}${district.seatCandidate && !district.seatOfGovernment ? " · Seat candidate" : ""}</strong>
             ${district.alignment ? `<small>Alignment: ${escapeHtml(district.alignment)} · d6 ${district.alignmentRoll}</small>` : ""}
             <small>Points of Interest: d4 ${district.poiCountRoll}</small>
             <ul>${district.pointsOfInterest.map(point => `<li>d6 ${point.roll} · ${escapeHtml(point.result)}</li>`).join("")}</ul>
@@ -488,7 +528,8 @@ async function promptForShadowdarkSettlement({
 
 function buildSettlementPageContent(settlement, originPoint = null) {
   if (!settlement) return "";
-  const seat = settlement.districts?.find(district => district.seatOfGovernment);
+  const seatSummary = governmentSeatSummary(settlement);
+  const dieLabel = districtDieLabel(settlement);
   const originHtml = originPoint ? `
     <h2>Origin Point of Interest</h2>
     <table>
@@ -514,13 +555,14 @@ function buildSettlementPageContent(settlement, originPoint = null) {
       <li><strong>Settlement dice:</strong> ${escapeHtml(settlement.diceFormula)}</li>
       <li><strong>Name:</strong> d8 ${settlement.nameRoll} · ${escapeHtml(settlement.name)}</li>
       <li><strong>Alignment:</strong> ${alignmentHtml}</li>
-      <li><strong>Seat of Government:</strong> ${seat ? `District ${seat.number} · ${escapeHtml(seat.districtType)} · roll ${seat.districtRoll}` : "—"}</li>
+      <li><strong>Seat of Government:</strong> ${escapeHtml(seatSummary.label)}</li>
     </ul>
+    ${seatSummary.tied ? '<p><strong>Government-seat tie:</strong> the core rule identifies the highest district roll but gives no tie-breaker. The GM chooses one of the listed highest-roll candidates.</p>' : ""}
     <h2>Districts</h2>
     ${settlement.districts.map(district => `
-      <h3>District ${district.number}: ${escapeHtml(district.districtType)}${district.seatOfGovernment ? " — Seat of Government" : ""}</h3>
+      <h3>District ${district.number}: ${escapeHtml(district.districtType)}${district.seatOfGovernment ? " — Seat of Government" : ""}${district.seatCandidate && !district.seatOfGovernment ? " — Seat candidate" : ""}</h3>
       <ul>
-        <li><strong>District die:</strong> ${settlement.diceFormula.replace(/^\d+d/, "d")} ${district.districtRoll}</li>
+        <li><strong>District die:</strong> ${dieLabel} ${district.districtRoll}</li>
         ${district.alignment ? `<li><strong>Alignment:</strong> ${escapeHtml(district.alignment)} (d6 ${district.alignmentRoll})</li>` : ""}
         <li><strong>Points of Interest:</strong> d4 ${district.poiCountRoll}</li>
       </ul>
@@ -545,10 +587,12 @@ export {
   normalizeSettlementType,
   normalizeAlignmentMode,
   settlementDiceFormula,
+  districtDieLabel,
   rollAlignment,
   rollDistrictPoi,
   rollSettlementDistrict,
   markSeatOfGovernment,
+  governmentSeatSummary,
   rollSettlementName,
   rollShadowdarkSettlement,
   rerollSettlementDistrict,

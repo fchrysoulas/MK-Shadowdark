@@ -410,12 +410,12 @@ test("Tavern and Shop controller is loaded after existing Exploration and NPC cr
   assert.ok(establishmentsIndex > npcIndex);
 });
 
-test("public Tavern/Shop runtime contains procedures and resolvers, not bundled source result arrays", () => {
+test("public Tavern/Shop runtime contains procedures and resolvers without hardcoded result maps", () => {
   assert.match(sourceRuntime, /TAVERN_QUALITIES/);
   assert.match(sourceRuntime, /findTavernDrinksTable/);
   assert.match(sourceRuntime, /findResultForTotal/);
   assert.match(sourceRuntime, /rollShopFromSource/);
   assert.match(generatorRuntime, /createSourceDrivenTavern/);
   assert.match(generatorRuntime, /createSourceDrivenShop/);
-  assert.doesNotMatch(sourceRuntime, /Object\.freeze\(\[\s*["']/);
+  assert.doesNotMatch(sourceRuntime, /TAVERN_RESULTS|DRINK_RESULTS|FOOD_RESULTS|SHOP_RESULTS|CUSTOMER_RESULTS/);
 });

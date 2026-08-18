@@ -1,4 +1,10 @@
 import { APP_ID } from "./gm-screen.js";
+import {
+  buildSettlementPageContent,
+  defaultSettlementTypeForPoint,
+  isSettlementPoint,
+  promptForShadowdarkSettlement,
+} from "./settlement-generator.js";
 
 const DEFAULT_NPC_NAME = "New NPC";
 const DEFAULT_LOCATION_NAME = "New Location";
@@ -187,6 +193,7 @@ function locationGeneratorDialogContent(pointOfInterest) {
         <div><dt>Location · d20 ${pointOfInterest.locationRoll}</dt><dd>${escapeHtml(pointOfInterest.location)}</dd></div>
         <div><dt>Feature · d20 ${pointOfInterest.featureRoll}</dt><dd>${escapeHtml(pointOfInterest.feature)}</dd></div>
       </dl>
+      ${isSettlementPoint(pointOfInterest) ? '<p class="mk-gm-secondary"><i class="fas fa-city"></i> This result can be expanded with the core Shadowdark settlement generator.</p>' : ""}
     </form>
   `;
 }
@@ -199,34 +206,49 @@ async function promptForShadowdarkLocation({
   if (!DialogClass?.wait) {
     return {
       ...pointOfInterest,
+      mode: "location",
       name: pointOfInterest.suggestedName,
     };
   }
 
   while (true) {
+    const buttons = {
+      create: {
+        icon: '<i class="fas fa-plus"></i>',
+        label: "Create",
+        callback: html => ({
+          action: "create",
+          name: dialogName(html),
+        }),
+      },
+    };
+
+    if (isSettlementPoint(pointOfInterest)) {
+      buttons.expand = {
+        icon: '<i class="fas fa-city"></i>',
+        label: "Expand Settlement",
+        callback: html => ({
+          action: "expand",
+          name: dialogName(html),
+        }),
+      };
+    }
+
+    buttons.reroll = {
+      icon: '<i class="fas fa-dice-d20"></i>',
+      label: "Roll Again",
+      callback: () => ({ action: "reroll" }),
+    };
+    buttons.cancel = {
+      icon: '<i class="fas fa-xmark"></i>',
+      label: "Cancel",
+      callback: () => ({ action: "cancel" }),
+    };
+
     const result = await DialogClass.wait({
       title: "Create Shadowdark Location",
       content: locationGeneratorDialogContent(pointOfInterest),
-      buttons: {
-        create: {
-          icon: '<i class="fas fa-plus"></i>',
-          label: "Create",
-          callback: html => ({
-            action: "create",
-            name: dialogName(html),
-          }),
-        },
-        reroll: {
-          icon: '<i class="fas fa-dice-d20"></i>',
-          label: "Roll Again",
-          callback: () => ({ action: "reroll" }),
-        },
-        cancel: {
-          icon: '<i class="fas fa-xmark"></i>',
-          label: "Cancel",
-          callback: () => ({ action: "cancel" }),
-        },
-      },
+      buttons,
       default: "create",
       close: () => ({ action: "cancel" }),
     });
@@ -236,9 +258,10 @@ async function promptForShadowdarkLocation({
       pointOfInterest = rollPointOfInterest();
       continue;
     }
-    if (result.action === "create") {
+    if (result.action === "create" || result.action === "expand") {
       return {
         ...pointOfInterest,
+        mode: result.action === "expand" ? "settlement" : "location",
         name: String(result.name ?? "").trim() || pointOfInterest.suggestedName,
       };
     }
@@ -252,7 +275,8 @@ function buildNpcDocumentData(name = DEFAULT_NPC_NAME) {
   };
 }
 
-function buildLocationPageContent(pointOfInterest, name = DEFAULT_LOCATION_NAME) {
+function buildLocationPageContent(pointOfInterest, name = DEFAULT_LOCATION_NAME, settlement = null) {
+  if (settlement) return buildSettlementPageContent(settlement, pointOfInterest);
   if (!pointOfInterest) return "";
   return `
     <h1>${escapeHtml(name)}</h1>
@@ -275,6 +299,7 @@ function buildLocationPageContent(pointOfInterest, name = DEFAULT_LOCATION_NAME)
 function buildLocationDocumentData(name = DEFAULT_LOCATION_NAME, {
   htmlFormat = 1,
   pointOfInterest = null,
+  settlement = null,
 } = {}) {
   const resolvedName = String(name || "").trim() || DEFAULT_LOCATION_NAME;
   return {
@@ -284,7 +309,7 @@ function buildLocationDocumentData(name = DEFAULT_LOCATION_NAME, {
         name: LOCATION_PAGE_NAME,
         type: "text",
         text: {
-          content: buildLocationPageContent(pointOfInterest, resolvedName),
+          content: buildLocationPageContent(pointOfInterest, resolvedName, settlement),
           format: Number(htmlFormat) || 1,
         },
       },
@@ -326,6 +351,7 @@ async function createExplorationNpc() {
 
 async function createExplorationLocation({
   rollPointOfInterest = rollShadowdarkPointOfInterest,
+  promptSettlement = promptForShadowdarkSettlement,
 } = {}) {
   if (!globalThis.game?.user?.isGM) {
     notifyGmOnly();
@@ -335,6 +361,17 @@ async function createExplorationLocation({
   const pointOfInterest = await promptForShadowdarkLocation({ rollPointOfInterest });
   if (pointOfInterest === null) return null;
 
+  let settlement = null;
+  let documentName = pointOfInterest.name;
+  if (pointOfInterest.mode === "settlement") {
+    settlement = await promptSettlement({
+      originPoint: pointOfInterest,
+      defaultType: defaultSettlementTypeForPoint(pointOfInterest) ?? "village",
+    });
+    if (!settlement) return null;
+    documentName = settlement.name;
+  }
+
   const JournalEntryClass = configuredDocumentClass(globalThis.JournalEntry);
   if (!JournalEntryClass?.create) {
     globalThis.ui?.notifications?.error?.("Foundry Journal creation is unavailable.");
@@ -342,9 +379,10 @@ async function createExplorationLocation({
   }
 
   const htmlFormat = globalThis.CONST?.JOURNAL_ENTRY_PAGE_FORMATS?.HTML ?? 1;
-  const journal = await JournalEntryClass.create(buildLocationDocumentData(pointOfInterest.name, {
+  const journal = await JournalEntryClass.create(buildLocationDocumentData(documentName, {
     htmlFormat,
     pointOfInterest,
+    settlement,
   }));
   journal?.sheet?.render?.(true);
   return journal ?? null;

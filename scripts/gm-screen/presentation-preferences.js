@@ -8,6 +8,7 @@ const WORKSPACES = Object.freeze([
   "combat",
   "environment",
   "rules",
+  "tables",
 ]);
 const DEFAULT_PREFERENCES = Object.freeze({
   groupActorUuid: "",

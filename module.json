@@ -69,6 +69,7 @@
     "scripts/gm-screen/presentation-controls.js",
     "scripts/gm-screen/exploration-creation-controls.js",
     "scripts/gm-screen/npc-creation-controls.js",
+    "scripts/gm-screen/tavern-shop-creation-controls.js",
     "scripts/source-tables/source-table-importer.js",
     "scripts/gm-screen/source-table-browser.js",
     "scripts/mk-shadowdark.js"

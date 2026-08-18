@@ -3,6 +3,7 @@ import {
   parseWesternMarkdownTables,
 } from "./parser.js";
 import { structureCoreDenseTables } from "./core-structured-tables.js";
+import { mergeCoreDynamicTables } from "./core-dynamic-tables.js";
 
 const CURSED_SCROLL_4_BOOK = Object.freeze({
   id: "cursed-scroll-4-river-of-night-v1-2",
@@ -54,7 +55,10 @@ function parseSupportedSourceTables(text, { filename = "" } = {}) {
   if (!isCursedScroll4Source(text, filename)) {
     const parsed = parseSourceTables(text, { filename });
     if (parsed.book?.id !== CORE_BOOK_ID) return parsed;
-    const tables = structureCoreDenseTables(parsed.tables);
+    const structured = structureCoreDenseTables(parsed.tables);
+    const tables = mergeCoreDynamicTables(structured, text, {
+      bookTitle: parsed.book?.title,
+    });
     return {
       ...parsed,
       tables,

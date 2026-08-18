@@ -69,6 +69,7 @@
     "scripts/gm-screen/presentation-controls.js",
     "scripts/gm-screen/exploration-creation-controls.js",
     "scripts/source-tables/source-table-importer.js",
+    "scripts/gm-screen/source-table-browser.js",
     "scripts/mk-shadowdark.js"
   ],
   "styles": [
@@ -90,6 +91,7 @@
     "styles/gm-screen-encounter-history.css",
     "styles/gm-screen-light-pressure.css",
     "styles/gm-screen-presentation.css",
+    "styles/gm-screen-source-tables.css",
     "styles/quickdraw-icons.css",
     "styles/encounter-engine.css",
     "styles/summary-bar.css",

@@ -32,6 +32,20 @@ function splitCapitalPhrases(text, expectedCount) {
   return values.every(Boolean) ? values : null;
 }
 
+function splitMatrixPhrases(text, expectedCount) {
+  const words = clean(text).split(" ").filter(Boolean);
+  if (!words.length) return null;
+  const starts = [];
+  words.forEach((word, index) => {
+    if (/^[A-ZÀ-ÖØ-Þ]/u.test(word) || /^\d+d\d+/iu.test(word)) starts.push(index);
+  });
+  if (starts[0] !== 0 || starts.length !== expectedCount) return null;
+  const values = starts.map((start, index) => (
+    words.slice(start, starts[index + 1] ?? words.length).join(" ")
+  ));
+  return values.every(Boolean) ? values : null;
+}
+
 function splitPossessiveProperNames(text, expectedCount) {
   const words = clean(text).split(" ").filter(Boolean);
   const values = [];
@@ -56,6 +70,24 @@ function splitSettlementType(text) {
   const match = /^(.*?)\s+(\d+d\d+)$/iu.exec(clean(text));
   if (!match) return null;
   return [clean(match[1]), clean(match[2])];
+}
+
+function splitGeneratorNameKnownFor(text) {
+  const words = clean(text).split(" ").filter(Boolean);
+  if (words.length < 3) return null;
+
+  let nameLength = 2;
+  if (normalize(words[0]) === "the") {
+    nameLength = words[2] === "&" ? 4 : 3;
+  } else if (words[1] === "&") {
+    nameLength = 3;
+  }
+
+  if (words.length <= nameLength) return null;
+  const name = words.slice(0, nameLength).join(" ");
+  const knownFor = words.slice(nameLength).join(" ");
+  if (!name || !knownFor || !/^[A-ZÀ-ÖØ-Þ]/u.test(knownFor)) return null;
+  return [name, knownFor];
 }
 
 function coreDenseSchema(table) {
@@ -93,6 +125,34 @@ function coreDenseSchema(table) {
     return {
       headers: ["Dwarf", "Elf", "Goblin", "Halfling", "Half-Orc", "Human"],
       split: text => splitFixedTokens(text, 6),
+    };
+  }
+
+  if (title === "tavern generator" && contextIncludes(table, "Taverns")) {
+    return {
+      headers: ["Name", "Known For"],
+      split: splitGeneratorNameKnownFor,
+    };
+  }
+
+  if (title === "food" && contextIncludes(table, "Taverns")) {
+    return {
+      headers: ["Poor (1d4 cp)", "Standard (1d6 sp)", "Wealthy (1d8 gp)"],
+      split: text => splitCapitalPhrases(text, 3),
+    };
+  }
+
+  if (title === "shop generator" && contextIncludes(table, "Shops")) {
+    return {
+      headers: ["Name", "Known For"],
+      split: splitGeneratorNameKnownFor,
+    };
+  }
+
+  if (title === "interesting customer" && contextIncludes(table, "Shops")) {
+    return {
+      headers: ["1", "2", "3", "4"],
+      split: text => splitMatrixPhrases(text, 4),
     };
   }
 
@@ -136,9 +196,11 @@ export {
   contextIncludes,
   labelFields,
   splitCapitalPhrases,
+  splitMatrixPhrases,
   splitPossessiveProperNames,
   splitFixedTokens,
   splitSettlementType,
+  splitGeneratorNameKnownFor,
   coreDenseSchema,
   structureCoreDenseTable,
   structureCoreDenseTables,

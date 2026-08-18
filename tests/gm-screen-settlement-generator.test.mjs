@@ -11,6 +11,7 @@ import {
   SETTLEMENT_TYPES,
   buildSettlementPageContent,
   defaultSettlementTypeForPoint,
+  governmentSeatSummary,
   isSettlementPoint,
   markSeatOfGovernment,
   rerollSettlementDistrict,
@@ -29,6 +30,15 @@ const settlementRuntime = fs.readFileSync(
 
 function constantRandom(value) {
   return () => value;
+}
+
+function districtContentWithoutSeatMetadata(district) {
+  const {
+    seatCandidate: _seatCandidate,
+    seatOfGovernment: _seatOfGovernment,
+    ...content
+  } = district;
+  return content;
 }
 
 test("Shadowdark settlement type dice and official name tables are preserved", () => {
@@ -116,7 +126,8 @@ test("Settlement generation uses the correct district count and die size for eve
     assert.equal(settlement.districts.length, expected.count);
     assert.equal(settlement.diceFormula, `${expected.count}d${expected.sides}`);
     assert.ok(settlement.districts.every(district => district.districtRoll >= 1 && district.districtRoll <= expected.sides));
-    assert.equal(settlement.districts.filter(district => district.seatOfGovernment).length, 1);
+    assert.equal(settlement.districts.filter(district => district.seatOfGovernment).length, 0);
+    assert.equal(settlement.districts.filter(district => district.seatCandidate).length, expected.count);
     assert.equal(settlement.alignment, "Lawful");
     assert.equal(settlement.alignmentRoll, 1);
   }
@@ -147,35 +158,57 @@ test("Per-district alignment mode rolls alignment for every district instead of 
   assert.ok(settlement.districts.every(district => district.alignmentRoll === 6));
 });
 
-test("Seat of government is assigned to the first highest district roll", () => {
+test("A unique highest district roll identifies the seat of government", () => {
   const districts = markSeatOfGovernment([
     { districtRoll: 2, districtType: "Low district" },
     { districtRoll: 4, districtType: "Market" },
-    { districtRoll: 4, districtType: "Market" },
+    { districtRoll: 3, districtType: "Artisan district" },
   ]);
-  assert.equal(districts[0].seatOfGovernment, false);
+  assert.equal(districts[0].seatCandidate, false);
+  assert.equal(districts[1].seatCandidate, true);
   assert.equal(districts[1].seatOfGovernment, true);
-  assert.equal(districts[2].seatOfGovernment, false);
+  assert.equal(districts[2].seatCandidate, false);
 });
 
-test("Reroll District changes only the selected district and recalculates the government seat", () => {
+test("Highest-roll ties stay explicit because Shadowdark gives no tie-breaker", () => {
+  const settlement = {
+    districts: markSeatOfGovernment([
+      { districtRoll: 2, districtType: "Low district" },
+      { districtRoll: 4, districtType: "Market" },
+      { districtRoll: 4, districtType: "Market" },
+    ]),
+  };
+  const summary = governmentSeatSummary(settlement);
+  assert.equal(settlement.districts.filter(district => district.seatOfGovernment).length, 0);
+  assert.deepEqual(
+    settlement.districts.filter(district => district.seatCandidate).map(district => district.number),
+    [2, 3],
+  );
+  assert.equal(summary.tied, true);
+  assert.match(summary.label, /GM chooses/);
+});
+
+test("Reroll District changes only selected district content and recalculates government metadata", () => {
   const original = rollShadowdarkSettlement({
     type: "village",
     random: constantRandom(0),
   });
-  const firstBefore = structuredClone(original.districts[0]);
-  const thirdBefore = structuredClone(original.districts[2]);
+  const firstBefore = districtContentWithoutSeatMetadata(original.districts[0]);
+  const thirdBefore = districtContentWithoutSeatMetadata(original.districts[2]);
 
   const rerolled = rerollSettlementDistrict(original, 1, {
     random: constantRandom(0.999999),
   });
 
-  assert.deepEqual(rerolled.districts[0], firstBefore);
-  assert.deepEqual(rerolled.districts[2], thirdBefore);
+  assert.deepEqual(districtContentWithoutSeatMetadata(rerolled.districts[0]), firstBefore);
+  assert.deepEqual(districtContentWithoutSeatMetadata(rerolled.districts[2]), thirdBefore);
   assert.equal(rerolled.districts[1].districtRoll, 4);
   assert.equal(rerolled.districts[1].districtType, "Market");
   assert.equal(rerolled.districts[1].poiCountRoll, 4);
+  assert.equal(rerolled.districts[1].seatCandidate, true);
   assert.equal(rerolled.districts[1].seatOfGovernment, true);
+  assert.equal(rerolled.districts[0].seatCandidate, false);
+  assert.equal(rerolled.districts[2].seatCandidate, false);
 });
 
 test("Generated Village and City POIs are eligible for settlement expansion", () => {
@@ -187,7 +220,7 @@ test("Generated Village and City POIs are eligible for settlement expansion", ()
   assert.equal(defaultSettlementTypeForPoint({ location: "Town" }), null);
 });
 
-test("Settlement Journal output preserves the origin POI, dice, districts, POIs, seat, and notes", () => {
+test("Settlement Journal output preserves the origin POI, dice, districts, POIs, seat handling, and notes", () => {
   const settlement = rollShadowdarkSettlement({
     type: "village",
     random: constantRandom(0),
@@ -208,6 +241,7 @@ test("Settlement Journal output preserves the origin POI, dice, districts, POIs,
   assert.match(html, /Shadowdark Settlement/);
   assert.match(html, /3d4/);
   assert.match(html, /Seat of Government/);
+  assert.match(html, /Government-seat tie/);
   assert.match(html, /Seedy flophouse/);
   assert.match(html, /GM Notes/);
 });

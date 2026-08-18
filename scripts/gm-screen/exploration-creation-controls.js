@@ -341,6 +341,8 @@ async function createExplorationLocation({
   }
 
   let pointOfInterest = await promptForShadowdarkLocation({ rollPointOfInterest });
+  if (pointOfInterest === null) return null;
+
   let settlement = null;
   let documentName = "";
 
@@ -350,7 +352,8 @@ async function createExplorationLocation({
     if (choice === "import") {
       await importSources();
       pointOfInterest = await promptForShadowdarkLocation({ rollPointOfInterest });
-      if (!pointOfInterest || pointOfInterest.mode === "missing-source") {
+      if (pointOfInterest === null) return null;
+      if (pointOfInterest?.mode === "missing-source") {
         globalThis.ui?.notifications?.warn?.("Cursed Scroll 4 Points of Interest is still unavailable after import.");
         return null;
       }
@@ -361,8 +364,6 @@ async function createExplorationLocation({
       pointOfInterest = null;
     }
   }
-
-  if (pointOfInterest === null) return null;
 
   if (pointOfInterest) {
     documentName = pointOfInterest.name;

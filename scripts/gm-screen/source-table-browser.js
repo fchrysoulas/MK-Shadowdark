@@ -38,6 +38,10 @@ function gmScreenApplication(application) {
   );
 }
 
+function isContextualSourceFormula(value) {
+  return String(value ?? "").trim().includes("*");
+}
+
 function collectSourceTableEntries(tables = globalThis.game?.tables) {
   return collectionValues(tables)
     .map(table => {
@@ -46,11 +50,15 @@ function collectSourceTableEntries(tables = globalThis.game?.tables) {
 
       const pages = Array.isArray(metadata.pages) ? metadata.pages : [];
       const warnings = Array.isArray(metadata.warnings) ? metadata.warnings : [];
+      const sourceFormula = String(metadata.formulaRaw ?? metadata.formula ?? "").trim();
+      const formula = sourceFormula || String(table?.formula ?? "");
+      const contextualFormula = isContextualSourceFormula(sourceFormula);
       return {
         id: String(table?.id ?? table?._id ?? ""),
         uuid: String(table?.uuid ?? ""),
         name: String(table?.name ?? "Imported Table"),
-        formula: String(table?.formula ?? metadata.formula ?? metadata.formulaRaw ?? ""),
+        formula,
+        contextualFormula,
         bookId: String(metadata.bookId ?? ""),
         bookTitle: String(metadata.bookTitle ?? metadata.bookId ?? "Imported Source"),
         pages,
@@ -120,6 +128,9 @@ function sourceTablePanelHtml(entries = []) {
 }
 
 function sourceTableRowHtml(entry) {
+  const rollAction = entry.contextualFormula
+    ? '<button type="button" disabled title="This source table uses a contextual dice formula. Roll it through the relevant generator."><i class="fas fa-dice"></i> Contextual</button>'
+    : `<button type="button" data-mk-source-table-action="roll" data-table-id="${escapeHtml(entry.id)}" title="Roll ${escapeHtml(entry.name)}"><i class="fas fa-dice-d20"></i> Roll</button>`;
   return `
     <article class="mk-gm-source-table-row" data-source-table-id="${escapeHtml(entry.id)}">
       <div class="mk-gm-source-table-main">
@@ -127,12 +138,12 @@ function sourceTableRowHtml(entry) {
         <small>${escapeHtml(entry.bookTitle)}</small>
       </div>
       <div class="mk-gm-source-table-meta">
-        <span title="Roll formula"><i class="fas fa-dice"></i> ${escapeHtml(entry.formula || "—")}</span>
+        <span title="Source roll formula"><i class="fas fa-dice"></i> ${escapeHtml(entry.formula || "—")}</span>
         <span title="PDF page(s)"><i class="fas fa-book-open"></i> ${escapeHtml(entry.pagesLabel)}</span>
         ${entry.warningCount ? `<span class="is-warning" title="${entry.warningCount} import warning(s)"><i class="fas fa-triangle-exclamation"></i> ${entry.warningCount}</span>` : ""}
       </div>
       <div class="mk-gm-source-table-actions">
-        <button type="button" data-mk-source-table-action="roll" data-table-id="${escapeHtml(entry.id)}" title="Roll ${escapeHtml(entry.name)}"><i class="fas fa-dice-d20"></i> Roll</button>
+        ${rollAction}
         <button type="button" data-mk-source-table-action="open" data-table-id="${escapeHtml(entry.id)}" title="Open ${escapeHtml(entry.name)}"><i class="fas fa-arrow-up-right-from-square"></i></button>
       </div>
     </article>
@@ -179,6 +190,11 @@ function findWorldTable(tableId, tables = globalThis.game?.tables) {
 async function rollSourceTable(table) {
   if (!table || typeof table.draw !== "function") {
     globalThis.ui?.notifications?.warn?.("The selected RollTable is unavailable.");
+    return null;
+  }
+  const metadata = sourceTableFlag(table);
+  if (isContextualSourceFormula(metadata?.formulaRaw)) {
+    globalThis.ui?.notifications?.warn?.("This source table uses a contextual dice formula. Roll it through the relevant generator.");
     return null;
   }
   return table.draw({ displayChat: true });
@@ -322,6 +338,7 @@ export {
   collectionValues,
   escapeHtml,
   gmScreenApplication,
+  isContextualSourceFormula,
   collectSourceTableEntries,
   sourceBookOptions,
   filterSourceTableEntries,

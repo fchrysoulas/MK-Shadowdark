@@ -6,6 +6,7 @@ import {
   WORKSPACE_ID,
   collectSourceTableEntries,
   filterSourceTableEntries,
+  findTablesNavButton,
   findWorldTable,
   openSourceTable,
   rollSourceTable,
@@ -13,8 +14,12 @@ import {
 } from "../scripts/gm-screen/source-table-browser.js";
 import {
   WORKSPACES,
-  normalizeWorkspace,
+  normalizeWorkspace as normalizePresentationWorkspace,
 } from "../scripts/gm-screen/presentation-preferences.js";
+import {
+  GM_SCREEN_WORKSPACES,
+  normalizeWorkspace as normalizeGmScreenWorkspace,
+} from "../scripts/gm-screen/view-model.js";
 
 const manifest = JSON.parse(fs.readFileSync(new URL("../module.json", import.meta.url), "utf8"));
 const runtime = fs.readFileSync(
@@ -55,10 +60,28 @@ function importedTable({
   };
 }
 
-test("GM Screen presentation preferences accept the Tables workspace", () => {
+test("Tables is canonical in both GM Screen and presentation workspace normalization", () => {
   assert.equal(WORKSPACE_ID, "tables");
   assert.ok(WORKSPACES.includes("tables"));
-  assert.equal(normalizeWorkspace("tables"), "tables");
+  assert.ok(GM_SCREEN_WORKSPACES.includes("tables"));
+  assert.equal(normalizePresentationWorkspace("tables"), "tables");
+  assert.equal(normalizeGmScreenWorkspace("tables"), "tables");
+});
+
+test("source table browser reuses the canonical Tables nav entry and removes a legacy duplicate", () => {
+  let removed = 0;
+  const canonical = { dataset: { action: "workspace", workspace: "tables" } };
+  const legacy = { remove() { removed += 1; } };
+  const nav = {
+    querySelector(selector) {
+      if (selector.includes('data-action="workspace"')) return canonical;
+      if (selector.includes("data-mk-source-tables-nav")) return legacy;
+      return null;
+    },
+  };
+
+  assert.equal(findTablesNavButton(nav), canonical);
+  assert.equal(removed, 1);
 });
 
 test("source table browser includes only canonical imported RollTables", () => {

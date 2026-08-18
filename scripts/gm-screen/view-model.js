@@ -19,6 +19,7 @@ const GM_SCREEN_WORKSPACES = Object.freeze([
   "encounter",
   "combat",
   "environment",
+  "tables",
   "rules",
 ]);
 

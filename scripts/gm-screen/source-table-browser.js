@@ -238,6 +238,14 @@ function activateTablesWorkspace(application, root, navButton) {
   });
 }
 
+function findTablesNavButton(nav) {
+  if (!nav?.querySelector) return null;
+  const canonical = nav.querySelector(`[data-action="workspace"][data-workspace="${WORKSPACE_ID}"]`);
+  const legacy = nav.querySelector('[data-mk-source-tables-nav="true"]');
+  if (canonical && legacy && canonical !== legacy) legacy.remove?.();
+  return canonical ?? legacy ?? null;
+}
+
 function bindSourceTableBrowser(application, root, entries) {
   const search = root.querySelector("[data-mk-source-table-search]");
   const source = root.querySelector("[data-mk-source-table-book]");
@@ -285,7 +293,8 @@ function decorateSourceTableBrowser(application, element) {
 
   const entries = collectSourceTableEntries();
 
-  let button = nav.querySelector('[data-mk-source-tables-nav="true"]');
+  let button = findTablesNavButton(nav);
+  let canonicalNavigation = button?.dataset?.action === "workspace";
   if (!button) {
     button = globalThis.document?.createElement?.("button");
     if (!button) return false;
@@ -294,6 +303,7 @@ function decorateSourceTableBrowser(application, element) {
     button.dataset.workspace = WORKSPACE_ID;
     button.textContent = "Tables";
     nav.append(button);
+    canonicalNavigation = false;
   }
 
   let panel = body.querySelector('[data-workspace-panel="tables"]');
@@ -306,11 +316,13 @@ function decorateSourceTableBrowser(application, element) {
     body.append(panel);
   }
 
-  button.addEventListener("click", event => {
-    event.preventDefault();
-    event.stopPropagation();
-    activateTablesWorkspace(application, root, button);
-  });
+  if (!canonicalNavigation) {
+    button.addEventListener("click", event => {
+      event.preventDefault();
+      event.stopPropagation();
+      activateTablesWorkspace(application, root, button);
+    });
+  }
 
   if (String(application.workspace ?? "") === WORKSPACE_ID) {
     root.dataset.workspace = WORKSPACE_ID;
@@ -350,6 +362,7 @@ export {
   openSourceTable,
   importSourceTables,
   activateTablesWorkspace,
+  findTablesNavButton,
   bindSourceTableBrowser,
   decorateSourceTableBrowser,
   registerSourceTableBrowser,

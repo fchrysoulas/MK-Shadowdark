@@ -1,128 +1,20 @@
 import { waitForGmDialog } from "../libs/dialog-v2.js";
+import {
+  CORE_BOOK_TITLE,
+  districtTypeFromSourceRoll,
+  resolveSettlementTypeConfig,
+  rollAlignmentFromSource,
+  rollDistrictPoiFromSource,
+  rollSettlementNameFromSource,
+  settlementSourceStatus,
+  tableProvenance,
+} from "./settlement-source-tables.js";
 
 const SETTLEMENT_TYPES = Object.freeze({
-  village: Object.freeze({
-    id: "village",
-    label: "Village",
-    diceCount: 3,
-    dieSides: 4,
-    nameTable: Object.freeze([
-      "Bruga's Hold", "Lastwatch", "Darkwater", "Ostlin",
-      "Treefall", "Vorn", "Hillshire", "Nighthaven",
-    ]),
-  }),
-  town: Object.freeze({
-    id: "town",
-    label: "Town",
-    diceCount: 4,
-    dieSides: 4,
-    nameTable: Object.freeze([
-      "Fairhollow", "Ivan's Keep", "Galina", "Brightlantern",
-      "Corvin's Crest", "Ironbridge", "Skalvin", "Toresk",
-    ]),
-  }),
-  city: Object.freeze({
-    id: "city",
-    label: "City",
-    diceCount: 6,
-    dieSides: 6,
-    nameTable: Object.freeze([
-      "Doraine", "Meridia", "King's Gate", "Myrkhos",
-      "Rularn", "Ordos", "Thane", "Rahgbat",
-    ]),
-  }),
-  metropolis: Object.freeze({
-    id: "metropolis",
-    label: "Metropolis",
-    diceCount: 8,
-    dieSides: 8,
-    nameTable: Object.freeze([
-      "Doraine", "Meridia", "King's Gate", "Myrkhos",
-      "Rularn", "Ordos", "Thane", "Rahgbat",
-    ]),
-  }),
-});
-
-const SETTLEMENT_DISTRICTS = Object.freeze([
-  "Slums",
-  "Low district",
-  "Artisan district",
-  "Market",
-  "High District",
-  "Temple district",
-  "University district",
-  "Castle district",
-]);
-
-const SETTLEMENT_ALIGNMENTS = Object.freeze([
-  "Lawful", "Lawful", "Lawful", "Neutral", "Neutral", "Chaotic",
-]);
-
-const DISTRICT_POINTS_OF_INTEREST = Object.freeze({
-  "Slums": Object.freeze([
-    "Seedy flophouse",
-    "Poor tavern",
-    "Poor tavern",
-    "Criminal safehouse",
-    "Poor shop",
-    "Witch/warlock's hovel",
-  ]),
-  "Low district": Object.freeze([
-    "Graveyard",
-    "Poor tavern",
-    "Poor tavern",
-    "Poor shop",
-    "Standard shop",
-    "Warehouses/sheds",
-  ]),
-  "Artisan district": Object.freeze([
-    "Stocks and pillories",
-    "Modest temple",
-    "Modest temple",
-    "Standard tavern",
-    "Standard tavern",
-    "Wealthy shop",
-  ]),
-  "Market": Object.freeze([
-    "Fortune teller",
-    "Rare and exotic goods",
-    "Rare and exotic goods",
-    "Rare and exotic goods",
-    "Apothecary",
-    "Illicit black market",
-  ]),
-  "High District": Object.freeze([
-    "Guildhouse",
-    "Wealthy tavern",
-    "Wealthy tavern",
-    "Manor house",
-    "Wealthy shop",
-    "City Watch outpost",
-  ]),
-  "Temple district": Object.freeze([
-    "Ruined temple",
-    "Minor deity's chapel",
-    "Minor deity's chapel",
-    "Forbidden shrine",
-    "Major god's temple",
-    "Revered holy site",
-  ]),
-  "University district": Object.freeze([
-    "Library",
-    "Lecture hall",
-    "Lecture hall",
-    "Standard tavern",
-    "Standard tavern",
-    "Wizard's tower",
-  ]),
-  "Castle district": Object.freeze([
-    "Royal bathhouse",
-    "City Watch's garrison",
-    "City Watch's garrison",
-    "Theater or coliseum",
-    "Theater or coliseum",
-    "Royal castle",
-  ]),
+  village: Object.freeze({ id: "village", label: "Village" }),
+  town: Object.freeze({ id: "town", label: "Town" }),
+  city: Object.freeze({ id: "city", label: "City" }),
+  metropolis: Object.freeze({ id: "metropolis", label: "Metropolis" }),
 });
 
 const ALIGNMENT_MODE_OVERALL = "overall";
@@ -170,63 +62,95 @@ function normalizeAlignmentMode(mode) {
   return ALIGNMENT_MODES.includes(key) ? key : ALIGNMENT_MODE_OVERALL;
 }
 
-function settlementDiceFormula(type) {
-  const config = SETTLEMENT_TYPES[normalizeSettlementType(type)];
-  return `${config.diceCount}d${config.dieSides}`;
+function settlementDiceFormula(type, { sourceStatus = null, tables = globalThis.game?.tables } = {}) {
+  const status = sourceStatus ?? settlementSourceStatus(tables);
+  return resolveSettlementTypeConfig(normalizeSettlementType(type), {
+    table: status?.tables?.type ?? null,
+    tables,
+  })?.diceFormula ?? "";
 }
 
 function districtDieLabel(settlement) {
-  const config = SETTLEMENT_TYPES[normalizeSettlementType(settlement?.type)];
-  return `d${config.dieSides}`;
+  const sides = Number(settlement?.districtDieSides);
+  if (Number.isInteger(sides) && sides > 1) return `d${sides}`;
+  const match = /d(\d+)/i.exec(String(settlement?.diceFormula ?? ""));
+  return match ? `d${match[1]}` : "die";
 }
 
-function rollAlignment(random = Math.random) {
-  const roll = rollDie(6, random);
+async function rollAlignment({ sourceStatus = null, tables = globalThis.game?.tables } = {}) {
+  const status = sourceStatus ?? settlementSourceStatus(tables);
+  const result = await rollAlignmentFromSource({
+    table: status?.tables?.alignment ?? null,
+    tables,
+  });
+  if (!result) return null;
   return {
-    roll,
-    alignment: SETTLEMENT_ALIGNMENTS[roll - 1],
+    roll: result.roll,
+    alignment: result.alignment,
+    source: tableProvenance(result.table),
   };
 }
 
-function districtPoiTable(districtType) {
-  return DISTRICT_POINTS_OF_INTEREST[districtType] ?? DISTRICT_POINTS_OF_INTEREST.Slums;
-}
-
-function rollDistrictPoi(districtType, random = Math.random) {
-  const roll = rollDie(6, random);
-  const table = districtPoiTable(districtType);
+async function rollDistrictPoi(districtType, { sourceStatus = null, tables = globalThis.game?.tables } = {}) {
+  const status = sourceStatus ?? settlementSourceStatus(tables);
+  const table = status?.tables?.districtPoiTables?.get?.(districtType) ?? null;
+  const result = await rollDistrictPoiFromSource(districtType, { table, tables });
+  if (!result) return null;
   return {
-    roll,
-    result: table[roll - 1],
+    roll: result.roll,
+    result: result.result,
+    source: tableProvenance(result.table),
   };
 }
 
-function rollSettlementDistrict({
+async function rollSettlementDistrict({
   type = "village",
   index = 0,
   alignmentMode = ALIGNMENT_MODE_OVERALL,
   random = Math.random,
+  sourceStatus = null,
+  tables = globalThis.game?.tables,
 } = {}) {
   const typeKey = normalizeSettlementType(type);
-  const config = SETTLEMENT_TYPES[typeKey];
+  const status = sourceStatus ?? settlementSourceStatus(tables);
+  const config = resolveSettlementTypeConfig(typeKey, {
+    table: status?.tables?.type ?? null,
+    tables,
+  });
+  if (!config) return null;
+
   const resolvedAlignmentMode = normalizeAlignmentMode(alignmentMode);
   const districtRoll = rollDie(config.dieSides, random);
-  const districtType = SETTLEMENT_DISTRICTS[districtRoll - 1];
+  const districtResult = districtTypeFromSourceRoll(districtRoll, {
+    table: status?.tables?.districts ?? null,
+    tables,
+  });
+  if (!districtResult?.districtType) return null;
+
   const poiCountRoll = rollDie(4, random);
-  const pointsOfInterest = Array.from({ length: poiCountRoll }, () => rollDistrictPoi(districtType, random));
+  const pointsOfInterest = [];
+  for (let count = 0; count < poiCountRoll; count += 1) {
+    const point = await rollDistrictPoi(districtResult.districtType, { sourceStatus: status, tables });
+    if (!point) return null;
+    pointsOfInterest.push(point);
+  }
+
   const districtAlignment = resolvedAlignmentMode === ALIGNMENT_MODE_DISTRICT
-    ? rollAlignment(random)
+    ? await rollAlignment({ sourceStatus: status, tables })
     : null;
+  if (resolvedAlignmentMode === ALIGNMENT_MODE_DISTRICT && !districtAlignment) return null;
 
   return {
     index,
     number: index + 1,
     districtRoll,
-    districtType,
+    districtType: districtResult.districtType,
+    districtSource: tableProvenance(districtResult.table),
     poiCountRoll,
     pointsOfInterest,
     alignmentRoll: districtAlignment?.roll ?? null,
     alignment: districtAlignment?.alignment ?? null,
+    alignmentSource: districtAlignment?.source ?? null,
     seatCandidate: false,
     seatOfGovernment: false,
   };
@@ -280,63 +204,101 @@ function governmentSeatSummary(settlement) {
   };
 }
 
-function rollSettlementName(type, random = Math.random) {
-  const typeKey = normalizeSettlementType(type);
-  const config = SETTLEMENT_TYPES[typeKey];
-  const roll = rollDie(8, random);
+async function rollSettlementName(type, { sourceStatus = null, tables = globalThis.game?.tables } = {}) {
+  const status = sourceStatus ?? settlementSourceStatus(tables);
+  const result = await rollSettlementNameFromSource(normalizeSettlementType(type), {
+    table: status?.tables?.names ?? null,
+    tables,
+  });
+  if (!result) return null;
   return {
-    roll,
-    name: config.nameTable[roll - 1],
+    roll: result.roll,
+    name: result.name,
+    source: tableProvenance(result.table),
   };
 }
 
-function rollShadowdarkSettlement({
+async function rollShadowdarkSettlement({
   type = "village",
   alignmentMode = ALIGNMENT_MODE_OVERALL,
   random = Math.random,
+  sourceStatus = null,
+  tables = globalThis.game?.tables,
 } = {}) {
   const typeKey = normalizeSettlementType(type);
-  const config = SETTLEMENT_TYPES[typeKey];
-  const resolvedAlignmentMode = normalizeAlignmentMode(alignmentMode);
-  const nameResult = rollSettlementName(typeKey, random);
-  const overallAlignment = resolvedAlignmentMode === ALIGNMENT_MODE_OVERALL
-    ? rollAlignment(random)
-    : null;
+  const status = sourceStatus ?? settlementSourceStatus(tables);
+  if (!status.available) return null;
 
-  const districts = Array.from({ length: config.diceCount }, (_, index) => rollSettlementDistrict({
-    type: typeKey,
-    index,
-    alignmentMode: resolvedAlignmentMode,
-    random,
-  }));
+  const config = resolveSettlementTypeConfig(typeKey, {
+    table: status.tables.type,
+    tables,
+  });
+  if (!config) return null;
+
+  const resolvedAlignmentMode = normalizeAlignmentMode(alignmentMode);
+  const nameResult = await rollSettlementName(typeKey, { sourceStatus: status, tables });
+  if (!nameResult) return null;
+  const overallAlignment = resolvedAlignmentMode === ALIGNMENT_MODE_OVERALL
+    ? await rollAlignment({ sourceStatus: status, tables })
+    : null;
+  if (resolvedAlignmentMode === ALIGNMENT_MODE_OVERALL && !overallAlignment) return null;
+
+  const districts = [];
+  for (let index = 0; index < config.diceCount; index += 1) {
+    const district = await rollSettlementDistrict({
+      type: typeKey,
+      index,
+      alignmentMode: resolvedAlignmentMode,
+      random,
+      sourceStatus: status,
+      tables,
+    });
+    if (!district) return null;
+    districts.push(district);
+  }
 
   return {
     type: typeKey,
-    typeLabel: config.label,
-    diceFormula: settlementDiceFormula(typeKey),
+    typeLabel: config.label || SETTLEMENT_TYPES[typeKey].label,
+    diceFormula: config.diceFormula,
+    districtDieSides: config.dieSides,
     nameRoll: nameResult.roll,
     name: nameResult.name,
+    nameSource: nameResult.source,
     alignmentMode: resolvedAlignmentMode,
     alignmentRoll: overallAlignment?.roll ?? null,
     alignment: overallAlignment?.alignment ?? null,
+    alignmentSource: overallAlignment?.source ?? null,
+    typeSource: tableProvenance(config.sourceTable),
+    districtsSource: tableProvenance(status.tables.districts),
+    sourceBookTitle: CORE_BOOK_TITLE,
     districts: markSeatOfGovernment(districts),
   };
 }
 
-function rerollSettlementDistrict(settlement, districtIndex, { random = Math.random } = {}) {
+async function rerollSettlementDistrict(settlement, districtIndex, {
+  random = Math.random,
+  sourceStatus = null,
+  tables = globalThis.game?.tables,
+} = {}) {
   if (!settlement) return settlement;
   const index = Math.floor(Number(districtIndex));
   if (!Number.isInteger(index) || index < 0 || index >= (settlement.districts?.length ?? 0)) return settlement;
+  const status = sourceStatus ?? settlementSourceStatus(tables);
+  if (!status.available) return null;
+
+  const replacement = await rollSettlementDistrict({
+    type: settlement.type,
+    index,
+    alignmentMode: settlement.alignmentMode,
+    random,
+    sourceStatus: status,
+    tables,
+  });
+  if (!replacement) return null;
 
   const districts = settlement.districts.map((district, currentIndex) => (
-    currentIndex === index
-      ? rollSettlementDistrict({
-        type: settlement.type,
-        index,
-        alignmentMode: settlement.alignmentMode,
-        random,
-      })
-      : { ...district }
+    currentIndex === index ? replacement : { ...district }
   ));
 
   return {
@@ -357,14 +319,19 @@ function defaultSettlementTypeForPoint(pointOfInterest) {
   return null;
 }
 
-function settlementOptionsDialogContent({ defaultType = "village" } = {}) {
+function settlementOptionsDialogContent({ defaultType = "village", sourceStatus = null } = {}) {
   const typeKey = normalizeSettlementType(defaultType);
+  const status = sourceStatus ?? settlementSourceStatus();
   return `
     <div class="mk-gm-create-document-form mk-gm-settlement-options-form">
       <div class="form-group">
         <label>Settlement Type</label>
         <select name="settlementType">
-          ${Object.values(SETTLEMENT_TYPES).map(config => `<option value="${config.id}" ${config.id === typeKey ? "selected" : ""}>${config.label} · ${config.diceCount}d${config.dieSides}</option>`).join("")}
+          ${Object.values(SETTLEMENT_TYPES).map(type => {
+            const config = resolveSettlementTypeConfig(type.id, { table: status?.tables?.type ?? null });
+            const suffix = config?.diceFormula ? ` · ${config.diceFormula}` : "";
+            return `<option value="${type.id}" ${type.id === typeKey ? "selected" : ""}>${type.label}${suffix}</option>`;
+          }).join("")}
         </select>
       </div>
       <div class="form-group">
@@ -374,15 +341,15 @@ function settlementOptionsDialogContent({ defaultType = "village" } = {}) {
           <option value="district">Roll alignment for each district</option>
         </select>
       </div>
-      <p class="mk-gm-secondary">Shadowdark settlement generation records the district dice, but does not automate the physical dice-on-paper map layout.</p>
+      <p class="mk-gm-secondary">Uses imported ${escapeHtml(CORE_BOOK_TITLE)} RollTables. The physical dice-on-paper settlement map layout is not automated.</p>
     </div>
   `;
 }
 
-async function promptForSettlementOptions({ defaultType = "village" } = {}) {
+async function promptForSettlementOptions({ defaultType = "village", sourceStatus = null } = {}) {
   const result = await waitForGmDialog({
     title: "Expand Shadowdark Settlement",
-    content: settlementOptionsDialogContent({ defaultType }),
+    content: settlementOptionsDialogContent({ defaultType, sourceStatus }),
     buttons: [
       {
         action: "generate",
@@ -407,6 +374,49 @@ async function promptForSettlementOptions({ defaultType = "village" } = {}) {
   return result ?? null;
 }
 
+function missingSettlementSourceDialogContent(status) {
+  const missing = status?.missing ?? [];
+  return `
+    <div class="mk-gm-create-document-form">
+      <p>The imported <strong>${escapeHtml(CORE_BOOK_TITLE)}</strong> settlement RollTables are required.</p>
+      ${missing.length ? `<p>Missing: ${missing.map(escapeHtml).join(", ")}.</p>` : ""}
+      <p class="hint">Use Import / Update Source Tables and select your owned Core v4.9 Markdown transcription.</p>
+    </div>
+  `;
+}
+
+async function promptForMissingSettlementSource(status) {
+  return waitForGmDialog({
+    title: "Settlement Source Tables Required",
+    content: missingSettlementSourceDialogContent(status),
+    buttons: [
+      {
+        action: "import",
+        icon: '<i class="fas fa-file-import"></i>',
+        label: "Import / Update Source Tables",
+        default: true,
+        callback: () => "import",
+      },
+      {
+        action: "cancel",
+        icon: '<i class="fas fa-xmark"></i>',
+        label: "Cancel",
+        callback: () => "cancel",
+      },
+    ],
+    close: () => "cancel",
+  });
+}
+
+async function openSourceTableImporter() {
+  const api = globalThis.game?.modules?.get?.("mk-shadowdark")?.api?.sourceTables;
+  if (typeof api?.openImporter !== "function") {
+    globalThis.ui?.notifications?.warn?.("Source Table Importer is unavailable.");
+    return null;
+  }
+  return api.openImporter();
+}
+
 function settlementGeneratorDialogContent(settlement, originPoint = null) {
   const seatSummary = governmentSeatSummary(settlement);
   const alignment = settlement.alignmentMode === ALIGNMENT_MODE_OVERALL
@@ -421,6 +431,7 @@ function settlementGeneratorDialogContent(settlement, originPoint = null) {
         <input type="text" name="name" value="${escapeHtml(settlement.name)}" autofocus autocomplete="off">
       </div>
       ${originPoint ? `<p class="mk-gm-secondary">Expanded from ${escapeHtml(originPoint.descriptor)} ${escapeHtml(originPoint.location)} · ${escapeHtml(originPoint.feature)}</p>` : ""}
+      <p class="mk-gm-secondary">Source: ${escapeHtml(settlement.sourceBookTitle || CORE_BOOK_TITLE)}</p>
       <dl class="mk-gm-data-list">
         <div><dt>Type</dt><dd>${escapeHtml(settlement.typeLabel)} · ${escapeHtml(settlement.diceFormula)}</dd></div>
         <div><dt>Name Roll</dt><dd>d8 ${settlement.nameRoll}</dd></div>
@@ -454,14 +465,35 @@ async function promptForShadowdarkSettlement({
   promptOptions = promptForSettlementOptions,
   rollSettlement = rollShadowdarkSettlement,
   rerollDistrict = rerollSettlementDistrict,
+  promptMissingSource = promptForMissingSettlementSource,
+  importSources = openSourceTableImporter,
+  tables = globalThis.game?.tables,
 } = {}) {
-  const options = await promptOptions({ defaultType });
+  let status = settlementSourceStatus(tables);
+  if (!status.available) {
+    const choice = await promptMissingSource(status);
+    if (choice !== "import") return null;
+    await importSources();
+    status = settlementSourceStatus(globalThis.game?.tables ?? tables);
+    if (!status.available) {
+      globalThis.ui?.notifications?.warn?.("Required Core settlement RollTables are still unavailable after import.");
+      return null;
+    }
+  }
+
+  const options = await promptOptions({ defaultType, sourceStatus: status });
   if (!options) return null;
 
-  let settlement = rollSettlement({
+  let settlement = await rollSettlement({
     type: options.type,
     alignmentMode: options.alignmentMode,
+    sourceStatus: status,
+    tables: globalThis.game?.tables ?? tables,
   });
+  if (!settlement) {
+    globalThis.ui?.notifications?.warn?.("The imported Core settlement tables could not resolve a complete settlement.");
+    return null;
+  }
 
   while (true) {
     const result = await waitForGmDialog({
@@ -505,14 +537,21 @@ async function promptForShadowdarkSettlement({
 
     if (!result || result.action === "cancel") return null;
     if (result.action === "rerollAll") {
-      settlement = rollSettlement({
+      settlement = await rollSettlement({
         type: options.type,
         alignmentMode: options.alignmentMode,
+        sourceStatus: status,
+        tables: globalThis.game?.tables ?? tables,
       });
+      if (!settlement) return null;
       continue;
     }
     if (result.action === "rerollDistrict") {
-      settlement = rerollDistrict(settlement, result.districtIndex);
+      settlement = await rerollDistrict(settlement, result.districtIndex, {
+        sourceStatus: status,
+        tables: globalThis.game?.tables ?? tables,
+      });
+      if (!settlement) return null;
       continue;
     }
     if (result.action === "create") {
@@ -524,10 +563,28 @@ async function promptForShadowdarkSettlement({
   }
 }
 
+function sourcePages(settlement) {
+  const pages = new Set();
+  const add = source => {
+    for (const page of source?.pages ?? []) if (Number.isFinite(Number(page))) pages.add(Number(page));
+  };
+  add(settlement?.nameSource);
+  add(settlement?.typeSource);
+  add(settlement?.alignmentSource);
+  add(settlement?.districtsSource);
+  for (const district of settlement?.districts ?? []) {
+    add(district?.districtSource);
+    add(district?.alignmentSource);
+    for (const point of district?.pointsOfInterest ?? []) add(point?.source);
+  }
+  return [...pages].sort((a, b) => a - b);
+}
+
 function buildSettlementPageContent(settlement, originPoint = null) {
   if (!settlement) return "";
   const seatSummary = governmentSeatSummary(settlement);
   const dieLabel = districtDieLabel(settlement);
+  const pages = sourcePages(settlement);
   const originHtml = originPoint ? `
     <h2>Origin Point of Interest</h2>
     <table>
@@ -548,6 +605,7 @@ function buildSettlementPageContent(settlement, originPoint = null) {
     <h1>${escapeHtml(settlement.name)}</h1>
     ${originHtml}
     <h2>Shadowdark Settlement</h2>
+    <p><strong>Source:</strong> ${escapeHtml(settlement.sourceBookTitle || CORE_BOOK_TITLE)}${pages.length ? ` · PDF p. ${escapeHtml(pages.join(", "))}` : ""}</p>
     <ul>
       <li><strong>Type:</strong> ${escapeHtml(settlement.typeLabel)}</li>
       <li><strong>Settlement dice:</strong> ${escapeHtml(settlement.diceFormula)}</li>
@@ -575,9 +633,6 @@ function buildSettlementPageContent(settlement, originPoint = null) {
 
 export {
   SETTLEMENT_TYPES,
-  SETTLEMENT_DISTRICTS,
-  SETTLEMENT_ALIGNMENTS,
-  DISTRICT_POINTS_OF_INTEREST,
   ALIGNMENT_MODE_OVERALL,
   ALIGNMENT_MODE_DISTRICT,
   ALIGNMENT_MODES,
@@ -598,7 +653,11 @@ export {
   defaultSettlementTypeForPoint,
   settlementOptionsDialogContent,
   promptForSettlementOptions,
+  missingSettlementSourceDialogContent,
+  promptForMissingSettlementSource,
+  openSourceTableImporter,
   settlementGeneratorDialogContent,
   promptForShadowdarkSettlement,
+  sourcePages,
   buildSettlementPageContent,
 };

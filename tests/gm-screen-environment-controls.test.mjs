@@ -7,17 +7,13 @@ import {
   buildEnvironmentEditorView,
   encounterZoneTerrainNames,
   readEncounterSetupForm,
-  readEnvironmentForm,
   renderEncounterSetup,
-  renderEnvironmentEditor,
   sameEncounterSetupValue,
-  sameEnvironmentValue,
-  setSaveButtonDirty,
 } from "../scripts/gm-screen/environment-controls.js";
 
-const runtime = fs.readFileSync(new URL("../scripts/gm-screen/environment-controls.js", import.meta.url), "utf8");
-const bridge = fs.readFileSync(new URL("../scripts/gm-screen/workspace-refactor.js", import.meta.url), "utf8");
-const template = fs.readFileSync(new URL("../templates/gm-screen.hbs", import.meta.url), "utf8");
+const environmentRuntime = fs.readFileSync(new URL("../scripts/gm-screen/environment-controls.js", import.meta.url), "utf8");
+const topRuntime = fs.readFileSync(new URL("../scripts/gm-screen/top-context-controls.js", import.meta.url), "utf8");
+const overviewRuntime = fs.readFileSync(new URL("../scripts/gm-screen/overview-links.js", import.meta.url), "utf8");
 const manifest = JSON.parse(fs.readFileSync(new URL("../module.json", import.meta.url), "utf8"));
 
 function rules() {
@@ -67,7 +63,7 @@ test("Encounter Zone source columns become the Terrain choices", () => {
   ]);
 });
 
-test("Overview Scene Context exposes only Terrain, Danger, Period, and an explicit Save Changes action", () => {
+test("top-bar context view still derives Terrain, Danger, and Period from canonical Scene Context", () => {
   const view = buildEnvironmentEditorView({
     scene: { name: "Salt Road" },
     zoneTableUuid: "RollTable.zone",
@@ -80,23 +76,15 @@ test("Overview Scene Context exposes only Terrain, Danger, Period, and an explic
     },
     resolved: resolvedContext(),
   });
-  const html = renderEnvironmentEditor(view);
 
   assert.equal(view.sceneName, "Salt Road");
   assert.deepEqual(view.terrains, ["Desert", "Canyon", "Mountain", "Salt Flat"]);
   assert.equal(view.stored.terrain, "Canyon");
-  for (const name of ["terrain", "dangerLevel", "period"]) {
-    assert.match(html, new RegExp(`<select name="${name}"`));
-  }
-  assert.doesNotMatch(html, /name="tableUuid"/);
-  assert.doesNotMatch(html, /save automatically/i);
-  assert.doesNotMatch(html, /<input type="text" name="terrain"/);
-  assert.match(html, /data-mk-environment-save hidden disabled/);
-  assert.match(html, /Save Changes/);
-  assert.match(html, /staged locally until you save/i);
+  assert.equal(view.stored.dangerLevel, "risky");
+  assert.equal(view.stored.period, "auto");
 });
 
-test("Overview Terrain is disabled until an Encounter Zone is configured in Tables", () => {
+test("Terrain remains unavailable until an Encounter Zone supplies terrain columns", () => {
   const view = buildEnvironmentEditorView({
     scene: { name: "Unknown Waste" },
     zoneTableUuid: "",
@@ -104,64 +92,29 @@ test("Overview Terrain is disabled until an Encounter Zone is configured in Tabl
     stored: { terrain: "Default", dangerLevel: "risky", period: "auto", tableUuid: "" },
     resolved: resolvedContext(),
   });
-  const html = renderEnvironmentEditor(view);
 
   assert.deepEqual(view.terrains, []);
-  assert.match(html, /No Encounter Zone selected/);
-  assert.match(html, /Choose one in Tables/);
-  assert.match(html, /<select name="terrain" disabled>/);
+  assert.match(topRuntime, /Configure an Encounter Zone in Tables to populate Terrain/);
+  assert.match(topRuntime, /disabled: view\.terrains\.length === 0/);
 });
 
-test("Scene Context form reader returns only the three Overview controls", () => {
-  const values = {
-    terrain: "Mountain",
-    dangerLevel: "risky",
-    period: "night",
-  };
-  const form = {
-    querySelector(selector) {
-      const name = selector.match(/name="([^"]+)"/)?.[1];
-      return name ? { value: values[name] ?? "" } : null;
-    },
-  };
-  const root = {
-    querySelector(selector) {
-      return selector === "[data-mk-environment-form]" ? form : null;
-    },
-  };
-
-  assert.deepEqual(readEnvironmentForm(root), values);
+test("visible Scene Context editing is owned by the top strip rather than Overview", () => {
+  assert.match(topRuntime, /pressureCell\(root, "Terrain"\)/);
+  assert.match(topRuntime, /pressureCell\(root, "Danger"\)/);
+  assert.match(topRuntime, /pressureCell\(root, "Period"\)/);
+  assert.match(topRuntime, /Save Context/);
+  assert.match(overviewRuntime, /overview\.innerHTML = overviewShellHtml\(\)/);
+  assert.doesNotMatch(overviewRuntime, /Scene Context/);
+  assert.doesNotMatch(overviewRuntime, /Encounter Pressure/);
+  assert.doesNotMatch(overviewRuntime, /Combat \/ Morale/);
+  assert.doesNotMatch(overviewRuntime, /Resting/);
 });
 
-test("Scene Context changes remain local until the explicit save action", () => {
-  assert.match(runtime, /bindEnvironmentManualSave/);
-  assert.match(runtime, /data-mk-environment-save/);
-  assert.match(runtime, /setSceneEnvironmentContext\(next, scene\)/);
-  assert.match(runtime, /tableUuid: current\.tableUuid/);
-  assert.match(runtime, /application\?\.render\?\.\(\{ force: true \}\)/);
-  assert.doesNotMatch(runtime, /bindAutoSave/);
-  assert.doesNotMatch(runtime, /Auto-save/);
-  assert.doesNotMatch(runtime, /_mkSceneContextDraft/);
-});
-
-test("dirty-state helpers reveal a save button only after values differ", () => {
-  const button = { hidden: true, disabled: true };
-  assert.equal(setSaveButtonDirty(button, false), false);
-  assert.equal(button.hidden, true);
-  assert.equal(button.disabled, true);
-
-  assert.equal(setSaveButtonDirty(button, true), true);
-  assert.equal(button.hidden, false);
-  assert.equal(button.disabled, false);
-
-  assert.equal(sameEnvironmentValue(
-    { terrain: "Desert", dangerLevel: "risky", period: "day" },
-    { terrain: "Desert", dangerLevel: "risky", period: "day" },
-  ), true);
-  assert.equal(sameEnvironmentValue(
-    { terrain: "Mountain", dangerLevel: "risky", period: "day" },
-    { terrain: "Desert", dangerLevel: "risky", period: "day" },
-  ), false);
+test("top context remains explicit-save and preserves the encounter-table field", () => {
+  assert.match(topRuntime, /setSceneEnvironmentContext/);
+  assert.match(topRuntime, /tableUuid: current\.tableUuid/);
+  assert.match(topRuntime, /application\?\.render\?\.\(\{ force: true \}\)/);
+  assert.doesNotMatch(topRuntime, /Auto-save|bindAutoSave|updateScene|updateActor|updateCombat/);
 });
 
 test("Encounter Setup contains explicit Encounter Zone and Encounter Table save controls", () => {
@@ -210,18 +163,14 @@ test("Encounter Setup form reader stages both selectors without persisting them"
   assert.deepEqual(readEncounterSetupForm(root), values);
 });
 
-test("Scene Context remains native on Overview and compatibility bridge does no workspace surgery", () => {
-  assert.match(template, /data-mk-gm-overview-scene-context/);
-  assert.doesNotMatch(template, /data-workspace-panel="environment"/);
-  assert.doesNotMatch(template, /data-workspace-panel="encounter"/);
-  assert.doesNotMatch(template, /configureEnvironment/);
-  assert.doesNotMatch(template, /profileName/);
-  assert.doesNotMatch(bridge, /prepareAdditionalWorkspaces|prepareOverviewSceneContext|removeGroupTravelContextButton|removeEncounterProfilePresentation/);
-
-  const bridgeIndex = manifest.esmodules.indexOf("scripts/gm-screen/workspace-refactor.js");
-  const rulesIndex = manifest.esmodules.indexOf("scripts/gm-screen/quick-rules.js");
+test("GM Screen loads top context before Overview shortcuts and keeps Encounter Setup helpers", () => {
   const environmentIndex = manifest.esmodules.indexOf("scripts/gm-screen/environment-controls.js");
-  assert.ok(bridgeIndex >= 0);
-  assert.ok(rulesIndex > bridgeIndex);
-  assert.ok(environmentIndex > rulesIndex);
+  const topIndex = manifest.esmodules.indexOf("scripts/gm-screen/top-context-controls.js");
+  const overviewIndex = manifest.esmodules.indexOf("scripts/gm-screen/overview-links.js");
+  const browserIndex = manifest.esmodules.indexOf("scripts/gm-screen/source-table-browser.js");
+  assert.ok(environmentIndex >= 0);
+  assert.ok(topIndex > environmentIndex);
+  assert.ok(overviewIndex > topIndex);
+  assert.ok(browserIndex > environmentIndex);
+  assert.match(environmentRuntime, /bindEncounterSetupManualSave/);
 });

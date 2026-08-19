@@ -117,6 +117,8 @@ const DEFAULT_ENVIRONMENT_PROFILES = Object.freeze({
   },
 });
 
+const CANONICAL_ENVIRONMENT_RULES = DEFAULT_ENVIRONMENT_PROFILES.default;
+
 function deepClone(value) {
   if (value === undefined || value === null) return value;
   if (globalThis.foundry?.utils?.deepClone) return foundry.utils.deepClone(value);
@@ -197,7 +199,7 @@ function normalizeEnvironmentProfiles(rawValue) {
     try {
       parsed = JSON.parse(rawValue || "{}");
     } catch (error) {
-      console.warn(`${MODULE_ID} | Environment Context | Invalid profile JSON. Using defaults.`, error);
+      console.warn(`${MODULE_ID} | Environment Context | Invalid legacy profile JSON. Using defaults.`, error);
       parsed = {};
     }
   }
@@ -244,6 +246,8 @@ function normalizeEnvironmentProfiles(rawValue) {
   return normalized;
 }
 
+// Legacy profile access remains only for rerolling old encounter records. New
+// Scene Context resolution never selects rules from these settings.
 function getEnvironmentProfiles() {
   return normalizeEnvironmentProfiles(
     setting(
@@ -254,8 +258,7 @@ function getEnvironmentProfiles() {
 }
 
 function getDefaultEnvironmentProfileId(profiles = getEnvironmentProfiles()) {
-  const requested = slug(setting(ENVIRONMENT_SETTINGS.defaultProfile, ENVIRONMENT_DEFAULT_PROFILE_ID));
-  if (profiles[requested]) return requested;
+  if (profiles[ENVIRONMENT_DEFAULT_PROFILE_ID]) return ENVIRONMENT_DEFAULT_PROFILE_ID;
   return Object.keys(profiles)[0] ?? ENVIRONMENT_DEFAULT_PROFILE_ID;
 }
 
@@ -276,62 +279,53 @@ function worldHour(worldTime = Number(globalThis.game?.time?.worldTime ?? 0)) {
   return Math.floor(normalized / 3600);
 }
 
-function determineEnvironmentPeriod(profile, requestedPeriod = "auto", worldTime = undefined) {
+function determineEnvironmentPeriod(rules, requestedPeriod = "auto", worldTime = undefined) {
   if (["day", "night"].includes(requestedPeriod)) return requestedPeriod;
 
   const hour = worldHour(worldTime);
-  const dayStart = Number(profile?.dayStart ?? 6);
-  const nightStart = Number(profile?.nightStart ?? 18);
+  const dayStart = Number(rules?.dayStart ?? 6);
+  const nightStart = Number(rules?.nightStart ?? 18);
 
   if (dayStart === nightStart) return "day";
   if (dayStart < nightStart) return hour >= dayStart && hour < nightStart ? "day" : "night";
   return hour >= dayStart || hour < nightStart ? "day" : "night";
 }
 
-function normalizeSceneEnvironmentContext(rawContext, profiles = getEnvironmentProfiles()) {
+function normalizeSceneEnvironmentContext(rawContext) {
   const stored = rawContext && typeof rawContext === "object" && !Array.isArray(rawContext)
     ? rawContext
     : {};
-  const fallbackProfileId = getDefaultEnvironmentProfileId(profiles);
-  const requestedProfileId = slug(stored.profileId);
-  const profileId = profiles[requestedProfileId] ? requestedProfileId : fallbackProfileId;
-  const profile = profiles[profileId] ?? DEFAULT_ENVIRONMENT_PROFILES.default;
-  const requestedDanger = String(stored.dangerLevel ?? profile.defaultDangerLevel ?? "unsafe");
-  const dangerLevel = profile.dangerLevels?.[requestedDanger]
+  const requestedDanger = String(stored.dangerLevel ?? CANONICAL_ENVIRONMENT_RULES.defaultDangerLevel ?? "unsafe");
+  const dangerLevel = CANONICAL_ENVIRONMENT_RULES.dangerLevels?.[requestedDanger]
     ? requestedDanger
-    : String(profile.defaultDangerLevel ?? "unsafe");
+    : String(CANONICAL_ENVIRONMENT_RULES.defaultDangerLevel ?? "unsafe");
+  const period = String(stored.period ?? "auto");
+  const terrain = String(stored.terrain ?? CANONICAL_ENVIRONMENT_RULES.defaultTerrain ?? "Default").trim();
 
   return {
-    profileId,
-    terrain: String(
-      stored.terrain
-      ?? profile.defaultTerrain
-      ?? Object.keys(profile.terrains ?? {})[0]
-      ?? "Default"
-    ),
+    terrain: terrain || "Default",
     dangerLevel,
-    period: ["auto", "day", "night"].includes(stored.period) ? stored.period : "auto",
+    period: ["auto", "day", "night"].includes(period) ? period : "auto",
     tableUuid: String(stored.tableUuid ?? ""),
   };
 }
 
 function getSceneEnvironmentContext(scene = currentScene()) {
-  const profiles = getEnvironmentProfiles();
   const stored = getSceneFlag(scene, ENVIRONMENT_SCENE_FLAG, {}) ?? {};
-  return normalizeSceneEnvironmentContext(stored, profiles);
+  return normalizeSceneEnvironmentContext(stored);
 }
 
-function terrainNames(profile) {
-  const names = Object.keys(profile?.terrains ?? {});
-  if (profile?.defaultTerrain && !names.includes(profile.defaultTerrain)) names.unshift(profile.defaultTerrain);
+function terrainNames(rules = CANONICAL_ENVIRONMENT_RULES) {
+  const names = Object.keys(rules?.terrains ?? {});
+  if (rules?.defaultTerrain && !names.includes(rules.defaultTerrain)) names.unshift(rules.defaultTerrain);
   return names.length ? names : ["Default"];
 }
 
-function tableUuidForEnvironmentContext(profile, terrain, period, explicitUuid = "") {
+function tableUuidForEnvironmentContext(rules, terrain, period, explicitUuid = "") {
   if (explicitUuid) return explicitUuid;
 
-  const terrainData = profile?.terrains?.[terrain]
-    ?? profile?.terrains?.[profile?.defaultTerrain]
+  const terrainData = rules?.terrains?.[terrain]
+    ?? rules?.terrains?.[rules?.defaultTerrain]
     ?? {};
 
   return String(
@@ -342,9 +336,9 @@ function tableUuidForEnvironmentContext(profile, terrain, period, explicitUuid =
   );
 }
 
-function normalizeDangerDefinition(profile, dangerLevel) {
-  const source = profile?.dangerLevels?.[dangerLevel]
-    ?? DEFAULT_ENVIRONMENT_PROFILES.default.dangerLevels.unsafe;
+function normalizeDangerDefinition(rules, dangerLevel) {
+  const source = rules?.dangerLevels?.[dangerLevel]
+    ?? CANONICAL_ENVIRONMENT_RULES.dangerLevels.unsafe;
   const encounterOn = Array.isArray(source?.encounterOn)
     ? [...new Set(source.encounterOn.map(Number).filter(Number.isFinite))]
     : [1];
@@ -360,15 +354,14 @@ function normalizeDangerDefinition(profile, dangerLevel) {
 
 function resolveEnvironmentContext(rawContext, {
   scene = null,
-  profiles = getEnvironmentProfiles(),
   worldTime = undefined,
 } = {}) {
-  const context = normalizeSceneEnvironmentContext(rawContext, profiles);
-  const profileRef = getEnvironmentProfile(context.profileId, profiles);
-  const resolvedPeriod = determineEnvironmentPeriod(profileRef.data, context.period, worldTime);
-  const danger = normalizeDangerDefinition(profileRef.data, context.dangerLevel);
+  const context = normalizeSceneEnvironmentContext(rawContext);
+  const rules = CANONICAL_ENVIRONMENT_RULES;
+  const resolvedPeriod = determineEnvironmentPeriod(rules, context.period, worldTime);
+  const danger = normalizeDangerDefinition(rules, context.dangerLevel);
   const effectiveTableUuid = tableUuidForEnvironmentContext(
-    profileRef.data,
+    rules,
     context.terrain,
     resolvedPeriod,
     context.tableUuid
@@ -378,8 +371,9 @@ function resolveEnvironmentContext(rawContext, {
     sceneId: String(scene?.id ?? ""),
     sceneUuid: String(scene?.uuid ?? ""),
     sceneName: String(scene?.name ?? ""),
-    profileId: profileRef.id,
-    profile: profileRef.data,
+    // Internal canonical rules object retained for encounter procedure code.
+    profileId: ENVIRONMENT_DEFAULT_PROFILE_ID,
+    profile: rules,
     terrain: context.terrain,
     dangerLevel: context.dangerLevel,
     danger,
@@ -402,17 +396,36 @@ function resolveSceneEnvironmentContext(scene = currentScene(), options = {}) {
   });
 }
 
+function publicResolvedContext(resolved) {
+  if (!resolved) return resolved;
+  const {
+    profile: _profile,
+    profileId: _profileId,
+    ...publicContext
+  } = resolved;
+  return publicContext;
+}
+
+function sameSceneContext(left, right) {
+  return left?.terrain === right?.terrain
+    && left?.dangerLevel === right?.dangerLevel
+    && left?.period === right?.period
+    && left?.tableUuid === right?.tableUuid;
+}
+
 async function setSceneEnvironmentContext(context, scene = currentScene(), {
   user = globalThis.game?.user,
 } = {}) {
   if (!scene?.setFlag) return null;
   if (!user?.isGM) {
-    globalThis.ui?.notifications?.warn?.("Only the GM can change the Scene environment context.");
+    globalThis.ui?.notifications?.warn?.("Only the GM can change the Scene context.");
     return null;
   }
 
-  const profiles = getEnvironmentProfiles();
-  const normalized = normalizeSceneEnvironmentContext(context, profiles);
+  const normalized = normalizeSceneEnvironmentContext(context);
+  const current = getSceneEnvironmentContext(scene);
+  if (sameSceneContext(current, normalized)) return normalized;
+
   await scene.setFlag(MODULE_ID, ENVIRONMENT_SCENE_FLAG, normalized);
   return normalized;
 }
@@ -425,10 +438,10 @@ function exposeEnvironmentContextApi() {
   module.api.environment = {
     sceneFlag: ENVIRONMENT_SCENE_FLAG,
     changedHook: ENVIRONMENT_CHANGED_HOOK,
-    getProfiles: getEnvironmentProfiles,
-    getProfile: getEnvironmentProfile,
     getSceneContext: getSceneEnvironmentContext,
-    resolveSceneContext: resolveSceneEnvironmentContext,
+    resolveSceneContext: (scene = currentScene(), options = {}) => (
+      publicResolvedContext(resolveSceneEnvironmentContext(scene, options))
+    ),
     setSceneContext: setSceneEnvironmentContext,
   };
 
@@ -454,15 +467,51 @@ function environmentFlagChanged(changes) {
   );
 }
 
-function emitEnvironmentChanged(scene) {
+function emitEnvironmentChanged(scene = currentScene()) {
+  if (!scene) return null;
   const context = resolveSceneEnvironmentContext(scene);
   globalThis.Hooks?.callAll?.(ENVIRONMENT_CHANGED_HOOK, scene, context);
   return context;
 }
 
+function rawStoredSceneContext(scene) {
+  return getSceneFlag(scene, ENVIRONMENT_SCENE_FLAG, {}) ?? {};
+}
+
+function needsSceneContextMigration(raw, normalized) {
+  if (!raw || typeof raw !== "object" || Array.isArray(raw)) return false;
+  const keys = Object.keys(raw);
+  if (keys.some(key => !["terrain", "dangerLevel", "period", "tableUuid"].includes(key))) return true;
+  return !sameSceneContext(raw, normalized);
+}
+
+async function migrateLegacySceneContexts({
+  user = globalThis.game?.user,
+  scenes = globalThis.game?.scenes,
+} = {}) {
+  if (!user?.isGM) return 0;
+  let migrated = 0;
+
+  for (const scene of scenes ?? []) {
+    if (!scene?.setFlag) continue;
+    const raw = rawStoredSceneContext(scene);
+    const normalized = normalizeSceneEnvironmentContext(raw);
+    if (!needsSceneContextMigration(raw, normalized)) continue;
+    await scene.setFlag(MODULE_ID, ENVIRONMENT_SCENE_FLAG, normalized);
+    migrated += 1;
+  }
+
+  return migrated;
+}
+
 function registerEnvironmentContextService() {
-  globalThis.Hooks?.once?.("ready", () => {
+  globalThis.Hooks?.once?.("ready", async () => {
     exposeEnvironmentContextApi();
+    try {
+      await migrateLegacySceneContexts();
+    } catch (error) {
+      console.warn(`${MODULE_ID} | Scene Context | Legacy Scene migration failed.`, error);
+    }
   });
 
   globalThis.Hooks?.on?.("canvasReady", canvas => {
@@ -474,6 +523,12 @@ function registerEnvironmentContextService() {
     if (!isActiveScene(scene) || !environmentFlagChanged(changes)) return;
     emitEnvironmentChanged(scene);
   });
+
+  // Foundry world time is the absolute clock. Automatic day/night context must
+  // refresh even when another module or macro advances world time.
+  globalThis.Hooks?.on?.("updateWorldTime", () => {
+    emitEnvironmentChanged(currentScene());
+  });
 }
 
 export {
@@ -484,6 +539,7 @@ export {
   ENVIRONMENT_CHANGED_HOOK,
   ENVIRONMENT_SETTINGS,
   DEFAULT_ENVIRONMENT_PROFILES,
+  CANONICAL_ENVIRONMENT_RULES,
   normalizeEnvironmentProfiles,
   getEnvironmentProfiles,
   getDefaultEnvironmentProfileId,
@@ -496,9 +552,13 @@ export {
   normalizeDangerDefinition,
   resolveEnvironmentContext,
   resolveSceneEnvironmentContext,
+  publicResolvedContext,
+  sameSceneContext,
   setSceneEnvironmentContext,
   exposeEnvironmentContextApi,
   environmentFlagChanged,
   emitEnvironmentChanged,
+  needsSceneContextMigration,
+  migrateLegacySceneContexts,
   registerEnvironmentContextService,
 };

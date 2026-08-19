@@ -16,9 +16,7 @@ const GM_SCREEN_WORKSPACES = Object.freeze([
   "overview",
   "exploration",
   "combat",
-  "resting",
   "downtime",
-  "rules",
   "tables",
   "session-log",
 ]);
@@ -27,11 +25,18 @@ const GM_SCREEN_WORKSPACE_LABELS = Object.freeze({
   overview: "Overview",
   exploration: "Exploration",
   combat: "Combat",
-  resting: "Resting",
   downtime: "Downtime",
-  rules: "Rules",
   tables: "Tables",
   "session-log": "Session Log",
+});
+
+const GM_SCREEN_WORKSPACE_ICONS = Object.freeze({
+  overview: "fa-compass",
+  exploration: "fa-map",
+  combat: "fa-swords",
+  downtime: "fa-coins",
+  tables: "fa-table-list",
+  "session-log": "fa-book-open",
 });
 
 function collectionValues(collection) {
@@ -47,7 +52,8 @@ function collectionValues(collection) {
 }
 
 function normalizeWorkspace(value) {
-  const workspace = String(value ?? "overview").trim().toLowerCase();
+  const rawWorkspace = String(value ?? "overview").trim().toLowerCase();
+  const workspace = rawWorkspace === "resting" ? "downtime" : rawWorkspace;
   return GM_SCREEN_WORKSPACES.includes(workspace) ? workspace : "overview";
 }
 
@@ -303,6 +309,7 @@ async function buildGmScreenViewModel({
     workspaces: GM_SCREEN_WORKSPACES.map(id => ({
       id,
       label: GM_SCREEN_WORKSPACE_LABELS[id] ?? id,
+      icon: GM_SCREEN_WORKSPACE_ICONS[id] ?? "fa-square",
       active: id === resolvedWorkspace,
     })),
     groups: groups.map(group => ({
@@ -381,6 +388,7 @@ async function buildGmScreenViewModel({
 export {
   GM_SCREEN_WORKSPACES,
   GM_SCREEN_WORKSPACE_LABELS,
+  GM_SCREEN_WORKSPACE_ICONS,
   collectionValues,
   normalizeWorkspace,
   getGroupActors,

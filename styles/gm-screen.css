@@ -346,10 +346,19 @@
   flex: 1 0 auto;
   min-height: 28px;
   padding: 3px 9px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
   font-size: 10px;
   font-weight: 800;
   letter-spacing: 0.04em;
   text-transform: uppercase;
+}
+
+.mk-gm-workspace-nav button > i {
+  color: var(--mk-gm-muted);
+  font-size: 11px;
 }
 
 .mk-gm-workspace-body {
@@ -365,11 +374,7 @@
 
 .mk-gm-screen[data-workspace="overview"] .mk-gm-workspace[data-workspace-panel="overview"],
 .mk-gm-screen[data-workspace="exploration"] .mk-gm-workspace[data-workspace-panel="exploration"],
-.mk-gm-screen[data-workspace="resting"] .mk-gm-workspace[data-workspace-panel="resting"],
-.mk-gm-screen[data-workspace="encounter"] .mk-gm-workspace[data-workspace-panel="encounter"],
-.mk-gm-screen[data-workspace="combat"] .mk-gm-workspace[data-workspace-panel="combat"],
-.mk-gm-screen[data-workspace="environment"] .mk-gm-workspace[data-workspace-panel="environment"],
-.mk-gm-screen[data-workspace="rules"] .mk-gm-workspace[data-workspace-panel="rules"] {
+.mk-gm-screen[data-workspace="combat"] .mk-gm-workspace[data-workspace-panel="combat"] {
   display: block;
 }
 
@@ -628,7 +633,6 @@
 }
 
 .mk-gm-dialog .mk-gm-create-document-form,
-.mk-gm-dialog .mk-gm-procedure-dialog,
 .mk-gm-dialog .mk-gm-time-dialog,
 .mk-gm-dialog .mk-gm-assignment-dialog,
 .mk-gm-dialog .mk-gm-watch-dialog,

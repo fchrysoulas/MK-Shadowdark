@@ -107,7 +107,7 @@ async function actionInspectMember(_event, target) {
   return openGroupMemberStatus(String(target?.dataset?.actorUuid ?? ""));
 }
 
-async function actionChangeProcedure() {
+async function actionSelectProcedure(next) {
   const group = await selectedGroup(this);
   if (!group) {
     notifyNoGroup();
@@ -115,44 +115,10 @@ async function actionChangeProcedure() {
   }
 
   const current = getGroupProcedureState(group);
-  const options = GROUP_PROCEDURE_STATES
-    .map(state => `<option value="${state}" ${state === current ? "selected" : ""}>${procedureLabel(state)}</option>`)
-    .join("");
-
-  const next = await waitForGmDialog({
-    title: "Group Procedure",
-    content: `
-      <div class="mk-gm-procedure-dialog">
-        <p>Choose the canonical procedure for <strong>${group.name ?? "Group"}</strong>.</p>
-        <div class="form-group">
-          <label>Procedure</label>
-          <select name="procedure">${options}</select>
-        </div>
-        <p class="hint">Changing procedure does not itself start a Rest, encounter, or Combat workflow.</p>
-      </div>
-    `,
-    buttons: [
-      {
-        action: "apply",
-        icon: '<i class="fas fa-check"></i>',
-        label: "Apply",
-        default: true,
-        callback: (_event, button) => dialogValue(button, '[name="procedure"]') ?? null,
-      },
-      {
-        action: "cancel",
-        icon: '<i class="fas fa-times"></i>',
-        label: "Cancel",
-        callback: () => null,
-      },
-    ],
-    close: () => null,
-  });
-
-  if (!next || next === current) return null;
+  if (!GROUP_PROCEDURE_STATES.includes(next) || next === current) return null;
 
   const result = await setGroupProcedureState(group, next, {
-    reason: "gm-screen",
+    reason: "gm-screen-top-bar",
   });
   await this.render({ force: true });
   return result;
@@ -331,6 +297,60 @@ function pressureCell(root, label) {
   )) ?? null;
 }
 
+function procedureValueFromCell(cell) {
+  const label = String(cell?.querySelector?.("strong")?.textContent ?? "")
+    .trim()
+    .toLowerCase();
+  return GROUP_PROCEDURE_STATES.find(state => procedureLabel(state).toLowerCase() === label)
+    ?? "downtime";
+}
+
+function installProcedureSelector(cell, {
+  value = "downtime",
+  disabled = false,
+  onChange,
+} = {}) {
+  if (!cell || typeof onChange !== "function") return null;
+
+  const labelElement = cell.querySelector?.("span");
+  cell.replaceChildren();
+  if (labelElement) cell.append(labelElement);
+
+  const select = globalThis.document?.createElement?.("select");
+  if (!select) return null;
+
+  select.name = "procedure";
+  select.title = "Change Group procedure";
+  select.setAttribute("aria-label", "Change Group procedure");
+  select.disabled = disabled;
+
+  for (const state of GROUP_PROCEDURE_STATES) {
+    const option = globalThis.document?.createElement?.("option");
+    if (!option) continue;
+    option.value = state;
+    option.textContent = procedureLabel(state);
+    option.selected = state === value;
+    select.append(option);
+  }
+
+  select.addEventListener("change", async event => {
+    event.stopPropagation();
+    const next = String(event.currentTarget?.value ?? "");
+    select.disabled = true;
+    try {
+      await onChange(next);
+    } catch (error) {
+      console.error("mk-shadowdark | GM Screen | Procedure update failed", error);
+      globalThis.ui?.notifications?.error?.(`Group procedure update failed: ${error.message}`);
+      select.value = value;
+      select.disabled = false;
+    }
+  });
+
+  cell.append(select);
+  return select;
+}
+
 function installPressureControl(cell, {
   label,
   title,
@@ -395,11 +415,10 @@ function bindPressureControls(app) {
   const procedure = pressureCell(root, "Procedure");
   const elapsed = pressureCell(root, "Elapsed");
 
-  installPressureControl(procedure, {
-    label: "Procedure",
-    title: "Change Group procedure",
-    icon: "fas fa-chevron-down",
-    onClick: () => actionChangeProcedure.call(app),
+  installProcedureSelector(procedure, {
+    value: procedureValueFromCell(procedure),
+    disabled: !app?.groupActorUuid,
+    onChange: next => actionSelectProcedure.call(app, next),
   });
   installPressureControl(elapsed, {
     label: "Elapsed",
@@ -592,7 +611,9 @@ export {
   MKGMscreen,
   canUseGmScreen,
   canonicalTurnSeconds,
-  actionChangeProcedure,
+  actionSelectProcedure,
+  procedureValueFromCell,
+  installProcedureSelector,
   actionTimeControls,
   bindPressureControls,
   getGmScreen,

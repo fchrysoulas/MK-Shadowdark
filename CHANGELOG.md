@@ -4,6 +4,10 @@
 
 - Moved GM Screen Terrain, Danger, and Period editing into the persistent top strip with a staged **Save Context** action; no Scene Context field auto-saves, and one explicit rerender occurs only after a successful save.
 - Replaced the Overview status dashboard with a per-GM drag/drop shortcut canvas for UUID-backed Foundry documents such as Journals, Actors, Items, and RollTables; clicking opens the original document and pin/remove operations update locally without a full GM Screen rerender.
+- Aligned and vertically corrected Overview shortcut interaction hitboxes.
+- Replaced the GM Screen Group Procedure popup with an immediate top-bar dropdown selector.
+- Added icons to GM Screen workspace navigation and merged the Resting status surface into Downtime.
+- Removed the dedicated GM Screen Rules workspace and its navigation tab; the remaining GM Screen workspaces retain their existing controls.
 - Removed Scene Context, Encounter Pressure, Resting, Combat/Morale, and Light summary cards from rendered Overview; active-party Light pressure remains in the persistent top strip.
 - Simplified the GM Screen into an explicit-update surface: removed ambient Actor/Scene/Combat/workflow refresh hooks and the generic Refresh button, removed GM Screen Marching Order/role, camp-watch, rest-start/resume, Group Traveling, and Group Camping controls, and kept those authoritative workflows in Group Management.
 - Changed Tables Encounter Setup to stage Encounter Zone and Encounter Table until **Save Encounter Setup** is pressed; selecting an Encounter Zone still previews its imported terrain columns without persisting them.

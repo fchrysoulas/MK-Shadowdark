@@ -20,8 +20,10 @@ test("Resting workspace no longer exposes rest-start, camping, or watch controls
   assert.doesNotMatch(template, /Edit Watches/);
 });
 
-test("Resting workspace remains a status surface with encounter staging", () => {
-  assert.match(template, /data-workspace-panel="resting"/);
+test("Downtime workspace includes the resting status surface with encounter staging", () => {
+  assert.doesNotMatch(template, /data-workspace-panel="resting"/);
+  assert.match(template, /data-workspace-panel="downtime"/);
+  assert.match(template, /data-mk-gm-rest-panel/);
   assert.match(template, /resting\.status/);
   assert.match(template, /resting\.completedTurns/);
   assert.match(template, /resting\.remainingChecks/);

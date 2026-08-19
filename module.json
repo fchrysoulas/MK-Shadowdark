@@ -61,7 +61,6 @@
     "scripts/gm-screen/encounter-controls.js",
     "scripts/gm-screen/encounter-history.js",
     "scripts/gm-screen/morale-controls.js",
-    "scripts/gm-screen/quick-rules.js",
     "scripts/gm-screen/environment-controls.js",
     "scripts/gm-screen/top-context-controls.js",
     "scripts/gm-screen/light-pressure.js",

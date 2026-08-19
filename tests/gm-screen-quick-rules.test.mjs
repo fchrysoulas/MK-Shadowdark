@@ -117,15 +117,15 @@ test("Quick Rules retain canonical Rest constants while encounter rules remain d
   assert.equal(rules.rest.totalLabel, "8 hours");
 });
 
-test("Quick Rules replace the entire rules workspace on GM Screen render", () => {
-  assert.match(runtime, /data-workspace-panel=\\?"rules\\?"/);
+test("Quick Rules runtime is retired from the GM Screen manifest", () => {
   assert.match(runtime, /workspace\.innerHTML = renderQuickRules\(buildQuickRules\(context\)\)/);
   assert.match(runtime, /resolveSceneEnvironmentContext\(\)/);
+  assert.equal(manifest.esmodules.includes("scripts/gm-screen/quick-rules.js"), false);
 });
 
-test("Dynamic Quick Rules load after GM Screen operational controllers", () => {
+test("Quick Rules no longer load with GM Screen operational controllers", () => {
   const moraleIndex = manifest.esmodules.indexOf("scripts/gm-screen/morale-controls.js");
   const rulesIndex = manifest.esmodules.indexOf("scripts/gm-screen/quick-rules.js");
   assert.ok(moraleIndex >= 0);
-  assert.ok(rulesIndex > moraleIndex);
+  assert.equal(rulesIndex, -1);
 });

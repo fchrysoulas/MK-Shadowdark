@@ -4,9 +4,7 @@ const WORKSPACES = Object.freeze([
   "overview",
   "exploration",
   "combat",
-  "resting",
   "downtime",
-  "rules",
   "tables",
   "session-log",
 ]);
@@ -17,7 +15,8 @@ const DEFAULT_PREFERENCES = Object.freeze({
 });
 
 function normalizeWorkspace(value) {
-  const workspace = String(value ?? "overview").trim().toLowerCase();
+  const rawWorkspace = String(value ?? "overview").trim().toLowerCase();
+  const workspace = rawWorkspace === "resting" ? "downtime" : rawWorkspace;
   return WORKSPACES.includes(workspace) ? workspace : "overview";
 }
 

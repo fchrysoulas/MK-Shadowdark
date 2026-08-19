@@ -15,9 +15,7 @@ const WORKSPACES = [
   "overview",
   "exploration",
   "combat",
-  "resting",
   "downtime",
-  "rules",
   "tables",
   "session-log",
 ];
@@ -58,6 +56,8 @@ test("GM Screen consumes canonical Group, Scene, encounter, and morale services"
 test("GM Screen procedure and elapsed pressure values are operational controls", () => {
   assert.match(runtime, /GROUP_PROCEDURE_STATES/);
   assert.match(runtime, /setGroupProcedureState\(group, next/);
+  assert.match(runtime, /installProcedureSelector\(procedure/);
+  assert.match(runtime, /select\.addEventListener\("change"/);
   assert.match(runtime, /advanceGroupTime\(group, seconds/);
   assert.match(runtime, /resetGroupTime\(group, procedure/);
   assert.match(runtime, /getExplorationEncounterState\(group\)\.turnSeconds/);
@@ -65,6 +65,7 @@ test("GM Screen procedure and elapsed pressure values are operational controls",
   assert.doesNotMatch(runtime, /presentation:\s*true/);
   assert.match(runtime, /bindPressureControls\(this\)/);
   assert.match(runtime, /Change Group procedure/);
+  assert.doesNotMatch(runtime, /mk-gm-procedure-dialog|title: "Group Procedure"/);
   assert.match(runtime, /Advance or reset Group procedure time/);
 });
 
@@ -75,7 +76,7 @@ test("GM Screen only offers one-turn advancement where a canonical duration exis
   assert.match(runtime, /Use an explicit custom amount/);
 });
 
-test("GM Screen owns the exact eight workspaces in order", () => {
+test("GM Screen owns the exact six workspaces in order", () => {
   assert.match(template, /mk-gm-party-rail/);
   assert.match(template, /mk-gm-pressure-strip/);
 
@@ -89,6 +90,9 @@ test("GM Screen owns the exact eight workspaces in order", () => {
 
   assert.doesNotMatch(template, /data-workspace-panel="encounter"/);
   assert.doesNotMatch(template, /data-workspace-panel="environment"/);
+  assert.doesNotMatch(template, /data-workspace-panel="rules"/);
+  assert.doesNotMatch(template, /data-workspace-panel="resting"/);
+  assert.match(template, /<i class="fas \{\{icon\}\}" aria-hidden="true"><\/i><span>\{\{label\}\}<\/span>/);
   assert.doesNotMatch(template, /configureEnvironment/);
   assert.doesNotMatch(template, /profileName|Active Profile/);
   assert.doesNotMatch(template, /Group Traveling/);
@@ -112,12 +116,15 @@ test("view model workspace contract matches the native template", () => {
   }
   assert.doesNotMatch(viewModel, /GM_SCREEN_WORKSPACES[\s\S]{0,400}"encounter"/);
   assert.doesNotMatch(viewModel, /GM_SCREEN_WORKSPACES[\s\S]{0,400}"environment"/);
+  assert.doesNotMatch(viewModel, /GM_SCREEN_WORKSPACES[\s\S]{0,400}"rules"/);
+  assert.doesNotMatch(viewModel, /GM_SCREEN_WORKSPACES[\s\S]{0,400}"resting"/);
+  assert.match(viewModel, /GM_SCREEN_WORKSPACE_ICONS/);
+  assert.match(viewModel, /rawWorkspace === "resting" \? "downtime"/);
 });
 
 test("requested workspace active tints remain defined", () => {
   assert.match(refactorStylesheet, /data-workspace="exploration"/);
   assert.match(refactorStylesheet, /data-workspace="combat"/);
-  assert.match(refactorStylesheet, /data-workspace="resting"/);
   assert.match(refactorStylesheet, /data-workspace="downtime"/);
 });
 
@@ -149,5 +156,8 @@ test("GM Screen runtime assets are loaded independently from Group Sheet", () =>
   assert.ok(manifest.esmodules.includes("scripts/gm-screen/top-context-controls.js"));
   assert.ok(manifest.esmodules.includes("scripts/gm-screen/overview-links.js"));
   assert.ok(manifest.styles.includes("styles/gm-screen.css"));
+  assert.ok(manifest.esmodules.includes("scripts/gm-screen/source-table-browser.js"));
+  assert.ok(manifest.styles.includes("styles/gm-screen-source-tables.css"));
+  assert.ok(!manifest.esmodules.includes("scripts/gm-screen/quick-rules.js"));
   assert.ok(!manifest.esmodules.includes("scripts/gm-screen-mock/gm-screen-mock.js"));
 });

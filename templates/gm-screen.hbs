@@ -98,7 +98,7 @@
     <main class="mk-gm-workspace-shell">
       <nav class="mk-gm-workspace-nav" aria-label="GM Screen workspace">
         {{#each workspaces}}
-        <button type="button" data-action="workspace" data-workspace="{{id}}" class="{{#if active}}is-active{{/if}}">{{label}}</button>
+        <button type="button" data-action="workspace" data-workspace="{{id}}" class="{{#if active}}is-active{{/if}}"><i class="fas {{icon}}" aria-hidden="true"></i><span>{{label}}</span></button>
         {{/each}}
       </nav>
 
@@ -179,79 +179,32 @@
           </article>
         </section>
 
-        <section class="mk-gm-workspace" data-workspace-panel="resting">
-          <article class="mk-gm-panel is-wide">
-            <header><i class="fas fa-campground"></i><span>Resting / Camp</span></header>
-            {{#if resting}}
-            <div class="mk-gm-big-stats four-col">
-              <div><span>Status</span><strong>{{resting.status}}</strong></div>
-              <div><span>Mode</span><strong>{{resting.mode}}</strong></div>
-              <div><span>Turns</span><strong>{{resting.completedTurns}}/{{resting.totalTurns}}</strong></div>
-              <div><span>Checks Left</span><strong>{{resting.remainingChecks}}</strong></div>
-            </div>
-            {{#if resting.nextCheckTurn}}<p class="mk-gm-secondary">Next required encounter check: resting turn {{resting.nextCheckTurn}}.</p>{{/if}}
-            {{#if resting.interrupted}}<div class="mk-gm-alert"><i class="fas fa-triangle-exclamation"></i> Rest is interrupted and benefits/rations remain pending.</div>{{/if}}
-            {{#if latestEncounter}}
-            <div class="mk-gm-panel-actions">
-              <button type="button" data-mk-encounter-action="stage" data-message-id="{{latestEncounter.messageId}}"><i class="fas fa-location-dot"></i> Stage Latest Encounter</button>
-            </div>
-            {{/if}}
-            {{else}}
-            <div class="mk-gm-empty">No Group selected.</div>
-            {{/if}}
-          </article>
-        </section>
-
         <section class="mk-gm-workspace" data-workspace-panel="downtime">
-          <article class="mk-gm-panel is-wide">
-            <header><i class="fas fa-coins"></i><span>Downtime</span></header>
-            <p class="mk-gm-secondary">Settlement-facing generators and downtime tools.</p>
-            <div class="mk-gm-panel-actions"></div>
-          </article>
-        </section>
-
-        <section class="mk-gm-workspace" data-workspace-panel="rules">
           <div class="mk-gm-panel-grid two-col">
-            <article class="mk-gm-panel">
-              <header><i class="fas fa-clock"></i><span>Procedure Turns</span></header>
-              <ul class="mk-gm-rules-list">
-                <li><strong>Encounter intervals are turns.</strong></li>
-                <li>Exploration turn: <strong>6 minutes</strong>.</li>
-                <li>Resting turn: <strong>1 hour</strong>.</li>
-                <li>Unsafe: check every <strong>3 turns</strong>.</li>
-                <li>Risky: check every <strong>2 turns</strong>.</li>
-                <li>Deadly: check <strong>every turn</strong>.</li>
-              </ul>
+            <article class="mk-gm-panel" data-mk-gm-rest-panel>
+              <header><i class="fas fa-campground"></i><span>Resting / Camp</span></header>
+              {{#if resting}}
+              <div class="mk-gm-big-stats four-col">
+                <div><span>Status</span><strong>{{resting.status}}</strong></div>
+                <div><span>Mode</span><strong>{{resting.mode}}</strong></div>
+                <div><span>Turns</span><strong>{{resting.completedTurns}}/{{resting.totalTurns}}</strong></div>
+                <div><span>Checks Left</span><strong>{{resting.remainingChecks}}</strong></div>
+              </div>
+              {{#if resting.nextCheckTurn}}<p class="mk-gm-secondary">Next required encounter check: resting turn {{resting.nextCheckTurn}}.</p>{{/if}}
+              {{#if resting.interrupted}}<div class="mk-gm-alert"><i class="fas fa-triangle-exclamation"></i> Rest is interrupted and benefits/rations remain pending.</div>{{/if}}
+              {{#if latestEncounter}}
+              <div class="mk-gm-panel-actions">
+                <button type="button" data-mk-encounter-action="stage" data-message-id="{{latestEncounter.messageId}}"><i class="fas fa-location-dot"></i> Stage Latest Encounter</button>
+              </div>
+              {{/if}}
+              {{else}}
+              <div class="mk-gm-empty">No Group selected.</div>
+              {{/if}}
             </article>
             <article class="mk-gm-panel">
-              <header><i class="fas fa-dice-d20"></i><span>Encounter Procedure</span></header>
-              <ul class="mk-gm-rules-list">
-                <li>Occurrence: <strong>1d6; encounter on 1</strong>.</li>
-                <li>Distance: 1 Close, 2–4 Near, 5–6 Far.</li>
-                <li>Activity: Shadowdark 2d6 activity table.</li>
-                <li>Reaction: 2d6, modified when the procedure requests CHA.</li>
-                <li>Staging is preview-first; nothing is created until Deploy.</li>
-              </ul>
-            </article>
-            <article class="mk-gm-panel">
-              <header><i class="fas fa-flag"></i><span>Morale</span></header>
-              <ul class="mk-gm-rules-list">
-                <li>Morale check: <strong>DC 15 WIS</strong>.</li>
-                <li>Groups check at half starting force.</li>
-                <li>Solo enemies check at half HP.</li>
-                <li>A living assigned leader checks for the force.</li>
-                <li>Failures receive <strong>Fleeing</strong>; immune creatures are excluded.</li>
-              </ul>
-            </article>
-            <article class="mk-gm-panel">
-              <header><i class="fas fa-bed"></i><span>Resting</span></header>
-              <ul class="mk-gm-rules-list">
-                <li>Normal Group rest: <strong>8 one-hour turns</strong>.</li>
-                <li>The encounter-check cadence is fixed when a rest begins.</li>
-                <li>Encounter checks resolve before rest benefits.</li>
-                <li>An encounter pauses the rest.</li>
-                <li>Rations and benefits finalize only after successful completion.</li>
-              </ul>
+              <header><i class="fas fa-coins"></i><span>Downtime</span></header>
+              <p class="mk-gm-secondary">Settlement-facing generators and downtime tools.</p>
+              <div class="mk-gm-panel-actions"></div>
             </article>
           </div>
         </section>

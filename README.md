@@ -95,15 +95,13 @@ Available workspaces, in order, are:
 - **Overview** — a per-GM shortcut dashboard. Drag normal Foundry documents such as Journal entries/pages, Actors, Items, RollTables, and other UUID-backed documents onto Overview to pin them. Clicking a pinned shortcut opens the original document; removing a shortcut deletes only the pin. Overview contains no built-in Scene Context, Encounter Pressure, Resting, or Combat/Morale status panels.
 - **Exploration** — exploration turns, encounter cadence, due checks, encounter processing, and exploration generators. Marching order and exploration-role editing remain in Group Management rather than the GM Screen.
 - **Combat** — current Foundry Combat round/turn/combatants and MK Morale overview.
-- **Resting** — current rest status, elapsed rest turns, checks remaining, interruption state, and encounter staging. Starting/resuming rests and camp-watch management remain in Group Management.
-- **Downtime** — settlement-facing generators and downtime tools, including Tavern and Shop creation.
-- **Rules** — compact GM Quick Rules for procedure turns, encounter checks, morale, and resting.
+- **Downtime** — settlement-facing generators and downtime tools, including Tavern and Shop creation, plus current rest status, elapsed rest turns, checks remaining, interruption state, and encounter staging. Starting/resuming rests and camp-watch management remain in Group Management.
 - **Tables** — Encounter Setup plus imported Shadowdark source RollTables with search, filtering, rolling, and source metadata. Encounter Zone and Encounter Table changes remain staged until **Save Encounter Setup** is pressed.
 - **Session Log** — recent canonical Group encounter records with inspection, staging, reveal, and reroll actions.
 
 Overview pins are presentation-only state stored on the current GM user as document UUIDs. They do not copy Journal/Actor/Item content and do not become Scene, Group, encounter, combat, morale, wound, or Focus state. Pinning or removing a shortcut updates the Overview canvas directly and does not force a full GM Screen rerender.
 
-The **Exploration**, **Combat**, **Resting**, and **Downtime** active tabs use green, red, blue, and dark-blue tints respectively. The former dedicated **Encounter** and **Environment** workspaces are removed; encounter history lives in Session Log, while Terrain, Danger, and Period are edited from the persistent top strip.
+The **Exploration**, **Combat**, and **Downtime** active tabs use green, red, and dark-blue tints respectively. The former dedicated **Encounter** and **Environment** workspaces are removed; encounter history lives in Session Log, while Terrain, Danger, and Period are edited from the persistent top strip.
 
 The GM Screen reads canonical state from Group, Scene Context, internal encounter services, Encounter Staging, Foundry Combat, Morale, and the prepared GM member-status model. It does not store a second party, procedure clock, encounter, combat, morale, wound, or Focus model.
 

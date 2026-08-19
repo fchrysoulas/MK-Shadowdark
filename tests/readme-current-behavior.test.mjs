@@ -22,15 +22,18 @@ test("README documents the current supported platform floor from the manifest", 
   assert.match(readme, /Shadowdark RPG system 4\.0\.0\+/);
 });
 
-test("README makes encounter intervals procedure-turn based", async () => {
+test("README makes encounter intervals procedure-turn based including Safe", async () => {
   const readme = await readReadme();
 
   assert.match(readme, /Every encounter interval means a number of procedure turns/i);
   assert.match(readme, /Exploration:\*\* 6 minutes \/ 360 seconds per turn/i);
-  assert.match(readme, /Resting:\*\* 1 hour per turn/i);
+  assert.match(readme, /Resting:\*\* 1 hour \/ 3600 seconds per turn/i);
+  assert.match(readme, /Combat:\*\* 6 seconds per turn/i);
+  assert.match(readme, /Safe \| No encounter checks/i);
   assert.match(readme, /Unsafe \| Every 3 turns/i);
   assert.match(readme, /Risky \| Every 2 turns/i);
   assert.match(readme, /Deadly \| Every 1 turn/i);
+  assert.match(readme, /Safe performs no encounter roll at all/i);
 });
 
 test("README retires standalone Encounter Engine entry points", async () => {
@@ -77,29 +80,53 @@ test("README documents the production GM Screen as a manual-update surface", asy
   assert.match(readme, /manual-update surface/i);
   assert.match(readme, /does not subscribe to ambient Actor, Scene, Combat, or MK workflow changes/i);
   assert.match(readme, /does not expose a generic Refresh button/i);
+  assert.match(readme, /Hide\/Show Active Party rail and Reset GM Screen Presentation controls are retired/i);
 });
 
-test("README documents top-strip Scene Context and explicit Encounter Setup saves", async () => {
+test("README documents direct one-turn Elapsed behavior", async () => {
+  const readme = await readReadme();
+
+  assert.match(readme, /Clicking \*\*Elapsed\*\* advances exactly one canonical turn/i);
+  assert.match(readme, /Exploration:\*\* 6 minutes/i);
+  assert.match(readme, /Resting:\*\* 1 hour/i);
+  assert.match(readme, /Combat:\*\* 6 seconds/i);
+  assert.match(readme, /Downtime:\*\* no generic turn duration/i);
+  assert.match(readme, /Elapsed readout uses hours and minutes only/i);
+  assert.match(readme, /There is no custom-time popup or Advance Custom action/i);
+});
+
+test("README documents auto-saving top context and explicit Encounter Setup saves", async () => {
   const readme = await readReadme();
 
   assert.match(readme, /Terrain, Danger, and Period dropdowns in the top strip/i);
-  assert.match(readme, /Save Context/);
+  assert.match(readme, /save immediately when their dropdown changes/i);
+  assert.match(readme, /There is no Save Context button/i);
   assert.match(readme, /Save Encounter Setup/);
-  assert.match(readme, /There is no auto-save/i);
   assert.match(readme, /Marching order and exploration-role editing remain in Group Management/i);
-  assert.match(readme, /Starting\/resuming rests and camp-watch management remain in Group Management/i);
   assert.match(readme, /production GM Screen no longer edits watches or starts\/resumes rests/i);
 });
 
-test("README documents Overview as per-GM document shortcuts rather than status panels", async () => {
+test("README documents Overview as per-GM document shortcuts", async () => {
   const readme = await readReadme();
 
   assert.match(readme, /Overview.*per-GM shortcut dashboard/is);
   assert.match(readme, /Journal entries\/pages, Actors, Items, RollTables/i);
   assert.match(readme, /Clicking a pinned shortcut opens the original document/i);
-  assert.match(readme, /Overview contains no built-in Scene Context, Encounter Pressure, Resting, or Combat\/Morale status panels/i);
   assert.match(readme, /presentation-only state stored on the current GM user as document UUIDs/i);
   assert.match(readme, /does not force a full GM Screen rerender/i);
+});
+
+test("README documents Downtime, Tools, and Session Log responsibilities", async () => {
+  const readme = await readReadme();
+
+  assert.match(readme, /Downtime.*Create Tavern.*Create Shop/is);
+  assert.match(readme, /Resting\/Camp status and controls are intentionally absent/i);
+  assert.match(readme, /Tools.*Scene\/Encounter Context.*Encounter Procedures/is);
+  assert.match(readme, /Rest schedule.*read-only inspector/is);
+  assert.match(readme, /Starting date and time/i);
+  assert.match(readme, /Start Session/);
+  assert.match(readme, /Reset Timer/);
+  assert.match(readme, /does not.*rewrite the world's calendar\/time/is);
 });
 
 test("README does not require the retired GM Screen Mock", async () => {

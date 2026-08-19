@@ -65,12 +65,12 @@
     "scripts/gm-screen/top-context-controls.js",
     "scripts/gm-screen/light-pressure.js",
     "scripts/gm-screen/overview-links.js",
-    "scripts/gm-screen/presentation-controls.js",
     "scripts/gm-screen/exploration-creation-controls.js",
     "scripts/gm-screen/npc-creation-controls.js",
     "scripts/gm-screen/tavern-shop-creation-controls.js",
     "scripts/source-tables/source-table-importer.js",
     "scripts/gm-screen/source-table-browser.js",
+    "scripts/gm-screen/tools-controls.js",
     "scripts/mk-shadowdark.js"
   ],
   "styles": [
@@ -93,7 +93,6 @@
     "styles/gm-screen-encounter-history.css",
     "styles/gm-screen-light-pressure.css",
     "styles/gm-screen-overview.css",
-    "styles/gm-screen-presentation.css",
     "styles/gm-screen-source-tables.css",
     "styles/quickdraw-icons.css",
     "styles/encounter-engine.css",

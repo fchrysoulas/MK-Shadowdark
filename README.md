@@ -79,29 +79,42 @@ mk.gmScreen.toggle();
 
 The GM Screen is a native Foundry ApplicationV2 surface. It is not a replacement for the Group Sheet and it does not own duplicate gameplay state.
 
-The GM Screen is intentionally a **manual-update surface**. It does not subscribe to ambient Actor, Scene, Combat, or MK workflow changes in order to force background rerenders, and it does not expose a generic Refresh button. Explicit GM actions and explicit configuration saves may rerender the screen after they complete. Group/workspace selection and party-rail presentation are kept only in the currently open application and are not silently persisted as presentation preferences.
+The GM Screen is intentionally a **manual-update surface** for outside changes. It does not subscribe to ambient Actor, Scene, Combat, or MK workflow changes in order to force background rerenders, and it does not expose a generic Refresh button. Direct GM Screen actions rerender when they complete. Group/workspace selection is kept only in the currently open application and is not silently persisted as a presentation preference. The former Hide/Show Active Party rail and Reset GM Screen Presentation controls are retired.
 
 Its production layout contains:
 
 - a persistent active-party/status rail
 - a persistent procedure/pressure strip
 - **Terrain, Danger, and Period dropdowns in the top strip**
+- a direct **Elapsed** one-turn control
 - a central contextual workspace
 
-Terrain, Danger, and Period are staged in the top strip. A **Save Context** button appears only when one of those values differs from the active Scene state. Pressing it persists the Scene Context and performs one explicit GM Screen rerender so all workspaces use the saved values. There is no auto-save.
+Terrain, Danger, and Period **save immediately when their dropdown changes**. There is no Save Context button. The saved Scene Context then rerenders the GM Screen once so all workspaces use the new values.
+
+The Procedure dropdown changes the canonical Group procedure. Clicking **Elapsed** advances exactly one canonical turn for that procedure:
+
+- **Exploration:** 6 minutes
+- **Resting:** 1 hour
+- **Combat:** 6 seconds
+- **Downtime:** no generic turn duration, so Elapsed is disabled
+
+The Elapsed readout uses hours and minutes only. Combat's 6-second turns are therefore represented in fractional minutes rather than a seconds display. There is no custom-time popup or Advance Custom action on the GM Screen.
 
 Available workspaces, in order, are:
 
-- **Overview** — a per-GM shortcut dashboard. Drag normal Foundry documents such as Journal entries/pages, Actors, Items, RollTables, and other UUID-backed documents onto Overview to pin them. Clicking a pinned shortcut opens the original document; removing a shortcut deletes only the pin. Overview contains no built-in Scene Context, Encounter Pressure, Resting, or Combat/Morale status panels.
+- **Overview** — a per-GM shortcut dashboard. Drag normal Foundry documents such as Journal entries/pages, Actors, Items, RollTables, and other UUID-backed documents onto Overview to pin them. Clicking a pinned shortcut opens the original document; removing a shortcut deletes only the pin.
 - **Exploration** — exploration turns, encounter cadence, due checks, encounter processing, and exploration generators. Marching order and exploration-role editing remain in Group Management rather than the GM Screen.
 - **Combat** — current Foundry Combat round/turn/combatants and MK Morale overview.
-- **Downtime** — settlement-facing generators and downtime tools, including Tavern and Shop creation, plus current rest status, elapsed rest turns, checks remaining, interruption state, and encounter staging. Starting/resuming rests and camp-watch management remain in Group Management.
+- **Downtime** — settlement-facing generators only, including **Create Tavern** and **Create Shop**. Resting/Camp status and controls are intentionally absent from this workspace.
 - **Tables** — Encounter Setup plus imported Shadowdark source RollTables with search, filtering, rolling, and source metadata. Encounter Zone and Encounter Table changes remain staged until **Save Encounter Setup** is pressed.
-- **Session Log** — recent canonical Group encounter records with inspection, staging, reveal, and reroll actions.
+- **Tools** — read-only inspectors for active hidden state and procedures: Scene/Encounter Context, Encounter Procedures, active light sources, Group assignments, Rest schedule, Morale state, plus shortcuts to Encounter Setup and source import.
+- **Session Log** — session metadata/timer controls plus recent canonical Group encounter records with inspection, staging, reveal, and reroll actions.
+
+Session Log includes a free-text **Starting date and time** field, **Start Session**, and **Reset Timer**. Start Session stores the entered label as Group session metadata and resets the currently selected procedure timer to zero. It also records the current Foundry world-time value as metadata, but it does **not** rewrite the world's calendar/time. Reset Timer resets only the current Group procedure timer after confirmation.
 
 Overview pins are presentation-only state stored on the current GM user as document UUIDs. They do not copy Journal/Actor/Item content and do not become Scene, Group, encounter, combat, morale, wound, or Focus state. Pinning or removing a shortcut updates the Overview canvas directly and does not force a full GM Screen rerender.
 
-The **Exploration**, **Combat**, and **Downtime** active tabs use green, red, and dark-blue tints respectively. The former dedicated **Encounter** and **Environment** workspaces are removed; encounter history lives in Session Log, while Terrain, Danger, and Period are edited from the persistent top strip.
+The **Exploration**, **Combat**, **Downtime**, and **Tools** active tabs use distinct tints. The former dedicated Encounter, Environment, Resting, and Rules workspaces are not part of the production navigation. Encounter history lives in Session Log, while Terrain, Danger, and Period are edited from the persistent top strip.
 
 The GM Screen reads canonical state from Group, Scene Context, internal encounter services, Encounter Staging, Foundry Combat, Morale, and the prepared GM member-status model. It does not store a second party, procedure clock, encounter, combat, morale, wound, or Focus model.
 
@@ -199,20 +212,22 @@ The core cadence rule is:
 
 An interval is never interpreted as a mixed “rounds/hours” value and is not itself a number of hours.
 
-Procedure turn lengths:
+Procedure turn lengths used by the GM Screen:
 
 - **Exploration:** 6 minutes / 360 seconds per turn.
-- **Resting:** 1 hour per turn.
+- **Resting:** 1 hour / 3600 seconds per turn.
+- **Combat:** 6 seconds per turn.
 
 Default danger cadence:
 
 | Danger | Encounter check cadence |
 | --- | --- |
+| Safe | No encounter checks |
 | Unsafe | Every 3 turns |
 | Risky | Every 2 turns |
 | Deadly | Every 1 turn |
 
-The default occurrence check is **1d6**, with an encounter on **1**.
+For Unsafe/Risky/Deadly, the default occurrence check is **1d6**, with an encounter on **1**. **Safe performs no encounter roll at all.**
 
 ---
 
@@ -224,6 +239,7 @@ The Group derives completed Exploration turns from unified elapsed Exploration t
 
 With the default 6-minute Exploration turn:
 
+- Safe schedules no checks
 - Unsafe checks after turns 3, 6, 9, ...
 - Risky checks after turns 2, 4, 6, ...
 - Deadly checks every turn
@@ -243,7 +259,7 @@ The active Scene is the source of truth for:
 - effective encounter table
 - encounter interval/formula
 
-The persisted Scene Context contains exactly four fields: **Terrain, Danger, Period, and Encounter Table**. The GM Screen deliberately splits their configuration across two explicit-save surfaces: the persistent **top strip** stages Terrain, Danger, and Period behind **Save Context**, while **Tables -> Encounter Setup** stages Encounter Zone and Encounter Table behind **Save Encounter Setup**. There is no GM-facing Profile field or `profileId` in Scene Context state.
+The persisted Scene Context contains exactly four fields: **Terrain, Danger, Period, and Encounter Table**. The persistent top strip auto-saves Terrain, Danger, and Period when one of those dropdowns changes, while **Tables -> Encounter Setup** stages Encounter Zone and Encounter Table behind **Save Encounter Setup**. There is no GM-facing Profile field or `profileId` in Scene Context state.
 
 The internal encounter resolver still owns one canonical Shadowdark rules definition for cadence, outcome tables, rerolls, and compatibility. That implementation detail is not a Scene Context choice.
 
@@ -256,7 +272,7 @@ The effective table is selected in this order:
 3. canonical terrain `any` table
 4. world fallback encounter table
 
-If no valid table is configured, a due encounter check is not silently consumed.
+If no valid table is configured, a due encounter check is not silently consumed. Safe requires no encounter table because it schedules no encounter checks.
 
 ---
 
@@ -274,17 +290,18 @@ Required encounter checks happen chronologically before rest benefits finalize.
 
 | Danger | Checks during an 8-turn rest |
 | --- | --- |
+| Safe | None |
 | Unsafe | Turns 3 and 6 |
 | Risky | Turns 2, 4, 6, and 8 |
 | Deadly | Every resting turn |
 
-The required check turns are snapshotted when the rest begins. Changing the Scene's Danger while that rest is active affects later rests, not the current check schedule; changing Period or Encounter Table can affect how a later due check resolves, but it cannot add, remove, consume, or skip that rest's scheduled checks.
+The required check turns are snapshotted when the rest begins. A rest started under Safe snapshots an empty encounter schedule. Changing the Scene's Danger while a rest is active affects later rests, not the current check schedule; changing Period or Encounter Table can affect how a later due check resolves, but it cannot add, remove, consume, or skip that rest's scheduled checks.
 
 ## Rest order of operations
 
 1. GM confirms the active resting party and intended ration use.
 2. Group enters Resting and starts the current rest timeline.
-3. Group/Foundry time advances to the next required check turn.
+3. Group/Foundry time advances to the next required check turn when one exists.
 4. The internal encounter service performs the occurrence check and resolves an encounter when triggered.
 5. If there is no encounter, resting continues.
 6. If an encounter occurs, resting pauses immediately.
@@ -293,7 +310,7 @@ The required check turns are snapshotted when the rest begins. Changing the Scen
 
 An interrupted rest consumes **0 planned rations** and grants **0 completed-rest benefits** until successful completion.
 
-Camp-watch assignments remain Group Management procedure context but do not automatically modify encounter odds. The production GM Screen no longer edits watches or starts/resumes rests.
+Camp-watch assignments remain Group Management procedure context but do not automatically modify encounter odds. The production GM Screen no longer edits watches or starts/resumes rests. Rest schedule state is available as a read-only inspector in **Tools** rather than being displayed in Downtime.
 
 ---
 
@@ -349,7 +366,7 @@ Direct world/Compendium Actor results are preferred for reliable staging Actor r
 
 # Encounter Staging
 
-A resolved GM encounter card includes **Stage Encounter**, and the production GM Screen can route the latest Group encounter into the same staging service.
+A resolved GM encounter card includes **Stage Encounter**, and the production GM Screen can route encounter history into the same staging service.
 
 ```text
 Encounter card -> Options -> Preview -> Deploy
@@ -436,7 +453,7 @@ Use the predefined effect:
 
 It sets the canonical MK morale-immunity state and excludes that actor from morale rolls/Fleeing application.
 
-The GM Screen displays current Foundry Combat and MK Morale context without replacing the Combat Tracker or creating another morale model.
+The GM Screen displays current Foundry Combat and MK Morale context without replacing the Combat Tracker or creating another morale model. **Tools -> Morale State** exposes the current force/threshold/leader/immunity/Fleeing selections as a read-only inspector.
 
 ---
 
@@ -459,7 +476,7 @@ Create or use a Shadowdark **Property** item such as `Fire`, then select that Pr
 - **Vulnerability** doubles matching damage.
 - Immunity takes precedence; matching Resistance + Vulnerability cancel.
 
-The predefined **Magical Attacks** effect makes weapon/NPC attacks count as magical. The predefined **Only Damaged by Magical Sources** effect blocks nonmagical-source Auto Damage. The predefined **Immune to morale checks** effect is consumed by Morale Automation.
+The predefined **Magical Attacks** effect makes weapon/NPC attacks count as magical. The predefined **Only Damaged by Magical Sources** effect blocks nonmagical sources while allowing spells, magic items, actor-level magical attacks, and attacks with a Magic/Magical Property. The predefined **Immune to morale checks** effect is consumed by Morale Automation.
 
 ---
 
@@ -581,11 +598,11 @@ The production GM Screen is GM-only. Use the **Token Scene Controls** and look f
 
 ## A Group encounter check is due but cannot run
 
-Verify the active Scene resolves a valid encounter RollTable. Configure **Tables -> Encounter Setup**, press **Save Encounter Setup**, and then process the due check.
+Verify the active Scene resolves a valid encounter RollTable. Configure **Tables -> Encounter Setup**, press **Save Encounter Setup**, and then process the due check. If Danger is **Safe**, no encounter check should be due.
 
 ## Scene Context changes do not affect the other GM Screen workspaces
 
-Terrain, Danger, and Period are intentionally staged in the persistent top strip. Change the dropdowns and press **Save Context**. The save persists Scene Context and performs one explicit GM Screen rerender so the other workspaces use the new values.
+Terrain, Danger, and Period auto-save when their top-strip dropdown changes and then perform one explicit GM Screen rerender. There is no Save Context button. Encounter Zone and Encounter Table still require **Save Encounter Setup** under Tables.
 
 ## I cannot select Terrain
 
@@ -597,11 +614,23 @@ Overview stores only the document UUID as a per-GM shortcut. It does not copy th
 
 ## The GM Screen does not update after an external Actor, Scene, or Combat change
 
-This is intentional. The GM Screen has no ambient live-refresh mechanism. Use an explicit GM Screen action, switch/reopen the screen as appropriate, or save staged configuration when you want the surface rebuilt.
+This is intentional. The GM Screen has no ambient live-refresh mechanism. Use an explicit GM Screen action, change a top context dropdown, switch workspaces, or reopen the screen when you want the surface rebuilt.
+
+## Elapsed does not advance time in Downtime
+
+Downtime has no canonical generic turn duration. Elapsed advances exactly one turn only for Exploration (6 minutes), Resting (1 hour), and Combat (6 seconds).
+
+## I need to reset a procedure timer
+
+Use **Session Log -> Reset Timer**. It resets the currently selected Group procedure timer after confirmation.
+
+## I need to record the start of a session
+
+Enter your campaign date/time text in **Session Log -> Starting date and time**, then press **Start Session**. This stores the label and resets the current procedure timer; it does not overwrite Foundry world time.
 
 ## Rest Party pauses with a configuration warning
 
-The current danger requires encounter checks but the Scene has no valid encounter table. Configure Encounter Setup and continue the same rest from Group Management.
+The current danger requires encounter checks but the Scene has no valid encounter table. Configure Encounter Setup and continue the same rest from Group Management. Safe rests have no scheduled encounter checks.
 
 ## Rest Party says Resume Rest
 

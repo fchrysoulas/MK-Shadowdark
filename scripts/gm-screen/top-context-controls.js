@@ -59,27 +59,6 @@ function installSelect(cell, {
   return cell.querySelector(`select[name="${name}"]`);
 }
 
-function ensureSaveCell(strip, periodCell) {
-  let cell = strip?.querySelector?.("[data-mk-context-save-cell]");
-  if (cell) return cell;
-
-  cell = globalThis.document?.createElement?.("div");
-  if (!cell) return null;
-  cell.className = "mk-gm-context-save-cell";
-  cell.dataset.mkContextSaveCell = "true";
-  cell.hidden = true;
-  cell.innerHTML = `
-    <span>Context</span>
-    <button type="button" data-mk-context-save disabled title="Save Terrain, Danger, and Period">
-      <i class="fas fa-floppy-disk"></i> Save Context
-    </button>
-  `;
-
-  if (periodCell?.after) periodCell.after(cell);
-  else strip?.append?.(cell);
-  return cell;
-}
-
 function readTopContext(root) {
   const strip = root?.matches?.(".mk-gm-pressure-strip")
     ? root
@@ -92,26 +71,6 @@ function readTopContext(root) {
     dangerLevel: read("dangerLevel"),
     period: read("period"),
   };
-}
-
-function sameTopContext(left, right) {
-  return left?.terrain === right?.terrain
-    && left?.dangerLevel === right?.dangerLevel
-    && left?.period === right?.period;
-}
-
-function updateSaveState(root, baseline) {
-  const strip = root?.matches?.(".mk-gm-pressure-strip")
-    ? root
-    : root?.querySelector?.(".mk-gm-pressure-strip");
-  const cell = strip?.querySelector?.("[data-mk-context-save-cell]");
-  const button = cell?.querySelector?.("[data-mk-context-save]");
-  const value = readTopContext(strip);
-  const dirty = Boolean(value && !sameTopContext(value, baseline));
-
-  if (cell) cell.hidden = !dirty;
-  if (button) button.disabled = !dirty;
-  return dirty;
 }
 
 async function saveTopContext(application, root, scene) {
@@ -131,6 +90,23 @@ async function saveTopContext(application, root, scene) {
 
   await application?.render?.({ force: true });
   return result;
+}
+
+function bindTopContextAutosave(application, strip, scene, controls = []) {
+  for (const select of controls.filter(Boolean)) {
+    select.addEventListener?.("change", async event => {
+      event.stopPropagation();
+      for (const control of controls.filter(Boolean)) control.disabled = true;
+      try {
+        await saveTopContext(application, strip, scene);
+      } catch (error) {
+        console.error("mk-shadowdark | GM Screen Top Context | Save failed", error);
+        globalThis.ui?.notifications?.error?.(`Scene context update failed: ${error.message}`);
+        for (const control of controls.filter(Boolean)) control.disabled = false;
+      }
+    });
+  }
+  return true;
 }
 
 function decorateTopContext(application, element) {
@@ -169,28 +145,7 @@ function decorateTopContext(application, element) {
     title: "Scene day/night period",
   });
 
-  const saveCell = ensureSaveCell(strip, periodCell);
-  const saveButton = saveCell?.querySelector?.("[data-mk-context-save]");
-  const refreshDirty = () => updateSaveState(strip, view.persisted);
-
-  for (const select of [terrainSelect, dangerSelect, periodSelect]) {
-    select?.addEventListener?.("change", refreshDirty);
-  }
-
-  saveButton?.addEventListener?.("click", async event => {
-    event.preventDefault();
-    event.stopPropagation();
-    saveButton.disabled = true;
-    try {
-      await saveTopContext(application, strip, view.scene);
-    } catch (error) {
-      console.error("mk-shadowdark | GM Screen Top Context | Save failed", error);
-      globalThis.ui?.notifications?.error?.(`Scene context update failed: ${error.message}`);
-      refreshDirty();
-    }
-  });
-
-  refreshDirty();
+  bindTopContextAutosave(application, strip, view.scene, [terrainSelect, dangerSelect, periodSelect]);
   return true;
 }
 
@@ -208,11 +163,9 @@ export {
   pressureCell,
   periodOptions,
   installSelect,
-  ensureSaveCell,
   readTopContext,
-  sameTopContext,
-  updateSaveState,
   saveTopContext,
+  bindTopContextAutosave,
   decorateTopContext,
   registerTopContextControls,
 };

@@ -1,5 +1,6 @@
 .mk-gm-screen[data-workspace="downtime"] .mk-gm-workspace[data-workspace-panel="downtime"],
 .mk-gm-screen[data-workspace="tables"] .mk-gm-workspace[data-workspace-panel="tables"],
+.mk-gm-screen[data-workspace="tools"] .mk-gm-workspace[data-workspace-panel="tools"],
 .mk-gm-screen[data-workspace="session-log"] .mk-gm-workspace[data-workspace-panel="session-log"] {
   display: block;
 }
@@ -17,6 +18,105 @@
 .mk-gm-workspace-nav button[data-workspace="downtime"].is-active {
   border-color: rgba(55, 84, 145, 0.95);
   background: rgba(55, 84, 145, 0.3);
+}
+
+.mk-gm-workspace-nav button[data-workspace="tools"].is-active {
+  border-color: rgba(170, 132, 71, 0.95);
+  background: rgba(170, 132, 71, 0.24);
+}
+
+.mk-gm-time-passes select {
+  width: 82px;
+}
+
+.mk-gm-tools-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+  margin-top: 10px;
+}
+
+.mk-gm-screen .mk-gm-tool-button {
+  display: grid;
+  grid-template-columns: 28px minmax(0, 1fr);
+  gap: 8px;
+  align-items: center;
+  min-height: 54px;
+  padding: 8px 10px;
+  text-align: left;
+}
+
+.mk-gm-tool-button > i {
+  color: #cbbb80;
+  font-size: 17px;
+  text-align: center;
+}
+
+.mk-gm-tool-button > span {
+  display: grid;
+  gap: 2px;
+  min-width: 0;
+}
+
+.mk-gm-tool-button strong {
+  font-size: 11px;
+}
+
+.mk-gm-tool-button small {
+  color: var(--mk-gm-muted);
+  font-size: 9px;
+  line-height: 1.3;
+}
+
+.mk-gm-tool-inspector h3 {
+  margin: 10px 0 4px;
+  font-size: 11px;
+  text-transform: uppercase;
+}
+
+.mk-gm-tool-inspector ul {
+  margin: 0;
+  padding-left: 20px;
+}
+
+.mk-gm-session-controls {
+  margin-bottom: 10px;
+}
+
+.mk-gm-session-start-row {
+  display: grid;
+  grid-template-columns: minmax(240px, 1fr) auto auto;
+  gap: 8px;
+  align-items: end;
+  margin-bottom: 9px;
+}
+
+.mk-gm-session-start-row .form-group {
+  display: grid;
+  gap: 4px;
+  margin: 0;
+}
+
+.mk-gm-session-start-row label {
+  color: var(--mk-gm-muted);
+  font-size: 9px;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.mk-gm-session-start-row input {
+  width: 100%;
+  min-height: 31px;
+  border: 1px solid var(--mk-gm-border);
+  border-radius: 4px;
+  background: #17191b;
+  color: var(--mk-gm-text);
+}
+
+.mk-gm-session-start-row button {
+  min-height: 31px;
+  padding: 4px 9px;
 }
 
 .mk-gm-scene-context-grid {
@@ -53,7 +153,12 @@
 }
 
 @media (max-width: 800px) {
+  .mk-gm-tools-grid,
   .mk-gm-scene-context-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .mk-gm-session-start-row {
     grid-template-columns: 1fr;
   }
 }

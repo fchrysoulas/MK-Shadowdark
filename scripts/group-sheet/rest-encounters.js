@@ -68,6 +68,7 @@ function normalizeGroupRestWorkflow(value) {
     consumedChecks: nonNegativeInteger(source.consumedChecks),
     intervalTurns: nonNegativeInteger(source.intervalTurns),
     checkTurns,
+    cadenceSnapshotted: Boolean(source.cadenceSnapshotted) || checkTurns.length > 0,
     participantUuids: uniqueStrings(source.participantUuids),
     completedMemberUuids: uniqueStrings(source.completedMemberUuids),
     rationsConsumed: Boolean(source.rationsConsumed),
@@ -88,7 +89,9 @@ async function setGroupRestWorkflow(actor, workflow) {
 }
 
 function calculateRestCheckTurns(intervalTurns, totalTurns = REST_TOTAL_TURNS) {
-  const interval = Math.max(1, nonNegativeInteger(intervalTurns) || 1);
+  const rawInterval = Number(intervalTurns);
+  if (!Number.isFinite(rawInterval) || rawInterval <= 0) return [];
+  const interval = Math.max(1, nonNegativeInteger(rawInterval));
   const total = Math.max(0, nonNegativeInteger(totalTurns));
   const turns = [];
 
@@ -107,15 +110,26 @@ function getCompletedRestTurns(actor) {
 }
 
 function restCadenceForContext(context = resolveSceneEnvironmentContext()) {
+  const disabled = context?.encounter?.disabled === true || context?.dangerLevel === "safe";
+  if (disabled) {
+    return {
+      disabled: true,
+      intervalTurns: 0,
+      checkTurns: [],
+    };
+  }
+
   const intervalTurns = Math.max(1, Number(context?.encounter?.interval ?? 1) || 1);
   return {
+    disabled: false,
     intervalTurns,
     checkTurns: calculateRestCheckTurns(intervalTurns),
   };
 }
 
 function workflowHasCadenceSnapshot(workflow) {
-  return Array.isArray(workflow?.checkTurns) && workflow.checkTurns.length > 0;
+  return Boolean(workflow?.cadenceSnapshotted)
+    || (Array.isArray(workflow?.checkTurns) && workflow.checkTurns.length > 0);
 }
 
 function getGroupRestState(actor, {
@@ -125,7 +139,7 @@ function getGroupRestState(actor, {
   const currentCadence = restCadenceForContext(context);
   const hasSnapshot = workflowHasCadenceSnapshot(workflow);
   const intervalTurns = hasSnapshot
-    ? Math.max(1, workflow.intervalTurns || currentCadence.intervalTurns)
+    ? nonNegativeInteger(workflow.intervalTurns)
     : currentCadence.intervalTurns;
   const checkTurns = hasSnapshot
     ? [...workflow.checkTurns]
@@ -141,6 +155,7 @@ function getGroupRestState(actor, {
     },
     context,
     cadenceSnapshotted: hasSnapshot,
+    encountersDisabled: hasSnapshot ? intervalTurns === 0 : currentCadence.disabled,
     intervalTurns,
     checkTurns,
     completedTurns,
@@ -164,6 +179,7 @@ async function ensureActiveRestCadenceSnapshot(actor, {
   const cadence = restCadenceForContext(context);
   workflow.intervalTurns = cadence.intervalTurns;
   workflow.checkTurns = cadence.checkTurns;
+  workflow.cadenceSnapshotted = true;
   await setGroupRestWorkflow(actor, workflow);
   return true;
 }
@@ -244,6 +260,7 @@ async function startGroupRest(actor, {
     consumedChecks: 0,
     intervalTurns: cadence.intervalTurns,
     checkTurns: cadence.checkTurns,
+    cadenceSnapshotted: true,
     participantUuids,
     completedMemberUuids: [],
     rationsConsumed: false,
@@ -603,10 +620,13 @@ async function renderGroupRestContext(app, html) {
   const watches = getGroupAssignments(actor).camping.watches ?? [];
   const watchMembers = uniqueStrings(watches.flatMap(watch => watch.actorUuids));
   const isGm = Boolean(globalThis.game?.user?.isGM);
+  const cadenceLabel = state.encountersDisabled
+    ? "no encounter checks"
+    : `every ${escapeHtml(state.intervalTurns)} ${state.intervalTurns === 1 ? "turn" : "turns"}`;
 
   const gmDetails = isGm
     ? `
-      <span><i class="fas fa-skull-crossbones"></i> Rest cadence <strong>every ${escapeHtml(state.intervalTurns)} ${state.intervalTurns === 1 ? "turn" : "turns"}</strong></span>
+      <span><i class="fas fa-skull-crossbones"></i> Rest cadence <strong>${cadenceLabel}</strong></span>
       <span>Checks <strong>${escapeHtml(state.workflow.consumedChecks)}/${escapeHtml(state.requiredChecks)}</strong></span>
       <span>Watches <strong>${escapeHtml(watches.length)}</strong> / ${escapeHtml(watchMembers.length)} assigned</span>
     `

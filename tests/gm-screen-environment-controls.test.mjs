@@ -4,15 +4,16 @@ import test from "node:test";
 
 import {
   buildEnvironmentEditorView,
+  readEnvironmentForm,
   renderEnvironmentEditor,
 } from "../scripts/gm-screen/environment-controls.js";
 
 const runtime = fs.readFileSync(new URL("../scripts/gm-screen/environment-controls.js", import.meta.url), "utf8");
+const bridge = fs.readFileSync(new URL("../scripts/gm-screen/workspace-refactor.js", import.meta.url), "utf8");
 const manifest = JSON.parse(fs.readFileSync(new URL("../module.json", import.meta.url), "utf8"));
 
-function profile() {
+function rules() {
   return {
-    name: "Cavern Profile",
     defaultTerrain: "Caves",
     defaultDangerLevel: "risky",
     terrains: { Caves: { any: "RollTable.auto" } },
@@ -22,22 +23,18 @@ function profile() {
   };
 }
 
-test("Environment editor presents stored choices and resolved effective context", () => {
-  const profiles = { cave: profile() };
+test("Scene Context editor presents the four stored choices and resolved effective context", () => {
   const view = buildEnvironmentEditorView({
     scene: { name: "Deep Cavern" },
-    profiles,
     tables: [{ uuid: "RollTable.auto", name: "Cave Encounters", group: "World" }],
     stored: {
-      profileId: "cave",
       terrain: "Caves",
       dangerLevel: "risky",
       period: "auto",
       tableUuid: "",
     },
     resolved: {
-      profileId: "cave",
-      profile: profiles.cave,
+      profile: rules(),
       terrain: "Caves",
       dangerLevel: "risky",
       danger: { label: "Risky" },
@@ -52,28 +49,25 @@ test("Environment editor presents stored choices and resolved effective context"
   assert.equal(view.sceneName, "Deep Cavern");
   assert.equal(view.stored.period, "auto");
   assert.equal(view.resolved.period, "night");
-  assert.equal(view.resolved.profileName, "Cavern Profile");
   assert.equal(view.resolved.tableName, "Cave Encounters");
   assert.equal(view.resolved.formula, "1d8");
   assert.equal(view.resolved.encounterOn, "1, 2");
+  assert.equal(Object.hasOwn(view.stored, "profileId"), false);
+  assert.equal(Object.hasOwn(view.resolved, "profileName"), false);
 });
 
-test("Environment editor clearly identifies a missing encounter table as blocking", () => {
-  const profiles = { cave: profile() };
+test("Scene Context editor clearly identifies a missing encounter table as blocking", () => {
   const view = buildEnvironmentEditorView({
     scene: { name: "Dry Cave" },
-    profiles,
     tables: [],
     stored: {
-      profileId: "cave",
       terrain: "Caves",
       dangerLevel: "risky",
       period: "auto",
       tableUuid: "",
     },
     resolved: {
-      profileId: "cave",
-      profile: profiles.cave,
+      profile: rules(),
       terrain: "Caves",
       dangerLevel: "risky",
       danger: { label: "Risky" },
@@ -86,40 +80,84 @@ test("Environment editor clearly identifies a missing encounter table as blockin
 
   assert.equal(view.resolved.tableConfigured, false);
   assert.match(html, /Encounter table not configured/);
-  assert.match(html, /Encounter checks are blocked/);
+  assert.match(html, /Encounter checks remain blocked/);
   assert.match(html, /Save Scene Context/);
 });
 
-test("Environment edits use the canonical Scene environment service and do not require a Group", () => {
-  assert.match(runtime, /setSceneEnvironmentContext\(value, scene\)/);
-  assert.match(runtime, /getEnvironmentProfiles\(\)/);
+test("Scene Context editor exposes exactly Terrain, Danger, Period, and Encounter Table", () => {
+  const view = buildEnvironmentEditorView({
+    scene: { name: "Cave" },
+    tables: [],
+    stored: { terrain: "Caves", dangerLevel: "risky", period: "auto", tableUuid: "" },
+    resolved: {
+      profile: rules(),
+      terrain: "Caves",
+      dangerLevel: "risky",
+      danger: { label: "Risky" },
+      period: "day",
+      tableUuid: "",
+      encounter: { interval: 2, formula: "1d8", encounterOn: [1, 2] },
+    },
+  });
+  const html = renderEnvironmentEditor(view);
+
+  for (const name of ["terrain", "dangerLevel", "period", "tableUuid"]) {
+    assert.match(html, new RegExp(`name="${name}"`));
+  }
+  assert.doesNotMatch(html, /name="profileId"/);
+  assert.doesNotMatch(html, /Active Profile/);
+  assert.match(html, /Effective Period/);
+  assert.match(html, /Encounter Cadence/);
+  assert.match(html, /Occurrence/);
+  assert.match(html, /Effective Table/);
+});
+
+test("Scene Context form reader returns only the four persisted fields", () => {
+  const values = {
+    terrain: "Caves",
+    dangerLevel: "risky",
+    period: "night",
+    tableUuid: "RollTable.caves",
+  };
+  const form = {
+    querySelector(selector) {
+      const name = selector.match(/name="([^"]+)"/)?.[1];
+      return name ? { value: values[name] ?? "" } : null;
+    },
+  };
+  const root = {
+    querySelector(selector) {
+      return selector === "[data-mk-environment-form]" ? form : null;
+    },
+  };
+
+  assert.deepEqual(readEnvironmentForm(root), values);
+});
+
+test("Scene Context saves directly to Scene state without persisting profileId", () => {
+  assert.match(runtime, /scene\.setFlag\(MODULE_ID, SCENE_CONTEXT_FLAG, value\)/);
   assert.match(runtime, /getSceneEnvironmentContext\(scene\)/);
   assert.match(runtime, /resolveSceneEnvironmentContext\(scene\)/);
   assert.match(runtime, /availableRollTables\(\)/);
+  assert.doesNotMatch(runtime, /name="profileId"/);
+  assert.doesNotMatch(runtime, /profileId:\s*read/);
   assert.doesNotMatch(runtime, /resolveGmScreenGroup/);
   assert.doesNotMatch(runtime, /groupActorUuid/);
 });
 
-test("Environment workspace exposes profile, terrain, danger, period, and table override controls", () => {
-  for (const name of ["profileId", "terrain", "dangerLevel", "period", "tableUuid"]) {
-    assert.match(runtime, new RegExp(`name="${name}"`));
-  }
-  assert.match(runtime, /Active Profile/);
-  assert.match(runtime, /Effective Terrain/);
-  assert.match(runtime, /Effective Period/);
-  assert.match(runtime, /Occurrence/);
-  assert.match(runtime, /Effective Table/);
+test("Scene Context is inline on Overview and the legacy Environment workspace path is removed", () => {
+  assert.match(runtime, /data-mk-gm-overview-scene-context/);
+  assert.doesNotMatch(runtime, /data-workspace-panel=\\?"environment\\?"/);
+  assert.match(bridge, /data-workspace-panel=\\?"environment\\?"/);
+  assert.match(bridge, /\.remove\?\.\(\)/);
+  assert.doesNotMatch(runtime, /application\.workspace = "environment"/);
 });
 
-test("Environment controller adds an Overview warning and direct Configure path when blocked", () => {
-  assert.match(runtime, /data-mk-overview-environment-warning/);
-  assert.match(runtime, /Encounter checks are blocked/);
-  assert.match(runtime, /application\.workspace = "environment"/);
-});
-
-test("GM Screen environment controller loads after dynamic Quick Rules", () => {
+test("GM Screen Scene Context controller loads after the workspace bridge and Quick Rules", () => {
+  const bridgeIndex = manifest.esmodules.indexOf("scripts/gm-screen/workspace-refactor.js");
   const rulesIndex = manifest.esmodules.indexOf("scripts/gm-screen/quick-rules.js");
   const environmentIndex = manifest.esmodules.indexOf("scripts/gm-screen/environment-controls.js");
-  assert.ok(rulesIndex >= 0);
+  assert.ok(bridgeIndex >= 0);
+  assert.ok(rulesIndex > bridgeIndex);
   assert.ok(environmentIndex > rulesIndex);
 });

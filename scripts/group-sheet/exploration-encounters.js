@@ -4,24 +4,14 @@ import { getGroupData } from "./activities.js";
 import { getGroupElapsedTime, GROUP_TIME_RESET_HOOK } from "./time.js";
 import {
   ENVIRONMENT_CHANGED_HOOK,
-  getEnvironmentProfiles,
-  getSceneEnvironmentContext,
   resolveSceneEnvironmentContext,
-  setSceneEnvironmentContext,
-  terrainNames,
 } from "../libs/environment-context.js";
 import {
   checkAndResolveEncounterService,
   ENCOUNTER_FAILURE,
 } from "../encounter-engine/service.js";
 import { createEncounterMessage } from "../encounter-engine/chat.js";
-import {
-  availableRollTables,
-  renderGroupedOptions,
-  readDialogForm,
-  resolveUuid,
-} from "../encounter-engine/helpers.js";
-import { waitForGmDialog } from "../libs/dialog-v2.js";
+import { resolveUuid } from "../encounter-engine/helpers.js";
 
 const DEFAULT_EXPLORATION_TURN_SECONDS = 360;
 const GROUP_EXPLORATION_ENCOUNTER_HOOK = "mkShadowdarkGroupExplorationEncounter";
@@ -54,18 +44,8 @@ function getExplorationEncounterProgress(actor) {
   return normalizeExplorationEncounterProgress(readStoredExplorationEncounterProgress(actor));
 }
 
-function getExplorationTurnSeconds(context) {
-  const configured = Number(
-    context?.profile?.explorationTurnSeconds
-    ?? context?.profile?.turnSeconds
-    ?? DEFAULT_EXPLORATION_TURN_SECONDS
-  );
-
-  if (!Number.isFinite(configured) || configured <= 0) {
-    return DEFAULT_EXPLORATION_TURN_SECONDS;
-  }
-
-  return Math.max(1, Math.floor(configured));
+function getExplorationTurnSeconds() {
+  return DEFAULT_EXPLORATION_TURN_SECONDS;
 }
 
 function calculateExplorationEncounterSchedule({
@@ -103,7 +83,7 @@ function getExplorationEncounterState(actor, {
 } = {}) {
   const progress = getExplorationEncounterProgress(actor);
   const elapsedSeconds = getGroupElapsedTime(actor, "exploration");
-  const turnSeconds = getExplorationTurnSeconds(context);
+  const turnSeconds = getExplorationTurnSeconds();
   const intervalTurns = Number(context?.encounter?.interval ?? 1);
   const schedule = calculateExplorationEncounterSchedule({
     elapsedSeconds,
@@ -210,9 +190,6 @@ function renderExplorationEncounterToolbar(view) {
       <span>Check every <strong>${escapeHtml(view.intervalTurns)}</strong> ${view.intervalTurns === 1 ? "turn" : "turns"}</span>
       <span>Due <strong>${escapeHtml(view.dueChecks)}</strong></span>
       <span title="Effective encounter RollTable">Table <strong>${escapeHtml(view.tableName)}</strong></span>
-      <button type="button" data-action="configure-exploration-encounters">
-        <i class="fas fa-sliders"></i> Encounter Context
-      </button>
       <button type="button" data-action="check-due-exploration-encounters" ${view.canCheck ? "" : "disabled"}>
         <i class="fas fa-dice-d20"></i> Check Due
       </button>
@@ -233,90 +210,21 @@ function renderExplorationEncounterToolbar(view) {
 
 function getRootElement(html) {
   if (!html) return null;
-  if (html instanceof HTMLElement) return html;
-  if (html[0] instanceof HTMLElement) return html[0];
-  return null;
+  if (globalThis.HTMLElement && html instanceof HTMLElement) return html;
+  if (globalThis.HTMLElement && html[0] instanceof HTMLElement) return html[0];
+  return html?.[0] ?? html;
 }
 
 async function openExplorationEncounterContextDialog(actor) {
   if (!globalThis.game?.user?.isGM) return null;
-
-  const profiles = getEnvironmentProfiles();
-  const sceneContext = getSceneEnvironmentContext();
-  const selectedProfile = profiles[sceneContext.profileId] ?? Object.values(profiles)[0];
-  const allTerrains = [...new Set(Object.values(profiles).flatMap(profile => terrainNames(profile)))];
-  const allDangerLevels = new Map();
-
-  for (const profile of Object.values(profiles)) {
-    for (const [id, data] of Object.entries(profile.dangerLevels ?? {})) {
-      if (!allDangerLevels.has(id)) allDangerLevels.set(id, data?.label ?? id);
-    }
+  const gmScreen = globalThis.game?.modules?.get?.(MODULE_ID)?.api?.gmScreen;
+  if (typeof gmScreen?.open !== "function") {
+    globalThis.ui?.notifications?.warn?.("Open the MK-Shadowdark GM Screen to edit Scene Context.");
+    return null;
   }
-
-  const tables = await availableRollTables();
-  const profileOptions = Object.entries(profiles).map(([id, profile]) => `
-    <option value="${escapeHtml(id)}" ${id === sceneContext.profileId ? "selected" : ""}>${escapeHtml(profile.name ?? id)}</option>
-  `).join("");
-  const terrainOptions = allTerrains.map(terrain => `
-    <option value="${escapeHtml(terrain)}" ${terrain === sceneContext.terrain ? "selected" : ""}>${escapeHtml(terrain)}</option>
-  `).join("");
-  const dangerOptions = Array.from(allDangerLevels.entries()).map(([id, label]) => `
-    <option value="${escapeHtml(id)}" ${id === sceneContext.dangerLevel ? "selected" : ""}>${escapeHtml(label)}</option>
-  `).join("");
-
-  const content = `
-    <div class="mk-group-encounter-context-dialog">
-      <p class="notes">Encounter cadence is measured in exploration turns. The default profile uses ${DEFAULT_EXPLORATION_TURN_SECONDS / 60} minutes per turn.</p>
-      <div class="form-group"><label>Profile</label><select name="profileId">${profileOptions}</select></div>
-      <div class="form-group"><label>Terrain</label><select name="terrain">${terrainOptions}</select></div>
-      <div class="form-group"><label>Danger</label><select name="dangerLevel">${dangerOptions}</select></div>
-      <div class="form-group">
-        <label>Time</label>
-        <select name="period">
-          <option value="auto" ${sceneContext.period === "auto" ? "selected" : ""}>Automatic from world time</option>
-          <option value="day" ${sceneContext.period === "day" ? "selected" : ""}>Day</option>
-          <option value="night" ${sceneContext.period === "night" ? "selected" : ""}>Night</option>
-        </select>
-      </div>
-      <div class="form-group">
-        <label>Encounter Table Override</label>
-        <select name="tableUuid">${renderGroupedOptions(tables, sceneContext.tableUuid)}</select>
-      </div>
-      <p class="hint">Current profile: ${escapeHtml(selectedProfile?.name ?? sceneContext.profileId)}. Changing encounter context starts the new turn cadence from the Group's current exploration progress.</p>
-    </div>
-  `;
-
-  return waitForGmDialog({
-    title: "Group Exploration Encounter Context",
-    content,
-    buttons: [
-      {
-        action: "save",
-        icon: '<i class="fas fa-save"></i>',
-        label: "Save",
-        default: true,
-        callback: async (_event, button) => {
-          const form = readDialogForm(button.form);
-          const result = await setSceneEnvironmentContext({
-            profileId: String(form.profileId ?? sceneContext.profileId),
-            terrain: String(form.terrain ?? sceneContext.terrain),
-            dangerLevel: String(form.dangerLevel ?? sceneContext.dangerLevel),
-            period: String(form.period ?? sceneContext.period),
-            tableUuid: String(form.tableUuid ?? ""),
-          });
-          actor?.sheet?.render?.(false);
-          return result;
-        },
-      },
-      {
-        action: "cancel",
-        icon: '<i class="fas fa-times"></i>',
-        label: "Cancel",
-        callback: () => null,
-      },
-    ],
-    close: () => null,
-    position: { width: 580 },
+  return gmScreen.open({
+    groupActorUuid: String(actor?.uuid ?? ""),
+    workspace: "overview",
   });
 }
 
@@ -381,20 +289,23 @@ async function processDueExplorationEncounters(actor, {
       user,
     });
 
-    consumedChecks += 1;
     results.push(serviceResult);
 
     let latestLabel = "No encounter";
-    if (serviceResult.reason) latestLabel = `Check failed: ${serviceResult.reason}`;
-    else if (serviceResult.isEncounter && serviceResult.encounter) {
-      serviceResult.encounter.groupContext = {
-        groupActorUuid: String(actor.uuid ?? ""),
-        procedure: "exploration",
-      };
-      latestLabel = `Encounter: ${serviceResult.encounter.encounter?.label ?? "Resolved"}`;
-      await createEncounterMessage(serviceResult.encounter, { whisper: true });
-    } else if (serviceResult.isEncounter) {
-      latestLabel = "Encounter triggered";
+    if (serviceResult.reason) {
+      latestLabel = `Check failed: ${serviceResult.reason}`;
+    } else {
+      consumedChecks += 1;
+      if (serviceResult.isEncounter && serviceResult.encounter) {
+        serviceResult.encounter.groupContext = {
+          groupActorUuid: String(actor.uuid ?? ""),
+          procedure: "exploration",
+        };
+        latestLabel = `Encounter: ${serviceResult.encounter.encounter?.label ?? "Resolved"}`;
+        await createEncounterMessage(serviceResult.encounter, { whisper: true });
+      } else if (serviceResult.isEncounter) {
+        latestLabel = "Encounter triggered";
+      }
     }
 
     setLatestResultForActor(actor, {
@@ -412,7 +323,7 @@ async function processDueExplorationEncounters(actor, {
 
   const transition = {
     groupActorUuid: String(actor.uuid ?? ""),
-    processed: results.length,
+    processed: results.filter(result => !result.reason).length,
     dueBefore,
     dueAfter: state.dueChecks,
     results,
@@ -424,7 +335,7 @@ async function processDueExplorationEncounters(actor, {
   if (notify) {
     const encounters = results.filter(result => result.isEncounter && result.encounter && !result.reason).length;
     globalThis.ui?.notifications?.info?.(
-      `Processed ${results.length} exploration encounter ${results.length === 1 ? "check" : "checks"}; ${encounters} ${encounters === 1 ? "encounter" : "encounters"}.`
+      `Processed ${transition.processed} exploration encounter ${transition.processed === 1 ? "check" : "checks"}; ${encounters} ${encounters === 1 ? "encounter" : "encounters"}.`
     );
   }
 
@@ -445,14 +356,6 @@ async function renderExplorationEncounterContext(app, html) {
   toolbar.insertAdjacentHTML("afterend", renderExplorationEncounterToolbar(view));
 
   const encounterToolbar = root.querySelector?.("[data-mk-exploration-encounters]");
-  encounterToolbar?.querySelector?.("[data-action='configure-exploration-encounters']")?.addEventListener("click", event => {
-    event.preventDefault();
-    openExplorationEncounterContextDialog(actor).catch(error => {
-      console.error(`${MODULE_ID} | Group Exploration Encounters | Configuration failed`, error);
-      globalThis.ui?.notifications?.error?.(`Encounter context failed: ${error.message}`);
-    });
-  });
-
   encounterToolbar?.querySelector?.("[data-action='check-due-exploration-encounters']")?.addEventListener("click", event => {
     event.preventDefault();
     processDueExplorationEncounters(actor).catch(error => {
@@ -462,17 +365,10 @@ async function renderExplorationEncounterContext(app, html) {
   });
 }
 
-async function realignAllGroupsForEnvironmentChange() {
+function refreshAllGroupsForEnvironmentChange() {
   if (!globalThis.game?.user?.isGM) return;
-
   for (const actor of globalThis.game?.actors ?? []) {
-    if (!isGroupActor(actor)) continue;
-    try {
-      await reconcileExplorationEncounterProgress(actor, { consumeCurrentSchedule: true });
-      actor.sheet?.render?.(false);
-    } catch (error) {
-      console.warn(`${MODULE_ID} | Group Exploration Encounters | Could not realign cadence.`, error);
-    }
+    if (isGroupActor(actor)) actor.sheet?.render?.(false);
   }
 }
 
@@ -521,9 +417,7 @@ function registerGroupExplorationEncounterService() {
   });
 
   globalThis.Hooks?.on?.(ENVIRONMENT_CHANGED_HOOK, () => {
-    realignAllGroupsForEnvironmentChange().catch(error => {
-      console.warn(`${MODULE_ID} | Group Exploration Encounters | Environment realignment failed.`, error);
-    });
+    refreshAllGroupsForEnvironmentChange();
   });
 
   globalThis.Hooks?.on?.(GROUP_TIME_RESET_HOOK, (actor, transition) => {
@@ -544,6 +438,7 @@ export {
   openExplorationEncounterContextDialog,
   processDueExplorationEncounters,
   renderExplorationEncounterContext,
+  refreshAllGroupsForEnvironmentChange,
   exposeExplorationEncounterApi,
   registerGroupExplorationEncounterService,
 };

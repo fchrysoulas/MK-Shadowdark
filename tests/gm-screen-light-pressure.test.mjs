@@ -4,7 +4,6 @@ import test from "node:test";
 
 import {
   buildLightPressure,
-  renderOverviewSummary,
   renderPressureCell,
 } from "../scripts/gm-screen/light-pressure.js";
 
@@ -38,28 +37,20 @@ test("GM Screen aggregates active light across active party members", () => {
   assert.deepEqual(summary.carriers.map(entry => entry.name), ["A", "B"]);
 });
 
-test("GM Screen presents a clear no-light warning", () => {
+test("GM Screen presents a clear no-light warning in the top strip", () => {
   const summary = buildLightPressure([]);
   assert.equal(summary.hasLight, false);
   assert.equal(summary.pressureLabel, "NO LIGHT");
   assert.match(renderPressureCell(summary), /NO LIGHT/);
   assert.match(renderPressureCell(summary), /No active light source among active party members/);
-  assert.match(renderOverviewSummary(summary), /No active light/);
-  assert.match(renderOverviewSummary(summary), /None of the active party members currently has an active Shadowdark light source/);
 });
 
-test("GM Screen light overview exposes carriers and source names", () => {
-  const summary = buildLightPressure([
-    {
-      actorUuid: "Actor.a",
-      name: "A",
-      light: { total: 1, items: [{ id: "torch", name: "Torch" }] },
-    },
-  ]);
-  const html = renderOverviewSummary(summary);
-  assert.match(html, /data-mk-light-carrier="Actor\.a"/);
-  assert.match(html, />A</);
-  assert.match(html, /Torch/);
+test("Light Pressure only decorates the persistent top strip", () => {
+  assert.match(runtime, /\.mk-gm-pressure-strip/);
+  assert.match(runtime, /data-mk-gm-light-pressure/);
+  assert.doesNotMatch(runtime, /data-workspace-panel=.?overview/);
+  assert.doesNotMatch(runtime, /renderOverviewSummary/);
+  assert.doesNotMatch(runtime, /data-mk-light-carrier/);
 });
 
 test("GM Screen light pressure derives from existing party view only", () => {
@@ -77,8 +68,13 @@ test("GM Screen pressure strip adapts to Light and optional Combat cells", () =>
 
 test("GM Screen light-pressure runtime and style are loaded", () => {
   const environmentIndex = manifest.esmodules.indexOf("scripts/gm-screen/environment-controls.js");
+  const topContextIndex = manifest.esmodules.indexOf("scripts/gm-screen/top-context-controls.js");
   const lightIndex = manifest.esmodules.indexOf("scripts/gm-screen/light-pressure.js");
+  const overviewIndex = manifest.esmodules.indexOf("scripts/gm-screen/overview-links.js");
   assert.ok(environmentIndex >= 0);
-  assert.ok(lightIndex > environmentIndex);
+  assert.ok(topContextIndex > environmentIndex);
+  assert.ok(lightIndex > topContextIndex);
+  assert.ok(overviewIndex > lightIndex);
   assert.ok(manifest.styles.includes("styles/gm-screen-light-pressure.css"));
+  assert.ok(manifest.styles.includes("styles/gm-screen-overview.css"));
 });

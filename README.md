@@ -79,6 +79,8 @@ mk.gmScreen.toggle();
 
 The GM Screen is a native Foundry ApplicationV2 surface. It is not a replacement for the Group Sheet and it does not own duplicate gameplay state.
 
+The GM Screen is intentionally a **manual-update surface**. It does not subscribe to ambient Actor, Scene, Combat, or MK workflow changes in order to force background rerenders, and it does not expose a generic Refresh button. Explicit GM actions and explicit configuration saves may rerender the screen after they complete. Group/workspace selection and party-rail presentation are kept only in the currently open application and are not silently persisted as presentation preferences.
+
 Its production layout contains:
 
 - a persistent active-party/status rail
@@ -87,13 +89,13 @@ Its production layout contains:
 
 Available workspaces, in order, are:
 
-- **Overview** — directly editable Scene Context, Encounter Pressure, Resting, Combat, Morale, and Group/procedure state at a glance.
-- **Exploration** — exploration turns, encounter cadence, due checks, Traveling assignments, and exploration generators.
+- **Overview** — staged Scene Context editing for Terrain, Danger, and Period plus Encounter Pressure, Resting, Combat, Morale, and Group/procedure state at a glance. Scene Context changes are not written until **Save Changes** is pressed; the button appears only when values differ.
+- **Exploration** — exploration turns, encounter cadence, due checks, encounter processing, and exploration generators. Marching order and exploration-role editing remain in Group Management rather than the GM Screen.
 - **Combat** — current Foundry Combat round/turn/combatants and MK Morale overview.
-- **Resting** — current rest status, elapsed rest turns, checks remaining, interruption state, Resume Rest, and staging shortcut.
+- **Resting** — current rest status, elapsed rest turns, checks remaining, interruption state, and encounter staging. Starting/resuming rests and camp-watch management remain in Group Management.
 - **Downtime** — settlement-facing generators and downtime tools, including Tavern and Shop creation.
 - **Rules** — compact GM Quick Rules for procedure turns, encounter checks, morale, and resting.
-- **Tables** — imported Shadowdark source RollTables with search, filtering, rolling, and source metadata.
+- **Tables** — Encounter Setup plus imported Shadowdark source RollTables with search, filtering, rolling, and source metadata. Encounter Zone and Encounter Table changes remain staged until **Save Encounter Setup** is pressed.
 - **Session Log** — recent canonical Group encounter records with inspection, staging, reveal, and reroll actions.
 
 The **Exploration**, **Combat**, **Resting**, and **Downtime** active tabs use green, red, blue, and dark-blue tints respectively. The former dedicated **Encounter** and **Environment** workspaces are removed; encounter history lives in Session Log, while Scene Context is edited directly on Overview.
@@ -105,6 +107,8 @@ The GM Screen reads canonical state from Group, Scene Context, internal encounte
 # Source Table Import
 
 The GM Screen **Tables** workspace can import native Foundry RollTables from Markdown transcriptions supplied by the GM. MK-Shadowdark parses the selected files locally and does not bundle the sourcebook table content.
+
+The same workspace contains **Encounter Setup**. The GM selects an imported Encounter Zone source and the encounter RollTable there; those selections are staged until **Save Encounter Setup** is pressed. The selected Encounter Zone provides the valid Terrain choices displayed on Overview from its imported source columns.
 
 Supported source detection includes:
 
@@ -223,7 +227,7 @@ With the default 6-minute Exploration turn:
 
 If a time advance crosses multiple check boundaries, MK-Shadowdark preserves the exact number of due checks rather than collapsing them into one.
 
-The GM can inspect/process the same due state from Group Traveling or the production GM Screen. Both route to the same Group encounter service. Group Traveling retains encounter-pressure/check-due information, while Scene Context editing is centralized on GM Screen Overview.
+The GM can inspect/process the same due state from Group Traveling or the production GM Screen. Both route to the same Group encounter service. Group Traveling retains encounter-pressure/check-due information; the GM Screen Exploration workspace exposes the same due-check processing without duplicating Marching Order, role, or Group Traveling navigation controls.
 
 ## Scene encounter context
 
@@ -236,7 +240,7 @@ The active Scene is the source of truth for:
 - effective encounter table
 - encounter interval/formula
 
-The GM edits exactly four Scene Context inputs directly from **Overview**: **Terrain, Danger, Period, and Encounter Table**. The persisted Scene Context contains those four fields only; there is no GM-facing Profile field or `profileId` in Scene Context state.
+The persisted Scene Context contains exactly four fields: **Terrain, Danger, Period, and Encounter Table**. The GM Screen deliberately splits their configuration across two explicit-save surfaces: **Overview** stages Terrain, Danger, and Period behind **Save Changes**, while **Tables -> Encounter Setup** stages Encounter Zone and Encounter Table behind **Save Encounter Setup**. There is no GM-facing Profile field or `profileId` in Scene Context state.
 
 The internal encounter resolver still owns one canonical Shadowdark rules definition for cadence, outcome tables, rerolls, and compatibility. That implementation detail is not a Scene Context choice.
 
@@ -281,12 +285,12 @@ The required check turns are snapshotted when the rest begins. Changing the Scen
 4. The internal encounter service performs the occurrence check and resolves an encounter when triggered.
 5. If there is no encounter, resting continues.
 6. If an encounter occurs, resting pauses immediately.
-7. The GM resolves the interruption and explicitly uses **Resume Rest** from Group Management or the GM Screen.
+7. The GM resolves the interruption and explicitly uses **Resume Rest** from Group Management.
 8. After all required checks and the full eight hours complete, planned resources and benefits finalize.
 
 An interrupted rest consumes **0 planned rations** and grants **0 completed-rest benefits** until successful completion.
 
-Camp-watch assignments are available as procedure context but do not automatically modify encounter odds.
+Camp-watch assignments remain Group Management procedure context but do not automatically modify encounter odds. The production GM Screen no longer edits watches or starts/resumes rests.
 
 ---
 
@@ -365,7 +369,7 @@ World Actors are reused. Compendium Actors can be previewed without import and a
 
 When **Add to Combat** is selected, the created TokenDocuments enter Foundry Combat through supported document APIs. MK-Shadowdark does not automatically roll initiative or start the round.
 
-A Resting encounter remains interrupted until the GM explicitly resumes the rest.
+A Resting encounter remains interrupted until the GM explicitly resumes the rest from Group Management.
 
 ---
 
@@ -574,15 +578,23 @@ The production GM Screen is GM-only. Use the **Token Scene Controls** and look f
 
 ## A Group encounter check is due but cannot run
 
-Verify the active Scene resolves a valid encounter RollTable through the Scene Context configuration on GM Screen Overview.
+Verify the active Scene resolves a valid encounter RollTable. Configure **Tables -> Encounter Setup**, press **Save Encounter Setup**, and then process the due check.
+
+## Scene Context changes do not affect the other GM Screen workspaces
+
+Overview fields are intentionally staged. Change Terrain, Danger, or Period and press **Save Changes**. The save persists Scene Context and performs one explicit GM Screen rerender so the other workspaces use the new context.
+
+## The GM Screen does not update after an external Actor, Scene, or Combat change
+
+This is intentional. The GM Screen has no ambient live-refresh mechanism. Use an explicit GM Screen action, switch/reopen the screen as appropriate, or save staged configuration when you want the surface rebuilt.
 
 ## Rest Party pauses with a configuration warning
 
-The current danger requires encounter checks but the Scene has no valid encounter table. Configure the Scene Context and continue the same rest.
+The current danger requires encounter checks but the Scene has no valid encounter table. Configure Encounter Setup and continue the same rest from Group Management.
 
 ## Rest Party says Resume Rest
 
-The rest was interrupted. Resolve the encounter/interruption, then explicitly press **Resume Rest** from Group Management or the GM Screen.
+The rest was interrupted. Resolve the encounter/interruption, then explicitly press **Resume Rest** from Group Management.
 
 ## Stage Encounter cannot deploy
 

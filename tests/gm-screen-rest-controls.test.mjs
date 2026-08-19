@@ -2,80 +2,34 @@ import assert from "node:assert/strict";
 import fs from "node:fs";
 import test from "node:test";
 
-import {
-  checkDisplay,
-  restActionForState,
-} from "../scripts/gm-screen/rest-controls.js";
-
-const controls = fs.readFileSync(new URL("../scripts/gm-screen/rest-controls.js", import.meta.url), "utf8");
 const manifest = JSON.parse(fs.readFileSync(new URL("../module.json", import.meta.url), "utf8"));
+const template = fs.readFileSync(new URL("../templates/gm-screen.hbs", import.meta.url), "utf8");
+const groupRest = fs.readFileSync(new URL("../scripts/group-sheet/rest-encounters.js", import.meta.url), "utf8");
 
-function state(status, { required = 3, remaining = 3 } = {}) {
-  return {
-    requiredChecks: required,
-    remainingChecks: remaining,
-    workflow: {
-      status,
-      mode: "normal",
-      consumedChecks: Math.max(0, required - remaining),
-      participantUuids: [],
-      plannedRations: 0,
-      rationsConsumed: false,
-    },
-  };
-}
-
-test("Ready rest uses prospective Required Checks semantics", () => {
-  assert.deepEqual(checkDisplay(state("ready")), {
-    label: "Required Checks",
-    value: 3,
-  });
-  assert.deepEqual(restActionForState(state("ready")), {
-    id: "begin",
-    label: "Begin Rest",
-    icon: "fa-bed",
-  });
+test("GM Screen no longer loads its rest workflow controller", () => {
+  assert.ok(!manifest.esmodules.includes("scripts/gm-screen/rest-controls.js"));
 });
 
-test("active and interrupted rest use remaining-work semantics", () => {
-  assert.deepEqual(checkDisplay(state("checking", { required: 3, remaining: 2 })), {
-    label: "Checks Left",
-    value: 2,
-  });
-  assert.equal(restActionForState(state("checking")).label, "Continue Rest");
-  assert.equal(restActionForState(state("interrupted")).label, "Resume Rest");
+test("Resting workspace no longer exposes rest-start, camping, or watch controls", () => {
+  assert.doesNotMatch(template, /Begin Rest/);
+  assert.doesNotMatch(template, /Begin New Rest/);
+  assert.doesNotMatch(template, /Continue Rest/);
+  assert.doesNotMatch(template, /Resume Rest/);
+  assert.doesNotMatch(template, /Group Camping/);
+  assert.doesNotMatch(template, /Camp Watches/);
+  assert.doesNotMatch(template, /Edit Watches/);
 });
 
-test("completed rest offers a new workflow without pretending checks remain", () => {
-  assert.deepEqual(checkDisplay(state("completed", { required: 3, remaining: 0 })), {
-    label: "Checks",
-    value: "3/3",
-  });
-  assert.equal(restActionForState(state("completed")).label, "Begin New Rest");
+test("Resting workspace remains a status surface with encounter staging", () => {
+  assert.match(template, /data-workspace-panel="resting"/);
+  assert.match(template, /resting\.status/);
+  assert.match(template, /resting\.completedTurns/);
+  assert.match(template, /resting\.remainingChecks/);
+  assert.match(template, /Stage Latest Encounter/);
 });
 
-test("GM Screen begins and continues rest through canonical Group Rest services", () => {
-  assert.match(controls, /startGroupRest\(group/);
-  assert.match(controls, /continueGroupRest\(group\)/);
-  assert.match(controls, /getGroupRestState\(group\)/);
-  assert.match(controls, /getPartyFoodTotal\(participants\)/);
-  assert.match(controls, /getRestMode\(\)/);
-  assert.match(controls, /getGroupAssignments\(group\)/);
-  assert.match(controls, /Rations and rest benefits are applied only after all required encounter checks/);
-});
-
-test("interrupted rest requires explicit GM confirmation", () => {
-  assert.match(controls, /Resume Interrupted Rest/);
-  assert.match(controls, /Confirm that the interruption has been resolved/);
-  assert.match(controls, /no: \{ label: "Cancel", default: true \}/);
-});
-
-test("GM Screen rest controls load after encounter and assignment controllers", () => {
-  const assignmentIndex = manifest.esmodules.indexOf("scripts/gm-screen/assignment-controls.js");
-  const encounterIndex = manifest.esmodules.indexOf("scripts/gm-screen/encounter-controls.js");
-  const restIndex = manifest.esmodules.indexOf("scripts/gm-screen/rest-controls.js");
-
-  assert.ok(assignmentIndex >= 0);
-  assert.ok(encounterIndex > assignmentIndex);
-  assert.ok(restIndex > encounterIndex);
+test("removing GM Screen rest controls does not remove the canonical Group Rest service", () => {
+  assert.match(groupRest, /startGroupRest/);
+  assert.match(groupRest, /continueGroupRest/);
+  assert.match(groupRest, /getGroupRestState/);
 });

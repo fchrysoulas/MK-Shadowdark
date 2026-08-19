@@ -63,18 +63,30 @@ test("README documents Group Exploration, Resting, staging, morale, and GM statu
   assert.match(readme, /# Encounter Staging/);
   assert.match(readme, /# GM Member Status/);
   assert.match(readme, /# Morale Automation/);
-  assert.match(readme, /Resume Rest/);
+  assert.match(readme, /Resume Rest.*Group Management/i);
   assert.match(readme, /Encounter card -> Options -> Preview -> Deploy/);
 });
 
-test("README documents production GM Screen alongside Group Management", async () => {
+test("README documents the production GM Screen as a manual-update surface", async () => {
   const readme = await readReadme();
 
   assert.match(readme, /Group Management.*GM Screen|GM Screen.*Group Management/is);
   assert.match(readme, /separate GM-only GM Screen/i);
   assert.match(readme, /shield button in Token Scene Controls/i);
   assert.match(readme, /mk\.gmScreen\.open\(\)/);
-  assert.match(readme, /separate GM-only GM Screen.*alongside Group Management/is);
+  assert.match(readme, /manual-update surface/i);
+  assert.match(readme, /does not subscribe to ambient Actor, Scene, Combat, or MK workflow changes/i);
+  assert.match(readme, /does not expose a generic Refresh button/i);
+});
+
+test("README documents explicit GM Screen configuration saves and retired duplicate controls", async () => {
+  const readme = await readReadme();
+
+  assert.match(readme, /Save Changes/);
+  assert.match(readme, /Save Encounter Setup/);
+  assert.match(readme, /Marching order and exploration-role editing remain in Group Management/i);
+  assert.match(readme, /Starting\/resuming rests and camp-watch management remain in Group Management/i);
+  assert.match(readme, /production GM Screen no longer edits watches or starts\/resumes rests/i);
 });
 
 test("README does not require the retired GM Screen Mock", async () => {

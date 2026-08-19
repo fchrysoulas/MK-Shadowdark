@@ -46,15 +46,16 @@ test("GM Screen morale reset requires confirmation", () => {
   assert.match(controls, /no: \{ label: "Cancel", default: true \}/);
 });
 
-test("GM Screen morale controller refreshes on Combat token flag changes", () => {
-  assert.match(controls, /"updateToken"/);
-  assert.match(controls, /combatContainsToken\(tokenDocument\)/);
-  assert.match(controls, /refreshGmScreen\(\)/);
+test("GM Screen morale controller has no ambient token-update refresh hook", () => {
+  assert.doesNotMatch(controls, /refreshGmScreen/);
+  assert.doesNotMatch(controls, /"updateToken"/);
+  assert.match(controls, /await application\.render\(\{ force: true \}\)/);
 });
 
-test("GM Screen morale controls load after the Rest controller", () => {
-  const restIndex = manifest.esmodules.indexOf("scripts/gm-screen/rest-controls.js");
+test("GM Screen morale controls load after the core GM Screen without the retired Rest controller", () => {
+  const gmIndex = manifest.esmodules.indexOf("scripts/gm-screen/gm-screen.js");
   const moraleIndex = manifest.esmodules.indexOf("scripts/gm-screen/morale-controls.js");
-  assert.ok(restIndex >= 0);
-  assert.ok(moraleIndex > restIndex);
+  assert.ok(gmIndex >= 0);
+  assert.ok(moraleIndex > gmIndex);
+  assert.ok(!manifest.esmodules.includes("scripts/gm-screen/rest-controls.js"));
 });

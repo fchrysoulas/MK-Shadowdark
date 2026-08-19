@@ -58,6 +58,7 @@
     "scripts/encounter-engine/encounter-engine.js",
     "scripts/gm-screen/presentation-preferences.js",
     "scripts/gm-screen/gm-screen.js",
+    "scripts/gm-screen/interaction-refresh-guard.js",
     "scripts/gm-screen/workspace-refactor.js",
     "scripts/gm-screen/live-refresh.js",
     "scripts/gm-screen/assignment-controls.js",

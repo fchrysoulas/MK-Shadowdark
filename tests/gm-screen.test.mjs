@@ -48,8 +48,9 @@ test("GM Screen consumes canonical Group, Scene, encounter, and morale services"
   assert.match(viewModel, /api\?\.morale/);
 
   assert.match(runtime, /processDueExplorationEncounters\(group\)/);
-  assert.match(runtime, /continueGroupRest\(group\)/);
   assert.match(runtime, /openEncounterStagingDialog\(latest\.data/);
+  assert.doesNotMatch(runtime, /continueGroupRest\(group\)/);
+  assert.doesNotMatch(runtime, /startGroupRest\(group/);
 });
 
 test("GM Screen procedure and elapsed pressure values are operational controls", () => {
@@ -88,6 +89,8 @@ test("GM Screen template natively owns the exact eight workspaces in order", () 
   assert.doesNotMatch(template, /data-workspace-panel="environment"/);
   assert.doesNotMatch(template, /configureEnvironment/);
   assert.doesNotMatch(template, /profileName|Active Profile/);
+  assert.doesNotMatch(template, /Group Traveling/);
+  assert.doesNotMatch(template, /Group Camping/);
   assert.match(template, /data-mk-gm-overview-scene-context/);
   assert.match(template, /Process Due Checks/);
 });

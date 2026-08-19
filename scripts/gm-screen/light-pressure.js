@@ -1,4 +1,3 @@
-import { resolveActorFromUuid } from "../group-sheet/actors.js";
 import { APP_ID } from "./gm-screen.js";
 
 function gmScreenApplication(application) {
@@ -65,55 +64,6 @@ function renderPressureCell(summary) {
   `;
 }
 
-function renderOverviewSummary(summary) {
-  if (!summary.hasLight) {
-    return `
-      <div class="mk-gm-alert is-warning mk-gm-light-alert" data-mk-gm-light-overview>
-        <i class="fas fa-fire-flame-simple"></i>
-        <span><strong>No active light.</strong> None of the active party members currently has an active Shadowdark light source.</span>
-      </div>
-    `;
-  }
-
-  const carriers = summary.carriers.map(carrier => {
-    const names = carrier.items.length
-      ? carrier.items.map(item => item.name).join(", ")
-      : `${carrier.count} active source${carrier.count === 1 ? "" : "s"}`;
-    return `
-      <button type="button" class="mk-gm-light-carrier" data-mk-light-carrier="${escapeHtml(carrier.actorUuid)}" title="Open ${escapeHtml(carrier.name)}">
-        <i class="fas fa-fire-flame-simple"></i>
-        <span>${escapeHtml(carrier.name)}</span>
-        <small>${escapeHtml(names)}</small>
-      </button>
-    `;
-  }).join("");
-
-  return `
-    <div class="mk-gm-light-overview" data-mk-gm-light-overview>
-      <div class="mk-gm-light-overview-heading">
-        <strong><i class="fas fa-fire-flame-simple"></i> ${summary.total} active light source${summary.total === 1 ? "" : "s"}</strong>
-        <span>${summary.carrierCount} carrier${summary.carrierCount === 1 ? "" : "s"}</span>
-      </div>
-      <div class="mk-gm-light-carriers">${carriers}</div>
-    </div>
-  `;
-}
-
-async function openCarrier(actorUuid) {
-  const actor = await resolveActorFromUuid(String(actorUuid ?? ""));
-  if (!actor) return null;
-  actor.sheet?.render?.(true);
-  return actor;
-}
-
-function insertHtml(parent, html) {
-  const holder = document.createElement("div");
-  holder.innerHTML = html.trim();
-  const element = holder.firstElementChild;
-  if (element) parent.append(element);
-  return element;
-}
-
 function decorateLightPressure(application, element, context) {
   if (!gmScreenApplication(application) || !globalThis.game?.user?.isGM) return false;
   const root = element?.querySelector ? element : null;
@@ -121,28 +71,15 @@ function decorateLightPressure(application, element, context) {
 
   const summary = buildLightPressure(context?.party ?? []);
   const strip = root.querySelector(".mk-gm-pressure-strip");
-  if (strip) {
-    strip.querySelector("[data-mk-gm-light-pressure]")?.remove();
-    const combatCell = strip.querySelector(".is-combat");
-    const holder = document.createElement("div");
-    holder.innerHTML = renderPressureCell(summary).trim();
-    const cell = holder.firstElementChild;
-    if (cell) strip.insertBefore(cell, combatCell ?? null);
-  }
+  if (!strip) return false;
 
-  const panel = root.querySelector('[data-workspace-panel="overview"] .mk-gm-panel:first-child');
-  if (panel) {
-    panel.querySelector("[data-mk-gm-light-overview]")?.remove();
-    const overview = insertHtml(panel, renderOverviewSummary(summary));
-    overview?.querySelectorAll?.("[data-mk-light-carrier]").forEach(button => {
-      button.addEventListener("click", event => {
-        event.preventDefault();
-        void openCarrier(button.dataset.mkLightCarrier);
-      });
-    });
-  }
-
-  return true;
+  strip.querySelector("[data-mk-gm-light-pressure]")?.remove();
+  const combatCell = strip.querySelector(".is-combat");
+  const holder = document.createElement("div");
+  holder.innerHTML = renderPressureCell(summary).trim();
+  const cell = holder.firstElementChild;
+  if (cell) strip.insertBefore(cell, combatCell ?? null);
+  return Boolean(cell);
 }
 
 function registerGmScreenLightPressure() {
@@ -157,7 +94,6 @@ export {
   gmScreenApplication,
   buildLightPressure,
   renderPressureCell,
-  renderOverviewSummary,
   decorateLightPressure,
   registerGmScreenLightPressure,
 };

@@ -1,5 +1,5 @@
 import { SOURCE_BOOKS } from "./parser.js";
-import { parseSupportedSourceTables } from "./source-parser.js";
+import { CURSED_SCROLL_BOOKS, parseSupportedSourceTables } from "./source-parser.js";
 
 const MODULE_ID = "mk-shadowdark";
 const ROOT_FOLDER_NAME = "MK Shadowdark Source Tables";
@@ -35,7 +35,11 @@ function runtimeDefaults() {
 }
 
 function sourceFolderName(bookId, fallbackTitle = "") {
-  const book = Object.values(SOURCE_BOOKS).find(candidate => candidate.id === bookId);
+  const knownBooks = [
+    ...Object.values(SOURCE_BOOKS),
+    ...Object.values(CURSED_SCROLL_BOOKS),
+  ];
+  const book = knownBooks.find(candidate => candidate.id === bookId);
   return book?.title ?? String(fallbackTitle || bookId);
 }
 
@@ -235,6 +239,14 @@ async function readSourceFiles(files) {
   return { parsedSources, warnings };
 }
 
+function supportedSourceTitles() {
+  return [
+    SOURCE_BOOKS.core.title,
+    SOURCE_BOOKS.western.title,
+    ...Object.values(CURSED_SCROLL_BOOKS).map(book => book.title),
+  ];
+}
+
 function filePickerContent() {
   return `
     <form class="mk-source-table-importer">
@@ -243,7 +255,7 @@ function filePickerContent() {
         <label>Source Markdown</label>
         <input type="file" name="sourceFiles" accept=".md,text/markdown,text/plain" multiple>
       </div>
-      <p class="hint">Supported: Shadowdark RPG Core v4.9, Player's Guide to the Western Reaches V1, and Cursed Scroll 4: River of Night V1-2.</p>
+      <p class="hint">Supported: ${escapeHtml(supportedSourceTitles().join(", "))}.</p>
     </form>
   `;
 }
@@ -387,6 +399,7 @@ export {
   upsertSourceRollTable,
   importParsedSources,
   readSourceFiles,
+  supportedSourceTitles,
   filePickerContent,
   previewContent,
   chooseSourceFiles,

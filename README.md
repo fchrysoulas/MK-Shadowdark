@@ -102,6 +102,25 @@ The GM Screen reads canonical state from Group, Scene Context, internal encounte
 
 ---
 
+# Source Table Import
+
+The GM Screen **Tables** workspace can import native Foundry RollTables from Markdown transcriptions supplied by the GM. MK-Shadowdark parses the selected files locally and does not bundle the sourcebook table content.
+
+Supported source detection includes:
+
+- **Shadowdark RPG Core Rulebook v4.9**
+- **Player's Guide to the Western Reaches V1**
+- **Cursed Scroll 1: Diablerie!**
+- **Cursed Scroll 2: Red Sands**
+- **Cursed Scroll 3: Midnight Sun**
+- **Cursed Scroll 4: River of Night**
+- **Cursed Scroll 5: Dwellers in the Deep**
+- **Cursed Scroll 6: City of Masks**
+
+Imported tables receive stable source keys and metadata. Reimporting the same source table updates the existing RollTable instead of creating a duplicate. Source tables whose dice formula is contextual rather than fixed are preserved as contextual source data and are not exposed as an ordinary generic roll when that would invent a rule the source does not provide.
+
+---
+
 # Group Sheet and Procedure Architecture
 
 The native MK-Shadowdark **Group Sheet** remains the authoritative party/procedure workspace.
@@ -251,6 +270,8 @@ Required encounter checks happen chronologically before rest benefits finalize.
 | Unsafe | Turns 3 and 6 |
 | Risky | Turns 2, 4, 6, and 8 |
 | Deadly | Every resting turn |
+
+The required check turns are snapshotted when the rest begins. Changing the Scene's Danger while that rest is active affects later rests, not the current check schedule; changing Period or Encounter Table can affect how a later due check resolves, but it cannot add, remove, consume, or skip that rest's scheduled checks.
 
 ## Rest order of operations
 

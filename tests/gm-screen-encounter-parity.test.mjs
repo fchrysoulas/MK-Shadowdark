@@ -48,7 +48,8 @@ test("Session Log inspector exposes canonical encounter fields and actions witho
   }
 
   assert.match(history, /data\?\.awareness\?\.label/);
-  assert.match(history, /data\?\.intent/);
+  assert.match(history, /data\.intent\s*\?/);
+  assert.match(history, /fieldRow\("Intent"[^\n]*"intent"/);
   assert.match(history, /data\?\.treasure\?\.label/);
   assert.match(history, /data\?\.morale\?\.label/);
   assert.match(history, /data\.tableName/);

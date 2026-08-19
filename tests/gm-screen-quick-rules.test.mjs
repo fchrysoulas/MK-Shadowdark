@@ -73,8 +73,10 @@ test("Quick Rules follow the canonical encounter rules without exposing a Profil
   assert.equal(Object.hasOwn(rules, "profileName"), false);
   assert.equal(rules.terrain, "Bog");
   assert.equal(rules.period, "night");
-  assert.equal(rules.exploration.turnSeconds, 900);
-  assert.equal(rules.exploration.turnLabel, "15 minutes");
+  // Exploration duration is a canonical six-minute Shadowdark turn. Legacy
+  // internal Profile data cannot override the runtime procedure duration.
+  assert.equal(rules.exploration.turnSeconds, 360);
+  assert.equal(rules.exploration.turnLabel, "6 minutes");
   assert.deepEqual(rules.activeDanger, {
     label: "Ominous",
     interval: 4,

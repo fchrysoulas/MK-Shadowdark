@@ -48,7 +48,7 @@
     <div><span>Terrain</span><strong>{{environment.terrain}}</strong></div>
     <div><span>Danger</span><strong>{{environment.dangerLabel}}</strong></div>
     <div><span>Period</span><strong>{{environment.period}}</strong></div>
-    <div><span>Encounter</span><strong>Every {{environment.intervalTurns}} {{environment.intervalUnit}}</strong></div>
+    <div><span>Encounter</span><strong>{{#if environment.encountersDisabled}}No encounter checks{{else}}Every {{environment.intervalTurns}} {{environment.intervalUnit}}{{/if}}</strong></div>
     {{#if combat.active}}
     <div class="is-combat"><span>Combat</span><strong>Round {{combat.round}}</strong></div>
     {{/if}}
@@ -129,7 +129,7 @@
             <div class="mk-gm-big-stats four-col">
               <div><span>Turns</span><strong>{{exploration.completedTurns}}</strong></div>
               <div><span>Turn Length</span><strong>{{exploration.turnMinutes}}m</strong></div>
-              <div><span>Cadence</span><strong>{{exploration.intervalTurns}} {{exploration.intervalUnit}}</strong></div>
+              <div><span>Cadence</span><strong>{{#if exploration.encountersDisabled}}No checks{{else}}{{exploration.intervalTurns}} {{exploration.intervalUnit}}{{/if}}</strong></div>
               <div><span>Due</span><strong>{{exploration.dueChecks}}</strong></div>
             </div>
             <dl class="mk-gm-data-list">
@@ -180,39 +180,24 @@
         </section>
 
         <section class="mk-gm-workspace" data-workspace-panel="downtime">
-          <div class="mk-gm-panel-grid two-col">
-            <article class="mk-gm-panel" data-mk-gm-rest-panel>
-              <header><i class="fas fa-campground"></i><span>Resting / Camp</span></header>
-              {{#if resting}}
-              <div class="mk-gm-big-stats four-col">
-                <div><span>Status</span><strong>{{resting.status}}</strong></div>
-                <div><span>Mode</span><strong>{{resting.mode}}</strong></div>
-                <div><span>Turns</span><strong>{{resting.completedTurns}}/{{resting.totalTurns}}</strong></div>
-                <div><span>Checks Left</span><strong>{{resting.remainingChecks}}</strong></div>
-              </div>
-              {{#if resting.nextCheckTurn}}<p class="mk-gm-secondary">Next required encounter check: resting turn {{resting.nextCheckTurn}}.</p>{{/if}}
-              {{#if resting.interrupted}}<div class="mk-gm-alert"><i class="fas fa-triangle-exclamation"></i> Rest is interrupted and benefits/rations remain pending.</div>{{/if}}
-              {{#if latestEncounter}}
-              <div class="mk-gm-panel-actions">
-                <button type="button" data-mk-encounter-action="stage" data-message-id="{{latestEncounter.messageId}}"><i class="fas fa-location-dot"></i> Stage Latest Encounter</button>
-              </div>
-              {{/if}}
-              {{else}}
-              <div class="mk-gm-empty">No Group selected.</div>
-              {{/if}}
-            </article>
-            <article class="mk-gm-panel">
-              <header><i class="fas fa-coins"></i><span>Downtime</span></header>
-              <p class="mk-gm-secondary">Settlement-facing generators and downtime tools.</p>
-              <div class="mk-gm-panel-actions"></div>
-            </article>
-          </div>
+          <article class="mk-gm-panel is-wide">
+            <header><i class="fas fa-coins"></i><span>Downtime</span></header>
+            <p class="mk-gm-secondary">Settlement-facing generators and downtime tools.</p>
+            <div class="mk-gm-panel-actions"></div>
+          </article>
         </section>
 
         <section class="mk-gm-workspace mk-gm-source-tables-workspace" data-workspace-panel="tables">
           <article class="mk-gm-panel is-wide" data-mk-gm-source-tables-panel>
             <header><i class="fas fa-table-list"></i><span>Source Tables</span></header>
             <div class="mk-gm-empty">Loading imported source tables…</div>
+          </article>
+        </section>
+
+        <section class="mk-gm-workspace" data-workspace-panel="tools">
+          <article class="mk-gm-panel is-wide" data-mk-gm-tools-panel>
+            <header><i class="fas fa-toolbox"></i><span>GM Tools</span></header>
+            <div class="mk-gm-empty">Loading GM tools…</div>
           </article>
         </section>
 

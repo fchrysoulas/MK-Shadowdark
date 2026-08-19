@@ -5,6 +5,7 @@ import { DEFAULT_ENVIRONMENT_PROFILES } from "../scripts/libs/environment-contex
 import {
   DEFAULT_EXPLORATION_TURN_SECONDS,
   calculateExplorationEncounterSchedule,
+  getExplorationEncounterProgress,
   getExplorationEncounterState,
   getExplorationTurnSeconds,
   processDueExplorationEncounters,

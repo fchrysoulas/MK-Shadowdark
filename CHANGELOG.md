@@ -2,16 +2,18 @@
 
 ## 1.9.14
 
+- Simplified the GM Screen into an explicit-update surface: removed ambient Actor/Scene/Combat/workflow refresh hooks and the generic Refresh button, removed GM Screen Marching Order/role, camp-watch, rest-start/resume, Group Traveling, and Group Camping controls, and kept those authoritative workflows in Group Management.
+- Changed GM Screen Scene Context to stage Terrain, Danger, and Period until **Save Changes** is pressed; the save button appears only when values differ and a successful save performs one explicit full GM Screen render so all workspaces use the new context.
+- Changed Tables Encounter Setup to stage Encounter Zone and Encounter Table until **Save Encounter Setup** is pressed; selecting an Encounter Zone still previews its imported terrain columns without persisting them.
+- Removed automatic GM Screen presentation persistence. Selected Group/workspace and party-rail state are now application-local only; party-rail controls remain available without silently writing preferences.
 - Reorganized the GM Screen into Overview, Exploration, Combat, Resting, Downtime, Rules, Tables, and Session Log; moved Scene Context inline to Overview, removed GM-facing environment profiles and the dedicated Encounter/Environment tabs, and preserved canonical Encounter Pressure processing.
 - Fixed Group Exploration so due encounter checks remain due when a missing/invalid encounter table is configured later; ordinary Scene Context edits and no-op saves no longer consume scheduled checks.
 - Fixed active Rest cadence so the required encounter-check turns are snapshotted when the rest begins; later Danger changes cannot create retroactive checks or silently skip future checks.
-- Reduced Scene Context to the canonical Terrain, Danger, Period, and Encounter Table fields, migrated legacy `profileId` state away from Scenes, removed Profile from Group Traveling and encounter-card presentation, and retained old Profile settings only as hidden compatibility storage.
-- Added external Foundry world-time refresh for automatic day/night Scene Context, cached RollTable discovery for the Overview editor, and corrected Combat's human-facing turn number to start at 1.
+- Reduced persisted Scene Context to the canonical Terrain, Danger, Period, and Encounter Table fields, migrated legacy `profileId` state away from Scenes, removed Profile from Group Traveling and encounter-card presentation, and retained old Profile settings only as hidden compatibility storage.
+- Cached RollTable discovery for Encounter Setup, retained explicit world-time resolution for automatic day/night Scene Context, and corrected Combat's human-facing turn number to start at 1.
 - Expanded source-table detection/import support to Shadowdark RPG Core v4.9, Player's Guide to the Western Reaches V1, and Cursed Scrolls 1-6 with stable source keys and idempotent RollTable updates.
 - Restyled GM Screen dialogs for readable dark-theme controls and migrated its opened menus to Foundry Application V2.
-- Expanded the production GM Screen with operational procedure-time, marching-order, exploration-role, camp-watch, resting, morale, combat, and Scene environment controls backed by the canonical Group services.
 - Added canonical encounter-card parity, recent encounter history, active-party light pressure, Shadowdark procedure quick rules, corrected encounter-pressure labels, and direct encounter actions to the GM Screen.
-- Added live document refresh and bounded client-side GM Screen presentation preferences while preserving the standalone Time Passes selector and keeping Group Time independent from Time Passes presentation.
 - Added optional Automated Animations compatibility for Shadowdark 4.x chat messages by mirroring the roll-config item UUID into the top-level Shadowdark flag expected by Foundry v13 AA 6.x; Automated Animations remains optional.
 
 ## 1.9.12
@@ -23,7 +25,7 @@
 ## 1.9.11
 
 - Added a production GM Screen alongside Group Management, with active-party status, procedure pressure, exploration, resting, encounter staging, combat, environment, and quick-rules workspaces backed by existing services.
-- Added Group-first procedure state, unified time, marching-order, exploration-role, camp-watch, Scene environment, exploration encounter, interrupted rest, encounter staging, and GM member-status services without changing the restored Group Sheet structure.
+- Added Group-first procedure state, unified time, marching-order, exploration-role, camp-watch, Scene environment, exploration encounter, interrupted rest, encounter staging, and GM-member-status services without changing the restored Group Sheet structure.
 - Retired the standalone Encounter Engine UI in favor of the shared headless encounter service used by Group Exploration and Resting.
 
 ## 1.9.10

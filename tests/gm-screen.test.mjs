@@ -5,6 +5,8 @@ import test from "node:test";
 const runtime = fs.readFileSync(new URL("../scripts/gm-screen/gm-screen.js", import.meta.url), "utf8");
 const viewModel = fs.readFileSync(new URL("../scripts/gm-screen/view-model.js", import.meta.url), "utf8");
 const template = fs.readFileSync(new URL("../templates/gm-screen.hbs", import.meta.url), "utf8");
+const topContext = fs.readFileSync(new URL("../scripts/gm-screen/top-context-controls.js", import.meta.url), "utf8");
+const overviewLinks = fs.readFileSync(new URL("../scripts/gm-screen/overview-links.js", import.meta.url), "utf8");
 const stylesheet = fs.readFileSync(new URL("../styles/gm-screen.css", import.meta.url), "utf8");
 const refactorStylesheet = fs.readFileSync(new URL("../styles/gm-screen-workspace-refactor.css", import.meta.url), "utf8");
 const manifest = JSON.parse(fs.readFileSync(new URL("../module.json", import.meta.url), "utf8"));
@@ -73,7 +75,7 @@ test("GM Screen only offers one-turn advancement where a canonical duration exis
   assert.match(runtime, /Use an explicit custom amount/);
 });
 
-test("GM Screen template natively owns the exact eight workspaces in order", () => {
+test("GM Screen owns the exact eight workspaces in order", () => {
   assert.match(template, /mk-gm-party-rail/);
   assert.match(template, /mk-gm-pressure-strip/);
 
@@ -91,8 +93,17 @@ test("GM Screen template natively owns the exact eight workspaces in order", () 
   assert.doesNotMatch(template, /profileName|Active Profile/);
   assert.doesNotMatch(template, /Group Traveling/);
   assert.doesNotMatch(template, /Group Camping/);
-  assert.match(template, /data-mk-gm-overview-scene-context/);
   assert.match(template, /Process Due Checks/);
+});
+
+test("Overview is replaced by document shortcuts and Scene Context editing lives in the top strip", () => {
+  assert.match(overviewLinks, /overview\.innerHTML = overviewShellHtml\(\)/);
+  assert.match(overviewLinks, /data-mk-overview-shortcuts/);
+  assert.doesNotMatch(overviewLinks, /Encounter Pressure|Combat \/ Morale|Resting/);
+  assert.match(topContext, /pressureCell\(root, "Terrain"\)/);
+  assert.match(topContext, /pressureCell\(root, "Danger"\)/);
+  assert.match(topContext, /pressureCell\(root, "Period"\)/);
+  assert.match(topContext, /Save Context/);
 });
 
 test("view model workspace contract matches the native template", () => {
@@ -125,7 +136,7 @@ test("Combat display converts Foundry's zero-based turn index to a human-facing 
   assert.match(template, /\{\{#if combat\.currentCombatant\}\}\{\{combat\.turn\}\}\{\{else\}\}—\{\{\/if\}\}/);
 });
 
-test("GM Screen does not persist duplicate gameplay state", () => {
+test("GM Screen core does not persist duplicate gameplay state", () => {
   const combined = `${runtime}\n${viewModel}`;
   assert.doesNotMatch(combined, /\.setFlag\s*\(/);
   assert.doesNotMatch(combined, /\.unsetFlag\s*\(/);
@@ -135,6 +146,8 @@ test("GM Screen does not persist duplicate gameplay state", () => {
 
 test("GM Screen runtime assets are loaded independently from Group Sheet", () => {
   assert.ok(manifest.esmodules.includes("scripts/gm-screen/gm-screen.js"));
+  assert.ok(manifest.esmodules.includes("scripts/gm-screen/top-context-controls.js"));
+  assert.ok(manifest.esmodules.includes("scripts/gm-screen/overview-links.js"));
   assert.ok(manifest.styles.includes("styles/gm-screen.css"));
   assert.ok(!manifest.esmodules.includes("scripts/gm-screen-mock/gm-screen-mock.js"));
 });

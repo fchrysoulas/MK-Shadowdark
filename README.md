@@ -84,12 +84,15 @@ The GM Screen is intentionally a **manual-update surface**. It does not subscrib
 Its production layout contains:
 
 - a persistent active-party/status rail
-- a persistent procedure/pressure summary
+- a persistent procedure/pressure strip
+- **Terrain, Danger, and Period dropdowns in the top strip**
 - a central contextual workspace
+
+Terrain, Danger, and Period are staged in the top strip. A **Save Context** button appears only when one of those values differs from the active Scene state. Pressing it persists the Scene Context and performs one explicit GM Screen rerender so all workspaces use the saved values. There is no auto-save.
 
 Available workspaces, in order, are:
 
-- **Overview** — staged Scene Context editing for Terrain, Danger, and Period plus Encounter Pressure, Resting, Combat, Morale, and Group/procedure state at a glance. Scene Context changes are not written until **Save Changes** is pressed; the button appears only when values differ.
+- **Overview** — a per-GM shortcut dashboard. Drag normal Foundry documents such as Journal entries/pages, Actors, Items, RollTables, and other UUID-backed documents onto Overview to pin them. Clicking a pinned shortcut opens the original document; removing a shortcut deletes only the pin. Overview contains no built-in Scene Context, Encounter Pressure, Resting, or Combat/Morale status panels.
 - **Exploration** — exploration turns, encounter cadence, due checks, encounter processing, and exploration generators. Marching order and exploration-role editing remain in Group Management rather than the GM Screen.
 - **Combat** — current Foundry Combat round/turn/combatants and MK Morale overview.
 - **Resting** — current rest status, elapsed rest turns, checks remaining, interruption state, and encounter staging. Starting/resuming rests and camp-watch management remain in Group Management.
@@ -98,7 +101,9 @@ Available workspaces, in order, are:
 - **Tables** — Encounter Setup plus imported Shadowdark source RollTables with search, filtering, rolling, and source metadata. Encounter Zone and Encounter Table changes remain staged until **Save Encounter Setup** is pressed.
 - **Session Log** — recent canonical Group encounter records with inspection, staging, reveal, and reroll actions.
 
-The **Exploration**, **Combat**, **Resting**, and **Downtime** active tabs use green, red, blue, and dark-blue tints respectively. The former dedicated **Encounter** and **Environment** workspaces are removed; encounter history lives in Session Log, while Scene Context is edited directly on Overview.
+Overview pins are presentation-only state stored on the current GM user as document UUIDs. They do not copy Journal/Actor/Item content and do not become Scene, Group, encounter, combat, morale, wound, or Focus state. Pinning or removing a shortcut updates the Overview canvas directly and does not force a full GM Screen rerender.
+
+The **Exploration**, **Combat**, **Resting**, and **Downtime** active tabs use green, red, blue, and dark-blue tints respectively. The former dedicated **Encounter** and **Environment** workspaces are removed; encounter history lives in Session Log, while Terrain, Danger, and Period are edited from the persistent top strip.
 
 The GM Screen reads canonical state from Group, Scene Context, internal encounter services, Encounter Staging, Foundry Combat, Morale, and the prepared GM member-status model. It does not store a second party, procedure clock, encounter, combat, morale, wound, or Focus model.
 
@@ -108,7 +113,7 @@ The GM Screen reads canonical state from Group, Scene Context, internal encounte
 
 The GM Screen **Tables** workspace can import native Foundry RollTables from Markdown transcriptions supplied by the GM. MK-Shadowdark parses the selected files locally and does not bundle the sourcebook table content.
 
-The same workspace contains **Encounter Setup**. The GM selects an imported Encounter Zone source and the encounter RollTable there; those selections are staged until **Save Encounter Setup** is pressed. The selected Encounter Zone provides the valid Terrain choices displayed on Overview from its imported source columns.
+The same workspace contains **Encounter Setup**. The GM selects an imported Encounter Zone source and the encounter RollTable there; those selections are staged until **Save Encounter Setup** is pressed. The selected Encounter Zone provides the valid Terrain choices displayed in the GM Screen top strip from its imported source columns.
 
 Supported source detection includes:
 
@@ -240,7 +245,7 @@ The active Scene is the source of truth for:
 - effective encounter table
 - encounter interval/formula
 
-The persisted Scene Context contains exactly four fields: **Terrain, Danger, Period, and Encounter Table**. The GM Screen deliberately splits their configuration across two explicit-save surfaces: **Overview** stages Terrain, Danger, and Period behind **Save Changes**, while **Tables -> Encounter Setup** stages Encounter Zone and Encounter Table behind **Save Encounter Setup**. There is no GM-facing Profile field or `profileId` in Scene Context state.
+The persisted Scene Context contains exactly four fields: **Terrain, Danger, Period, and Encounter Table**. The GM Screen deliberately splits their configuration across two explicit-save surfaces: the persistent **top strip** stages Terrain, Danger, and Period behind **Save Context**, while **Tables -> Encounter Setup** stages Encounter Zone and Encounter Table behind **Save Encounter Setup**. There is no GM-facing Profile field or `profileId` in Scene Context state.
 
 The internal encounter resolver still owns one canonical Shadowdark rules definition for cadence, outcome tables, rerolls, and compatibility. That implementation detail is not a Scene Context choice.
 
@@ -582,7 +587,15 @@ Verify the active Scene resolves a valid encounter RollTable. Configure **Tables
 
 ## Scene Context changes do not affect the other GM Screen workspaces
 
-Overview fields are intentionally staged. Change Terrain, Danger, or Period and press **Save Changes**. The save persists Scene Context and performs one explicit GM Screen rerender so the other workspaces use the new context.
+Terrain, Danger, and Period are intentionally staged in the persistent top strip. Change the dropdowns and press **Save Context**. The save persists Scene Context and performs one explicit GM Screen rerender so the other workspaces use the new values.
+
+## I cannot select Terrain
+
+Configure an **Encounter Zone** under **Tables -> Encounter Setup** and press **Save Encounter Setup**. Terrain choices in the top strip come from that Encounter Zone's imported source columns.
+
+## An Overview shortcut disappeared from the source document
+
+Overview stores only the document UUID as a per-GM shortcut. It does not copy the source document. If the original Actor, Journal, Item, RollTable, or other document is deleted, the shortcut can no longer open it and may be removed from Overview.
 
 ## The GM Screen does not update after an external Actor, Scene, or Combat change
 

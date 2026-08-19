@@ -2,11 +2,13 @@
 
 ## 1.9.14
 
+- Moved GM Screen Terrain, Danger, and Period editing into the persistent top strip with a staged **Save Context** action; no Scene Context field auto-saves, and one explicit rerender occurs only after a successful save.
+- Replaced the Overview status dashboard with a per-GM drag/drop shortcut canvas for UUID-backed Foundry documents such as Journals, Actors, Items, and RollTables; clicking opens the original document and pin/remove operations update locally without a full GM Screen rerender.
+- Removed Scene Context, Encounter Pressure, Resting, Combat/Morale, and Light summary cards from rendered Overview; active-party Light pressure remains in the persistent top strip.
 - Simplified the GM Screen into an explicit-update surface: removed ambient Actor/Scene/Combat/workflow refresh hooks and the generic Refresh button, removed GM Screen Marching Order/role, camp-watch, rest-start/resume, Group Traveling, and Group Camping controls, and kept those authoritative workflows in Group Management.
-- Changed GM Screen Scene Context to stage Terrain, Danger, and Period until **Save Changes** is pressed; the save button appears only when values differ and a successful save performs one explicit full GM Screen render so all workspaces use the new context.
 - Changed Tables Encounter Setup to stage Encounter Zone and Encounter Table until **Save Encounter Setup** is pressed; selecting an Encounter Zone still previews its imported terrain columns without persisting them.
-- Removed automatic GM Screen presentation persistence. Selected Group/workspace and party-rail state are now application-local only; party-rail controls remain available without silently writing preferences.
-- Reorganized the GM Screen into Overview, Exploration, Combat, Resting, Downtime, Rules, Tables, and Session Log; moved Scene Context inline to Overview, removed GM-facing environment profiles and the dedicated Encounter/Environment tabs, and preserved canonical Encounter Pressure processing.
+- Removed automatic GM Screen presentation persistence. Selected Group/workspace and party-rail state are now application-local only; party-rail controls remain available without silently writing preferences. Overview document pins are the exception: they are explicit per-GM presentation shortcuts stored as document UUIDs.
+- Reorganized the GM Screen into Overview, Exploration, Combat, Resting, Downtime, Rules, Tables, and Session Log; removed GM-facing environment profiles and the dedicated Encounter/Environment tabs, and preserved canonical Encounter Pressure processing in Exploration.
 - Fixed Group Exploration so due encounter checks remain due when a missing/invalid encounter table is configured later; ordinary Scene Context edits and no-op saves no longer consume scheduled checks.
 - Fixed active Rest cadence so the required encounter-check turns are snapshotted when the rest begins; later Danger changes cannot create retroactive checks or silently skip future checks.
 - Reduced persisted Scene Context to the canonical Terrain, Danger, Period, and Encounter Table fields, migrated legacy `profileId` state away from Scenes, removed Profile from Group Traveling and encounter-card presentation, and retained old Profile settings only as hidden compatibility storage.

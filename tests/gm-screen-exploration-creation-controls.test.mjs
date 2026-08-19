@@ -339,9 +339,10 @@ test("Create Location no longer embeds verbatim Points of Interest arrays", () =
   assert.match(runtime, /Import \/ Update Source Tables/);
 });
 
-test("Exploration creation controller remains loaded after presentation controls", () => {
-  const presentationIndex = manifest.esmodules.indexOf("scripts/gm-screen/presentation-controls.js");
+test("Exploration creation controller remains loaded without retired presentation controls", () => {
+  const gmScreenIndex = manifest.esmodules.indexOf("scripts/gm-screen/gm-screen.js");
   const creationIndex = manifest.esmodules.indexOf("scripts/gm-screen/exploration-creation-controls.js");
-  assert.ok(presentationIndex >= 0);
-  assert.ok(creationIndex > presentationIndex);
+  assert.ok(gmScreenIndex >= 0);
+  assert.ok(creationIndex > gmScreenIndex);
+  assert.ok(!manifest.esmodules.includes("scripts/gm-screen/presentation-controls.js"));
 });

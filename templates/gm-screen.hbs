@@ -106,20 +106,9 @@
       <div class="mk-gm-workspace-body">
         <section class="mk-gm-workspace" data-workspace-panel="overview">
           <div class="mk-gm-panel-grid two-col">
-            <article class="mk-gm-panel">
-              <header><i class="fas fa-compass"></i><span>Procedure / Pressure</span></header>
-              <dl class="mk-gm-data-list">
-                <div><dt>Group</dt><dd>{{groupName}}</dd></div>
-                <div><dt>Procedure</dt><dd>{{procedure}}</dd></div>
-                <div><dt>Scene</dt><dd>{{scene.name}}</dd></div>
-                <div><dt>Terrain</dt><dd>{{environment.terrain}}</dd></div>
-                <div><dt>Danger</dt><dd>{{environment.dangerLabel}} · every {{environment.intervalTurns}} {{environment.intervalUnit}}</dd></div>
-                <div><dt>Period</dt><dd>{{environment.period}}</dd></div>
-                <div><dt>Table</dt><dd>{{#if environment.tableConfigured}}Configured{{else}}Not configured{{/if}}</dd></div>
-              </dl>
-              <div class="mk-gm-panel-actions">
-                <button type="button" data-action="configureEnvironment" {{#unless hasGroups}}disabled{{/unless}}><i class="fas fa-sliders"></i> Scene Context</button>
-              </div>
+            <article class="mk-gm-panel" data-mk-gm-overview-scene-context="true">
+              <header><i class="fas fa-mountain-sun"></i><span>Scene Context</span></header>
+              <div class="mk-gm-empty">Loading Scene Context…</div>
             </article>
 
             <article class="mk-gm-panel">
@@ -131,7 +120,7 @@
                 <div><span>Next Check</span><strong>{{exploration.nextCheckLabel}}</strong></div>
               </div>
               <div class="mk-gm-panel-actions">
-                <button type="button" data-action="processDueEncounters" {{#unless exploration.canCheck}}disabled{{/unless}}><i class="fas fa-dice"></i> Check Due</button>
+                <button type="button" data-action="processDueEncounters" {{#unless exploration.canCheck}}disabled{{/unless}}><i class="fas fa-dice"></i> Process Due Checks</button>
                 {{#if latestEncounter}}<button type="button" data-mk-encounter-action="stage" data-message-id="{{latestEncounter.messageId}}"><i class="fas fa-location-dot"></i> Stage Latest</button>{{/if}}
               </div>
               {{else}}
@@ -149,7 +138,6 @@
               </div>
               {{#if resting.interrupted}}
               <div class="mk-gm-alert"><i class="fas fa-triangle-exclamation"></i> Rest interrupted. Resolve the encounter before resuming.</div>
-              <div class="mk-gm-panel-actions"><button type="button" data-action="resumeRest"><i class="fas fa-play"></i> Resume Rest</button></div>
               {{/if}}
               {{else}}
               <div class="mk-gm-empty">No Group rest context.</div>
@@ -161,8 +149,8 @@
               {{#if combat.active}}
               <div class="mk-gm-big-stats">
                 <div><span>Round</span><strong>{{combat.round}}</strong></div>
-                <div><span>Turn</span><strong>{{combat.turn}}</strong></div>
-                <div><span>Current</span><strong>{{combat.currentCombatant.name}}</strong></div>
+                <div><span>Turn</span><strong>{{#if combat.currentCombatant}}{{combat.turn}}{{else}}—{{/if}}</strong></div>
+                <div><span>Current</span><strong>{{#if combat.currentCombatant}}{{combat.currentCombatant.name}}{{else}}—{{/if}}</strong></div>
               </div>
               {{#if combat.morale}}
               <p class="mk-gm-secondary">Morale: {{combat.morale.livingCount}} / {{combat.morale.initialCount}} living · {{#if combat.morale.checked}}checked{{else}}pending{{/if}}</p>
@@ -194,73 +182,11 @@
               {{#if exploration.latest}}<div><dt>Latest Check</dt><dd>{{exploration.latest.label}}</dd></div>{{/if}}
             </dl>
             <div class="mk-gm-panel-actions">
-              <button type="button" data-action="configureEnvironment"><i class="fas fa-sliders"></i> Scene Context</button>
               <button type="button" data-action="processDueEncounters" {{#unless exploration.canCheck}}disabled{{/unless}}><i class="fas fa-dice"></i> Process Due Checks</button>
               <button type="button" data-action="openGroup"><i class="fas fa-route"></i> Group Traveling</button>
             </div>
             {{else}}
             <div class="mk-gm-empty">No Group selected.</div>
-            {{/if}}
-          </article>
-        </section>
-
-        <section class="mk-gm-workspace" data-workspace-panel="resting">
-          <article class="mk-gm-panel is-wide">
-            <header><i class="fas fa-campground"></i><span>Resting / Camp</span></header>
-            {{#if resting}}
-            <div class="mk-gm-big-stats four-col">
-              <div><span>Status</span><strong>{{resting.status}}</strong></div>
-              <div><span>Mode</span><strong>{{resting.mode}}</strong></div>
-              <div><span>Turns</span><strong>{{resting.completedTurns}}/{{resting.totalTurns}}</strong></div>
-              <div><span>Checks Left</span><strong>{{resting.remainingChecks}}</strong></div>
-            </div>
-            {{#if resting.nextCheckTurn}}<p class="mk-gm-secondary">Next required encounter check: resting turn {{resting.nextCheckTurn}}.</p>{{/if}}
-            {{#if resting.interrupted}}<div class="mk-gm-alert"><i class="fas fa-triangle-exclamation"></i> Rest is interrupted and benefits/rations remain pending.</div>{{/if}}
-            <div class="mk-gm-panel-actions">
-              {{#if resting.interrupted}}<button type="button" data-action="resumeRest"><i class="fas fa-play"></i> Resume Rest</button>{{/if}}
-              {{#if latestEncounter}}<button type="button" data-mk-encounter-action="stage" data-message-id="{{latestEncounter.messageId}}"><i class="fas fa-location-dot"></i> Stage Latest Encounter</button>{{/if}}
-              <button type="button" data-action="openGroup"><i class="fas fa-bed"></i> Group Camping</button>
-            </div>
-            {{else}}
-            <div class="mk-gm-empty">No Group selected.</div>
-            {{/if}}
-          </article>
-        </section>
-
-        <section class="mk-gm-workspace" data-workspace-panel="encounter">
-          <article class="mk-gm-panel is-wide">
-            <header><i class="fas fa-skull-crossbones"></i><span>Latest Group Encounter</span></header>
-            {{#if latestEncounter}}
-            <div class="mk-gm-encounter-head">
-              <strong>{{latestEncounter.count}} × {{latestEncounter.label}}</strong>
-              <span class="is-{{latestEncounter.disposition}}">{{latestEncounter.disposition}}</span>
-            </div>
-            <div class="mk-gm-encounter-context-line">
-              <span><i class="fas fa-table-list"></i> {{latestEncounter.data.tableName}}</span>
-              <span><i class="fas fa-layer-group"></i> {{latestEncounter.data.profileName}}</span>
-              <span><i class="fas fa-mountain-sun"></i> {{latestEncounter.terrain}}</span>
-              <span><i class="fas fa-skull-crossbones"></i> {{latestEncounter.danger}}</span>
-              <span><i class="fas fa-clock"></i> {{latestEncounter.period}}</span>
-            </div>
-            <dl class="mk-gm-data-list mk-gm-encounter-details">
-              <div><dt>Number</dt><dd class="mk-gm-encounter-field"><span>{{latestEncounter.count}}{{#if latestEncounter.data.encounter.numberFormula}} · {{latestEncounter.data.encounter.numberFormula}}{{/if}}</span><button type="button" data-mk-encounter-action="reroll-field" data-field="number" data-message-id="{{latestEncounter.messageId}}" title="Reroll Number"><i class="fas fa-rotate"></i></button></dd></div>
-              <div><dt>Creature</dt><dd class="mk-gm-encounter-field"><span>{{latestEncounter.label}}</span><button type="button" data-mk-encounter-action="reroll-field" data-field="encounter" data-message-id="{{latestEncounter.messageId}}" title="Reroll Creature"><i class="fas fa-rotate"></i></button></dd></div>
-              <div><dt>Distance</dt><dd class="mk-gm-encounter-field"><span>{{latestEncounter.distance}}</span><button type="button" data-mk-encounter-action="reroll-field" data-field="distance" data-message-id="{{latestEncounter.messageId}}" title="Reroll Distance"><i class="fas fa-rotate"></i></button></dd></div>
-              <div><dt>Activity</dt><dd class="mk-gm-encounter-field"><span>{{latestEncounter.activity}}</span><button type="button" data-mk-encounter-action="reroll-field" data-field="activity" data-message-id="{{latestEncounter.messageId}}" title="Reroll Activity"><i class="fas fa-rotate"></i></button></dd></div>
-              <div><dt>Awareness</dt><dd class="mk-gm-encounter-field"><span>{{latestEncounter.data.awareness.label}}</span>{{#if latestEncounter.data.awareness.optional}}<button type="button" data-mk-encounter-action="reroll-field" data-field="awareness" data-message-id="{{latestEncounter.messageId}}" title="Reroll Awareness"><i class="fas fa-rotate"></i></button>{{/if}}</dd></div>
-              <div><dt>Reaction</dt><dd class="mk-gm-encounter-field"><span>{{latestEncounter.reaction}} · {{latestEncounter.disposition}}</span><button type="button" data-mk-encounter-action="reroll-field" data-field="reaction" data-message-id="{{latestEncounter.messageId}}" title="Reroll Reaction"><i class="fas fa-rotate"></i></button></dd></div>
-              {{#if latestEncounter.data.intent}}<div><dt>Intent</dt><dd class="mk-gm-encounter-field"><span>{{latestEncounter.data.intent.label}}</span><button type="button" data-mk-encounter-action="reroll-field" data-field="intent" data-message-id="{{latestEncounter.messageId}}" title="Reroll Intent"><i class="fas fa-rotate"></i></button></dd></div>{{/if}}
-              <div><dt>Treasure</dt><dd class="mk-gm-encounter-field"><span>{{latestEncounter.data.treasure.label}}</span><button type="button" data-mk-encounter-action="reroll-field" data-field="treasure" data-message-id="{{latestEncounter.messageId}}" title="Reroll Treasure"><i class="fas fa-rotate"></i></button></dd></div>
-              <div><dt>Morale</dt><dd>{{latestEncounter.data.morale.label}}{{#if latestEncounter.data.morale.trigger}} · {{latestEncounter.data.morale.trigger}}{{/if}}</dd></div>
-              <div><dt>Staging</dt><dd>{{#if latestEncounter.staged}}Staged {{latestEncounter.data.staging.count}} in {{latestEncounter.data.staging.sceneName}} · {{latestEncounter.data.staging.formation}}{{#if latestEncounter.data.staging.combat}} · Combat{{/if}}{{else}}Not staged{{/if}}</dd></div>
-            </dl>
-            <div class="mk-gm-panel-actions mk-gm-encounter-actions">
-              <button type="button" data-mk-encounter-action="stage" data-message-id="{{latestEncounter.messageId}}"><i class="fas fa-location-dot"></i> {{#if latestEncounter.staged}}Stage Again{{else}}Stage Encounter{{/if}}</button>
-              <button type="button" data-mk-encounter-action="reveal" data-message-id="{{latestEncounter.messageId}}"><i class="fas fa-eye"></i> Reveal to Players</button>
-              <button type="button" data-mk-encounter-action="reroll-all" data-message-id="{{latestEncounter.messageId}}"><i class="fas fa-dice-d20"></i> Reroll All</button>
-            </div>
-            {{else}}
-            <div class="mk-gm-empty">No resolved encounter card exists for this Group yet.</div>
             {{/if}}
           </article>
         </section>
@@ -271,8 +197,8 @@
             {{#if combat.active}}
             <div class="mk-gm-big-stats four-col">
               <div><span>Round</span><strong>{{combat.round}}</strong></div>
-              <div><span>Turn</span><strong>{{combat.turn}}</strong></div>
-              <div><span>Current</span><strong>{{combat.currentCombatant.name}}</strong></div>
+              <div><span>Turn</span><strong>{{#if combat.currentCombatant}}{{combat.turn}}{{else}}—{{/if}}</strong></div>
+              <div><span>Current</span><strong>{{#if combat.currentCombatant}}{{combat.currentCombatant.name}}{{else}}—{{/if}}</strong></div>
               {{#if combat.morale}}<div><span>Enemy Force</span><strong>{{combat.morale.livingCount}}/{{combat.morale.initialCount}}</strong></div>{{/if}}
             </div>
             <div class="mk-gm-combat-list">
@@ -295,18 +221,33 @@
           </article>
         </section>
 
-        <section class="mk-gm-workspace" data-workspace-panel="environment">
+        <section class="mk-gm-workspace" data-workspace-panel="resting">
           <article class="mk-gm-panel is-wide">
-            <header><i class="fas fa-mountain-sun"></i><span>Scene / Environment</span></header>
-            <dl class="mk-gm-data-list">
-              <div><dt>Scene</dt><dd>{{scene.name}}</dd></div>
-              <div><dt>Terrain</dt><dd>{{environment.terrain}}</dd></div>
-              <div><dt>Danger</dt><dd>{{environment.dangerLabel}}</dd></div>
-              <div><dt>Period</dt><dd>{{environment.period}}</dd></div>
-              <div><dt>Encounter Cadence</dt><dd>Every {{environment.intervalTurns}} procedure {{environment.intervalUnit}}</dd></div>
-              <div><dt>Encounter Table</dt><dd>{{#if environment.tableConfigured}}Configured{{else}}Not configured{{/if}}</dd></div>
-            </dl>
-            <div class="mk-gm-panel-actions"><button type="button" data-action="configureEnvironment" {{#unless hasGroups}}disabled{{/unless}}><i class="fas fa-sliders"></i> Edit Scene Encounter Context</button></div>
+            <header><i class="fas fa-campground"></i><span>Resting / Camp</span></header>
+            {{#if resting}}
+            <div class="mk-gm-big-stats four-col">
+              <div><span>Status</span><strong>{{resting.status}}</strong></div>
+              <div><span>Mode</span><strong>{{resting.mode}}</strong></div>
+              <div><span>Turns</span><strong>{{resting.completedTurns}}/{{resting.totalTurns}}</strong></div>
+              <div><span>Checks Left</span><strong>{{resting.remainingChecks}}</strong></div>
+            </div>
+            {{#if resting.nextCheckTurn}}<p class="mk-gm-secondary">Next required encounter check: resting turn {{resting.nextCheckTurn}}.</p>{{/if}}
+            {{#if resting.interrupted}}<div class="mk-gm-alert"><i class="fas fa-triangle-exclamation"></i> Rest is interrupted and benefits/rations remain pending.</div>{{/if}}
+            <div class="mk-gm-panel-actions">
+              {{#if latestEncounter}}<button type="button" data-mk-encounter-action="stage" data-message-id="{{latestEncounter.messageId}}"><i class="fas fa-location-dot"></i> Stage Latest Encounter</button>{{/if}}
+              <button type="button" data-action="openGroup"><i class="fas fa-bed"></i> Group Camping</button>
+            </div>
+            {{else}}
+            <div class="mk-gm-empty">No Group selected.</div>
+            {{/if}}
+          </article>
+        </section>
+
+        <section class="mk-gm-workspace" data-workspace-panel="downtime">
+          <article class="mk-gm-panel is-wide">
+            <header><i class="fas fa-coins"></i><span>Downtime</span></header>
+            <p class="mk-gm-secondary">Settlement-facing generators and downtime tools.</p>
+            <div class="mk-gm-panel-actions"></div>
           </article>
         </section>
 
@@ -316,7 +257,7 @@
               <header><i class="fas fa-clock"></i><span>Procedure Turns</span></header>
               <ul class="mk-gm-rules-list">
                 <li><strong>Encounter intervals are turns.</strong></li>
-                <li>Exploration turn: <strong>6 minutes</strong> by default.</li>
+                <li>Exploration turn: <strong>6 minutes</strong>.</li>
                 <li>Resting turn: <strong>1 hour</strong>.</li>
                 <li>Unsafe: check every <strong>3 turns</strong>.</li>
                 <li>Risky: check every <strong>2 turns</strong>.</li>
@@ -326,7 +267,7 @@
             <article class="mk-gm-panel">
               <header><i class="fas fa-dice-d20"></i><span>Encounter Procedure</span></header>
               <ul class="mk-gm-rules-list">
-                <li>Default occurrence: <strong>1d6; encounter on 1</strong>.</li>
+                <li>Occurrence: <strong>1d6; encounter on 1</strong>.</li>
                 <li>Distance: 1 Close, 2–4 Near, 5–6 Far.</li>
                 <li>Activity: Shadowdark 2d6 activity table.</li>
                 <li>Reaction: 2d6, modified when the procedure requests CHA.</li>
@@ -347,12 +288,27 @@
               <header><i class="fas fa-bed"></i><span>Resting</span></header>
               <ul class="mk-gm-rules-list">
                 <li>Normal Group rest: <strong>8 one-hour turns</strong>.</li>
+                <li>The encounter-check cadence is fixed when a rest begins.</li>
                 <li>Encounter checks resolve before rest benefits.</li>
                 <li>An encounter pauses the rest.</li>
                 <li>Rations and benefits finalize only after successful completion.</li>
               </ul>
             </article>
           </div>
+        </section>
+
+        <section class="mk-gm-workspace mk-gm-source-tables-workspace" data-workspace-panel="tables">
+          <article class="mk-gm-panel is-wide" data-mk-gm-source-tables-panel>
+            <header><i class="fas fa-table-list"></i><span>Source Tables</span></header>
+            <div class="mk-gm-empty">Loading imported source tables…</div>
+          </article>
+        </section>
+
+        <section class="mk-gm-workspace" data-workspace-panel="session-log">
+          <article class="mk-gm-panel is-wide">
+            <header><i class="fas fa-book-open"></i><span>Session Log</span></header>
+            <div class="mk-gm-empty">No session records yet.</div>
+          </article>
         </section>
       </div>
     </main>

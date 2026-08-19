@@ -106,23 +106,29 @@ function filterSourceTableEntries(entries = [], { query = "", bookId = "" } = {}
   });
 }
 
-function sourceTablePanelHtml(entries = []) {
+function sourceTablePanelContent(entries = []) {
   const books = sourceBookOptions(entries);
   return `
+    <article class="mk-gm-panel is-wide" data-mk-gm-source-tables-panel>
+      <header><i class="fas fa-table-list"></i><span>Source Tables</span></header>
+      <div class="mk-gm-source-table-toolbar">
+        <input type="search" data-mk-source-table-search placeholder="Search imported tables…" autocomplete="off" aria-label="Search imported source tables">
+        <select data-mk-source-table-book aria-label="Filter source book">
+          <option value="">All Sources</option>
+          ${books.map(book => `<option value="${escapeHtml(book.id)}">${escapeHtml(book.title)}</option>`).join("")}
+        </select>
+        <button type="button" data-mk-source-table-action="import"><i class="fas fa-file-import"></i> Import / Update</button>
+      </div>
+      <div class="mk-gm-source-table-summary" data-mk-source-table-summary></div>
+      <div class="mk-gm-source-table-list" data-mk-source-table-list></div>
+    </article>
+  `;
+}
+
+function sourceTablePanelHtml(entries = []) {
+  return `
     <section class="mk-gm-workspace mk-gm-source-tables-workspace" data-workspace-panel="${WORKSPACE_ID}">
-      <article class="mk-gm-panel is-wide">
-        <header><i class="fas fa-table-list"></i><span>Source Tables</span></header>
-        <div class="mk-gm-source-table-toolbar">
-          <input type="search" data-mk-source-table-search placeholder="Search imported tables…" autocomplete="off" aria-label="Search imported source tables">
-          <select data-mk-source-table-book aria-label="Filter source book">
-            <option value="">All Sources</option>
-            ${books.map(book => `<option value="${escapeHtml(book.id)}">${escapeHtml(book.title)}</option>`).join("")}
-          </select>
-          <button type="button" data-mk-source-table-action="import"><i class="fas fa-file-import"></i> Import / Update</button>
-        </div>
-        <div class="mk-gm-source-table-summary" data-mk-source-table-summary></div>
-        <div class="mk-gm-source-table-list" data-mk-source-table-list></div>
-      </article>
+      ${sourceTablePanelContent(entries)}
     </section>
   `;
 }
@@ -165,7 +171,7 @@ function renderSourceTableList(root, entries, filters = {}) {
       <div class="mk-gm-source-table-empty">
         <i class="fas fa-book"></i>
         <strong>No source tables imported</strong>
-        <span>Use Import / Update and select your owned Shadowdark Core and/or Western Reaches Markdown transcription.</span>
+        <span>Use Import / Update and select one of your supported owned Shadowdark Markdown transcriptions.</span>
       </div>
     `;
     return filtered;
@@ -250,16 +256,16 @@ function bindSourceTableBrowser(application, root, entries) {
   const search = root.querySelector("[data-mk-source-table-search]");
   const source = root.querySelector("[data-mk-source-table-book]");
   const panel = root.querySelector('[data-workspace-panel="tables"]');
-  if (!panel) return false;
+  if (!panel || !search || !source) return false;
 
   const currentFilters = () => ({
-    query: search?.value ?? "",
-    bookId: source?.value ?? "",
+    query: search.value ?? "",
+    bookId: source.value ?? "",
   });
   const refreshList = () => renderSourceTableList(panel, entries, currentFilters());
 
-  search?.addEventListener?.("input", refreshList);
-  source?.addEventListener?.("change", refreshList);
+  search.addEventListener?.("input", refreshList);
+  source.addEventListener?.("change", refreshList);
 
   panel.addEventListener("click", event => {
     const button = event.target?.closest?.("[data-mk-source-table-action]");
@@ -314,6 +320,8 @@ function decorateSourceTableBrowser(application, element) {
     panel = wrapper.firstElementChild;
     if (!panel) return false;
     body.append(panel);
+  } else {
+    panel.innerHTML = sourceTablePanelContent(entries).trim();
   }
 
   if (!canonicalNavigation) {
@@ -354,6 +362,7 @@ export {
   collectSourceTableEntries,
   sourceBookOptions,
   filterSourceTableEntries,
+  sourceTablePanelContent,
   sourceTablePanelHtml,
   sourceTableRowHtml,
   renderSourceTableList,

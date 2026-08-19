@@ -29,6 +29,7 @@ const DEFAULT_ENVIRONMENT_PROFILES = Object.freeze({
       },
     },
     dangerLevels: {
+      safe: { label: "Safe", interval: 0, formula: "", encounterOn: [], disabled: true },
       unsafe: { label: "Unsafe", interval: 3, formula: "1d6", encounterOn: [1] },
       risky: { label: "Risky", interval: 2, formula: "1d6", encounterOn: [1] },
       deadly: { label: "Deadly", interval: 1, formula: "1d6", encounterOn: [1] },
@@ -339,6 +340,18 @@ function tableUuidForEnvironmentContext(rules, terrain, period, explicitUuid = "
 function normalizeDangerDefinition(rules, dangerLevel) {
   const source = rules?.dangerLevels?.[dangerLevel]
     ?? CANONICAL_ENVIRONMENT_RULES.dangerLevels.unsafe;
+  const disabled = source?.disabled === true || Number(source?.interval) === 0;
+  if (disabled) {
+    return {
+      id: dangerLevel,
+      label: String(source?.label ?? dangerLevel),
+      disabled: true,
+      interval: 0,
+      formula: "",
+      encounterOn: [],
+    };
+  }
+
   const encounterOn = Array.isArray(source?.encounterOn)
     ? [...new Set(source.encounterOn.map(Number).filter(Number.isFinite))]
     : [1];
@@ -346,6 +359,7 @@ function normalizeDangerDefinition(rules, dangerLevel) {
   return {
     id: dangerLevel,
     label: String(source?.label ?? dangerLevel),
+    disabled: false,
     interval: Math.max(1, Math.floor(Number(source?.interval ?? 1) || 1)),
     formula: String(source?.formula ?? "1d6"),
     encounterOn: encounterOn.length ? encounterOn : [1],
@@ -382,6 +396,7 @@ function resolveEnvironmentContext(rawContext, {
     explicitTableUuid: context.tableUuid,
     tableUuid: effectiveTableUuid,
     encounter: {
+      disabled: danger.disabled === true,
       interval: danger.interval,
       formula: danger.formula,
       encounterOn: [...danger.encounterOn],

@@ -21,6 +21,7 @@ function rules() {
     defaultTerrain: "Default",
     defaultDangerLevel: "risky",
     dangerLevels: {
+      safe: { label: "Safe", interval: 0, formula: "", encounterOn: [], disabled: true },
       risky: { label: "Risky", interval: 2, formula: "1d8", encounterOn: [1, 2] },
     },
   };
@@ -63,7 +64,7 @@ test("Encounter Zone source columns become the Terrain choices", () => {
   ]);
 });
 
-test("top-bar context view still derives Terrain, Danger, and Period from canonical Scene Context", () => {
+test("top-bar context view derives Terrain, Danger, and Period from canonical Scene Context", () => {
   const view = buildEnvironmentEditorView({
     scene: { name: "Salt Road" },
     zoneTableUuid: "RollTable.zone",
@@ -102,7 +103,7 @@ test("visible Scene Context editing is owned by the top strip rather than Overvi
   assert.match(topRuntime, /pressureCell\(root, "Terrain"\)/);
   assert.match(topRuntime, /pressureCell\(root, "Danger"\)/);
   assert.match(topRuntime, /pressureCell\(root, "Period"\)/);
-  assert.match(topRuntime, /Save Context/);
+  assert.doesNotMatch(topRuntime, /Save Context|data-mk-context-save/);
   assert.match(overviewRuntime, /overview\.innerHTML = overviewShellHtml\(\)/);
   assert.doesNotMatch(overviewRuntime, /Scene Context/);
   assert.doesNotMatch(overviewRuntime, /Encounter Pressure/);
@@ -110,11 +111,31 @@ test("visible Scene Context editing is owned by the top strip rather than Overvi
   assert.doesNotMatch(overviewRuntime, /Resting/);
 });
 
-test("top context remains explicit-save and preserves the encounter-table field", () => {
+test("top context auto-saves changed dropdowns and preserves the encounter-table field", () => {
+  assert.match(topRuntime, /bindTopContextAutosave/);
+  assert.match(topRuntime, /addEventListener\?\.\("change"/);
   assert.match(topRuntime, /setSceneEnvironmentContext/);
   assert.match(topRuntime, /tableUuid: current\.tableUuid/);
   assert.match(topRuntime, /application\?\.render\?\.\(\{ force: true \}\)/);
-  assert.doesNotMatch(topRuntime, /Auto-save|bindAutoSave|updateScene|updateActor|updateCombat/);
+  assert.doesNotMatch(topRuntime, /updateScene|updateActor|updateCombat/);
+});
+
+test("Danger choices include Safe through canonical rules", () => {
+  const view = buildEnvironmentEditorView({
+    scene: { name: "Salt Road" },
+    zoneTableUuid: "RollTable.zone",
+    zoneTable: encounterZoneTable(),
+    stored: { terrain: "Desert", dangerLevel: "safe", period: "day", tableUuid: "" },
+    resolved: {
+      ...resolvedContext(),
+      profile: rules(),
+      dangerLevel: "safe",
+      danger: { label: "Safe", disabled: true },
+      encounter: { disabled: true, interval: 0, formula: "", encounterOn: [] },
+    },
+  });
+  assert.equal(view.stored.dangerLevel, "safe");
+  assert.equal(view.rules.dangerLevels.safe.label, "Safe");
 });
 
 test("Encounter Setup contains explicit Encounter Zone and Encounter Table save controls", () => {

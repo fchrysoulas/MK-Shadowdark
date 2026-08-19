@@ -38,7 +38,6 @@
           <i class="fas fa-hourglass-half"></i> Time Passes
         </button>
       </div>
-      <button type="button" data-action="refresh" title="Refresh GM Screen"><i class="fas fa-rotate"></i></button>
       <button type="button" data-action="openGroup" {{#unless hasGroups}}disabled{{/unless}}><i class="fas fa-users-gear"></i> Group Management</button>
     </div>
   </header>
@@ -183,7 +182,6 @@
             </dl>
             <div class="mk-gm-panel-actions">
               <button type="button" data-action="processDueEncounters" {{#unless exploration.canCheck}}disabled{{/unless}}><i class="fas fa-dice"></i> Process Due Checks</button>
-              <button type="button" data-action="openGroup"><i class="fas fa-route"></i> Group Traveling</button>
             </div>
             {{else}}
             <div class="mk-gm-empty">No Group selected.</div>
@@ -233,10 +231,11 @@
             </div>
             {{#if resting.nextCheckTurn}}<p class="mk-gm-secondary">Next required encounter check: resting turn {{resting.nextCheckTurn}}.</p>{{/if}}
             {{#if resting.interrupted}}<div class="mk-gm-alert"><i class="fas fa-triangle-exclamation"></i> Rest is interrupted and benefits/rations remain pending.</div>{{/if}}
+            {{#if latestEncounter}}
             <div class="mk-gm-panel-actions">
-              {{#if latestEncounter}}<button type="button" data-mk-encounter-action="stage" data-message-id="{{latestEncounter.messageId}}"><i class="fas fa-location-dot"></i> Stage Latest Encounter</button>{{/if}}
-              <button type="button" data-action="openGroup"><i class="fas fa-bed"></i> Group Camping</button>
+              <button type="button" data-mk-encounter-action="stage" data-message-id="{{latestEncounter.messageId}}"><i class="fas fa-location-dot"></i> Stage Latest Encounter</button>
             </div>
+            {{/if}}
             {{else}}
             <div class="mk-gm-empty">No Group selected.</div>
             {{/if}}

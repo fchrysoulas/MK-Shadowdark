@@ -43,6 +43,14 @@ function uniqueStrings(values = []) {
   )];
 }
 
+function normalizeRestCheckTurns(values = []) {
+  return [...new Set(
+    (Array.isArray(values) ? values : [])
+      .map(nonNegativeInteger)
+      .filter(turn => turn >= 1 && turn <= REST_TOTAL_TURNS)
+  )].sort((left, right) => left - right);
+}
+
 function normalizeGroupRestWorkflow(value) {
   const source = value && typeof value === "object" && !Array.isArray(value)
     ? value
@@ -51,12 +59,15 @@ function normalizeGroupRestWorkflow(value) {
   const mode = String(source.mode ?? "normal").toLowerCase() === "grinder"
     ? "grinder"
     : "normal";
+  const checkTurns = normalizeRestCheckTurns(source.checkTurns);
 
   return {
     status,
     mode,
     plannedRations: nonNegativeInteger(source.plannedRations),
     consumedChecks: nonNegativeInteger(source.consumedChecks),
+    intervalTurns: nonNegativeInteger(source.intervalTurns),
+    checkTurns,
     participantUuids: uniqueStrings(source.participantUuids),
     completedMemberUuids: uniqueStrings(source.completedMemberUuids),
     rationsConsumed: Boolean(source.rationsConsumed),
@@ -95,12 +106,30 @@ function getCompletedRestTurns(actor) {
   );
 }
 
+function restCadenceForContext(context = resolveSceneEnvironmentContext()) {
+  const intervalTurns = Math.max(1, Number(context?.encounter?.interval ?? 1) || 1);
+  return {
+    intervalTurns,
+    checkTurns: calculateRestCheckTurns(intervalTurns),
+  };
+}
+
+function workflowHasCadenceSnapshot(workflow) {
+  return Array.isArray(workflow?.checkTurns) && workflow.checkTurns.length > 0;
+}
+
 function getGroupRestState(actor, {
   context = resolveSceneEnvironmentContext(),
 } = {}) {
   const workflow = getGroupRestWorkflow(actor);
-  const intervalTurns = Math.max(1, Number(context?.encounter?.interval ?? 1) || 1);
-  const checkTurns = calculateRestCheckTurns(intervalTurns);
+  const currentCadence = restCadenceForContext(context);
+  const hasSnapshot = workflowHasCadenceSnapshot(workflow);
+  const intervalTurns = hasSnapshot
+    ? Math.max(1, workflow.intervalTurns || currentCadence.intervalTurns)
+    : currentCadence.intervalTurns;
+  const checkTurns = hasSnapshot
+    ? [...workflow.checkTurns]
+    : currentCadence.checkTurns;
   const consumedChecks = Math.min(workflow.consumedChecks, checkTurns.length);
   const completedTurns = getCompletedRestTurns(actor);
   const nextCheckTurn = checkTurns[consumedChecks] ?? null;
@@ -111,6 +140,7 @@ function getGroupRestState(actor, {
       consumedChecks,
     },
     context,
+    cadenceSnapshotted: hasSnapshot,
     intervalTurns,
     checkTurns,
     completedTurns,
@@ -119,6 +149,23 @@ function getGroupRestState(actor, {
     nextCheckTurn,
     completeTimeReached: completedTurns >= REST_TOTAL_TURNS,
   };
+}
+
+async function ensureActiveRestCadenceSnapshot(actor, {
+  context = resolveSceneEnvironmentContext(),
+  user = globalThis.game?.user,
+} = {}) {
+  if (!actor?.update || !isGroupActor(actor) || !user?.isGM) return false;
+
+  const workflow = getGroupRestWorkflow(actor);
+  if (!["checking", "interrupted"].includes(workflow.status)) return false;
+  if (workflowHasCadenceSnapshot(workflow)) return false;
+
+  const cadence = restCadenceForContext(context);
+  workflow.intervalTurns = cadence.intervalTurns;
+  workflow.checkTurns = cadence.checkTurns;
+  await setGroupRestWorkflow(actor, workflow);
+  return true;
 }
 
 async function resolveRestParticipants(actor, workflow = getGroupRestWorkflow(actor)) {
@@ -164,6 +211,7 @@ async function startGroupRest(actor, {
   participants,
   mode = getRestMode(),
   user = globalThis.game?.user,
+  context = resolveSceneEnvironmentContext(),
 } = {}) {
   if (!actor?.update || !isGroupActor(actor)) {
     throw new TypeError("A Group Actor is required to start resting.");
@@ -176,6 +224,7 @@ async function startGroupRest(actor, {
   const rationCount = nonNegativeInteger(plannedRations);
   const previousProcedure = getGroupProcedureState(actor);
   const returnProcedure = previousProcedure === "resting" ? "downtime" : previousProcedure;
+  const cadence = restCadenceForContext(context);
 
   await resetGroupTime(actor, "resting", {
     user,
@@ -193,6 +242,8 @@ async function startGroupRest(actor, {
     mode,
     plannedRations: rationCount,
     consumedChecks: 0,
+    intervalTurns: cadence.intervalTurns,
+    checkTurns: cadence.checkTurns,
     participantUuids,
     completedMemberUuids: [],
     rationsConsumed: false,
@@ -321,6 +372,8 @@ async function continueGroupRest(actor, {
   }
   if (!user?.isGM) return null;
 
+  await ensureActiveRestCadenceSnapshot(actor, { user });
+
   let state = getGroupRestState(actor);
   let workflow = state.workflow;
   if (!["checking", "interrupted"].includes(workflow.status)) {
@@ -365,9 +418,26 @@ async function continueGroupRest(actor, {
     });
 
     workflow = getGroupRestWorkflow(actor);
+
+    if (serviceResult.reason) {
+      workflow.status = "interrupted";
+      workflow = await setGroupRestWorkflow(actor, workflow);
+      if (notify) {
+        globalThis.ui?.notifications?.warn?.(
+          `Rest paused because the encounter check could not finish: ${serviceResult.reason}.`
+        );
+      }
+      return emitRestWorkflow(actor, {
+        action: "interrupted",
+        workflow,
+        encounter: serviceResult,
+        completedTurns: getCompletedRestTurns(actor),
+      });
+    }
+
     workflow.consumedChecks += 1;
 
-    if (serviceResult.isEncounter || serviceResult.reason) {
+    if (serviceResult.isEncounter) {
       workflow.status = "interrupted";
       workflow = await setGroupRestWorkflow(actor, workflow);
 
@@ -380,10 +450,9 @@ async function continueGroupRest(actor, {
       }
 
       if (notify) {
-        const message = serviceResult.reason
-          ? `Rest paused because the encounter check could not finish: ${serviceResult.reason}.`
-          : `Rest interrupted at resting turn ${getCompletedRestTurns(actor)}. Resolve the encounter, then use Rest Party to continue.`;
-        globalThis.ui?.notifications?.warn?.(message);
+        globalThis.ui?.notifications?.warn?.(
+          `Rest interrupted at resting turn ${getCompletedRestTurns(actor)}. Resolve the encounter, then use Rest Party to continue.`
+        );
       }
 
       return emitRestWorkflow(actor, {
@@ -444,7 +513,7 @@ async function promptNewGroupRest(actor) {
           <label>Total rations to consume on successful completion</label>
           <input type="number" name="rations" value="${Math.min(participants.length, availableRations)}" min="0" max="${availableRations}" step="1" required>
         </div>
-        <p class="hint">Rations and rest benefits are applied only after all required encounter checks complete without an unresolved interruption.</p>
+        <p class="hint">The encounter cadence is fixed when this rest begins. Rations and rest benefits are applied only after all required checks complete without an unresolved interruption.</p>
       </form>
     `,
     buttons: {
@@ -522,6 +591,8 @@ async function renderGroupRestContext(app, html) {
   const actor = app?.actor;
   if (!isGroupActor(actor)) return;
 
+  await ensureActiveRestCadenceSnapshot(actor);
+
   const root = getRootElement(html);
   const campingInfo = root?.querySelector?.(".mk-group-tab[data-tab='camping'] .mk-camping-info");
   const restButton = root?.querySelector?.("[data-action='rest-party']");
@@ -535,8 +606,7 @@ async function renderGroupRestContext(app, html) {
 
   const gmDetails = isGm
     ? `
-      <span><i class="fas fa-skull-crossbones"></i> Danger <strong>${escapeHtml(state.context.danger?.label ?? state.context.dangerLevel)}</strong></span>
-      <span>Check every <strong>${escapeHtml(state.intervalTurns)}</strong> ${state.intervalTurns === 1 ? "turn" : "turns"}</span>
+      <span><i class="fas fa-skull-crossbones"></i> Rest cadence <strong>every ${escapeHtml(state.intervalTurns)} ${state.intervalTurns === 1 ? "turn" : "turns"}</strong></span>
       <span>Checks <strong>${escapeHtml(state.workflow.consumedChecks)}/${escapeHtml(state.requiredChecks)}</strong></span>
       <span>Watches <strong>${escapeHtml(watches.length)}</strong> / ${escapeHtml(watchMembers.length)} assigned</span>
     `
@@ -588,8 +658,16 @@ function exposeGroupRestApi() {
 }
 
 function registerGroupRestEncounterService() {
-  globalThis.Hooks?.once?.("ready", () => {
+  globalThis.Hooks?.once?.("ready", async () => {
     exposeGroupRestApi();
+    if (!globalThis.game?.user?.isGM) return;
+    for (const actor of globalThis.game?.actors ?? []) {
+      try {
+        await ensureActiveRestCadenceSnapshot(actor);
+      } catch (error) {
+        console.warn(`${MODULE_ID} | Group Rest | Could not migrate active rest cadence.`, error);
+      }
+    }
   });
 
   globalThis.Hooks?.on?.("renderActorSheet", (app, html) => {
@@ -603,10 +681,14 @@ export {
   REST_TURN_SECONDS,
   REST_TOTAL_TURNS,
   GROUP_REST_WORKFLOW_HOOK,
+  normalizeRestCheckTurns,
   normalizeGroupRestWorkflow,
   calculateRestCheckTurns,
+  restCadenceForContext,
+  workflowHasCadenceSnapshot,
   getGroupRestWorkflow,
   getGroupRestState,
+  ensureActiveRestCadenceSnapshot,
   startGroupRest,
   advanceRestToTurn,
   continueGroupRest,

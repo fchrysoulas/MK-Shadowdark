@@ -1,6 +1,7 @@
 const MODULE_ID = "mk-shadowdark";
 const GM_SCREEN_APP_ID = "mk-shadowdark-gm-screen";
 const ENCOUNTER_FLAG = "encounterEngine";
+const SCENE_CONTEXT_FLAG = "encounterContext";
 
 function rootElement(value) {
   if (!value) return null;
@@ -140,16 +141,57 @@ function hideLegacyProfileSetting() {
   if (definition) definition.config = false;
 }
 
+function currentScene() {
+  return globalThis.canvas?.scene ?? globalThis.game?.scenes?.current ?? null;
+}
+
+function sceneContextValue(value = {}) {
+  const period = String(value?.period ?? "auto");
+  return {
+    terrain: String(value?.terrain ?? "Default"),
+    dangerLevel: String(value?.dangerLevel ?? "unsafe"),
+    period: ["auto", "day", "night"].includes(period) ? period : "auto",
+    tableUuid: String(value?.tableUuid ?? ""),
+  };
+}
+
 function redirectLegacyConfigureApi() {
   const module = globalThis.game?.modules?.get?.(MODULE_ID);
-  const service = module?.api?.groupExplorationEncounters;
-  if (!service || typeof service !== "object") return false;
+  if (!module) return false;
+  let patched = false;
 
-  service.configure = async () => {
-    module.api?.gmScreen?.open?.({ workspace: "overview" });
-    return null;
-  };
-  return true;
+  const exploration = module.api?.groupExplorationEncounters;
+  if (exploration && typeof exploration === "object") {
+    exploration.configure = async () => {
+      module.api?.gmScreen?.open?.({ workspace: "overview" });
+      return null;
+    };
+    patched = true;
+  }
+
+  const environment = module.api?.environment;
+  if (environment && typeof environment === "object") {
+    const originalGetSceneContext = environment.getSceneContext;
+    if (typeof originalGetSceneContext === "function") {
+      environment.getSceneContext = (...args) => sceneContextValue(originalGetSceneContext(...args));
+    }
+
+    environment.setSceneContext = async (context, scene = currentScene(), {
+      user = globalThis.game?.user,
+    } = {}) => {
+      const next = sceneContextValue(context);
+      if (!scene?.setFlag) return null;
+      if (!user?.isGM) {
+        globalThis.ui?.notifications?.warn?.("Only the GM can change the Scene context.");
+        return null;
+      }
+      await scene.setFlag(MODULE_ID, SCENE_CONTEXT_FLAG, next);
+      return next;
+    };
+    patched = true;
+  }
+
+  return patched;
 }
 
 function registerWorkspaceRefactor() {
@@ -175,6 +217,7 @@ registerWorkspaceRefactor();
 export {
   MODULE_ID,
   GM_SCREEN_APP_ID,
+  SCENE_CONTEXT_FLAG,
   rootElement,
   gmScreenApplication,
   ensureWorkspace,
@@ -186,6 +229,8 @@ export {
   removeEncounterProfilePresentation,
   hideLegacyProfileControl,
   hideLegacyProfileSetting,
+  currentScene,
+  sceneContextValue,
   redirectLegacyConfigureApi,
   registerWorkspaceRefactor,
 };

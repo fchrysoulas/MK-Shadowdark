@@ -1,4 +1,10 @@
 import { sourceTableFlag } from "../source-tables/source-table-importer.js";
+import {
+  bindEncounterSetupAutoSave,
+  buildEncounterSetupView,
+  cachedAvailableRollTables,
+  renderEncounterSetup,
+} from "./environment-controls.js";
 import { patchGmScreenPresentationPreferences } from "./presentation-preferences.js";
 
 const MODULE_ID = "mk-shadowdark";
@@ -106,16 +112,20 @@ function filterSourceTableEntries(entries = [], { query = "", bookId = "" } = {}
   });
 }
 
-function sourceTablePanelContent(entries = []) {
-  const books = sourceBookOptions(entries);
+function sourceTablePanelContent(entries = [], encounterSetupHtml = "") {
+  const encounterSetup = encounterSetupHtml
+    ? `<article class="mk-gm-panel is-wide" data-mk-gm-tables-encounter-setup>${encounterSetupHtml}</article>`
+    : "";
+
   return `
+    ${encounterSetup}
     <article class="mk-gm-panel is-wide" data-mk-gm-source-tables-panel>
       <header><i class="fas fa-table-list"></i><span>Source Tables</span></header>
       <div class="mk-gm-source-table-toolbar">
         <input type="search" data-mk-source-table-search placeholder="Search imported tables…" autocomplete="off" aria-label="Search imported source tables">
         <select data-mk-source-table-book aria-label="Filter source book">
           <option value="">All Sources</option>
-          ${books.map(book => `<option value="${escapeHtml(book.id)}">${escapeHtml(book.title)}</option>`).join("")}
+          ${sourceBookOptions(entries).map(book => `<option value="${escapeHtml(book.id)}">${escapeHtml(book.title)}</option>`).join("")}
         </select>
         <button type="button" data-mk-source-table-action="import"><i class="fas fa-file-import"></i> Import / Update</button>
       </div>
@@ -125,10 +135,10 @@ function sourceTablePanelContent(entries = []) {
   `;
 }
 
-function sourceTablePanelHtml(entries = []) {
+function sourceTablePanelHtml(entries = [], encounterSetupHtml = "") {
   return `
     <section class="mk-gm-workspace mk-gm-source-tables-workspace" data-workspace-panel="${WORKSPACE_ID}">
-      ${sourceTablePanelContent(entries)}
+      ${sourceTablePanelContent(entries, encounterSetupHtml)}
     </section>
   `;
 }
@@ -288,7 +298,7 @@ function bindSourceTableBrowser(application, root, entries) {
   return true;
 }
 
-function decorateSourceTableBrowser(application, element) {
+async function decorateSourceTableBrowser(application, element) {
   if (!gmScreenApplication(application) || !globalThis.game?.user?.isGM) return false;
   const root = element?.querySelector ? element : null;
   if (!root?.querySelector) return false;
@@ -298,6 +308,9 @@ function decorateSourceTableBrowser(application, element) {
   if (!nav || !body) return false;
 
   const entries = collectSourceTableEntries();
+  const tables = await cachedAvailableRollTables();
+  const encounterSetupView = buildEncounterSetupView({ tables });
+  const encounterSetupHtml = renderEncounterSetup(encounterSetupView);
 
   let button = findTablesNavButton(nav);
   let canonicalNavigation = button?.dataset?.action === "workspace";
@@ -316,12 +329,17 @@ function decorateSourceTableBrowser(application, element) {
   if (!panel) {
     const wrapper = globalThis.document?.createElement?.("div");
     if (!wrapper) return false;
-    wrapper.innerHTML = sourceTablePanelHtml(entries).trim();
+    wrapper.innerHTML = sourceTablePanelHtml(entries, encounterSetupHtml).trim();
     panel = wrapper.firstElementChild;
     if (!panel) return false;
     body.append(panel);
   } else {
-    panel.innerHTML = sourceTablePanelContent(entries).trim();
+    panel.innerHTML = sourceTablePanelContent(entries, encounterSetupHtml).trim();
+  }
+
+  const encounterSetup = panel.querySelector("[data-mk-gm-tables-encounter-setup]");
+  if (encounterSetup && encounterSetupView.scene) {
+    bindEncounterSetupAutoSave(encounterSetup, encounterSetupView.scene);
   }
 
   if (!canonicalNavigation) {
@@ -345,7 +363,7 @@ function decorateSourceTableBrowser(application, element) {
 
 function registerSourceTableBrowser() {
   globalThis.Hooks?.on?.("renderApplicationV2", (application, element) => {
-    decorateSourceTableBrowser(application, element);
+    void decorateSourceTableBrowser(application, element);
   });
 }
 

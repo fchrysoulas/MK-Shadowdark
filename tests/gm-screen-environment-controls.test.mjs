@@ -3,8 +3,11 @@ import fs from "node:fs";
 import test from "node:test";
 
 import {
+  buildEncounterSetupView,
   buildEnvironmentEditorView,
+  encounterZoneTerrainNames,
   readEnvironmentForm,
+  renderEncounterSetup,
   renderEnvironmentEditor,
 } from "../scripts/gm-screen/environment-controls.js";
 
@@ -23,102 +26,91 @@ function rules() {
   };
 }
 
-test("Scene Context editor presents the four stored choices and resolved effective context", () => {
-  const view = buildEnvironmentEditorView({
-    scene: { name: "Deep Cavern" },
-    tables: [{ uuid: "RollTable.auto", name: "Cave Encounters", group: "World" }],
-    stored: {
-      terrain: "Caves",
-      dangerLevel: "risky",
-      period: "auto",
-      tableUuid: "",
+function encounterZoneTable() {
+  return {
+    uuid: "RollTable.zone",
+    name: "Encounter Zone",
+    flags: {
+      "mk-shadowdark": {
+        sourceTable: {
+          key: "test:encounter-zone",
+          bookTitle: "Test Source",
+          columns: ["d8", "Desert", "Canyon", "Mountain", "Salt Flat"],
+        },
+      },
     },
-    resolved: {
-      profile: rules(),
-      terrain: "Caves",
-      dangerLevel: "risky",
-      danger: { label: "Risky" },
-      requestedPeriod: "auto",
-      period: "night",
-      explicitTableUuid: "",
-      tableUuid: "RollTable.auto",
-      encounter: { interval: 2, formula: "1d8", encounterOn: [1, 2] },
-    },
-  });
+  };
+}
 
-  assert.equal(view.sceneName, "Deep Cavern");
-  assert.equal(view.stored.period, "auto");
-  assert.equal(view.resolved.period, "night");
-  assert.equal(view.resolved.tableName, "Cave Encounters");
-  assert.equal(view.resolved.formula, "1d8");
-  assert.equal(view.resolved.encounterOn, "1, 2");
-  assert.equal(Object.hasOwn(view.stored, "profileId"), false);
-  assert.equal(Object.hasOwn(view.resolved, "profileName"), false);
+function resolvedContext() {
+  return {
+    profile: rules(),
+    terrain: "Canyon",
+    dangerLevel: "risky",
+    danger: { label: "Risky" },
+    requestedPeriod: "auto",
+    period: "night",
+    encounter: { interval: 2, formula: "1d8", encounterOn: [1, 2] },
+  };
+}
+
+test("Encounter Zone source columns become the Terrain choices", () => {
+  assert.deepEqual(encounterZoneTerrainNames(encounterZoneTable()), [
+    "Desert",
+    "Canyon",
+    "Mountain",
+    "Salt Flat",
+  ]);
 });
 
-test("Scene Context editor clearly identifies a missing encounter table as blocking without consuming due checks", () => {
+test("Overview Scene Context exposes only Terrain, Danger, and Period", () => {
   const view = buildEnvironmentEditorView({
-    scene: { name: "Dry Cave" },
-    tables: [],
+    scene: { name: "Salt Road" },
+    zoneTableUuid: "RollTable.zone",
+    zoneTable: encounterZoneTable(),
     stored: {
-      terrain: "Caves",
+      terrain: "Canyon",
       dangerLevel: "risky",
       period: "auto",
-      tableUuid: "",
+      tableUuid: "RollTable.encounters",
     },
-    resolved: {
-      profile: rules(),
-      terrain: "Caves",
-      dangerLevel: "risky",
-      danger: { label: "Risky" },
-      period: "day",
-      tableUuid: "",
-      encounter: { interval: 2, formula: "1d8", encounterOn: [1, 2] },
-    },
+    resolved: resolvedContext(),
   });
   const html = renderEnvironmentEditor(view);
 
-  assert.equal(view.resolved.tableConfigured, false);
-  assert.match(html, /Encounter table not configured/);
-  assert.match(html, /Due checks remain pending/);
-  assert.match(html, /Save Scene Context/);
-});
-
-test("Scene Context editor exposes exactly Terrain, Danger, Period, and Encounter Table", () => {
-  const view = buildEnvironmentEditorView({
-    scene: { name: "Cave" },
-    tables: [],
-    stored: { terrain: "Caves", dangerLevel: "risky", period: "auto", tableUuid: "" },
-    resolved: {
-      profile: rules(),
-      terrain: "Caves",
-      dangerLevel: "risky",
-      danger: { label: "Risky" },
-      period: "day",
-      tableUuid: "",
-      encounter: { interval: 2, formula: "1d8", encounterOn: [1, 2] },
-    },
-  });
-  const html = renderEnvironmentEditor(view);
-
-  for (const name of ["terrain", "dangerLevel", "period", "tableUuid"]) {
-    assert.match(html, new RegExp(`name="${name}"`));
+  assert.equal(view.sceneName, "Salt Road");
+  assert.deepEqual(view.terrains, ["Desert", "Canyon", "Mountain", "Salt Flat"]);
+  assert.equal(view.stored.terrain, "Canyon");
+  for (const name of ["terrain", "dangerLevel", "period"]) {
+    assert.match(html, new RegExp(`<select name="${name}"`));
   }
-  assert.match(html, /<input type="text" name="terrain"/);
-  assert.doesNotMatch(html, /name="profileId"/);
-  assert.doesNotMatch(html, /Active Profile/);
-  assert.match(html, /Effective Period/);
-  assert.match(html, /Encounter Cadence/);
-  assert.match(html, /Occurrence/);
-  assert.match(html, /Effective Table/);
+  assert.doesNotMatch(html, /name="tableUuid"/);
+  assert.doesNotMatch(html, /Save Scene Context/);
+  assert.doesNotMatch(html, /<input type="text" name="terrain"/);
+  assert.match(html, /Changes save automatically/);
 });
 
-test("Scene Context form reader returns only the four persisted fields", () => {
+test("Overview Terrain is disabled until an Encounter Zone is configured in Tables", () => {
+  const view = buildEnvironmentEditorView({
+    scene: { name: "Unknown Waste" },
+    zoneTableUuid: "",
+    zoneTable: null,
+    stored: { terrain: "Default", dangerLevel: "risky", period: "auto", tableUuid: "" },
+    resolved: resolvedContext(),
+  });
+  const html = renderEnvironmentEditor(view);
+
+  assert.deepEqual(view.terrains, []);
+  assert.match(html, /No Encounter Zone selected/);
+  assert.match(html, /Choose one in Tables/);
+  assert.match(html, /<select name="terrain" disabled>/);
+});
+
+test("Scene Context form reader returns only the three Overview controls", () => {
   const values = {
-    terrain: "Caves",
+    terrain: "Mountain",
     dangerLevel: "risky",
     period: "night",
-    tableUuid: "RollTable.caves",
   };
   const form = {
     querySelector(selector) {
@@ -135,33 +127,49 @@ test("Scene Context form reader returns only the four persisted fields", () => {
   assert.deepEqual(readEnvironmentForm(root), values);
 });
 
-test("Scene Context uses the canonical four-field setter and caches RollTable discovery", () => {
-  assert.match(runtime, /setSceneEnvironmentContext\(value, scene\)/);
-  assert.match(runtime, /cachedAvailableRollTables\(\)/);
-  assert.match(runtime, /availableTableCache/);
-  assert.match(runtime, /invalidateAvailableRollTableCache/);
-  assert.match(runtime, /createRollTable/);
-  assert.match(runtime, /_mkSceneContextRenderToken/);
-  assert.doesNotMatch(runtime, /scene\.setFlag\(MODULE_ID, SCENE_CONTEXT_FLAG, value\)/);
-  assert.doesNotMatch(runtime, /name="profileId"/);
-  assert.doesNotMatch(runtime, /profileId:\s*read/);
+test("Overview auto-saves changes without forcing a GM Screen rerender", () => {
+  assert.match(runtime, /\[data-mk-environment-form\] select/);
+  assert.match(runtime, /addEventListener\("change"/);
+  assert.match(runtime, /setSceneEnvironmentContext\(next, scene\)/);
+  assert.match(runtime, /tableUuid: current\.tableUuid/);
+  assert.match(runtime, /_mkSceneContextDraft/);
+  assert.doesNotMatch(runtime, /application\.render\(\{ force: true \}\)/);
+  assert.doesNotMatch(runtime, /const tables = await cachedAvailableRollTables\(\)/);
 });
 
-test("Scene Context is native on Overview and obsolete Encounter/Environment panels are absent", () => {
+test("Encounter Setup contains Encounter Zone and Encounter Table controls outside Overview", () => {
+  const zone = encounterZoneTable();
+  const view = buildEncounterSetupView({
+    scene: { name: "Salt Road" },
+    tables: [
+      { uuid: zone.uuid, name: zone.name, group: "World" },
+      { uuid: "RollTable.encounters", name: "Wastes Encounters", group: "World" },
+    ],
+    stored: { terrain: "Desert", dangerLevel: "risky", period: "day", tableUuid: "RollTable.encounters" },
+    zoneTableUuid: zone.uuid,
+    zoneTables: [{ uuid: zone.uuid, name: zone.name, group: "Test Source", document: zone }],
+  });
+  const html = renderEncounterSetup(view);
+
+  assert.match(html, /name="zoneTableUuid"/);
+  assert.match(html, /name="tableUuid"/);
+  assert.match(html, /Desert, Canyon, Mountain, Salt Flat/);
+  assert.match(html, /Changes save automatically/);
+  assert.doesNotMatch(html, /Save/);
+});
+
+test("Scene Context remains native on Overview and compatibility bridge does no workspace surgery", () => {
   assert.match(template, /data-mk-gm-overview-scene-context/);
   assert.doesNotMatch(template, /data-workspace-panel="environment"/);
   assert.doesNotMatch(template, /data-workspace-panel="encounter"/);
   assert.doesNotMatch(template, /configureEnvironment/);
   assert.doesNotMatch(template, /profileName/);
   assert.doesNotMatch(bridge, /prepareAdditionalWorkspaces|prepareOverviewSceneContext|removeGroupTravelContextButton|removeEncounterProfilePresentation/);
-});
 
-test("compatibility bridge runs before GM Screen decorators but performs no GM Screen DOM surgery", () => {
   const bridgeIndex = manifest.esmodules.indexOf("scripts/gm-screen/workspace-refactor.js");
   const rulesIndex = manifest.esmodules.indexOf("scripts/gm-screen/quick-rules.js");
   const environmentIndex = manifest.esmodules.indexOf("scripts/gm-screen/environment-controls.js");
   assert.ok(bridgeIndex >= 0);
   assert.ok(rulesIndex > bridgeIndex);
   assert.ok(environmentIndex > rulesIndex);
-  assert.match(bridge, /compatibility-only/i);
 });

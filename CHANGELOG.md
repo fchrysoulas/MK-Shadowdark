@@ -63,7 +63,7 @@
 ## 1.9.2
 
 - Reworked morale to treat all hostile NPC combatants as one enemy force instead of separate NPC groups.
-- At half strength, an assigned living leader makes one morale check for the force; without one, each remaining eligible NPC checks individually.
+- At half strength, an assigned living leader makes one morale check for the force; without a leader, each remaining eligible NPC checks individually.
 - Failed morale checks now automatically apply the **Fleeing** status to the affected enemies.
 
 ## 1.9.1

@@ -5,7 +5,9 @@ import test from "node:test";
 import {
   buildEncounterHistory,
   findRecentEncounterMessages,
+  normalizeSessionState,
   renderEncounterInspector,
+  renderSessionControls,
 } from "../scripts/gm-screen/encounter-history.js";
 
 const runtime = fs.readFileSync(new URL("../scripts/gm-screen/encounter-history.js", import.meta.url), "utf8");
@@ -89,10 +91,40 @@ test("Historical encounter inspector actions target the selected source message 
   assert.match(html, /data-mk-select-encounter="new"/);
 });
 
-test("Encounter history is presentation-only and reconstructs from ChatMessages", () => {
+test("Session Log exposes a free-text start field, Start Session, and Reset Timer", () => {
+  const state = normalizeSessionState({ startLabel: "14 Frostwane, 10 PM", startedAt: 123, worldTime: 456 });
+  const html = renderSessionControls(state, {
+    procedure: "exploration",
+    elapsedLabel: "18m",
+    hasGroup: true,
+  });
+  assert.match(html, /Starting date and time/);
+  assert.match(html, /14 Frostwane, 10 PM/);
+  assert.match(html, /Start Session/);
+  assert.match(html, /Reset Timer/);
+  assert.match(html, /Exploration/);
+  assert.match(html, /18m/);
+});
+
+test("Start Session stores text metadata and resets the current procedure timer", () => {
+  assert.match(runtime, /SESSION_FLAG = "gmScreenSession"/);
+  assert.match(runtime, /group\.setFlag\(MODULE_ID, SESSION_FLAG/);
+  assert.match(runtime, /getGroupProcedureState\(group\)/);
+  assert.match(runtime, /resetGroupTime\(group, procedure/);
+  assert.match(runtime, /reason: "gm-screen-session-start"/);
+  assert.match(runtime, /worldTime: Number\(globalThis\.game\?\.time\?\.worldTime/);
+});
+
+test("Reset Timer is a Session Log action rather than an Elapsed popup action", () => {
+  assert.match(runtime, /resetSessionTimer/);
+  assert.match(runtime, /Reset .* Timer/);
+  assert.match(runtime, /gm-screen-session-log-reset/);
+});
+
+test("Encounter history still reconstructs from ChatMessages while only Session metadata is persisted", () => {
   assert.match(runtime, /globalThis\.game\?\.messages/);
   assert.match(runtime, /application\.encounterMessageId/);
-  assert.doesNotMatch(runtime, /setFlag\s*\(/);
+  assert.match(runtime, /setSessionState/);
   assert.doesNotMatch(runtime, /localStorage/);
   assert.doesNotMatch(runtime, /recentEvents/);
   assert.match(runtime, /ENCOUNTER_HISTORY_LIMIT = 8/);
@@ -102,6 +134,7 @@ test("Encounter history binds canonical encounter actions after replacing the wo
   assert.match(runtime, /executeEncounterAction\(application, button/);
   assert.match(runtime, /bindEncounterActions\(application, workspace\)/);
   assert.match(runtime, /bindHistorySelection\(application, workspace\)/);
+  assert.match(runtime, /bindSessionControls\(application, workspace, group\)/);
 });
 
 test("Encounter history runtime and style load after canonical encounter controls", () => {

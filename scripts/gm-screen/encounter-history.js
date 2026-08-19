@@ -131,7 +131,7 @@ function renderEncounterInspector(history) {
   if (!entry) {
     return `
       <article class="mk-gm-panel is-wide">
-        <header><i class="fas fa-skull-crossbones"></i><span>Group Encounters</span></header>
+        <header><i class="fas fa-book-open"></i><span>Session Log</span></header>
         <div class="mk-gm-empty">No resolved encounter card exists for this Group yet.</div>
       </article>
     `;
@@ -166,7 +166,6 @@ function renderEncounterInspector(history) {
       </div>
       <div class="mk-gm-encounter-context-line">
         <span><i class="fas fa-table-list"></i> ${escapeHtml(data.tableName ?? "")}</span>
-        <span><i class="fas fa-layer-group"></i> ${escapeHtml(data.profileName ?? "")}</span>
         <span><i class="fas fa-mountain-sun"></i> ${escapeHtml(entry.terrain)}</span>
         <span><i class="fas fa-skull-crossbones"></i> ${escapeHtml(entry.danger)}</span>
         <span><i class="fas fa-clock"></i> ${escapeHtml(entry.period)}</span>
@@ -224,7 +223,7 @@ function bindEncounterActions(application, workspace) {
 async function decorateEncounterHistory(application, element) {
   if (!gmScreenApplication(application) || !globalThis.game?.user?.isGM) return false;
   const root = element?.querySelector ? element : null;
-  const workspace = root?.querySelector?.('[data-workspace-panel="encounter"]');
+  const workspace = root?.querySelector?.('[data-workspace-panel="session-log"]');
   if (!workspace) return false;
 
   const group = await resolveGmScreenGroup(application.groupActorUuid ?? "");

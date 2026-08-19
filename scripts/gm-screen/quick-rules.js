@@ -99,7 +99,6 @@ function buildQuickRules(context = resolveSceneEnvironmentContext()) {
   const morale = profile.morale ?? {};
 
   return {
-    profileName: String(profile.name ?? context?.profileId ?? "Active profile"),
     terrain: String(context?.terrain ?? profile.defaultTerrain ?? "Default"),
     period: String(context?.period ?? "day"),
     exploration: {
@@ -138,8 +137,8 @@ function buildQuickRules(context = resolveSceneEnvironmentContext()) {
 }
 
 function ruleLine(label, rule) {
-  if (!rule?.enabled) return `<li><strong>${escapeHtml(label)}:</strong> disabled in this profile.</li>`;
-  const formula = rule.formula ? `<strong>${escapeHtml(rule.formula)}</strong>` : "profile mapping";
+  if (!rule?.enabled) return `<li><strong>${escapeHtml(label)}:</strong> disabled.</li>`;
+  const formula = rule.formula ? `<strong>${escapeHtml(rule.formula)}</strong>` : "configured mapping";
   const summary = rule.summary ? ` · ${escapeHtml(rule.summary)}` : "";
   return `<li><strong>${escapeHtml(label)}:</strong> ${formula}${summary}</li>`;
 }
@@ -149,14 +148,13 @@ function renderQuickRules(rules) {
     ? rules.dangers.map(danger => `
       <li><strong>${escapeHtml(danger.label)}:</strong> every ${danger.interval} ${danger.intervalUnit} · ${escapeHtml(danger.formula)} · encounter on ${escapeHtml(danger.encounterOn)}</li>
     `).join("")
-    : "<li>No danger levels are defined in the active profile.</li>";
+    : "<li>No danger levels are defined.</li>";
 
   return `
     <div class="mk-gm-panel-grid two-col" data-mk-gm-quick-rules>
       <article class="mk-gm-panel">
-        <header><i class="fas fa-layer-group"></i><span>Active Profile</span></header>
+        <header><i class="fas fa-book"></i><span>Procedure Timing</span></header>
         <ul class="mk-gm-rules-list">
-          <li><strong>Profile:</strong> ${escapeHtml(rules.profileName)}</li>
           <li><strong>Scene context:</strong> ${escapeHtml(rules.terrain)} · ${escapeHtml(rules.period)}</li>
           <li><strong>Exploration turn:</strong> ${escapeHtml(rules.exploration.turnLabel)}</li>
           <li><strong>Resting turn:</strong> ${escapeHtml(rules.rest.turnLabel)} · ${rules.rest.totalTurns} turns / ${escapeHtml(rules.rest.totalLabel)}</li>
@@ -179,7 +177,7 @@ function renderQuickRules(rules) {
           ${ruleLine("Reaction", rules.reaction)}
           ${ruleLine("Intent", rules.intent)}
           ${ruleLine("Treasure", rules.treasure)}
-          <li><strong>Expanded surprise dice:</strong> ${rules.surprise.enabled ? `${escapeHtml(rules.surprise.formula)} · surprised on ${escapeHtml(rules.surprise.surprisedOn)}` : "disabled in this profile"}.</li>
+          <li><strong>Expanded surprise dice:</strong> ${rules.surprise.enabled ? `${escapeHtml(rules.surprise.formula)} · surprised on ${escapeHtml(rules.surprise.surprisedOn)}` : "disabled"}.</li>
         </ul>
       </article>
 

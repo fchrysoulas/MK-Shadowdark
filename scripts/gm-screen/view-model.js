@@ -15,13 +15,24 @@ import { CHAT_FLAG, MODULE_ID } from "../encounter-engine/constants.js";
 const GM_SCREEN_WORKSPACES = Object.freeze([
   "overview",
   "exploration",
-  "resting",
-  "encounter",
   "combat",
-  "environment",
-  "tables",
+  "resting",
+  "downtime",
   "rules",
+  "tables",
+  "session-log",
 ]);
+
+const GM_SCREEN_WORKSPACE_LABELS = Object.freeze({
+  overview: "Overview",
+  exploration: "Exploration",
+  combat: "Combat",
+  resting: "Resting",
+  downtime: "Downtime",
+  rules: "Rules",
+  tables: "Tables",
+  "session-log": "Session Log",
+});
 
 function collectionValues(collection) {
   if (!collection) return [];
@@ -290,7 +301,7 @@ async function buildGmScreenViewModel({
     workspace: resolvedWorkspace,
     workspaces: GM_SCREEN_WORKSPACES.map(id => ({
       id,
-      label: id[0].toUpperCase() + id.slice(1),
+      label: GM_SCREEN_WORKSPACE_LABELS[id] ?? id,
       active: id === resolvedWorkspace,
     })),
     groups: groups.map(group => ({
@@ -368,6 +379,7 @@ async function buildGmScreenViewModel({
 
 export {
   GM_SCREEN_WORKSPACES,
+  GM_SCREEN_WORKSPACE_LABELS,
   collectionValues,
   normalizeWorkspace,
   getGroupActors,

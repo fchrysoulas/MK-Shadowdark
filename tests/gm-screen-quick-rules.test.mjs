@@ -12,12 +12,11 @@ const manifest = JSON.parse(fs.readFileSync(new URL("../module.json", import.met
 
 function customContext() {
   return {
-    profileId: "house",
     terrain: "Bog",
     period: "night",
     dangerLevel: "ominous",
     profile: {
-      name: "House Procedures",
+      name: "Internal Rules Definition",
       explorationTurnSeconds: 900,
       dangerLevels: {
         ominous: {
@@ -68,10 +67,10 @@ function customContext() {
   };
 }
 
-test("Quick Rules follow a customized active environment profile", () => {
+test("Quick Rules follow the canonical encounter rules without exposing a Profile", () => {
   const rules = buildQuickRules(customContext());
 
-  assert.equal(rules.profileName, "House Procedures");
+  assert.equal(Object.hasOwn(rules, "profileName"), false);
   assert.equal(rules.terrain, "Bog");
   assert.equal(rules.period, "night");
   assert.equal(rules.exploration.turnSeconds, 900);
@@ -92,7 +91,7 @@ test("Quick Rules follow a customized active environment profile", () => {
   assert.equal(rules.morale.ability, "CHA");
 });
 
-test("Quick Rules identify disabled optional procedures", () => {
+test("Quick Rules identify disabled optional procedures without Profile language", () => {
   const context = customContext();
   context.profile.optionalProcedures.intent = false;
   context.profile.optionalProcedures.surpriseDice = false;
@@ -101,11 +100,14 @@ test("Quick Rules identify disabled optional procedures", () => {
 
   assert.equal(rules.intent.enabled, false);
   assert.equal(rules.surprise.enabled, false);
-  assert.match(html, /Intent:<\/strong> disabled in this profile/);
-  assert.match(html, /Expanded surprise dice:<\/strong> disabled in this profile/);
+  assert.match(html, /Intent:<\/strong> disabled\./);
+  assert.match(html, /Expanded surprise dice:<\/strong> disabled/);
+  assert.doesNotMatch(html, /Active Profile/);
+  assert.doesNotMatch(html, /Profile:<\/strong>/);
+  assert.doesNotMatch(html, /in this profile/i);
 });
 
-test("Quick Rules retain canonical Rest constants while profile rules remain dynamic", () => {
+test("Quick Rules retain canonical Rest constants while encounter rules remain dynamic", () => {
   const rules = buildQuickRules(customContext());
   assert.equal(rules.rest.turnSeconds, 3600);
   assert.equal(rules.rest.turnLabel, "1 hour");

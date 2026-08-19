@@ -40,7 +40,7 @@ function bindButton(button, create) {
 function decorateTavernShopCreationControls(application, element) {
   if (!gmScreenApplication(application) || !globalThis.game?.user?.isGM) return false;
   const root = element?.querySelector ? element : null;
-  const workspace = root?.querySelector?.('[data-workspace-panel="exploration"]');
+  const workspace = root?.querySelector?.('[data-workspace-panel="downtime"]');
   if (!workspace) return false;
   const actions = ensureActionRow(workspace);
   if (!actions) return false;

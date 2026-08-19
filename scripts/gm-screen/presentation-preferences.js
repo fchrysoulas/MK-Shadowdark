@@ -3,12 +3,12 @@ const SETTING_KEY = "gmScreenPresentationPreferences";
 const WORKSPACES = Object.freeze([
   "overview",
   "exploration",
-  "resting",
-  "encounter",
   "combat",
-  "environment",
+  "resting",
+  "downtime",
   "rules",
   "tables",
+  "session-log",
 ]);
 const DEFAULT_PREFERENCES = Object.freeze({
   groupActorUuid: "",

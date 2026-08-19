@@ -56,7 +56,7 @@ The old **MK-Shadowdark GM Screen Mock** prototype is not a dependency and is no
 
 - **Group Sheet** — members, active party, hirelings, mounts, shared inventory, Traveling, Camping, and party resources.
 - **Camping Tasks** — Bed Down, Cook, Craft, Entertain, Scavenge, Hunt, Keep Watch, and Predict.
-- **Shared Scene Environment** — terrain, danger, day/night, environment profile, and encounter table belong to the active Scene context.
+- **Shared Scene Context** — terrain, danger, day/night period, and encounter table belong to the active Scene context.
 - **Unified Group Time** — Group procedures store elapsed procedure time while Foundry world time remains the only absolute clock.
 - **Marching / Role Context** — Front, Middle, Rear, Scout, Light Bearer, and ordered camp watches.
 - **Group Exploration Encounters** — encounter cadence/checks are part of Traveling.
@@ -85,17 +85,20 @@ Its production layout contains:
 - a persistent procedure/pressure summary
 - a central contextual workspace
 
-Available workspaces include:
+Available workspaces, in order, are:
 
-- **Overview** — Group, procedure, Scene, danger, encounter pressure, Resting, Combat, and Morale at a glance.
-- **Exploration** — turns, encounter cadence, due checks, Scene encounter context, and Traveling shortcut.
-- **Resting** — current rest status, elapsed rest turns, checks remaining, interruption state, Resume Rest, and staging shortcut.
-- **Encounter** — latest resolved Group encounter and staging access.
+- **Overview** — directly editable Scene Context, Encounter Pressure, Resting, Combat, Morale, and Group/procedure state at a glance.
+- **Exploration** — exploration turns, encounter cadence, due checks, Traveling assignments, and exploration generators.
 - **Combat** — current Foundry Combat round/turn/combatants and MK Morale overview.
-- **Environment** — current Scene terrain, danger, day/night, and encounter table context.
+- **Resting** — current rest status, elapsed rest turns, checks remaining, interruption state, Resume Rest, and staging shortcut.
+- **Downtime** — settlement-facing generators and downtime tools, including Tavern and Shop creation.
 - **Rules** — compact GM Quick Rules for procedure turns, encounter checks, morale, and resting.
+- **Tables** — imported Shadowdark source RollTables with search, filtering, rolling, and source metadata.
+- **Session Log** — recent canonical Group encounter records with inspection, staging, reveal, and reroll actions.
 
-The GM Screen reads canonical state from Group, Scene environment, internal encounter services, Encounter Staging, Foundry Combat, Morale, and the prepared GM member-status model. It does not store a second party, procedure clock, encounter, combat, morale, wound, or Focus model.
+The **Exploration**, **Combat**, **Resting**, and **Downtime** active tabs use green, red, blue, and dark-blue tints respectively. The former dedicated **Encounter** and **Environment** workspaces are removed; encounter history lives in Session Log, while Scene Context is edited directly on Overview.
+
+The GM Screen reads canonical state from Group, Scene Context, internal encounter services, Encounter Staging, Foundry Combat, Morale, and the prepared GM member-status model. It does not store a second party, procedure clock, encounter, combat, morale, wound, or Focus model.
 
 ---
 
@@ -139,7 +142,7 @@ This is infrastructure shared by Group procedures and the GM Screen. It is not a
 
 ```text
 WHO?       Group active members / roles / watches
-WHERE?     Active Scene environment context
+WHERE?     Active Scene Context
 WHEN?      Group elapsed procedure time + Foundry world time
 STATE?     Group procedure state
 WHAT?      Internal encounter service
@@ -152,7 +155,7 @@ Important invariants:
 
 - Foundry world time is the only absolute clock.
 - Group stores elapsed procedure time, not a second world clock.
-- Scene encounter environment belongs to Scene state.
+- Scene Context belongs to Scene state.
 - Encounter intervals always mean procedure turns.
 - Exploration and Resting decide when encounter checks are due.
 - Encounter formulas/tables/reaction/resolution have one internal implementation.
@@ -201,13 +204,12 @@ With the default 6-minute Exploration turn:
 
 If a time advance crosses multiple check boundaries, MK-Shadowdark preserves the exact number of due checks rather than collapsing them into one.
 
-The GM can inspect/process the same due state from Group Traveling or the production GM Screen. Both route to the same Group encounter service.
+The GM can inspect/process the same due state from Group Traveling or the production GM Screen. Both route to the same Group encounter service. Group Traveling retains encounter-pressure/check-due information, while Scene Context editing is centralized on GM Screen Overview.
 
 ## Scene encounter context
 
 The active Scene is the source of truth for:
 
-- environment profile
 - terrain
 - danger level
 - requested/effective day or night period
@@ -215,15 +217,17 @@ The active Scene is the source of truth for:
 - effective encounter table
 - encounter interval/formula
 
-The Group and GM Screen do not duplicate these values into separate profiles.
+The GM edits exactly four Scene Context inputs directly from **Overview**: **Terrain, Danger, Period, and Encounter Table**. The persisted Scene Context contains those four fields only; there is no GM-facing Profile field or `profileId` in Scene Context state.
+
+The internal encounter resolver still owns one canonical Shadowdark rules definition for cadence, outcome tables, rerolls, and compatibility. That implementation detail is not a Scene Context choice.
 
 ## Encounter-table selection
 
 The effective table is selected in this order:
 
 1. explicit Scene table override
-2. matching profile terrain + effective day/night table
-3. profile terrain `any` table
+2. matching canonical terrain + effective day/night table
+3. canonical terrain `any` table
 4. world fallback encounter table
 
 If no valid table is configured, a due encounter check is not silently consumed.
@@ -549,11 +553,11 @@ The production GM Screen is GM-only. Use the **Token Scene Controls** and look f
 
 ## A Group encounter check is due but cannot run
 
-Verify the active Scene resolves a valid encounter RollTable through the Group Encounter / Scene Context configuration.
+Verify the active Scene resolves a valid encounter RollTable through the Scene Context configuration on GM Screen Overview.
 
 ## Rest Party pauses with a configuration warning
 
-The current danger requires encounter checks but the Scene has no valid encounter table. Configure the Scene context and continue the same rest.
+The current danger requires encounter checks but the Scene has no valid encounter table. Configure the Scene Context and continue the same rest.
 
 ## Rest Party says Resume Rest
 

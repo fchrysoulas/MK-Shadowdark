@@ -9,6 +9,7 @@ const topContext = fs.readFileSync(new URL("../scripts/gm-screen/top-context-con
 const overviewLinks = fs.readFileSync(new URL("../scripts/gm-screen/overview-links.js", import.meta.url), "utf8");
 const stylesheet = fs.readFileSync(new URL("../styles/gm-screen.css", import.meta.url), "utf8");
 const refactorStylesheet = fs.readFileSync(new URL("../styles/gm-screen-workspace-refactor.css", import.meta.url), "utf8");
+const tools = fs.readFileSync(new URL("../scripts/gm-screen/tools-controls.js", import.meta.url), "utf8");
 const manifest = JSON.parse(fs.readFileSync(new URL("../module.json", import.meta.url), "utf8"));
 
 const WORKSPACES = [
@@ -17,6 +18,7 @@ const WORKSPACES = [
   "combat",
   "downtime",
   "tables",
+  "tools",
   "session-log",
 ];
 
@@ -53,30 +55,31 @@ test("GM Screen consumes canonical Group, Scene, encounter, and morale services"
   assert.doesNotMatch(runtime, /startGroupRest\(group/);
 });
 
-test("GM Screen procedure and elapsed pressure values are operational controls", () => {
+test("Procedure and Elapsed are operational direct controls", () => {
   assert.match(runtime, /GROUP_PROCEDURE_STATES/);
   assert.match(runtime, /setGroupProcedureState\(group, next/);
   assert.match(runtime, /installProcedureSelector\(procedure/);
   assert.match(runtime, /select\.addEventListener\("change"/);
+  assert.match(runtime, /actionAdvanceOneTurn/);
   assert.match(runtime, /advanceGroupTime\(group, seconds/);
-  assert.match(runtime, /resetGroupTime\(group, procedure/);
   assert.match(runtime, /getExplorationEncounterState\(group\)\.turnSeconds/);
   assert.match(runtime, /REST_TURN_SECONDS/);
-  assert.doesNotMatch(runtime, /presentation:\s*true/);
-  assert.match(runtime, /bindPressureControls\(this\)/);
-  assert.match(runtime, /Change Group procedure/);
-  assert.doesNotMatch(runtime, /mk-gm-procedure-dialog|title: "Group Procedure"/);
-  assert.match(runtime, /Advance or reset Group procedure time/);
+  assert.match(runtime, /COMBAT_TURN_SECONDS = 6/);
+  assert.match(runtime, /fa-forward-step/);
+  assert.doesNotMatch(runtime, /actionTimeControls|Advance Custom|timeAmount|timeUnit/);
+  assert.doesNotMatch(runtime, /resetGroupTime/);
 });
 
-test("GM Screen only offers one-turn advancement where a canonical duration exists", () => {
+test("one-turn advancement is 6m Exploration, 1h Resting, and 6s Combat", () => {
   assert.match(runtime, /procedure === "exploration"/);
   assert.match(runtime, /procedure === "resting"/);
-  assert.match(runtime, /This procedure has no canonical generic turn duration/);
-  assert.match(runtime, /Use an explicit custom amount/);
+  assert.match(runtime, /procedure === "combat"/);
+  assert.match(runtime, /if \(procedure === "combat"\) return COMBAT_TURN_SECONDS/);
+  assert.match(viewModel, /return `\$\{minuteLabel\}m`/);
+  assert.doesNotMatch(viewModel, /return `\$\{total\}s`/);
 });
 
-test("GM Screen owns the exact six workspaces in order", () => {
+test("GM Screen owns the exact seven workspaces in order", () => {
   assert.match(template, /mk-gm-party-rail/);
   assert.match(template, /mk-gm-pressure-strip/);
 
@@ -98,16 +101,26 @@ test("GM Screen owns the exact six workspaces in order", () => {
   assert.doesNotMatch(template, /Group Traveling/);
   assert.doesNotMatch(template, /Group Camping/);
   assert.match(template, /Process Due Checks/);
+  assert.match(template, /data-mk-gm-tools-panel/);
 });
 
-test("Overview is replaced by document shortcuts and Scene Context editing lives in the top strip", () => {
+test("Overview is document shortcuts and top Scene Context auto-saves", () => {
   assert.match(overviewLinks, /overview\.innerHTML = overviewShellHtml\(\)/);
   assert.match(overviewLinks, /data-mk-overview-shortcuts/);
   assert.doesNotMatch(overviewLinks, /Encounter Pressure|Combat \/ Morale|Resting/);
   assert.match(topContext, /pressureCell\(root, "Terrain"\)/);
   assert.match(topContext, /pressureCell\(root, "Danger"\)/);
   assert.match(topContext, /pressureCell\(root, "Period"\)/);
-  assert.match(topContext, /Save Context/);
+  assert.match(topContext, /bindTopContextAutosave/);
+  assert.doesNotMatch(topContext, /Save Context|data-mk-context-save/);
+});
+
+test("Downtime contains no Resting or Camp status panel", () => {
+  const start = template.indexOf('data-workspace-panel="downtime"');
+  const end = template.indexOf('data-workspace-panel="tables"');
+  const downtime = template.slice(start, end);
+  assert.match(downtime, />Downtime</);
+  assert.doesNotMatch(downtime, /Resting \/ Camp|Checks Left|Stage Latest Encounter/);
 });
 
 test("view model workspace contract matches the native template", () => {
@@ -126,9 +139,10 @@ test("requested workspace active tints remain defined", () => {
   assert.match(refactorStylesheet, /data-workspace="exploration"/);
   assert.match(refactorStylesheet, /data-workspace="combat"/);
   assert.match(refactorStylesheet, /data-workspace="downtime"/);
+  assert.match(refactorStylesheet, /data-workspace="tools"/);
 });
 
-test("GM Screen exposes the standalone Time Passes dice selector", () => {
+test("GM Screen exposes a wider standalone Time Passes dice selector", () => {
   assert.match(template, /data-time-passes-dice/);
   assert.match(template, /<option value="1">1d6<\/option>/);
   assert.match(template, /<option value="2">2d6<\/option>/);
@@ -136,6 +150,23 @@ test("GM Screen exposes the standalone Time Passes dice selector", () => {
   assert.match(template, /data-action="timePasses"/);
   assert.match(runtime, /const rollTimePasses = api\?\.roll \?\? api\?\.timePasses/);
   assert.match(runtime, /rollTimePasses\(\{ diceCount \}\)/);
+  assert.match(refactorStylesheet, /\.mk-gm-time-passes select[\s\S]*width: 82px/);
+});
+
+test("Tools exposes inspectors for hidden active selections", () => {
+  for (const label of [
+    "Scene / Encounter Context",
+    "Encounter Procedures",
+    "Active Light Sources",
+    "Group Assignments",
+    "Rest Schedule",
+    "Morale State",
+    "Encounter Setup",
+    "Import Source Tables",
+  ]) {
+    assert.match(tools, new RegExp(label.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")));
+  }
+  assert.match(tools, /Read-only here/);
 });
 
 test("Combat display converts Foundry's zero-based turn index to a human-facing number", () => {
@@ -151,10 +182,16 @@ test("GM Screen core does not persist duplicate gameplay state", () => {
   assert.doesNotMatch(combined, /game\.settings\.set\s*\(/);
 });
 
+test("retired presentation buttons are not loaded", () => {
+  assert.ok(!manifest.esmodules.includes("scripts/gm-screen/presentation-controls.js"));
+  assert.ok(!manifest.styles.includes("styles/gm-screen-presentation.css"));
+});
+
 test("GM Screen runtime assets are loaded independently from Group Sheet", () => {
   assert.ok(manifest.esmodules.includes("scripts/gm-screen/gm-screen.js"));
   assert.ok(manifest.esmodules.includes("scripts/gm-screen/top-context-controls.js"));
   assert.ok(manifest.esmodules.includes("scripts/gm-screen/overview-links.js"));
+  assert.ok(manifest.esmodules.includes("scripts/gm-screen/tools-controls.js"));
   assert.ok(manifest.styles.includes("styles/gm-screen.css"));
   assert.ok(manifest.esmodules.includes("scripts/gm-screen/source-table-browser.js"));
   assert.ok(manifest.styles.includes("styles/gm-screen-source-tables.css"));

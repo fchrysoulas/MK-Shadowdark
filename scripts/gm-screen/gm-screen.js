@@ -1,7 +1,6 @@
 import { resolveActorFromUuid } from "../group-sheet/actors.js";
 import {
   getExplorationEncounterState,
-  openExplorationEncounterContextDialog,
   processDueExplorationEncounters,
 } from "../group-sheet/exploration-encounters.js";
 import { openGroupMemberStatus } from "../group-sheet/member-status.js";
@@ -10,10 +9,7 @@ import {
   getGroupProcedureState,
   setGroupProcedureState,
 } from "../group-sheet/procedure.js";
-import {
-  REST_TURN_SECONDS,
-  continueGroupRest,
-} from "../group-sheet/rest-encounters.js";
+import { REST_TURN_SECONDS } from "../group-sheet/rest-encounters.js";
 import {
   advanceGroupTime,
   getGroupElapsedTime,
@@ -87,10 +83,6 @@ async function actionWorkspace(_event, target) {
 async function actionSelectGroup(_event, target) {
   this.groupActorUuid = String(target?.dataset?.groupUuid ?? "");
   this.workspace = "overview";
-  return this.render({ force: true });
-}
-
-async function actionRefresh() {
   return this.render({ force: true });
 }
 
@@ -284,35 +276,10 @@ async function actionTimeControls() {
   return result;
 }
 
-async function actionConfigureEnvironment() {
-  const group = await selectedGroup(this);
-  if (!group) return null;
-  const result = await openExplorationEncounterContextDialog(group);
-  await this.render({ force: true });
-  return result;
-}
-
 async function actionProcessDueEncounters() {
   const group = await selectedGroup(this);
   if (!group) return null;
   const result = await processDueExplorationEncounters(group);
-  await this.render({ force: true });
-  return result;
-}
-
-async function actionResumeRest() {
-  const group = await selectedGroup(this);
-  if (!group) return null;
-
-  const confirmed = await confirmGmDialog({
-    title: "Resume Interrupted Rest",
-    content: "<p>Confirm that the interruption has been resolved and continue the existing Group rest from its current turn?</p>",
-    yes: { label: "Continue" },
-    no: { label: "Cancel", default: true },
-  });
-  if (!confirmed) return null;
-
-  const result = await continueGroupRest(group);
   await this.render({ force: true });
   return result;
 }
@@ -473,13 +440,10 @@ class MKGMscreen extends ApplicationBase {
     actions: {
       workspace: actionWorkspace,
       selectGroup: actionSelectGroup,
-      refresh: actionRefresh,
       openGroup: actionOpenGroup,
       openMember: actionOpenMember,
       inspectMember: actionInspectMember,
-      configureEnvironment: actionConfigureEnvironment,
       processDueEncounters: actionProcessDueEncounters,
-      resumeRest: actionResumeRest,
       stageLatestEncounter: actionStageLatestEncounter,
       openCombat: actionOpenCombat,
       timePasses: actionTimePasses,
@@ -574,11 +538,6 @@ async function toggleGmScreen(options = {}) {
   return openGmScreen(options);
 }
 
-function refreshGmScreen() {
-  if (!gmScreen?.rendered) return;
-  gmScreen.render({ force: true });
-}
-
 function registerSceneControl() {
   globalThis.Hooks?.on?.("getSceneControlButtons", controls => {
     if (!canUseGmScreen()) return;
@@ -609,7 +568,6 @@ function exposeGmScreenApi() {
     open: openGmScreen,
     close: closeGmScreen,
     toggle: toggleGmScreen,
-    refresh: refreshGmScreen,
     get application() {
       return getGmScreen();
     },
@@ -618,33 +576,8 @@ function exposeGmScreenApi() {
   return module.api.gmScreen;
 }
 
-function registerRefreshHooks() {
-  const refreshHooks = [
-    "updateActor",
-    "updateScene",
-    "canvasReady",
-    "combatStart",
-    "updateCombat",
-    "createCombatant",
-    "updateCombatant",
-    "deleteCombatant",
-    "mkShadowdarkGroupProcedureChanged",
-    "mkShadowdarkGroupTimeAdvanced",
-    "mkShadowdarkGroupTimeReset",
-    "mkShadowdarkGroupAssignmentsChanged",
-    "mkShadowdarkEnvironmentChanged",
-    "mkShadowdarkGroupExplorationEncounter",
-    "mkShadowdarkGroupRestWorkflow",
-  ];
-
-  for (const hook of refreshHooks) {
-    globalThis.Hooks?.on?.(hook, refreshGmScreen);
-  }
-}
-
 function registerGmScreen() {
   registerSceneControl();
-  registerRefreshHooks();
 
   globalThis.Hooks?.once?.("ready", () => {
     exposeGmScreenApi();
@@ -666,7 +599,6 @@ export {
   openGmScreen,
   closeGmScreen,
   toggleGmScreen,
-  refreshGmScreen,
   exposeGmScreenApi,
   registerGmScreen,
 };

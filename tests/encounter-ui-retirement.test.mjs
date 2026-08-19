@@ -38,7 +38,7 @@ test("legacy Time Passes bridge constants are removed", () => {
   assert.equal(encounterConstants.SETTINGS.autoTimePasses, undefined);
 });
 
-test("legacy world setting keys are relabeled for Group ownership and obsolete auto-Time-Passes setting is hidden", () => {
+test("legacy Profile settings are explicitly deprecated and hidden", () => {
   const previousGame = globalThis.game;
   const settings = new Map([
     ["mk-shadowdark.encounterEngineEnabled", { name: "old", hint: "old", config: true }],
@@ -63,14 +63,18 @@ test("legacy world setting keys are relabeled for Group ownership and obsolete a
       settings.get("mk-shadowdark.encounterEngineAutoTimePasses").hint,
       /no longer determines or resolves encounters/i
     );
-    assert.match(settings.get("mk-shadowdark.encounterEngineProfiles").name, /^Group Encounter/);
+    assert.equal(settings.get("mk-shadowdark.encounterEngineDefaultProfile").config, false);
+    assert.match(settings.get("mk-shadowdark.encounterEngineDefaultProfile").name, /^Legacy Encounter Rules/);
+    assert.match(settings.get("mk-shadowdark.encounterEngineDefaultProfile").hint, /does not use Profiles/i);
+    assert.match(settings.get("mk-shadowdark.encounterEngineProfiles").name, /^Legacy Encounter Rules Storage/);
     assert.equal(settings.get("mk-shadowdark.encounterEngineProfiles").config, false);
+    assert.match(settings.get("mk-shadowdark.encounterEngineProfiles").hint, /older encounter records/i);
   } finally {
     globalThis.game = previousGame;
   }
 });
 
-test("public encounter API remains headless and keeps internal resolver/chat-card support", () => {
+test("public encounter API remains headless and Profile-free while keeping internal reroll/card support", () => {
   const previousGame = globalThis.game;
   const moduleRecord = { api: {} };
 
@@ -86,12 +90,16 @@ test("public encounter API remains headless and keeps internal resolver/chat-car
   try {
     const api = encounterModule.exposeApi();
     assert.equal(api.headless, true);
-    assert.equal(api.version, 3);
+    assert.equal(api.version, 4);
     assert.equal(typeof api.check, "function");
     assert.equal(typeof api.resolve, "function");
     assert.equal(typeof api.checkAndResolve, "function");
     assert.equal(typeof api.rerollField, "function");
     assert.equal(typeof api.renderCard, "function");
+    assert.equal(typeof api.getSceneContext, "function");
+    assert.equal(typeof api.setSceneContext, "function");
+    assert.equal("getProfiles" in api, false);
+    assert.equal("defaults" in api, false);
     assert.equal("openDialog" in api, false);
     assert.equal("configureProfiles" in api, false);
     assert.equal(moduleRecord.api.encounterService, api.service);

@@ -9,6 +9,8 @@ import {
   getExplorationTurnSeconds,
   processDueExplorationEncounters,
   reconcileExplorationEncounterProgress,
+  refreshAllGroupsForEnvironmentChange,
+  renderExplorationEncounterToolbar,
 } from "../scripts/group-sheet/exploration-encounters.js";
 
 function makeGroupActor({ elapsed = 0, consumedChecks = 0, updates = [] } = {}) {
@@ -57,6 +59,7 @@ function installRuntime({
   rollTotals = [],
   table = null,
   enabled = true,
+  actors = [],
 } = {}) {
   const previous = {
     game: globalThis.game,
@@ -104,7 +107,7 @@ function installRuntime({
       get: (_moduleId, key) => settings.get(`mk-shadowdark.${key}`),
     },
     dice3d: null,
-    actors: [],
+    actors,
     packs: new Map(),
   };
   globalThis.canvas = { scene };
@@ -138,25 +141,18 @@ function installRuntime({
   };
 
   return {
+    scene,
     restore() {
       Object.assign(globalThis, previous);
     },
   };
 }
 
-test("default exploration turn is six minutes", () => {
+test("exploration turn is canonically six minutes and no hidden Profile can override it", () => {
   assert.equal(DEFAULT_EXPLORATION_TURN_SECONDS, 360);
-  assert.equal(getExplorationTurnSeconds({ profile: {} }), 360);
-});
-
-test("environment profiles can override exploration turn duration without changing interval units", () => {
-  assert.equal(getExplorationTurnSeconds({
-    profile: { explorationTurnSeconds: 600 },
-  }), 600);
-
-  assert.equal(getExplorationTurnSeconds({
-    profile: { turnSeconds: 480 },
-  }), 480);
+  assert.equal(getExplorationTurnSeconds(), 360);
+  assert.equal(getExplorationTurnSeconds({ profile: { explorationTurnSeconds: 600 } }), 360);
+  assert.equal(getExplorationTurnSeconds({ profile: { turnSeconds: 480 } }), 360);
 });
 
 test("interval values are counts of completed exploration turns", () => {
@@ -206,11 +202,10 @@ test("consumed checks reduce due count without creating a second time clock", ()
   assert.equal(schedule.nextCheckTurn, 9);
 });
 
-test("Group state derives turns from #45 exploration elapsed seconds and Scene danger interval", () => {
+test("Group state derives turns from exploration elapsed seconds and Scene danger interval", () => {
   const actor = makeGroupActor({ elapsed: 6 * 360, consumedChecks: 1 });
   const runtime = installRuntime({
     sceneContext: {
-      profileId: "default",
       terrain: "Default",
       dangerLevel: "unsafe",
       period: "day",
@@ -234,7 +229,6 @@ test("backward/reset exploration time reconciles consumed checks down to the cur
   const actor = makeGroupActor({ elapsed: 360, consumedChecks: 3, updates });
   const runtime = installRuntime({
     sceneContext: {
-      profileId: "default",
       dangerLevel: "unsafe",
       period: "day",
       tableUuid: "RollTable.encounters",
@@ -250,12 +244,11 @@ test("backward/reset exploration time reconciles consumed checks down to the cur
   }
 });
 
-test("environment changes can consume the current schedule so the new cadence starts from now", async () => {
+test("explicit manual reconcile can still consume the current schedule when deliberately requested", async () => {
   const updates = [];
   const actor = makeGroupActor({ elapsed: 6 * 360, consumedChecks: 0, updates });
   const runtime = installRuntime({
     sceneContext: {
-      profileId: "default",
       dangerLevel: "unsafe",
       period: "day",
       tableUuid: "RollTable.encounters",
@@ -272,7 +265,24 @@ test("environment changes can consume the current schedule so the new cadence st
   }
 });
 
-test("processing multiple due checks calls the headless encounter service and consumes each check", async () => {
+test("automatic Scene Context refresh never consumes due checks", () => {
+  const updates = [];
+  const actor = makeGroupActor({ elapsed: 6 * 360, consumedChecks: 0, updates });
+  const runtime = installRuntime({ actors: [actor] });
+  let renders = 0;
+  actor.sheet.render = () => { renders += 1; };
+
+  try {
+    refreshAllGroupsForEnvironmentChange();
+    assert.equal(renders, 1);
+    assert.equal(updates.length, 0);
+    assert.equal(actor.flags["mk-shadowdark"].group.encounters.exploration.consumedChecks, 0);
+  } finally {
+    runtime.restore();
+  }
+});
+
+test("processing multiple due checks calls the headless encounter service and consumes each successful check", async () => {
   const updates = [];
   const actor = makeGroupActor({ elapsed: 6 * 360, consumedChecks: 0, updates });
   const table = {
@@ -284,7 +294,6 @@ test("processing multiple due checks calls the headless encounter service and co
     table,
     rollTotals: [4, 5],
     sceneContext: {
-      profileId: "default",
       terrain: "Default",
       dangerLevel: "unsafe",
       period: "day",
@@ -314,7 +323,6 @@ test("missing encounter table blocks due processing before an occurrence roll is
   const runtime = installRuntime({
     rollTotals: [1],
     sceneContext: {
-      profileId: "default",
       terrain: "Default",
       dangerLevel: "unsafe",
       period: "day",
@@ -333,4 +341,61 @@ test("missing encounter table blocks due processing before an occurrence roll is
   } finally {
     runtime.restore();
   }
+});
+
+test("fixing a missing table preserves the blocked due check and then processes it normally", async () => {
+  const actor = makeGroupActor({ elapsed: 3 * 360, consumedChecks: 0 });
+  const sceneContext = {
+    terrain: "Default",
+    dangerLevel: "unsafe",
+    period: "day",
+    tableUuid: "",
+  };
+  const table = {
+    uuid: "RollTable.encounters",
+    name: "Road Encounters",
+    documentName: "RollTable",
+  };
+  const runtime = installRuntime({
+    table,
+    rollTotals: [4],
+    sceneContext,
+  });
+
+  try {
+    const blocked = await processDueExplorationEncounters(actor, { notify: false });
+    assert.equal(blocked.reason, "missing-table");
+    assert.equal(getExplorationEncounterState(actor).dueChecks, 1);
+
+    sceneContext.tableUuid = table.uuid;
+    refreshAllGroupsForEnvironmentChange();
+    assert.equal(getExplorationEncounterState(actor).dueChecks, 1);
+
+    const processed = await processDueExplorationEncounters(actor, { notify: false });
+    assert.equal(processed.processed, 1);
+    assert.equal(processed.dueAfter, 0);
+  } finally {
+    runtime.restore();
+  }
+});
+
+test("Group Traveling toolbar keeps pressure and Check Due but has no separate Context/Profile control", () => {
+  const html = renderExplorationEncounterToolbar({
+    isGm: true,
+    dangerLabel: "Unsafe",
+    intervalTurns: 3,
+    dueChecks: 1,
+    tableName: "Road Encounters",
+    canCheck: true,
+    terrain: "Road",
+    period: "Day",
+    completedTurns: 3,
+    turnMinutes: 6,
+    latest: null,
+  });
+
+  assert.match(html, /Due <strong>1<\/strong>/);
+  assert.match(html, /check-due-exploration-encounters/);
+  assert.doesNotMatch(html, /configure-exploration-encounters/);
+  assert.doesNotMatch(html, /Profile|Encounter Context/);
 });

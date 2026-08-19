@@ -186,7 +186,7 @@ function buildCombatView(combat = globalThis.game?.combat) {
       active: false,
       name: "No active combat",
       round: 0,
-      turn: 0,
+      turn: null,
       currentCombatant: null,
       combatants: [],
       morale: null,
@@ -195,7 +195,8 @@ function buildCombatView(combat = globalThis.game?.combat) {
 
   const turns = Array.isArray(combat.turns) ? combat.turns : [];
   const turnIndex = Number(combat.turn);
-  const currentCombatant = Number.isInteger(turnIndex) && turnIndex >= 0 ? turns[turnIndex] ?? null : null;
+  const hasCurrentTurn = Number.isInteger(turnIndex) && turnIndex >= 0 && turnIndex < turns.length;
+  const currentCombatant = hasCurrentTurn ? turns[turnIndex] ?? null : null;
   const moraleApi = globalThis.game?.modules?.get?.(MODULE_ID)?.api?.morale;
   let morale = null;
 
@@ -226,7 +227,7 @@ function buildCombatView(combat = globalThis.game?.combat) {
     id: String(combat.id ?? ""),
     name: String(combat.name ?? "Combat"),
     round: Math.max(0, Number(combat.round ?? 0) || 0),
-    turn: Math.max(0, Number(combat.turn ?? 0) || 0),
+    turn: hasCurrentTurn ? turnIndex + 1 : null,
     currentCombatant: currentCombatant ? combatantView(currentCombatant, currentCombatant) : null,
     combatants: turns.map(combatant => combatantView(combatant, currentCombatant)),
     morale,

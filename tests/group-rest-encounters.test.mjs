@@ -7,6 +7,7 @@ import {
   REST_TURN_SECONDS,
   calculateRestCheckTurns,
   continueGroupRest,
+  ensureActiveRestCadenceSnapshot,
   getGroupRestState,
   getGroupRestWorkflow,
   startGroupRest,
@@ -23,7 +24,7 @@ function makeMember({ uuid = "Actor.member-1", hp = 1, hpMax = 5, rations = 2 } 
     },
   };
 
-  const actor = {
+  return {
     id: uuid.split(".").at(-1),
     uuid,
     documentName: "Actor",
@@ -56,8 +57,6 @@ function makeMember({ uuid = "Actor.member-1", hp = 1, hpMax = 5, rations = 2 } 
       }
     },
   };
-
-  return actor;
 }
 
 function makeGroupActor(member, { restingElapsed = 0 } = {}) {
@@ -107,7 +106,7 @@ function makeGroupActor(member, { restingElapsed = 0 } = {}) {
   };
 }
 
-function installRuntime({ member, group, tableConfigured = true } = {}) {
+function installRuntime({ member, group, tableConfigured = true, sceneContext = null } = {}) {
   const previous = {
     foundry: globalThis.foundry,
     game: globalThis.game,
@@ -118,8 +117,7 @@ function installRuntime({ member, group, tableConfigured = true } = {}) {
     ChatMessage: globalThis.ChatMessage,
   };
 
-  const sceneContext = {
-    profileId: "default",
+  const context = sceneContext ?? {
     terrain: "Default",
     dangerLevel: "unsafe",
     period: "day",
@@ -130,7 +128,7 @@ function installRuntime({ member, group, tableConfigured = true } = {}) {
     uuid: "Scene.scene-1",
     name: "Camp",
     getFlag(scope, key) {
-      if (scope === "mk-shadowdark" && key === "encounterContext") return sceneContext;
+      if (scope === "mk-shadowdark" && key === "encounterContext") return context;
       return undefined;
     },
   };
@@ -198,6 +196,7 @@ function installRuntime({ member, group, tableConfigured = true } = {}) {
   globalThis.ChatMessage = undefined;
 
   return {
+    sceneContext: context,
     restore() {
       Object.assign(globalThis, previous);
     },
@@ -215,7 +214,7 @@ test("danger intervals are interpreted as resting-turn counts", () => {
   assert.deepEqual(calculateRestCheckTurns(1), [1, 2, 3, 4, 5, 6, 7, 8]);
 });
 
-test("starting a rest resets the #45 resting timeline and snapshots the active participants", async () => {
+test("starting a rest resets the resting timeline and snapshots participants and cadence", async () => {
   const member = makeMember();
   const group = makeGroupActor(member, { restingElapsed: 7200 });
   const runtime = installRuntime({ member, group });
@@ -231,6 +230,8 @@ test("starting a rest resets the #45 resting timeline and snapshots the active p
     assert.equal(workflow.status, "checking");
     assert.equal(workflow.plannedRations, 1);
     assert.deepEqual(workflow.participantUuids, [member.uuid]);
+    assert.equal(workflow.intervalTurns, 3);
+    assert.deepEqual(workflow.checkTurns, [3, 6]);
     assert.equal(workflow.rationsConsumed, false);
     assert.equal(group.flags["mk-shadowdark"].group.time.elapsed.resting, 0);
     assert.equal(group.flags["mk-shadowdark"].group.procedure.state, "resting");
@@ -239,7 +240,7 @@ test("starting a rest resets the #45 resting timeline and snapshots the active p
   }
 });
 
-test("an encounter interruption advances only to its check turn and consumes no ration or rest benefit", async () => {
+test("an encounter interruption advances only to its snapshotted check turn and consumes no ration or rest benefit", async () => {
   const member = makeMember({ hp: 1, hpMax: 5, rations: 2 });
   const group = makeGroupActor(member);
   const runtime = installRuntime({ member, group });
@@ -317,6 +318,99 @@ test("resuming an interrupted Unsafe rest continues at turn 6 then completes at 
   }
 });
 
+test("Unsafe to Deadly Scene Danger change does not add retroactive checks to an active rest", async () => {
+  const member = makeMember({ rations: 2 });
+  const group = makeGroupActor(member);
+  const runtime = installRuntime({ member, group });
+
+  try {
+    await startGroupRest(group, { plannedRations: 1, participants: [member] });
+    await continueGroupRest(group, {
+      notify: false,
+      encounterService: async () => ({ isEncounter: true, encounter: null, reason: "" }),
+    });
+    assert.equal(getGroupRestWorkflow(group).consumedChecks, 1);
+    assert.deepEqual(getGroupRestWorkflow(group).checkTurns, [3, 6]);
+
+    runtime.sceneContext.dangerLevel = "deadly";
+    let checks = 0;
+    const completed = await continueGroupRest(group, {
+      notify: false,
+      encounterService: async () => {
+        checks += 1;
+        return { isEncounter: false, encounter: null, reason: "" };
+      },
+    });
+
+    assert.equal(completed.action, "completed");
+    assert.equal(checks, 1);
+    assert.deepEqual(getGroupRestWorkflow(group).checkTurns, [3, 6]);
+    assert.equal(getGroupRestWorkflow(group).consumedChecks, 2);
+  } finally {
+    runtime.restore();
+  }
+});
+
+test("Deadly to Unsafe Scene Danger change does not skip future snapshotted checks", async () => {
+  const member = makeMember({ rations: 2 });
+  const group = makeGroupActor(member);
+  const sceneContext = {
+    terrain: "Default",
+    dangerLevel: "deadly",
+    period: "day",
+    tableUuid: "RollTable.rest",
+  };
+  const runtime = installRuntime({ member, group, sceneContext });
+
+  try {
+    await startGroupRest(group, { plannedRations: 1, participants: [member] });
+    assert.deepEqual(getGroupRestWorkflow(group).checkTurns, [1, 2, 3, 4, 5, 6, 7, 8]);
+
+    await continueGroupRest(group, {
+      notify: false,
+      encounterService: async () => ({ isEncounter: true, encounter: null, reason: "" }),
+    });
+    assert.equal(getGroupRestWorkflow(group).consumedChecks, 1);
+
+    runtime.sceneContext.dangerLevel = "unsafe";
+    let checks = 0;
+    const completed = await continueGroupRest(group, {
+      notify: false,
+      encounterService: async () => {
+        checks += 1;
+        return { isEncounter: false, encounter: null, reason: "" };
+      },
+    });
+
+    assert.equal(completed.action, "completed");
+    assert.equal(checks, 7);
+    assert.equal(getGroupRestWorkflow(group).consumedChecks, 8);
+    assert.deepEqual(getGroupRestWorkflow(group).checkTurns, [1, 2, 3, 4, 5, 6, 7, 8]);
+  } finally {
+    runtime.restore();
+  }
+});
+
+test("encounter-service failure pauses rest without consuming the due check", async () => {
+  const member = makeMember();
+  const group = makeGroupActor(member);
+  const runtime = installRuntime({ member, group });
+
+  try {
+    await startGroupRest(group, { plannedRations: 0, participants: [member] });
+    const result = await continueGroupRest(group, {
+      notify: false,
+      encounterService: async () => ({ isEncounter: false, encounter: null, reason: "disabled" }),
+    });
+
+    assert.equal(result.action, "interrupted");
+    assert.equal(getGroupRestWorkflow(group).consumedChecks, 0);
+    assert.equal(getGroupRestState(group).nextCheckTurn, 3);
+  } finally {
+    runtime.restore();
+  }
+});
+
 test("successful rest processes all required checks before consuming rations and benefits", async () => {
   const member = makeMember({ hp: 2, hpMax: 7, rations: 2 });
   const group = makeGroupActor(member);
@@ -387,7 +481,7 @@ test("missing encounter table blocks rest before time, ration, or benefit mutati
   }
 });
 
-test("rest state exposes chronological check progress without another elapsed-time clock", async () => {
+test("legacy active rest without a cadence snapshot is migrated once", async () => {
   const member = makeMember();
   const group = makeGroupActor(member, { restingElapsed: 4 * 3600 });
   group.flags["mk-shadowdark"].group.resting = {
@@ -403,7 +497,11 @@ test("rest state exposes chronological check progress without another elapsed-ti
   const runtime = installRuntime({ member, group });
 
   try {
+    assert.equal(getGroupRestState(group).cadenceSnapshotted, false);
+    assert.equal(await ensureActiveRestCadenceSnapshot(group), true);
     const state = getGroupRestState(group);
+    assert.equal(state.cadenceSnapshotted, true);
+    assert.deepEqual(state.checkTurns, [3, 6]);
     assert.equal(state.completedTurns, 4);
     assert.equal(state.requiredChecks, 2);
     assert.equal(state.remainingChecks, 1);

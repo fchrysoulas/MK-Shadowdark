@@ -1,15 +1,19 @@
 import test from "node:test";
 import assert from "node:assert/strict";
+import fs from "node:fs";
 
 import {
+  CANONICAL_ENVIRONMENT_RULES,
   DEFAULT_ENVIRONMENT_PROFILES,
   ENVIRONMENT_CHANGED_HOOK,
   ENVIRONMENT_SCENE_FLAG,
   determineEnvironmentPeriod,
   environmentFlagChanged,
   getSceneEnvironmentContext,
+  migrateLegacySceneContexts,
   normalizeEnvironmentProfiles,
   normalizeSceneEnvironmentContext,
+  publicResolvedContext,
   resolveEnvironmentContext,
   setSceneEnvironmentContext,
 } from "../scripts/libs/environment-context.js";
@@ -17,6 +21,8 @@ import {
   getSceneEncounterContext,
   normalizeProfiles,
 } from "../scripts/encounter-engine/helpers.js";
+
+const runtime = fs.readFileSync(new URL("../scripts/libs/environment-context.js", import.meta.url), "utf8");
 
 function withGame({ settings = {}, worldTime = 0 } = {}, callback) {
   const previousGame = globalThis.game;
@@ -38,24 +44,22 @@ function withGame({ settings = {}, worldTime = 0 } = {}, callback) {
   }
 }
 
-test("shared environment service owns Encounter profile normalization", () => {
+test("shared environment service remains the canonical Encounter context implementation", () => {
   assert.equal(normalizeProfiles, normalizeEnvironmentProfiles);
   assert.equal(getSceneEncounterContext, getSceneEnvironmentContext);
 });
 
-test("default profile preserves current Shadowdark encounter behavior", () => {
-  const profiles = normalizeEnvironmentProfiles({});
-  const profile = profiles.default;
-
-  assert.equal(profile.profileSchema, 2);
-  assert.equal(profile.name, "Shadowdark Core");
-  assert.equal(profile.defaultTerrain, "Default");
-  assert.equal(profile.defaultDangerLevel, "unsafe");
-  assert.equal(profile.dangerLevels.unsafe.interval, 3);
-  assert.deepEqual(profile.dangerLevels.unsafe.encounterOn, [1]);
+test("canonical Shadowdark rules preserve current encounter cadence", () => {
+  assert.equal(CANONICAL_ENVIRONMENT_RULES.name, "Shadowdark Core");
+  assert.equal(CANONICAL_ENVIRONMENT_RULES.defaultTerrain, "Default");
+  assert.equal(CANONICAL_ENVIRONMENT_RULES.defaultDangerLevel, "unsafe");
+  assert.equal(CANONICAL_ENVIRONMENT_RULES.dangerLevels.unsafe.interval, 3);
+  assert.equal(CANONICAL_ENVIRONMENT_RULES.dangerLevels.risky.interval, 2);
+  assert.equal(CANONICAL_ENVIRONMENT_RULES.dangerLevels.deadly.interval, 1);
+  assert.deepEqual(CANONICAL_ENVIRONMENT_RULES.dangerLevels.unsafe.encounterOn, [1]);
 });
 
-test("legacy default profile is upgraded without losing configured terrain tables", () => {
+test("legacy profile JSON remains readable for old encounter rerolls", () => {
   const profiles = normalizeEnvironmentProfiles({
     default: {
       profileSchema: 1,
@@ -86,191 +90,191 @@ test("legacy default profile is upgraded without losing configured terrain table
   assert.equal(profiles.default.auxiliaryTables.morale, undefined);
 });
 
-test("scene context keeps the existing encounterContext Scene flag shape", () => {
-  withGame({
-    settings: {
-      encounterEngineProfiles: JSON.stringify(DEFAULT_ENVIRONMENT_PROFILES),
-      encounterEngineDefaultProfile: "default",
+test("Scene Context strips legacy profileId and exposes exactly four fields", () => {
+  const scene = {
+    getFlag: (scope, key) => {
+      assert.equal(scope, "mk-shadowdark");
+      assert.equal(key, ENVIRONMENT_SCENE_FLAG);
+      return {
+        profileId: "wastes",
+        terrain: "Ruins",
+        dangerLevel: "deadly",
+        period: "night",
+        tableUuid: "RollTable.override",
+      };
     },
-  }, () => {
-    const scene = {
-      getFlag: (scope, key) => {
-        assert.equal(scope, "mk-shadowdark");
-        assert.equal(key, ENVIRONMENT_SCENE_FLAG);
-        return {
-          profileId: "default",
-          terrain: "Ruins",
-          dangerLevel: "deadly",
-          period: "night",
-          tableUuid: "RollTable.override",
-        };
-      },
-    };
+  };
 
-    assert.deepEqual(getSceneEnvironmentContext(scene), {
-      profileId: "default",
-      terrain: "Ruins",
-      dangerLevel: "deadly",
-      period: "night",
-      tableUuid: "RollTable.override",
-    });
+  assert.deepEqual(withGame({}, () => getSceneEnvironmentContext(scene)), {
+    terrain: "Ruins",
+    dangerLevel: "deadly",
+    period: "night",
+    tableUuid: "RollTable.override",
   });
 });
 
-test("resolved context derives effective period, danger procedure, and terrain table", () => {
-  const profiles = normalizeEnvironmentProfiles({
-    wastes: {
-      name: "Wastes",
-      dayStart: 6,
-      nightStart: 18,
-      defaultTerrain: "Salt Flats",
-      defaultDangerLevel: "risky",
-      terrains: {
-        "Salt Flats": {
-          day: "RollTable.day",
-          night: "RollTable.night",
+test("hidden default Profile and Scene profileId cannot change current runtime rules", () => {
+  const resolved = withGame({
+    settings: {
+      encounterEngineProfiles: JSON.stringify({
+        custom: {
+          name: "Custom",
+          defaultTerrain: "Salt Flats",
+          defaultDangerLevel: "unsafe",
+          terrains: { "Salt Flats": { any: "RollTable.custom" } },
+          dangerLevels: {
+            unsafe: { label: "Custom Unsafe", interval: 9, formula: "1d20", encounterOn: [20] },
+          },
         },
-      },
-      dangerLevels: {
-        risky: {
-          label: "Risky",
-          interval: 2,
-          formula: "1d6",
-          encounterOn: [1],
-        },
-      },
+      }),
+      encounterEngineDefaultProfile: "custom",
+      encounterEngineDefaultTableUuid: "RollTable.default",
     },
-  });
-
-  const resolved = withGame({}, () => resolveEnvironmentContext({
-    profileId: "wastes",
+    worldTime: 22 * 3600,
+  }, () => resolveEnvironmentContext({
+    profileId: "custom",
     terrain: "Salt Flats",
-    dangerLevel: "risky",
+    dangerLevel: "unsafe",
     period: "auto",
     tableUuid: "",
   }, {
     scene: { id: "scene-1", uuid: "Scene.scene-1", name: "The Flats" },
-    profiles,
-    worldTime: 22 * 3600,
   }));
 
   assert.equal(resolved.sceneId, "scene-1");
   assert.equal(resolved.sceneName, "The Flats");
   assert.equal(resolved.requestedPeriod, "auto");
   assert.equal(resolved.period, "night");
-  assert.equal(resolved.tableUuid, "RollTable.night");
-  assert.equal(resolved.danger.label, "Risky");
-  assert.equal(resolved.encounter.interval, 2);
+  assert.equal(resolved.tableUuid, "RollTable.default");
+  assert.equal(resolved.danger.label, "Unsafe");
+  assert.equal(resolved.encounter.interval, 3);
   assert.equal(resolved.encounter.formula, "1d6");
   assert.deepEqual(resolved.encounter.encounterOn, [1]);
+  assert.equal(resolved.profile, CANONICAL_ENVIRONMENT_RULES);
 });
 
-test("explicit encounter table override wins over profile terrain mapping", () => {
-  const profile = DEFAULT_ENVIRONMENT_PROFILES.default;
-  const profiles = {
-    default: {
-      ...profile,
-      terrains: {
-        Default: {
-          any: "RollTable.profile",
-          day: "RollTable.day",
-          night: "RollTable.night",
-        },
-      },
-    },
-  };
-
-  const resolved = withGame({}, () => resolveEnvironmentContext({
-    profileId: "default",
-    terrain: "Default",
+test("explicit encounter table override wins over the world fallback", () => {
+  const resolved = withGame({
+    settings: { encounterEngineDefaultTableUuid: "RollTable.default" },
+  }, () => resolveEnvironmentContext({
+    terrain: "Any Terrain",
     dangerLevel: "unsafe",
     period: "day",
     tableUuid: "RollTable.override",
-  }, { profiles }));
+  }));
 
   assert.equal(resolved.explicitTableUuid, "RollTable.override");
   assert.equal(resolved.tableUuid, "RollTable.override");
 });
 
 test("period resolution supports automatic and explicit day/night", () => {
-  const profile = { dayStart: 6, nightStart: 18 };
+  const rules = { dayStart: 6, nightStart: 18 };
 
-  assert.equal(determineEnvironmentPeriod(profile, "auto", 8 * 3600), "day");
-  assert.equal(determineEnvironmentPeriod(profile, "auto", 22 * 3600), "night");
-  assert.equal(determineEnvironmentPeriod(profile, "day", 22 * 3600), "day");
-  assert.equal(determineEnvironmentPeriod(profile, "night", 8 * 3600), "night");
+  assert.equal(determineEnvironmentPeriod(rules, "auto", 8 * 3600), "day");
+  assert.equal(determineEnvironmentPeriod(rules, "auto", 22 * 3600), "night");
+  assert.equal(determineEnvironmentPeriod(rules, "day", 22 * 3600), "day");
+  assert.equal(determineEnvironmentPeriod(rules, "night", 8 * 3600), "night");
 });
 
-test("invalid Scene values normalize against the selected profile", () => {
-  const profiles = normalizeEnvironmentProfiles({
-    dungeon: {
-      name: "Dungeon",
-      defaultTerrain: "Crypt",
-      defaultDangerLevel: "deadly",
-      terrains: { Crypt: { any: "" } },
-      dangerLevels: {
-        deadly: { label: "Deadly", interval: 1, formula: "1d6", encounterOn: [1] },
-      },
-    },
-  });
-
-  const normalized = withGame({
-    settings: { encounterEngineDefaultProfile: "dungeon" },
-  }, () => normalizeSceneEnvironmentContext({
-    profileId: "missing",
+test("invalid Scene values normalize against canonical Shadowdark rules", () => {
+  const normalized = withGame({}, () => normalizeSceneEnvironmentContext({
+    profileId: "custom",
+    terrain: "Crypt",
     dangerLevel: "missing",
     period: "invalid",
-  }, profiles));
+  }));
 
   assert.deepEqual(normalized, {
-    profileId: "dungeon",
     terrain: "Crypt",
-    dangerLevel: "deadly",
+    dangerLevel: "unsafe",
     period: "auto",
     tableUuid: "",
   });
 });
 
-test("GM setter writes the existing Scene flag instead of creating parallel Group state", async () => {
+test("GM setter writes only four fields and avoids no-op writes", async () => {
   const writes = [];
   const previousGame = globalThis.game;
 
   globalThis.game = {
     user: { isGM: true },
-    settings: {
-      settings: new Map([
-        ["mk-shadowdark.encounterEngineProfiles", {}],
-        ["mk-shadowdark.encounterEngineDefaultProfile", {}],
-      ]),
-      get: (_moduleId, key) => key === "encounterEngineProfiles"
-        ? JSON.stringify(DEFAULT_ENVIRONMENT_PROFILES)
-        : "default",
-    },
+    settings: { settings: new Map(), get: () => undefined },
   };
 
   try {
-    const scene = {
-      setFlag: async (scope, key, value) => writes.push({ scope, key, value }),
-    };
-
-    const result = await setSceneEnvironmentContext({
-      profileId: "default",
+    const current = {
       terrain: "Default",
       dangerLevel: "risky",
       period: "day",
       tableUuid: "RollTable.special",
+    };
+    const scene = {
+      getFlag: () => current,
+      setFlag: async (scope, key, value) => writes.push({ scope, key, value }),
+    };
+
+    const result = await setSceneEnvironmentContext({
+      profileId: "legacy",
+      ...current,
     }, scene);
 
+    assert.deepEqual(result, current);
+    assert.equal(writes.length, 0);
+
+    await setSceneEnvironmentContext({ ...current, terrain: "Caves" }, scene);
     assert.equal(writes.length, 1);
-    assert.equal(writes[0].scope, "mk-shadowdark");
-    assert.equal(writes[0].key, "encounterContext");
-    assert.deepEqual(writes[0].value, result);
+    assert.deepEqual(writes[0].value, {
+      terrain: "Caves",
+      dangerLevel: "risky",
+      period: "day",
+      tableUuid: "RollTable.special",
+    });
+    assert.equal(Object.hasOwn(writes[0].value, "profileId"), false);
   } finally {
     globalThis.game = previousGame;
   }
 });
 
-test("non-GM setter cannot mutate Scene environment context", async () => {
+test("legacy Scene migration removes profileId without losing four-field choices", async () => {
+  const writes = [];
+  const raw = {
+    profileId: "custom",
+    terrain: "Desert",
+    dangerLevel: "deadly",
+    period: "night",
+    tableUuid: "RollTable.desert",
+  };
+  const scene = {
+    getFlag: () => raw,
+    setFlag: async (_scope, _key, value) => writes.push(value),
+  };
+
+  const migrated = await withGame({}, () => migrateLegacySceneContexts({
+    user: { isGM: true },
+    scenes: [scene],
+  }));
+  assert.equal(await migrated, 1);
+  assert.deepEqual(writes[0], {
+    terrain: "Desert",
+    dangerLevel: "deadly",
+    period: "night",
+    tableUuid: "RollTable.desert",
+  });
+});
+
+test("public resolved context never exposes internal Profile fields", () => {
+  const publicContext = publicResolvedContext({
+    profileId: "default",
+    profile: CANONICAL_ENVIRONMENT_RULES,
+    terrain: "Default",
+    dangerLevel: "unsafe",
+  });
+  assert.equal(Object.hasOwn(publicContext, "profileId"), false);
+  assert.equal(Object.hasOwn(publicContext, "profile"), false);
+  assert.equal(publicContext.terrain, "Default");
+});
+
+test("non-GM setter cannot mutate Scene Context", async () => {
   let writes = 0;
   const previousGame = globalThis.game;
   const previousUi = globalThis.ui;
@@ -305,4 +309,9 @@ test("environment Scene update detection supports flattened and nested Foundry u
 
   assert.equal(environmentFlagChanged({ name: "Different Scene Name" }), false);
   assert.equal(ENVIRONMENT_CHANGED_HOOK, "mkShadowdarkEnvironmentChanged");
+});
+
+test("external Foundry world-time changes refresh automatic Scene Context", () => {
+  assert.match(runtime, /Hooks\?\.on\?\.\("updateWorldTime"/);
+  assert.match(runtime, /emitEnvironmentChanged\(currentScene\(\)\)/);
 });

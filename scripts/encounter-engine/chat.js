@@ -55,6 +55,13 @@ function stagingSummary(data, { publicCard = false } = {}) {
   `;
 }
 
+function encounterFooter(data) {
+  const sceneName = String(data?.sceneName ?? "").trim();
+  return sceneName
+    ? `<footer class="mk-sd-encounter-footer">${escapeHtml(sceneName)}</footer>`
+    : "";
+}
+
 export function renderEncounterCard(data, { publicCard = false } = {}) {
   const periodLabel = data.period === "night" ? "Night" : "Day";
   const disposition = String(data.disposition ?? "neutral");
@@ -111,10 +118,7 @@ export function renderEncounterCard(data, { publicCard = false } = {}) {
 
       ${stagingSummary(data, { publicCard })}
       ${controls}
-
-      <footer class="mk-sd-encounter-footer">
-        ${escapeHtml(data.profileName)}${data.sceneName ? ` - ${escapeHtml(data.sceneName)}` : ""}
-      </footer>
+      ${encounterFooter(data)}
     </section>
   `;
 }

@@ -6,6 +6,7 @@ import { encounterMessage } from "../scripts/gm-screen/encounter-controls.js";
 
 const chat = fs.readFileSync(new URL("../scripts/encounter-engine/chat.js", import.meta.url), "utf8");
 const controls = fs.readFileSync(new URL("../scripts/gm-screen/encounter-controls.js", import.meta.url), "utf8");
+const history = fs.readFileSync(new URL("../scripts/gm-screen/encounter-history.js", import.meta.url), "utf8");
 const template = fs.readFileSync(new URL("../templates/gm-screen.hbs", import.meta.url), "utf8");
 const manifest = JSON.parse(fs.readFileSync(new URL("../module.json", import.meta.url), "utf8"));
 
@@ -41,21 +42,22 @@ test("GM Screen encounter actions resolve the exact rendered source message", ()
   assert.match(controls, /context\?\.latestEncounter\?\.messageId/);
 });
 
-test("GM Screen encounter workspace exposes canonical card fields and actions", () => {
+test("Session Log inspector exposes canonical encounter fields and actions without Profile", () => {
   for (const field of ["number", "encounter", "distance", "activity", "reaction", "treasure"]) {
-    assert.match(template, new RegExp(`data-field=["']${field}["']`));
+    assert.match(history, new RegExp(`fieldRow\\([^\\n]*["']${field}["']`));
   }
 
-  assert.match(template, /latestEncounter\.data\.awareness\.label/);
-  assert.match(template, /latestEncounter\.data\.awareness\.optional/);
-  assert.match(template, /latestEncounter\.data\.intent/);
-  assert.match(template, /latestEncounter\.data\.treasure\.label/);
-  assert.match(template, /latestEncounter\.data\.morale\.label/);
-  assert.match(template, /latestEncounter\.data\.tableName/);
-  assert.match(template, /latestEncounter\.data\.profileName/);
-  assert.match(template, /data-mk-encounter-action="reveal"/);
-  assert.match(template, /data-mk-encounter-action="reroll-all"/);
-  assert.match(template, /data-mk-encounter-action="stage"/);
+  assert.match(history, /data\?\.awareness\?\.label/);
+  assert.match(history, /data\?\.intent/);
+  assert.match(history, /data\?\.treasure\?\.label/);
+  assert.match(history, /data\?\.morale\?\.label/);
+  assert.match(history, /data\.tableName/);
+  assert.doesNotMatch(history, /profileName|Active Profile/);
+  assert.match(history, /data-mk-encounter-action="reveal"/);
+  assert.match(history, /data-mk-encounter-action="reroll-all"/);
+  assert.match(history, /data-mk-encounter-action="stage"/);
+  assert.match(template, /data-workspace-panel="session-log"/);
+  assert.doesNotMatch(template, /data-workspace-panel="encounter"/);
 });
 
 test("GM Screen staging shortcuts no longer use the legacy direct Application action", () => {

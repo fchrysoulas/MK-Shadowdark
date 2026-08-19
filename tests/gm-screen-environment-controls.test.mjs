@@ -10,13 +10,13 @@ import {
 
 const runtime = fs.readFileSync(new URL("../scripts/gm-screen/environment-controls.js", import.meta.url), "utf8");
 const bridge = fs.readFileSync(new URL("../scripts/gm-screen/workspace-refactor.js", import.meta.url), "utf8");
+const template = fs.readFileSync(new URL("../templates/gm-screen.hbs", import.meta.url), "utf8");
 const manifest = JSON.parse(fs.readFileSync(new URL("../module.json", import.meta.url), "utf8"));
 
 function rules() {
   return {
-    defaultTerrain: "Caves",
+    defaultTerrain: "Default",
     defaultDangerLevel: "risky",
-    terrains: { Caves: { any: "RollTable.auto" } },
     dangerLevels: {
       risky: { label: "Risky", interval: 2, formula: "1d8", encounterOn: [1, 2] },
     },
@@ -56,7 +56,7 @@ test("Scene Context editor presents the four stored choices and resolved effecti
   assert.equal(Object.hasOwn(view.resolved, "profileName"), false);
 });
 
-test("Scene Context editor clearly identifies a missing encounter table as blocking", () => {
+test("Scene Context editor clearly identifies a missing encounter table as blocking without consuming due checks", () => {
   const view = buildEnvironmentEditorView({
     scene: { name: "Dry Cave" },
     tables: [],
@@ -80,7 +80,7 @@ test("Scene Context editor clearly identifies a missing encounter table as block
 
   assert.equal(view.resolved.tableConfigured, false);
   assert.match(html, /Encounter table not configured/);
-  assert.match(html, /Encounter checks remain blocked/);
+  assert.match(html, /Due checks remain pending/);
   assert.match(html, /Save Scene Context/);
 });
 
@@ -104,6 +104,7 @@ test("Scene Context editor exposes exactly Terrain, Danger, Period, and Encounte
   for (const name of ["terrain", "dangerLevel", "period", "tableUuid"]) {
     assert.match(html, new RegExp(`name="${name}"`));
   }
+  assert.match(html, /<input type="text" name="terrain"/);
   assert.doesNotMatch(html, /name="profileId"/);
   assert.doesNotMatch(html, /Active Profile/);
   assert.match(html, /Effective Period/);
@@ -134,30 +135,33 @@ test("Scene Context form reader returns only the four persisted fields", () => {
   assert.deepEqual(readEnvironmentForm(root), values);
 });
 
-test("Scene Context saves directly to Scene state without persisting profileId", () => {
-  assert.match(runtime, /scene\.setFlag\(MODULE_ID, SCENE_CONTEXT_FLAG, value\)/);
-  assert.match(runtime, /getSceneEnvironmentContext\(scene\)/);
-  assert.match(runtime, /resolveSceneEnvironmentContext\(scene\)/);
-  assert.match(runtime, /availableRollTables\(\)/);
+test("Scene Context uses the canonical four-field setter and caches RollTable discovery", () => {
+  assert.match(runtime, /setSceneEnvironmentContext\(value, scene\)/);
+  assert.match(runtime, /cachedAvailableRollTables\(\)/);
+  assert.match(runtime, /availableTableCache/);
+  assert.match(runtime, /invalidateAvailableRollTableCache/);
+  assert.match(runtime, /createRollTable/);
+  assert.match(runtime, /_mkSceneContextRenderToken/);
+  assert.doesNotMatch(runtime, /scene\.setFlag\(MODULE_ID, SCENE_CONTEXT_FLAG, value\)/);
   assert.doesNotMatch(runtime, /name="profileId"/);
   assert.doesNotMatch(runtime, /profileId:\s*read/);
-  assert.doesNotMatch(runtime, /resolveGmScreenGroup/);
-  assert.doesNotMatch(runtime, /groupActorUuid/);
 });
 
-test("Scene Context is inline on Overview and the legacy Environment workspace path is removed", () => {
-  assert.match(runtime, /data-mk-gm-overview-scene-context/);
-  assert.doesNotMatch(runtime, /data-workspace-panel=\\?"environment\\?"/);
-  assert.match(bridge, /data-workspace-panel=\\?"environment\\?"/);
-  assert.match(bridge, /\.remove\?\.\(\)/);
-  assert.doesNotMatch(runtime, /application\.workspace = "environment"/);
+test("Scene Context is native on Overview and obsolete Encounter/Environment panels are absent", () => {
+  assert.match(template, /data-mk-gm-overview-scene-context/);
+  assert.doesNotMatch(template, /data-workspace-panel="environment"/);
+  assert.doesNotMatch(template, /data-workspace-panel="encounter"/);
+  assert.doesNotMatch(template, /configureEnvironment/);
+  assert.doesNotMatch(template, /profileName/);
+  assert.doesNotMatch(bridge, /prepareAdditionalWorkspaces|prepareOverviewSceneContext|removeGroupTravelContextButton|removeEncounterProfilePresentation/);
 });
 
-test("GM Screen Scene Context controller loads after the workspace bridge and Quick Rules", () => {
+test("compatibility bridge runs before GM Screen decorators but performs no GM Screen DOM surgery", () => {
   const bridgeIndex = manifest.esmodules.indexOf("scripts/gm-screen/workspace-refactor.js");
   const rulesIndex = manifest.esmodules.indexOf("scripts/gm-screen/quick-rules.js");
   const environmentIndex = manifest.esmodules.indexOf("scripts/gm-screen/environment-controls.js");
   assert.ok(bridgeIndex >= 0);
   assert.ok(rulesIndex > bridgeIndex);
   assert.ok(environmentIndex > rulesIndex);
+  assert.match(bridge, /compatibility-only/i);
 });

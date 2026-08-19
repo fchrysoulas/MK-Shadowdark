@@ -1,5 +1,5 @@
 import { PREDEFINED_EFFECT_KEYS } from "../libs/predefined-effects.js";
-import { APP_ID, refreshGmScreen } from "./gm-screen.js";
+import { APP_ID } from "./gm-screen.js";
 import { confirmGmDialog, waitForGmDialog } from "../libs/dialog-v2.js";
 
 const MODULE_ID = "mk-shadowdark";
@@ -355,19 +355,9 @@ async function decorateMoralePanel(application, element) {
   return true;
 }
 
-function combatContainsToken(tokenDocument, combat = globalThis.game?.combat) {
-  const tokenId = String(tokenDocument?.id ?? "");
-  if (!tokenId || !combat) return false;
-  return collectionValues(combat.combatants).some(combatant => String(combatant?.token?.id ?? combatant?.tokenId ?? "") === tokenId);
-}
-
 function registerGmScreenMoraleControls() {
   globalThis.Hooks?.on?.("renderApplicationV2", (application, element) => {
     void decorateMoralePanel(application, element);
-  });
-
-  globalThis.Hooks?.on?.("updateToken", tokenDocument => {
-    if (combatContainsToken(tokenDocument)) refreshGmScreen();
   });
 }
 
@@ -385,7 +375,6 @@ export {
   resultSummary,
   buildMoraleView,
   renderMoraleDetails,
-  combatContainsToken,
   decorateMoralePanel,
   registerGmScreenMoraleControls,
 };

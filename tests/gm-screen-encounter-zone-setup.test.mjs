@@ -22,15 +22,25 @@ test("Tables workspace owns Encounter Setup", () => {
   assert.match(html, /name="zoneTableUuid"/);
 });
 
-test("Tables hydrator builds Encounter Setup from cached RollTables and binds auto-save", () => {
+test("Tables hydrator builds Encounter Setup and binds explicit manual save", () => {
   assert.match(browserRuntime, /cachedAvailableRollTables\(\)/);
   assert.match(browserRuntime, /buildEncounterSetupView\(\{ tables \}\)/);
   assert.match(browserRuntime, /renderEncounterSetup\(encounterSetupView\)/);
-  assert.match(browserRuntime, /bindEncounterSetupAutoSave\(encounterSetup, encounterSetupView\.scene\)/);
+  assert.match(browserRuntime, /bindEncounterSetupManualSave\(application, encounterSetup, encounterSetupView\.scene/);
+  assert.doesNotMatch(browserRuntime, /bindEncounterSetupAutoSave/);
+  assert.doesNotMatch(browserRuntime, /patchGmScreenPresentationPreferences/);
 });
 
 test("Overview decorator no longer owns or scans Encounter Setup", () => {
   assert.doesNotMatch(environmentRuntime, /data-mk-gm-exploration-encounter-setup/);
   assert.doesNotMatch(environmentRuntime, /const setup = root\.querySelector/);
   assert.match(environmentRuntime, /data-mk-gm-overview-scene-context/);
+});
+
+test("Encounter Setup changes only stage state until Save Encounter Setup is clicked", () => {
+  assert.match(environmentRuntime, /data-mk-encounter-setup-save/);
+  assert.match(environmentRuntime, /bindEncounterSetupManualSave/);
+  assert.match(environmentRuntime, /saveButton\.addEventListener\("click"/);
+  assert.match(environmentRuntime, /saveEncounterSetup\(application, setup, scene\)/);
+  assert.doesNotMatch(environmentRuntime, /Auto-save/);
 });

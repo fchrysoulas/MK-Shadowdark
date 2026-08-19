@@ -6,7 +6,19 @@ const runtime = fs.readFileSync(new URL("../scripts/gm-screen/gm-screen.js", imp
 const viewModel = fs.readFileSync(new URL("../scripts/gm-screen/view-model.js", import.meta.url), "utf8");
 const template = fs.readFileSync(new URL("../templates/gm-screen.hbs", import.meta.url), "utf8");
 const stylesheet = fs.readFileSync(new URL("../styles/gm-screen.css", import.meta.url), "utf8");
+const refactorStylesheet = fs.readFileSync(new URL("../styles/gm-screen-workspace-refactor.css", import.meta.url), "utf8");
 const manifest = JSON.parse(fs.readFileSync(new URL("../module.json", import.meta.url), "utf8"));
+
+const WORKSPACES = [
+  "overview",
+  "exploration",
+  "combat",
+  "resting",
+  "downtime",
+  "rules",
+  "tables",
+  "session-log",
+];
 
 test("GM Screen is a separate ApplicationV2 surface", () => {
   assert.match(runtime, /HandlebarsApplicationMixin\(ApplicationV2\)/);
@@ -60,12 +72,39 @@ test("GM Screen only offers one-turn advancement where a canonical duration exis
   assert.match(runtime, /Use an explicit custom amount/);
 });
 
-test("GM Screen has party, pressure, and contextual workspaces", () => {
+test("GM Screen template natively owns the exact eight workspaces in order", () => {
   assert.match(template, /mk-gm-party-rail/);
   assert.match(template, /mk-gm-pressure-strip/);
-  for (const workspace of ["overview", "exploration", "resting", "encounter", "combat", "environment", "rules"]) {
-    assert.match(template, new RegExp(`data-workspace-panel=["']${workspace}["']`));
+
+  let previousIndex = -1;
+  for (const workspace of WORKSPACES) {
+    const marker = `data-workspace-panel="${workspace}"`;
+    const index = template.indexOf(marker);
+    assert.ok(index > previousIndex, `${workspace} should appear in canonical order`);
+    previousIndex = index;
   }
+
+  assert.doesNotMatch(template, /data-workspace-panel="encounter"/);
+  assert.doesNotMatch(template, /data-workspace-panel="environment"/);
+  assert.doesNotMatch(template, /configureEnvironment/);
+  assert.doesNotMatch(template, /profileName|Active Profile/);
+  assert.match(template, /data-mk-gm-overview-scene-context/);
+  assert.match(template, /Process Due Checks/);
+});
+
+test("view model workspace contract matches the native template", () => {
+  for (const workspace of WORKSPACES) {
+    assert.match(viewModel, new RegExp(`"${workspace.replace("-", "\\-")}"`));
+  }
+  assert.doesNotMatch(viewModel, /GM_SCREEN_WORKSPACES[\s\S]{0,400}"encounter"/);
+  assert.doesNotMatch(viewModel, /GM_SCREEN_WORKSPACES[\s\S]{0,400}"environment"/);
+});
+
+test("requested workspace active tints remain defined", () => {
+  assert.match(refactorStylesheet, /data-workspace="exploration"/);
+  assert.match(refactorStylesheet, /data-workspace="combat"/);
+  assert.match(refactorStylesheet, /data-workspace="resting"/);
+  assert.match(refactorStylesheet, /data-workspace="downtime"/);
 });
 
 test("GM Screen exposes the standalone Time Passes dice selector", () => {
@@ -76,6 +115,11 @@ test("GM Screen exposes the standalone Time Passes dice selector", () => {
   assert.match(template, /data-action="timePasses"/);
   assert.match(runtime, /const rollTimePasses = api\?\.roll \?\? api\?\.timePasses/);
   assert.match(runtime, /rollTimePasses\(\{ diceCount \}\)/);
+});
+
+test("Combat display converts Foundry's zero-based turn index to a human-facing number", () => {
+  assert.match(viewModel, /hasCurrentTurn \? turnIndex \+ 1 : null/);
+  assert.match(template, /\{\{#if combat\.currentCombatant\}\}\{\{combat\.turn\}\}\{\{else\}\}—\{\{\/if\}\}/);
 });
 
 test("GM Screen does not persist duplicate gameplay state", () => {

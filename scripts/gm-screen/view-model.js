@@ -18,6 +18,7 @@ const GM_SCREEN_WORKSPACES = Object.freeze([
   "combat",
   "downtime",
   "tables",
+  "tools",
   "session-log",
 ]);
 
@@ -27,6 +28,7 @@ const GM_SCREEN_WORKSPACE_LABELS = Object.freeze({
   combat: "Combat",
   downtime: "Downtime",
   tables: "Tables",
+  tools: "Tools",
   "session-log": "Session Log",
 });
 
@@ -36,6 +38,7 @@ const GM_SCREEN_WORKSPACE_ICONS = Object.freeze({
   combat: "fa-swords",
   downtime: "fa-coins",
   tables: "fa-table-list",
+  tools: "fa-toolbox",
   "session-log": "fa-book-open",
 });
 
@@ -85,17 +88,23 @@ async function resolveGmScreenGroup(groupActorUuid = "", actors = globalThis.gam
   return groups[0] ?? null;
 }
 
-function formatDuration(seconds) {
-  const total = Math.max(0, Math.floor(Number(seconds) || 0));
-  const hours = Math.floor(total / 3600);
-  const minutes = Math.floor((total % 3600) / 60);
+function formatMinuteValue(value) {
+  const rounded = Math.round(Number(value || 0) * 10) / 10;
+  return Number.isInteger(rounded) ? String(rounded) : rounded.toFixed(1);
+}
 
-  if (hours > 0) return `${hours}h ${minutes}m`;
-  if (minutes > 0) return `${minutes}m`;
-  return `${total}s`;
+function formatDuration(seconds) {
+  const total = Math.max(0, Number(seconds) || 0);
+  const hours = Math.floor(total / 3600);
+  const remainingMinutes = (total - (hours * 3600)) / 60;
+  const minuteLabel = formatMinuteValue(remainingMinutes);
+
+  if (hours > 0) return `${hours}h ${minuteLabel}m`;
+  return `${minuteLabel}m`;
 }
 
 function formatExplorationNextCheck(state) {
+  if (state?.encountersDisabled) return "No checks";
   const dueChecks = Math.max(0, Number(state?.dueChecks ?? 0) || 0);
   if (dueChecks > 0) return dueChecks === 1 ? "Due now" : `Due now (${dueChecks})`;
 
@@ -302,7 +311,8 @@ async function buildGmScreenViewModel({
   const resolvedWorkspace = normalizeWorkspace(workspace);
   const environment = resolveSceneEnvironmentContext(scene);
   const combatView = buildCombatView(combat);
-  const intervalTurns = Math.max(1, Number(environment?.encounter?.interval ?? 1) || 1);
+  const encountersDisabled = environment?.encounter?.disabled === true || environment?.dangerLevel === "safe";
+  const intervalTurns = encountersDisabled ? 0 : Math.max(1, Number(environment?.encounter?.interval ?? 1) || 1);
 
   const base = {
     workspace: resolvedWorkspace,
@@ -330,6 +340,7 @@ async function buildGmScreenViewModel({
       dangerLevel: String(environment?.dangerLevel ?? "unsafe"),
       dangerLabel: String(environment?.danger?.label ?? environment?.dangerLevel ?? "Unsafe"),
       period: String(environment?.period ?? "day"),
+      encountersDisabled,
       intervalTurns,
       intervalUnit: intervalTurns === 1 ? "turn" : "turns",
       tableUuid: String(environment?.tableUuid ?? ""),
@@ -340,7 +351,7 @@ async function buildGmScreenViewModel({
     assignments: buildAssignmentsView(groupActor),
     procedure: "downtime",
     elapsedSeconds: 0,
-    elapsedLabel: "0s",
+    elapsedLabel: "0m",
     exploration: null,
     resting: null,
     latestEncounter: null,
@@ -380,6 +391,8 @@ async function buildGmScreenViewModel({
       nextCheckTurn: rest.nextCheckTurn,
       interrupted: rest.workflow.status === "interrupted",
       active: ["checking", "interrupted"].includes(rest.workflow.status),
+      encountersDisabled: rest.encountersDisabled,
+      checkTurns: [...rest.checkTurns],
     },
     latestEncounter,
   };
@@ -393,6 +406,7 @@ export {
   normalizeWorkspace,
   getGroupActors,
   resolveGmScreenGroup,
+  formatMinuteValue,
   formatDuration,
   formatExplorationNextCheck,
   buildPartyView,

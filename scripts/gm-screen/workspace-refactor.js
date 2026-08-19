@@ -160,6 +160,10 @@ function registerWorkspaceRefactor() {
     hideLegacyProfileControl(application, element);
   });
 
+  globalThis.Hooks?.on?.("renderApplication", (application, element) => {
+    hideLegacyProfileControl(application, element);
+  });
+
   globalThis.Hooks?.on?.("renderActorSheet", removeGroupTravelContextButton);
   globalThis.Hooks?.on?.("renderChatMessage", removeEncounterProfilePresentation);
 

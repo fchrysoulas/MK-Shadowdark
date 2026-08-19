@@ -79,14 +79,27 @@ test("README documents the production GM Screen as a manual-update surface", asy
   assert.match(readme, /does not expose a generic Refresh button/i);
 });
 
-test("README documents explicit GM Screen configuration saves and retired duplicate controls", async () => {
+test("README documents top-strip Scene Context and explicit Encounter Setup saves", async () => {
   const readme = await readReadme();
 
-  assert.match(readme, /Save Changes/);
+  assert.match(readme, /Terrain, Danger, and Period dropdowns in the top strip/i);
+  assert.match(readme, /Save Context/);
   assert.match(readme, /Save Encounter Setup/);
+  assert.match(readme, /There is no auto-save/i);
   assert.match(readme, /Marching order and exploration-role editing remain in Group Management/i);
   assert.match(readme, /Starting\/resuming rests and camp-watch management remain in Group Management/i);
   assert.match(readme, /production GM Screen no longer edits watches or starts\/resumes rests/i);
+});
+
+test("README documents Overview as per-GM document shortcuts rather than status panels", async () => {
+  const readme = await readReadme();
+
+  assert.match(readme, /Overview.*per-GM shortcut dashboard/is);
+  assert.match(readme, /Journal entries\/pages, Actors, Items, RollTables/i);
+  assert.match(readme, /Clicking a pinned shortcut opens the original document/i);
+  assert.match(readme, /Overview contains no built-in Scene Context, Encounter Pressure, Resting, or Combat\/Morale status panels/i);
+  assert.match(readme, /presentation-only state stored on the current GM user as document UUIDs/i);
+  assert.match(readme, /does not force a full GM Screen rerender/i);
 });
 
 test("README does not require the retired GM Screen Mock", async () => {

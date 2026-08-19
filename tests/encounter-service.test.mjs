@@ -122,9 +122,32 @@ test("check definition comes from normalized environment danger context", () => 
   assert.deepEqual(definition, {
     dangerLevel: "risky",
     label: "Risky",
+    disabled: false,
     interval: 2,
     formula: "1d8",
     encounterOn: [1, 2, 3],
+  });
+});
+
+test("Safe check definition disables encounter rolls", () => {
+  const definition = buildEncounterCheckDefinition({
+    dangerLevel: "safe",
+    danger: { label: "Safe", disabled: true },
+    encounter: {
+      disabled: true,
+      interval: 0,
+      formula: "",
+      encounterOn: [],
+    },
+  });
+
+  assert.deepEqual(definition, {
+    dangerLevel: "safe",
+    label: "Safe",
+    disabled: true,
+    interval: 0,
+    formula: "",
+    encounterOn: [],
   });
 });
 
@@ -180,12 +203,42 @@ test("occurrence check returns structured data without ChatMessage or Dialog", a
     assert.equal(result.reason, "");
     assert.equal(result.isEncounter, true);
     assert.equal(result.check.dangerLevel, "unsafe");
+    assert.equal(result.check.disabled, false);
     assert.equal(result.check.interval, 3);
     assert.equal(result.check.formula, "1d6");
     assert.equal(result.check.total, 1);
     assert.deepEqual(result.check.encounterOn, [1]);
     assert.equal(result.encounter, null);
     assert.equal(result.context.sceneId, "scene-1");
+  } finally {
+    runtime.restore();
+  }
+});
+
+test("Safe occurrence check returns without rolling or resolving", async () => {
+  let resolvedUuids = 0;
+  const runtime = installRuntime({
+    rollTotals: [1],
+    tableResolver: async () => {
+      resolvedUuids += 1;
+      return null;
+    },
+    sceneContext: {
+      terrain: "Default",
+      dangerLevel: "safe",
+      period: "day",
+      tableUuid: "RollTable.never-needed",
+    },
+  });
+
+  try {
+    const result = await checkAndResolveEncounterService();
+    assert.equal(result.reason, "");
+    assert.equal(result.isEncounter, false);
+    assert.equal(result.check.disabled, true);
+    assert.equal(result.check.total, null);
+    assert.equal(result.encounter, null);
+    assert.equal(resolvedUuids, 0);
   } finally {
     runtime.restore();
   }

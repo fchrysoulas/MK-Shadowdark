@@ -192,26 +192,20 @@ function invalidateAvailableRollTableCache() {
   availableTablePromise = null;
 }
 
-function draftForScene(application, scene) {
-  const draft = application?._mkSceneContextDraft;
-  if (!draft || String(draft.sceneId ?? "") !== String(scene?.id ?? "")) return null;
-  return draft;
-}
-
 function buildEnvironmentEditorView({
   scene = currentScene(),
   stored = getSceneEnvironmentContext(scene),
   resolved = resolveSceneEnvironmentContext(scene),
   zoneTableUuid = getSceneEncounterZoneTableUuid(scene),
   zoneTable = findWorldTable(zoneTableUuid),
-  draft = null,
 } = {}) {
   const rules = resolved?.profile ?? {};
   const terrains = encounterZoneTerrainNames(zoneTable);
-  const requestedTerrain = String(draft?.terrain ?? stored.terrain ?? resolved.terrain ?? rules.defaultTerrain ?? "Default");
-  const terrain = terrains.length && !terrains.includes(requestedTerrain) ? terrains[0] : requestedTerrain;
-  const dangerLevel = String(draft?.dangerLevel ?? stored.dangerLevel ?? resolved.dangerLevel ?? rules.defaultDangerLevel ?? "unsafe");
+  const persistedTerrain = String(stored.terrain ?? resolved.terrain ?? rules.defaultTerrain ?? "Default");
+  const terrain = terrains.length && !terrains.includes(persistedTerrain) ? terrains[0] : persistedTerrain;
+  const dangerLevel = String(stored.dangerLevel ?? resolved.dangerLevel ?? rules.defaultDangerLevel ?? "unsafe");
   const danger = normalizeDangerDefinition(rules, dangerLevel);
+  const period = String(stored.period ?? resolved.requestedPeriod ?? "auto");
 
   return {
     scene,
@@ -219,10 +213,15 @@ function buildEnvironmentEditorView({
     rules,
     terrains,
     zoneTableUuid,
+    persisted: {
+      terrain: persistedTerrain,
+      dangerLevel,
+      period,
+    },
     stored: {
       terrain,
       dangerLevel,
-      period: String(draft?.period ?? stored.period ?? resolved.requestedPeriod ?? "auto"),
+      period,
     },
     resolved: {
       period: String(resolved.period ?? "day"),
@@ -270,7 +269,7 @@ function renderEnvironmentEditor(view) {
           </select>
         </div>
       </div>
-      <p class="hint">Changes save automatically.</p>
+      <p class="hint">Changes are staged locally until you save them.</p>
     </form>
 
     <dl class="mk-gm-data-list mk-gm-scene-context-summary" data-mk-environment-resolved>
@@ -279,6 +278,12 @@ function renderEnvironmentEditor(view) {
       <div><dt>Encounter Cadence</dt><dd>${escapeHtml(resolved.dangerLabel)} · every ${resolved.interval} ${resolved.interval === 1 ? "turn" : "turns"}</dd></div>
       <div><dt>Occurrence</dt><dd>${escapeHtml(resolved.formula)} · encounter on ${escapeHtml(resolved.encounterOn)}</dd></div>
     </dl>
+
+    <div class="mk-gm-panel-actions">
+      <button type="button" data-mk-environment-save hidden disabled>
+        <i class="fas fa-floppy-disk"></i> Save Changes
+      </button>
+    </div>
   `;
 }
 
@@ -327,7 +332,12 @@ function renderEncounterSetup(view) {
       <div><dt>Terrain choices</dt><dd data-mk-encounter-zone-terrains>${terrainSummary}</dd></div>
       <div><dt>Encounter Table</dt><dd>${escapeHtml(tableName(view.encounterTableUuid, view.tables))}</dd></div>
     </dl>
-    <p class="hint">Changes save automatically.</p>
+    <p class="hint">Changes are staged locally until you save them.</p>
+    <div class="mk-gm-panel-actions">
+      <button type="button" data-mk-encounter-setup-save hidden disabled>
+        <i class="fas fa-floppy-disk"></i> Save Encounter Setup
+      </button>
+    </div>
   `;
 }
 
@@ -342,10 +352,46 @@ function readEnvironmentForm(root) {
   };
 }
 
-function sameEditorValue(left, right) {
+function readEncounterSetupForm(root) {
+  const form = root?.querySelector?.("[data-mk-encounter-setup-form]");
+  if (!form) return null;
+  const read = name => String(form.querySelector(`[name="${name}"]`)?.value ?? "");
+  return {
+    zoneTableUuid: read("zoneTableUuid"),
+    tableUuid: read("tableUuid"),
+  };
+}
+
+function sameEnvironmentValue(left, right) {
   return left?.terrain === right?.terrain
     && left?.dangerLevel === right?.dangerLevel
     && left?.period === right?.period;
+}
+
+function sameEncounterSetupValue(left, right) {
+  return left?.zoneTableUuid === right?.zoneTableUuid
+    && left?.tableUuid === right?.tableUuid;
+}
+
+function setSaveButtonDirty(button, dirty) {
+  if (!button) return Boolean(dirty);
+  button.hidden = !dirty;
+  button.disabled = !dirty;
+  return Boolean(dirty);
+}
+
+function updateEnvironmentSaveState(editor, baseline) {
+  const value = readEnvironmentForm(editor);
+  const dirty = Boolean(value && !sameEnvironmentValue(value, baseline));
+  setSaveButtonDirty(editor?.querySelector?.("[data-mk-environment-save]"), dirty);
+  return dirty;
+}
+
+function updateEncounterSetupSaveState(setup, baseline) {
+  const value = readEncounterSetupForm(setup);
+  const dirty = Boolean(value && !sameEncounterSetupValue(value, baseline));
+  setSaveButtonDirty(setup?.querySelector?.("[data-mk-encounter-setup-save]"), dirty);
+  return dirty;
 }
 
 async function saveEnvironmentEditor(application, root, scene) {
@@ -362,76 +408,104 @@ async function saveEnvironmentEditor(application, root, scene) {
     ...value,
     tableUuid: current.tableUuid,
   };
-  const draft = {
-    sceneId: String(scene.id ?? ""),
-    ...value,
-  };
-  application._mkSceneContextDraft = draft;
-
-  try {
-    const result = await setSceneEnvironmentContext(next, scene);
-    if (sameEditorValue(application._mkSceneContextDraft, draft)) application._mkSceneContextDraft = null;
-    return result;
-  } catch (error) {
-    if (sameEditorValue(application._mkSceneContextDraft, draft)) application._mkSceneContextDraft = null;
-    throw error;
-  }
+  const result = await setSceneEnvironmentContext(next, scene);
+  await application?.render?.({ force: true });
+  return result;
 }
 
-async function saveEncounterSetup(control, scene) {
-  if (!scene?.setFlag || !globalThis.game?.user?.isGM) return null;
-  const name = String(control?.name ?? "");
-  const value = String(control?.value ?? "");
-
-  if (name === "tableUuid") {
-    const current = getSceneEnvironmentContext(scene);
-    return setSceneEnvironmentContext({ ...current, tableUuid: value }, scene);
+async function saveEncounterSetup(application, setup, scene) {
+  const value = readEncounterSetupForm(setup);
+  if (!value || !scene?.setFlag) return null;
+  if (!globalThis.game?.user?.isGM) {
+    globalThis.ui?.notifications?.warn?.("Only the GM can change Encounter Setup.");
+    return null;
   }
 
-  if (name !== "zoneTableUuid") return null;
-  await setSceneEncounterZoneTableUuid(value, scene);
-
-  const zoneTable = findWorldTable(value);
-  const terrains = encounterZoneTerrainNames(zoneTable);
   const current = getSceneEnvironmentContext(scene);
-  if (terrains.length && !terrains.includes(current.terrain)) {
-    await setSceneEnvironmentContext({ ...current, terrain: terrains[0] }, scene);
-  }
+  await setSceneEncounterZoneTableUuid(value.zoneTableUuid, scene);
 
-  const summary = control.closest?.("[data-mk-gm-tables-encounter-setup]")
-    ?.querySelector?.("[data-mk-encounter-zone-terrains]");
-  if (summary) summary.textContent = terrains.length ? terrains.join(", ") : "No terrain columns detected";
+  const zoneTable = findWorldTable(value.zoneTableUuid);
+  const terrains = encounterZoneTerrainNames(zoneTable);
+  const terrain = terrains.length && !terrains.includes(current.terrain)
+    ? terrains[0]
+    : current.terrain;
 
-  return value;
+  await setSceneEnvironmentContext({
+    ...current,
+    terrain,
+    tableUuid: value.tableUuid,
+  }, scene);
+
+  await application?.render?.({ force: true });
+  return {
+    ...value,
+    terrain,
+  };
 }
 
-function bindAutoSave(application, editor, scene) {
+function bindEnvironmentManualSave(application, editor, scene, baseline) {
+  const saveButton = editor?.querySelector?.("[data-mk-environment-save]");
+  if (!saveButton) return false;
+
+  const refreshDirtyState = () => updateEnvironmentSaveState(editor, baseline);
   editor.querySelectorAll?.("[data-mk-environment-form] select").forEach(control => {
-    control.addEventListener("change", async () => {
-      try {
-        await saveEnvironmentEditor(application, editor, scene);
-      } catch (error) {
-        console.error("mk-shadowdark | GM Screen Scene Context | Auto-save failed", error);
-        globalThis.ui?.notifications?.error?.(`Scene context update failed: ${error.message}`);
-      }
-    });
+    control.addEventListener("change", refreshDirtyState);
   });
+
+  saveButton.addEventListener("click", async event => {
+    event.preventDefault();
+    event.stopPropagation();
+    saveButton.disabled = true;
+    try {
+      await saveEnvironmentEditor(application, editor, scene);
+    } catch (error) {
+      console.error("mk-shadowdark | GM Screen Scene Context | Save failed", error);
+      globalThis.ui?.notifications?.error?.(`Scene context update failed: ${error.message}`);
+      refreshDirtyState();
+    }
+  });
+
+  refreshDirtyState();
+  return true;
 }
 
-function bindEncounterSetupAutoSave(setup, scene) {
+function previewEncounterZoneTerrains(setup) {
+  const value = readEncounterSetupForm(setup);
+  const summary = setup?.querySelector?.("[data-mk-encounter-zone-terrains]");
+  if (!value || !summary) return [];
+
+  const terrains = encounterZoneTerrainNames(findWorldTable(value.zoneTableUuid));
+  summary.textContent = terrains.length ? terrains.join(", ") : "No terrain columns detected";
+  return terrains;
+}
+
+function bindEncounterSetupManualSave(application, setup, scene, baseline) {
+  const saveButton = setup?.querySelector?.("[data-mk-encounter-setup-save]");
+  if (!saveButton) return false;
+
+  const refreshDirtyState = () => updateEncounterSetupSaveState(setup, baseline);
   setup.querySelectorAll?.("[data-mk-encounter-setup-form] select").forEach(control => {
-    control.addEventListener("change", async () => {
-      control.disabled = true;
-      try {
-        await saveEncounterSetup(control, scene);
-      } catch (error) {
-        console.error("mk-shadowdark | GM Screen Encounter Setup | Auto-save failed", error);
-        globalThis.ui?.notifications?.error?.(`Encounter setup update failed: ${error.message}`);
-      } finally {
-        control.disabled = false;
-      }
+    control.addEventListener("change", () => {
+      if (control.name === "zoneTableUuid") previewEncounterZoneTerrains(setup);
+      refreshDirtyState();
     });
   });
+
+  saveButton.addEventListener("click", async event => {
+    event.preventDefault();
+    event.stopPropagation();
+    saveButton.disabled = true;
+    try {
+      await saveEncounterSetup(application, setup, scene);
+    } catch (error) {
+      console.error("mk-shadowdark | GM Screen Encounter Setup | Save failed", error);
+      globalThis.ui?.notifications?.error?.(`Encounter setup update failed: ${error.message}`);
+      refreshDirtyState();
+    }
+  });
+
+  refreshDirtyState();
+  return true;
 }
 
 function decorateEnvironmentWorkspace(application, element) {
@@ -441,12 +515,9 @@ function decorateEnvironmentWorkspace(application, element) {
   const editor = root?.querySelector?.("[data-mk-gm-overview-scene-context]");
   if (!editor || !scene) return false;
 
-  const view = buildEnvironmentEditorView({
-    scene,
-    draft: draftForScene(application, scene),
-  });
+  const view = buildEnvironmentEditorView({ scene });
   editor.innerHTML = renderEnvironmentEditor(view);
-  bindAutoSave(application, editor, scene);
+  bindEnvironmentManualSave(application, editor, scene, view.persisted);
   return true;
 }
 
@@ -487,10 +558,17 @@ export {
   buildEncounterSetupView,
   renderEncounterSetup,
   readEnvironmentForm,
+  readEncounterSetupForm,
+  sameEnvironmentValue,
+  sameEncounterSetupValue,
+  setSaveButtonDirty,
+  updateEnvironmentSaveState,
+  updateEncounterSetupSaveState,
   saveEnvironmentEditor,
   saveEncounterSetup,
-  bindAutoSave,
-  bindEncounterSetupAutoSave,
+  bindEnvironmentManualSave,
+  previewEncounterZoneTerrains,
+  bindEncounterSetupManualSave,
   decorateEnvironmentWorkspace,
   registerGmScreenEnvironmentControls,
 };

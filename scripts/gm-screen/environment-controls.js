@@ -86,9 +86,7 @@ async function setSceneEncounterZoneTableUuid(tableUuid, scene = currentScene(),
   }
 
   const normalized = String(tableUuid ?? "");
-  const current = getSceneEncounterZoneTableUuid(scene);
-  if (current === normalized) return normalized;
-
+  if (getSceneEncounterZoneTableUuid(scene) === normalized) return normalized;
   await scene.setFlag(MODULE_ID, ENCOUNTER_ZONE_FLAG, normalized);
   return normalized;
 }
@@ -115,7 +113,7 @@ function tableOptions(tables, selectedUuid, {
     groups.get(group).push(table);
   }
 
-  const automatic = `<option value="" ${selectedUuid ? "" : "selected"}>${escapeHtml(emptyLabel)}</option>`;
+  const empty = `<option value="" ${selectedUuid ? "" : "selected"}>${escapeHtml(emptyLabel)}</option>`;
   const grouped = [...groups.entries()].map(([group, entries]) => `
     <optgroup label="${escapeHtml(group)}">
       ${entries.map(table => `
@@ -124,7 +122,7 @@ function tableOptions(tables, selectedUuid, {
     </optgroup>
   `).join("");
 
-  return automatic + grouped;
+  return empty + grouped;
 }
 
 function isDiceColumn(column) {
@@ -140,8 +138,8 @@ function encounterZoneTerrainNames(table) {
 }
 
 function isEncounterZoneTable(table) {
-  const name = String(table?.name ?? "").toLowerCase();
-  return name.includes("encounter zone") && encounterZoneTerrainNames(table).length > 0;
+  return String(table?.name ?? "").toLowerCase().includes("encounter zone")
+    && encounterZoneTerrainNames(table).length > 0;
 }
 
 function availableEncounterZoneTables(tables = globalThis.game?.tables) {
@@ -164,7 +162,9 @@ function findWorldTable(tableUuid, tables = globalThis.game?.tables) {
 }
 
 function terrainOptions(terrains, selected) {
-  if (!terrains.length) return '<option value="Default" selected>Configure Encounter Zone in Exploration</option>';
+  if (!terrains.length) {
+    return '<option value="Default" selected>Configure Encounter Zone in Tables</option>';
+  }
   const resolved = terrains.includes(selected) ? selected : terrains[0];
   return terrains.map(terrain => `
     <option value="${escapeHtml(terrain)}" ${terrain === resolved ? "selected" : ""}>${escapeHtml(terrain)}</option>
@@ -200,7 +200,6 @@ function draftForScene(application, scene) {
 
 function buildEnvironmentEditorView({
   scene = currentScene(),
-  tables = [],
   stored = getSceneEnvironmentContext(scene),
   resolved = resolveSceneEnvironmentContext(scene),
   zoneTableUuid = getSceneEncounterZoneTableUuid(scene),
@@ -217,7 +216,6 @@ function buildEnvironmentEditorView({
   return {
     scene,
     sceneName: String(scene?.name ?? "No active Scene"),
-    tables,
     rules,
     terrains,
     zoneTableUuid,
@@ -232,9 +230,6 @@ function buildEnvironmentEditorView({
       interval: Number(resolved.encounter?.interval ?? danger.interval),
       formula: String(resolved.encounter?.formula ?? danger.formula),
       encounterOn: rollResultsLabel(resolved.encounter?.encounterOn ?? danger.encounterOn),
-      tableUuid: String(resolved.tableUuid ?? ""),
-      tableName: tableName(resolved.tableUuid, tables),
-      tableConfigured: Boolean(resolved.tableUuid),
     },
   };
 }
@@ -250,7 +245,7 @@ function renderEnvironmentEditor(view) {
     ${view.terrains.length ? "" : `
       <div class="mk-gm-alert is-warning" data-mk-environment-zone-warning>
         <i class="fas fa-triangle-exclamation"></i>
-        <strong>No Encounter Zone selected.</strong> Choose one in Exploration to populate Terrain.
+        <strong>No Encounter Zone selected.</strong> Choose one in Tables to populate Terrain.
       </div>
     `}
 
@@ -296,11 +291,12 @@ function buildEncounterSetupView({
 } = {}) {
   const selectedZone = zoneTables.find(table => table.uuid === zoneTableUuid) ?? null;
   const terrains = encounterZoneTerrainNames(selectedZone?.document);
+  const zoneUuids = new Set(zoneTables.map(table => table.uuid));
 
   return {
     scene,
     zoneTables,
-    tables,
+    tables: (tables ?? []).filter(table => !zoneUuids.has(String(table?.uuid ?? ""))),
     selectedZone,
     zoneTableUuid,
     encounterTableUuid: String(stored.tableUuid ?? ""),
@@ -319,7 +315,7 @@ function renderEncounterSetup(view) {
       <div class="form-group">
         <label>Encounter Zone</label>
         <select name="zoneTableUuid">${tableOptions(view.zoneTables, view.zoneTableUuid, { emptyLabel: "Select imported Encounter Zone" })}</select>
-        <p class="hint">Terrain comes from this table's source columns.</p>
+        <p class="hint">Terrain choices come from this table's source columns.</p>
       </div>
       <div class="form-group">
         <label>Encounter Table</label>
@@ -331,7 +327,7 @@ function renderEncounterSetup(view) {
       <div><dt>Terrain choices</dt><dd data-mk-encounter-zone-terrains>${terrainSummary}</dd></div>
       <div><dt>Encounter Table</dt><dd>${escapeHtml(tableName(view.encounterTableUuid, view.tables))}</dd></div>
     </dl>
-    <p class="hint">Encounter setup saves automatically.</p>
+    <p class="hint">Changes save automatically.</p>
   `;
 }
 
@@ -374,19 +370,15 @@ async function saveEnvironmentEditor(application, root, scene) {
 
   try {
     const result = await setSceneEnvironmentContext(next, scene);
-    if (sameEditorValue(application._mkSceneContextDraft, draft)) {
-      application._mkSceneContextDraft = null;
-    }
+    if (sameEditorValue(application._mkSceneContextDraft, draft)) application._mkSceneContextDraft = null;
     return result;
   } catch (error) {
-    if (sameEditorValue(application._mkSceneContextDraft, draft)) {
-      application._mkSceneContextDraft = null;
-    }
+    if (sameEditorValue(application._mkSceneContextDraft, draft)) application._mkSceneContextDraft = null;
     throw error;
   }
 }
 
-async function saveEncounterSetup(application, control, scene, tables) {
+async function saveEncounterSetup(control, scene) {
   if (!scene?.setFlag || !globalThis.game?.user?.isGM) return null;
   const name = String(control?.name ?? "");
   const value = String(control?.value ?? "");
@@ -406,12 +398,10 @@ async function saveEncounterSetup(application, control, scene, tables) {
     await setSceneEnvironmentContext({ ...current, terrain: terrains[0] }, scene);
   }
 
-  const summary = control.closest?.("[data-mk-gm-exploration-encounter-setup]")
+  const summary = control.closest?.("[data-mk-gm-tables-encounter-setup]")
     ?.querySelector?.("[data-mk-encounter-zone-terrains]");
   if (summary) summary.textContent = terrains.length ? terrains.join(", ") : "No terrain columns detected";
 
-  void application;
-  void tables;
   return value;
 }
 
@@ -428,12 +418,12 @@ function bindAutoSave(application, editor, scene) {
   });
 }
 
-function bindEncounterSetupAutoSave(application, setup, scene, tables) {
+function bindEncounterSetupAutoSave(setup, scene) {
   setup.querySelectorAll?.("[data-mk-encounter-setup-form] select").forEach(control => {
     control.addEventListener("change", async () => {
       control.disabled = true;
       try {
-        await saveEncounterSetup(application, control, scene, tables);
+        await saveEncounterSetup(control, scene);
       } catch (error) {
         console.error("mk-shadowdark | GM Screen Encounter Setup | Auto-save failed", error);
         globalThis.ui?.notifications?.error?.(`Encounter setup update failed: ${error.message}`);
@@ -444,43 +434,25 @@ function bindEncounterSetupAutoSave(application, setup, scene, tables) {
   });
 }
 
-async function decorateEnvironmentWorkspace(application, element) {
+function decorateEnvironmentWorkspace(application, element) {
   if (!gmScreenApplication(application) || !globalThis.game?.user?.isGM) return false;
   const root = element?.querySelector ? element : null;
   const scene = currentScene();
-  if (!root || !scene) return false;
+  const editor = root?.querySelector?.("[data-mk-gm-overview-scene-context]");
+  if (!editor || !scene) return false;
 
-  const editor = root.querySelector("[data-mk-gm-overview-scene-context]");
-  const setup = root.querySelector("[data-mk-gm-exploration-encounter-setup]");
-  if (!editor && !setup) return false;
-
-  const renderToken = Number(application._mkSceneContextRenderToken ?? 0) + 1;
-  application._mkSceneContextRenderToken = renderToken;
-  const tables = await cachedAvailableRollTables();
-  if (application._mkSceneContextRenderToken !== renderToken) return false;
-
-  if (editor?.isConnected) {
-    const view = buildEnvironmentEditorView({
-      scene,
-      tables,
-      draft: draftForScene(application, scene),
-    });
-    editor.innerHTML = renderEnvironmentEditor(view);
-    bindAutoSave(application, editor, scene);
-  }
-
-  if (setup?.isConnected) {
-    const setupView = buildEncounterSetupView({ scene, tables });
-    setup.innerHTML = renderEncounterSetup(setupView);
-    bindEncounterSetupAutoSave(application, setup, scene, tables);
-  }
-
+  const view = buildEnvironmentEditorView({
+    scene,
+    draft: draftForScene(application, scene),
+  });
+  editor.innerHTML = renderEnvironmentEditor(view);
+  bindAutoSave(application, editor, scene);
   return true;
 }
 
 function registerGmScreenEnvironmentControls() {
   globalThis.Hooks?.on?.("renderApplicationV2", (application, element) => {
-    void decorateEnvironmentWorkspace(application, element);
+    decorateEnvironmentWorkspace(application, element);
   });
 
   for (const hook of ["createRollTable", "updateRollTable", "deleteRollTable", "createCompendium", "updateCompendium", "deleteCompendium"]) {

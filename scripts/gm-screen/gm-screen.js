@@ -10,24 +10,19 @@ import {
   setGroupProcedureState,
 } from "../group-sheet/procedure.js";
 import { REST_TURN_SECONDS } from "../group-sheet/rest-encounters.js";
-import {
-  advanceGroupTime,
-  getGroupElapsedTime,
-  resetGroupTime,
-} from "../group-sheet/time.js";
+import { advanceGroupTime } from "../group-sheet/time.js";
 import { openEncounterStagingDialog } from "../encounter-engine/staging.js";
 import {
   buildGmScreenViewModel,
   findLatestEncounterMessage,
-  formatDuration,
   normalizeWorkspace,
   resolveGmScreenGroup,
 } from "./view-model.js";
-import { confirmGmDialog, waitForGmDialog } from "../libs/dialog-v2.js";
 
 const MODULE_ID = "mk-shadowdark";
 const APP_ID = "mk-shadowdark-gm-screen";
 const CONTROL_TOOL_ID = "mk-shadowdark-gm-screen";
+const COMBAT_TURN_SECONDS = 6;
 
 let gmScreen = null;
 
@@ -48,30 +43,15 @@ function procedureLabel(procedure) {
   return value.charAt(0).toUpperCase() + value.slice(1);
 }
 
-function dialogRoot(html) {
-  if (html?.form?.querySelector) return html.form;
-  if (html?.querySelector) return html;
-  if (html?.[0]?.querySelector) return html[0];
-  return null;
-}
-
-function dialogValue(html, selector) {
-  const root = dialogRoot(html);
-  const direct = root?.querySelector?.(selector)?.value;
-  if (direct !== undefined) return direct;
-  return html?.find?.(selector)?.val?.();
-}
-
 async function selectedGroup(app) {
   return resolveGmScreenGroup(app?.groupActorUuid ?? "");
 }
 
 function canonicalTurnSeconds(group, procedure) {
   if (!group) return null;
-  if (procedure === "exploration") {
-    return getExplorationEncounterState(group).turnSeconds;
-  }
+  if (procedure === "exploration") return getExplorationEncounterState(group).turnSeconds;
   if (procedure === "resting") return REST_TURN_SECONDS;
+  if (procedure === "combat") return COMBAT_TURN_SECONDS;
   return null;
 }
 
@@ -124,7 +104,7 @@ async function actionSelectProcedure(next) {
   return result;
 }
 
-async function actionTimeControls() {
+async function actionAdvanceOneTurn() {
   const group = await selectedGroup(this);
   if (!group) {
     notifyNoGroup();
@@ -132,111 +112,15 @@ async function actionTimeControls() {
   }
 
   const procedure = getGroupProcedureState(group);
-  const elapsed = getGroupElapsedTime(group, procedure);
-  const turnSeconds = canonicalTurnSeconds(group, procedure);
-  const buttons = [];
-
-  if (turnSeconds) {
-    buttons.push({
-      action: "turn",
-      icon: '<i class="fas fa-forward-step"></i>',
-      label: `+1 Turn (${formatDuration(turnSeconds)})`,
-      callback: () => ({ action: "turn" }),
-    });
-  }
-
-  buttons.push({
-    action: "custom",
-    icon: '<i class="fas fa-clock"></i>',
-    label: "Advance Custom",
-    default: !turnSeconds,
-    callback: (_event, button) => ({
-      action: "custom",
-      amount: dialogValue(button, '[name="timeAmount"]'),
-      unit: dialogValue(button, '[name="timeUnit"]'),
-    }),
-  });
-  buttons.push({
-    action: "reset",
-    icon: '<i class="fas fa-arrow-rotate-left"></i>',
-    label: "Reset Timer",
-    callback: () => ({ action: "reset" }),
-  });
-  buttons.push({
-    action: "cancel",
-    icon: '<i class="fas fa-times"></i>',
-    label: "Cancel",
-    callback: () => null,
-  });
-
-  const choice = await waitForGmDialog({
-    title: `${procedureLabel(procedure)} Time`,
-    content: `
-      <div class="mk-gm-time-dialog">
-        <p><strong>${group.name ?? "Group"}</strong> · ${procedureLabel(procedure)} · elapsed <strong>${formatDuration(elapsed)}</strong>.</p>
-        ${turnSeconds
-          ? `<p>Canonical procedure turn: <strong>${formatDuration(turnSeconds)}</strong>.</p>`
-          : "<p>This procedure has no canonical generic turn duration. Use an explicit custom amount.</p>"}
-        <div class="form-group">
-          <label>Custom amount</label>
-          <div class="form-fields">
-            <input type="number" name="timeAmount" value="1" min="1" step="1">
-            <select name="timeUnit">
-              <option value="seconds">Seconds</option>
-              <option value="minutes" selected>Minutes</option>
-              <option value="hours">Hours</option>
-            </select>
-          </div>
-        </div>
-        <p class="hint">Time advances through the canonical Group Time service and remains synchronized with Foundry world time.</p>
-      </div>
-    `,
-    buttons,
-    close: () => null,
-  });
-
-  if (!choice) return null;
-
-  if (choice.action === "reset") {
-    const confirmed = await confirmGmDialog({
-      title: `Reset ${procedureLabel(procedure)} Timer`,
-      content: `<p>Reset the <strong>${procedureLabel(procedure)}</strong> elapsed timer for <strong>${group.name ?? "Group"}</strong> to zero?</p>`,
-      yes: { label: "Reset" },
-      no: { label: "Cancel", default: true },
-    });
-    if (!confirmed) return null;
-
-    const result = await resetGroupTime(group, procedure, {
-      reason: "gm-screen",
-    });
-    await this.render({ force: true });
-    return result;
-  }
-
-  let seconds = turnSeconds;
-  if (choice.action === "custom") {
-    const amount = Number(choice.amount);
-    const multiplier = {
-      seconds: 1,
-      minutes: 60,
-      hours: 3600,
-    }[String(choice.unit ?? "minutes")];
-
-    seconds = amount * multiplier;
-    if (!Number.isInteger(amount) || amount <= 0 || !Number.isInteger(seconds) || seconds <= 0) {
-      globalThis.ui?.notifications?.warn?.("Enter a positive whole custom time amount.");
-      return null;
-    }
-  }
-
-  if (!Number.isInteger(seconds) || seconds <= 0) {
-    globalThis.ui?.notifications?.warn?.("This procedure has no canonical turn duration. Use Custom Time.");
+  const seconds = canonicalTurnSeconds(group, procedure);
+  if (!seconds) {
+    globalThis.ui?.notifications?.info?.(`${procedureLabel(procedure)} has no canonical GM Screen turn duration.`);
     return null;
   }
 
   const result = await advanceGroupTime(group, seconds, {
     procedure,
-    reason: choice.action === "turn" ? "gm-screen-turn" : "gm-screen-custom",
+    reason: "gm-screen-one-turn",
   });
   await this.render({ force: true });
   return result;
@@ -355,6 +239,7 @@ function installPressureControl(cell, {
   label,
   title,
   icon,
+  disabled = false,
   onClick,
 }) {
   if (!cell || typeof onClick !== "function") return false;
@@ -380,6 +265,7 @@ function installPressureControl(cell, {
   button.className = "mk-gm-pressure-control";
   button.title = title;
   button.setAttribute("aria-label", title);
+  button.disabled = disabled;
   button.style.display = "flex";
   button.style.alignItems = "center";
   button.style.justifyContent = "space-between";
@@ -402,7 +288,7 @@ function installPressureControl(cell, {
   button.addEventListener("click", event => {
     event.preventDefault();
     event.stopPropagation();
-    void onClick();
+    if (!button.disabled) void onClick();
   });
   cell.append(button);
   return true;
@@ -414,17 +300,23 @@ function bindPressureControls(app) {
 
   const procedure = pressureCell(root, "Procedure");
   const elapsed = pressureCell(root, "Elapsed");
+  const currentProcedure = procedureValueFromCell(procedure);
 
   installProcedureSelector(procedure, {
-    value: procedureValueFromCell(procedure),
+    value: currentProcedure,
     disabled: !app?.groupActorUuid,
     onChange: next => actionSelectProcedure.call(app, next),
   });
+
+  const hasTurn = ["exploration", "resting", "combat"].includes(currentProcedure);
   installPressureControl(elapsed, {
     label: "Elapsed",
-    title: "Advance or reset Group procedure time",
-    icon: "fas fa-clock-rotate-left",
-    onClick: () => actionTimeControls.call(app),
+    title: hasTurn
+      ? `Advance ${procedureLabel(currentProcedure)} by 1 turn`
+      : "Downtime has no canonical turn duration",
+    icon: "fas fa-forward-step",
+    disabled: !app?.groupActorUuid || !hasTurn,
+    onClick: () => actionAdvanceOneTurn.call(app),
   });
 
   return true;
@@ -606,15 +498,19 @@ function registerGmScreen() {
 registerGmScreen();
 
 export {
+  MODULE_ID,
   APP_ID,
   CONTROL_TOOL_ID,
+  COMBAT_TURN_SECONDS,
   MKGMscreen,
   canUseGmScreen,
+  procedureLabel,
   canonicalTurnSeconds,
   actionSelectProcedure,
+  actionAdvanceOneTurn,
   procedureValueFromCell,
   installProcedureSelector,
-  actionTimeControls,
+  installPressureControl,
   bindPressureControls,
   getGmScreen,
   openGmScreen,

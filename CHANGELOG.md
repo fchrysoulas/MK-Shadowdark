@@ -3,6 +3,11 @@
 ## 1.9.14
 
 - Reorganized the GM Screen into Overview, Exploration, Combat, Resting, Downtime, Rules, Tables, and Session Log; moved Scene Context inline to Overview, removed GM-facing environment profiles and the dedicated Encounter/Environment tabs, and preserved canonical Encounter Pressure processing.
+- Fixed Group Exploration so due encounter checks remain due when a missing/invalid encounter table is configured later; ordinary Scene Context edits and no-op saves no longer consume scheduled checks.
+- Fixed active Rest cadence so the required encounter-check turns are snapshotted when the rest begins; later Danger changes cannot create retroactive checks or silently skip future checks.
+- Reduced Scene Context to the canonical Terrain, Danger, Period, and Encounter Table fields, migrated legacy `profileId` state away from Scenes, removed Profile from Group Traveling and encounter-card presentation, and retained old Profile settings only as hidden compatibility storage.
+- Added external Foundry world-time refresh for automatic day/night Scene Context, cached RollTable discovery for the Overview editor, and corrected Combat's human-facing turn number to start at 1.
+- Expanded source-table detection/import support to Shadowdark RPG Core v4.9, Player's Guide to the Western Reaches V1, and Cursed Scrolls 1-6 with stable source keys and idempotent RollTable updates.
 - Restyled GM Screen dialogs for readable dark-theme controls and migrated its opened menus to Foundry Application V2.
 - Expanded the production GM Screen with operational procedure-time, marching-order, exploration-role, camp-watch, resting, morale, combat, and Scene environment controls backed by the canonical Group services.
 - Added canonical encounter-card parity, recent encounter history, active-party light pressure, Shadowdark procedure quick rules, corrected encounter-pressure labels, and direct encounter actions to the GM Screen.

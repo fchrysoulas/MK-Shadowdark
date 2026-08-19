@@ -13,13 +13,25 @@ function hideLegacyProfileControl(application, element) {
   const root = rootElement(element);
   const input = root?.querySelector?.('[name="encounterEngineDefaultProfile"]');
   if (!input) return false;
-  input.closest?.(".form-group")?.remove?.();
+
+  const form = input.form ?? root?.querySelector?.("form") ?? root;
+  const group = input.closest?.(".form-group");
+
+  // Preserve the legacy value in form submission for backwards compatibility,
+  // while removing every user-visible Profile control.
+  input.type = "hidden";
+  input.hidden = true;
+  input.setAttribute?.("aria-hidden", "true");
+  form?.append?.(input);
+  group?.remove?.();
   return true;
 }
 
 function hideLegacyProfileSetting() {
-  const definition = globalThis.game?.settings?.settings?.get?.(`${MODULE_ID}.encounterEngineDefaultProfile`);
-  if (definition) definition.config = false;
+  for (const key of ["encounterEngineDefaultProfile", "encounterEngineProfiles"]) {
+    const definition = globalThis.game?.settings?.settings?.get?.(`${MODULE_ID}.${key}`);
+    if (definition) definition.config = false;
+  }
 }
 
 function registerWorkspaceRefactor() {

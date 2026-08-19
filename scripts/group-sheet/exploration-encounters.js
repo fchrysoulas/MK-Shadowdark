@@ -435,6 +435,7 @@ export {
   getExplorationEncounterState,
   reconcileExplorationEncounterProgress,
   buildExplorationEncounterViewData,
+  renderExplorationEncounterToolbar,
   openExplorationEncounterContextDialog,
   processDueExplorationEncounters,
   renderExplorationEncounterContext,

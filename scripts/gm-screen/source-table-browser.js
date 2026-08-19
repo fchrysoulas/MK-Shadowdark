@@ -1,11 +1,10 @@
 import { sourceTableFlag } from "../source-tables/source-table-importer.js";
 import {
-  bindEncounterSetupAutoSave,
+  bindEncounterSetupManualSave,
   buildEncounterSetupView,
   cachedAvailableRollTables,
   renderEncounterSetup,
 } from "./environment-controls.js";
-import { patchGmScreenPresentationPreferences } from "./presentation-preferences.js";
 
 const MODULE_ID = "mk-shadowdark";
 const GM_SCREEN_APP_ID = "mk-shadowdark-gm-screen";
@@ -247,11 +246,6 @@ function activateTablesWorkspace(application, root, navButton) {
   root.querySelectorAll(".mk-gm-workspace-nav button").forEach(button => {
     button.classList.toggle("is-active", button === navButton);
   });
-  void patchGmScreenPresentationPreferences({
-    groupActorUuid: String(application?.groupActorUuid ?? ""),
-    workspace: WORKSPACE_ID,
-    partyRailCollapsed: application?.partyRailCollapsed === true,
-  });
 }
 
 function findTablesNavButton(nav) {
@@ -339,7 +333,10 @@ async function decorateSourceTableBrowser(application, element) {
 
   const encounterSetup = panel.querySelector("[data-mk-gm-tables-encounter-setup]");
   if (encounterSetup && encounterSetupView.scene) {
-    bindEncounterSetupAutoSave(encounterSetup, encounterSetupView.scene);
+    bindEncounterSetupManualSave(application, encounterSetup, encounterSetupView.scene, {
+      zoneTableUuid: encounterSetupView.zoneTableUuid,
+      tableUuid: encounterSetupView.encounterTableUuid,
+    });
   }
 
   if (!canonicalNavigation) {

@@ -542,3 +542,49 @@ mk.gmScreen.open();
 ```
 
 Prefer canonical service APIs over private flags or rendered DOM state.
+
+---
+
+# Troubleshooting
+
+## The GM Screen button is missing
+
+The production GM Screen is GM-only. Use the **Token Scene Controls** and look for the shield button. The same screen can be opened with `game.modules.get("mk-shadowdark").api.gmScreen.open()` after the module is ready.
+
+## A Group encounter check is due but cannot run
+
+Verify the active Scene resolves a valid encounter RollTable through the Scene Context configuration on GM Screen Overview.
+
+## Rest Party pauses with a configuration warning
+
+The current danger requires encounter checks but the Scene has no valid encounter table. Configure the Scene Context and continue the same rest.
+
+## Rest Party says Resume Rest
+
+The rest was interrupted. Resolve the encounter/interruption, then explicitly press **Resume Rest** from Group Management or the GM Screen.
+
+## Stage Encounter cannot deploy
+
+The encounter could not be mapped safely to a world or Compendium Actor. MK-Shadowdark intentionally creates no tokens in that case.
+
+## Morale does not trigger
+
+Verify that combat has started, the NPCs are hostile, the primary active GM is connected, the hostile force reached its threshold, morale was not already checked, and the creature is not morale-immune.
+
+## Equipment icons are missing
+
+Verify the item is actually held/equipped according to Shadowdark data and Token Equipment Display visibility/settings allow the current user to see it.
+
+---
+
+## Notes
+
+- Settings are grouped in Foundry's module settings menu.
+- Base Management was removed from MK-Shadowdark; old compatibility API calls warn instead of creating the removed actor type.
+- The standalone Encounter Engine UI and the old GM Screen Mock prototype are retired.
+- **Group Management and the production GM Screen are both supported and coexist.**
+- Bundled Camping activity icons are from [Game-icons.net](https://game-icons.net/) under CC BY 3.0.
+
+## License
+
+MIT

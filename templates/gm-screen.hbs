@@ -104,61 +104,21 @@
 
       <div class="mk-gm-workspace-body">
         <section class="mk-gm-workspace" data-workspace-panel="overview">
-          <div class="mk-gm-panel-grid two-col">
-            <article class="mk-gm-panel" data-mk-gm-overview-scene-context="true">
-              <header><i class="fas fa-mountain-sun"></i><span>Scene Context</span></header>
-              <div class="mk-gm-empty">Loading Scene Context…</div>
-            </article>
-
-            <article class="mk-gm-panel">
-              <header><i class="fas fa-dice-d20"></i><span>Encounter Pressure</span></header>
-              {{#if exploration}}
-              <div class="mk-gm-big-stats">
-                <div><span>Exploration Turns</span><strong>{{exploration.completedTurns}}</strong></div>
-                <div><span>Due Checks</span><strong>{{exploration.dueChecks}}</strong></div>
-                <div><span>Next Check</span><strong>{{exploration.nextCheckLabel}}</strong></div>
+          <div class="mk-gm-overview-shortcuts" data-mk-overview-shortcuts>
+            <div class="mk-gm-overview-shortcuts-head">
+              <div>
+                <strong>Overview</strong>
+                <span>Drop Journals, Actors, Items, RollTables, or other Foundry documents here to keep quick links.</span>
               </div>
-              <div class="mk-gm-panel-actions">
-                <button type="button" data-action="processDueEncounters" {{#unless exploration.canCheck}}disabled{{/unless}}><i class="fas fa-dice"></i> Process Due Checks</button>
-                {{#if latestEncounter}}<button type="button" data-mk-encounter-action="stage" data-message-id="{{latestEncounter.messageId}}"><i class="fas fa-location-dot"></i> Stage Latest</button>{{/if}}
+              <i class="fas fa-thumbtack"></i>
+            </div>
+            <div class="mk-gm-overview-link-list" data-mk-overview-link-list>
+              <div class="mk-gm-overview-drop-empty">
+                <i class="fas fa-arrow-down"></i>
+                <strong>Drop documents here</strong>
+                <span>Drag from a Journal, Actor sheet, sidebar directory, or another Foundry document source.</span>
               </div>
-              {{else}}
-              <div class="mk-gm-empty">Select a Group to inspect encounter pressure.</div>
-              {{/if}}
-            </article>
-
-            <article class="mk-gm-panel">
-              <header><i class="fas fa-campground"></i><span>Resting</span></header>
-              {{#if resting}}
-              <div class="mk-gm-big-stats">
-                <div><span>Status</span><strong>{{resting.status}}</strong></div>
-                <div><span>Turns</span><strong>{{resting.completedTurns}}/{{resting.totalTurns}}</strong></div>
-                <div><span>Checks Left</span><strong>{{resting.remainingChecks}}</strong></div>
-              </div>
-              {{#if resting.interrupted}}
-              <div class="mk-gm-alert"><i class="fas fa-triangle-exclamation"></i> Rest interrupted. Resolve the encounter before resuming.</div>
-              {{/if}}
-              {{else}}
-              <div class="mk-gm-empty">No Group rest context.</div>
-              {{/if}}
-            </article>
-
-            <article class="mk-gm-panel">
-              <header><i class="fas fa-swords"></i><span>Combat / Morale</span></header>
-              {{#if combat.active}}
-              <div class="mk-gm-big-stats">
-                <div><span>Round</span><strong>{{combat.round}}</strong></div>
-                <div><span>Turn</span><strong>{{#if combat.currentCombatant}}{{combat.turn}}{{else}}—{{/if}}</strong></div>
-                <div><span>Current</span><strong>{{#if combat.currentCombatant}}{{combat.currentCombatant.name}}{{else}}—{{/if}}</strong></div>
-              </div>
-              {{#if combat.morale}}
-              <p class="mk-gm-secondary">Morale: {{combat.morale.livingCount}} / {{combat.morale.initialCount}} living · {{#if combat.morale.checked}}checked{{else}}pending{{/if}}</p>
-              {{/if}}
-              <div class="mk-gm-panel-actions"><button type="button" data-action="openCombat"><i class="fas fa-list-ol"></i> Combat Tracker</button></div>
-              {{else}}
-              <div class="mk-gm-empty">No active Combat.</div>
-              {{/if}}
-            </article>
+            </div>
           </div>
         </section>
 

@@ -74,7 +74,7 @@ test("README documents production GM Screen alongside Group Management", async (
   assert.match(readme, /separate GM-only GM Screen/i);
   assert.match(readme, /shield button in Token Scene Controls/i);
   assert.match(readme, /mk\.gmScreen\.open\(\)/);
-  assert.match(readme, /Group Management and the production GM Screen are both supported and coexist/i);
+  assert.match(readme, /separate GM-only GM Screen.*alongside Group Management/is);
 });
 
 test("README does not require the retired GM Screen Mock", async () => {

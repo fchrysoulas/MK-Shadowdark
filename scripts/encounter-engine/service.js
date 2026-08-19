@@ -36,7 +36,6 @@ function getEncounterServiceContext(options = {}) {
   const scene = options.scene ?? currentScene();
   const sceneContext = getSceneEnvironmentContext(scene);
   const rawContext = {
-    profileId: options.profileId ?? sceneContext.profileId,
     terrain: options.terrain ?? sceneContext.terrain,
     dangerLevel: options.dangerLevel ?? sceneContext.dangerLevel,
     period: options.period ?? sceneContext.period,

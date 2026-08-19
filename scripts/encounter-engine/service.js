@@ -50,16 +50,20 @@ function getEncounterServiceContext(options = {}) {
 
 function buildEncounterCheckDefinition(context) {
   const encounter = context?.encounter ?? {};
-  const encounterOn = Array.isArray(encounter.encounterOn)
-    ? [...new Set(encounter.encounterOn.map(Number).filter(Number.isFinite))]
-    : [1];
+  const disabled = encounter?.disabled === true || String(context?.dangerLevel ?? "") === "safe";
+  const encounterOn = disabled
+    ? []
+    : Array.isArray(encounter.encounterOn)
+      ? [...new Set(encounter.encounterOn.map(Number).filter(Number.isFinite))]
+      : [1];
 
   return {
     dangerLevel: String(context?.dangerLevel ?? "unsafe"),
     label: String(context?.danger?.label ?? context?.dangerLevel ?? "Unsafe"),
-    interval: Math.max(1, Math.floor(Number(encounter.interval ?? 1) || 1)),
-    formula: String(encounter.formula ?? "1d6"),
-    encounterOn: encounterOn.length ? encounterOn : [1],
+    disabled,
+    interval: disabled ? 0 : Math.max(1, Math.floor(Number(encounter.interval ?? 1) || 1)),
+    formula: disabled ? "" : String(encounter.formula ?? "1d6"),
+    encounterOn: disabled ? [] : encounterOn.length ? encounterOn : [1],
   };
 }
 
@@ -85,6 +89,20 @@ async function checkEncounterService(options = {}) {
   if (guardReason) return baseServiceResult({ context, reason: guardReason });
 
   const definition = buildEncounterCheckDefinition(context);
+  if (definition.disabled) {
+    return {
+      check: {
+        ...definition,
+        total: null,
+        isEncounter: false,
+      },
+      isEncounter: false,
+      encounter: null,
+      context,
+      reason: "",
+    };
+  }
+
   const roll = await evaluateRoll(definition.formula, "Random Encounter Check");
   const total = rollTotal(roll, 0);
   const isEncounter = encounterOccurs(total, definition.encounterOn);

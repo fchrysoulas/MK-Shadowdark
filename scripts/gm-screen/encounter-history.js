@@ -1,12 +1,18 @@
+import { getGroupProcedureState } from "../group-sheet/procedure.js";
+import { getGroupElapsedTime, resetGroupTime } from "../group-sheet/time.js";
+import { confirmGmDialog } from "../libs/dialog-v2.js";
 import { APP_ID } from "./gm-screen.js";
 import { executeEncounterAction } from "./encounter-controls.js";
 import {
   collectionValues,
+  formatDuration,
   messageEncounterData,
   resolveGmScreenGroup,
 } from "./view-model.js";
 
+const MODULE_ID = "mk-shadowdark";
 const ENCOUNTER_HISTORY_LIMIT = 8;
+const SESSION_FLAG = "gmScreenSession";
 
 function gmScreenApplication(application) {
   return Boolean(
@@ -27,6 +33,120 @@ function escapeHtml(value) {
     '"': "&quot;",
     "'": "&#39;",
   })[character]);
+}
+
+function normalizeSessionState(value) {
+  const source = value && typeof value === "object" && !Array.isArray(value) ? value : {};
+  return {
+    startLabel: String(source.startLabel ?? ""),
+    startedAt: Math.max(0, Number(source.startedAt ?? 0) || 0),
+    worldTime: Number.isFinite(Number(source.worldTime)) ? Number(source.worldTime) : 0,
+  };
+}
+
+function getSessionState(group) {
+  if (!group) return normalizeSessionState();
+  let value;
+  try {
+    value = group.getFlag?.(MODULE_ID, SESSION_FLAG);
+  } catch (_error) {
+    value = undefined;
+  }
+  if (value === undefined) value = group.flags?.[MODULE_ID]?.[SESSION_FLAG];
+  return normalizeSessionState(value);
+}
+
+async function setSessionState(group, value) {
+  const normalized = normalizeSessionState(value);
+  if (!group?.setFlag) return normalized;
+  await group.setFlag(MODULE_ID, SESSION_FLAG, normalized);
+  return normalized;
+}
+
+function procedureLabel(procedure) {
+  const value = String(procedure ?? "downtime");
+  return value.charAt(0).toUpperCase() + value.slice(1);
+}
+
+function renderSessionControls(session, {
+  procedure = "downtime",
+  elapsedLabel = "0m",
+  hasGroup = true,
+} = {}) {
+  return `
+    <article class="mk-gm-panel is-wide mk-gm-session-controls" data-mk-gm-session-controls>
+      <header><i class="fas fa-calendar-day"></i><span>Session</span></header>
+      <div class="mk-gm-session-start-row">
+        <div class="form-group">
+          <label>Starting date and time</label>
+          <input type="text" data-mk-session-start-text value="${escapeHtml(session.startLabel)}" placeholder="e.g. 14 Frostwane, 10:00 PM" ${hasGroup ? "" : "disabled"}>
+        </div>
+        <button type="button" data-mk-session-action="start" ${hasGroup ? "" : "disabled"}><i class="fas fa-play"></i> Start Session</button>
+        <button type="button" data-mk-session-action="reset" ${hasGroup ? "" : "disabled"}><i class="fas fa-arrow-rotate-left"></i> Reset Timer</button>
+      </div>
+      <dl class="mk-gm-data-list">
+        <div><dt>Session Start</dt><dd>${escapeHtml(session.startLabel || "Not started")}</dd></div>
+        <div><dt>Current Procedure</dt><dd>${escapeHtml(procedureLabel(procedure))}</dd></div>
+        <div><dt>Procedure Timer</dt><dd>${escapeHtml(elapsedLabel)}</dd></div>
+      </dl>
+    </article>
+  `;
+}
+
+async function startSession(application, group, workspace) {
+  if (!group) return null;
+  const input = workspace?.querySelector?.("[data-mk-session-start-text]");
+  const startLabel = String(input?.value ?? "").trim();
+  if (!startLabel) {
+    globalThis.ui?.notifications?.warn?.("Enter the session starting date and time first.");
+    input?.focus?.();
+    return null;
+  }
+
+  const procedure = getGroupProcedureState(group);
+  const state = await setSessionState(group, {
+    startLabel,
+    startedAt: Date.now(),
+    worldTime: Number(globalThis.game?.time?.worldTime ?? 0) || 0,
+  });
+  await resetGroupTime(group, procedure, {
+    reason: "gm-screen-session-start",
+  });
+  application.encounterMessageId = "";
+  await application.render({ force: true });
+  return state;
+}
+
+async function resetSessionTimer(application, group) {
+  if (!group) return null;
+  const procedure = getGroupProcedureState(group);
+  const confirmed = await confirmGmDialog({
+    title: `Reset ${procedureLabel(procedure)} Timer`,
+    content: `<p>Reset the current <strong>${escapeHtml(procedureLabel(procedure))}</strong> timer for <strong>${escapeHtml(group.name ?? "Group")}</strong> to zero?</p>`,
+    yes: { label: "Reset" },
+    no: { label: "Cancel", default: true },
+  });
+  if (!confirmed) return null;
+
+  const result = await resetGroupTime(group, procedure, {
+    reason: "gm-screen-session-log-reset",
+  });
+  await application.render({ force: true });
+  return result;
+}
+
+function bindSessionControls(application, workspace, group) {
+  workspace.querySelector?.('[data-mk-session-action="start"]')?.addEventListener("click", event => {
+    event.preventDefault();
+    event.stopPropagation();
+    void startSession(application, group, workspace);
+  });
+  workspace.querySelector?.('[data-mk-session-action="reset"]')?.addEventListener("click", event => {
+    event.preventDefault();
+    event.stopPropagation();
+    void resetSessionTimer(application, group);
+  });
+  return true;
 }
 
 function messageTimestamp(message, data) {
@@ -131,7 +251,7 @@ function renderEncounterInspector(history) {
   if (!entry) {
     return `
       <article class="mk-gm-panel is-wide">
-        <header><i class="fas fa-book-open"></i><span>Session Log</span></header>
+        <header><i class="fas fa-book-open"></i><span>Encounter History</span></header>
         <div class="mk-gm-empty">No resolved encounter card exists for this Group yet.</div>
       </article>
     `;
@@ -231,7 +351,17 @@ async function decorateEncounterHistory(application, element) {
     selectedMessageId: application.encounterMessageId ?? "",
   });
   application.encounterMessageId = history.selectedMessageId;
-  workspace.innerHTML = renderEncounterInspector(history);
+
+  const procedure = group ? getGroupProcedureState(group) : "downtime";
+  const elapsedLabel = group ? formatDuration(getGroupElapsedTime(group, procedure)) : "0m";
+  const session = getSessionState(group);
+  workspace.innerHTML = `${renderSessionControls(session, {
+    procedure,
+    elapsedLabel,
+    hasGroup: Boolean(group),
+  })}${renderEncounterInspector(history)}`;
+
+  bindSessionControls(application, workspace, group);
   bindHistorySelection(application, workspace);
   bindEncounterActions(application, workspace);
   return true;
@@ -246,8 +376,17 @@ function registerGmScreenEncounterHistory() {
 registerGmScreenEncounterHistory();
 
 export {
+  MODULE_ID,
   ENCOUNTER_HISTORY_LIMIT,
+  SESSION_FLAG,
   gmScreenApplication,
+  normalizeSessionState,
+  getSessionState,
+  setSessionState,
+  renderSessionControls,
+  startSession,
+  resetSessionTimer,
+  bindSessionControls,
   messageTimestamp,
   findRecentEncounterMessages,
   encounterHistoryEntry,

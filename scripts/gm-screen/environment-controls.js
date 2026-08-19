@@ -2,14 +2,15 @@ import {
   availableRollTables,
 } from "../encounter-engine/helpers.js";
 import {
-  getEnvironmentProfiles,
   getSceneEnvironmentContext,
   normalizeDangerDefinition,
   resolveSceneEnvironmentContext,
-  setSceneEnvironmentContext,
   terrainNames,
 } from "../libs/environment-context.js";
 import { APP_ID } from "./gm-screen.js";
+
+const MODULE_ID = "mk-shadowdark";
+const SCENE_CONTEXT_FLAG = "encounterContext";
 
 function gmScreenApplication(application) {
   return Boolean(
@@ -48,20 +49,14 @@ function tableName(tableUuid, tables = []) {
   return tables.find(table => String(table?.uuid ?? "") === uuid)?.name ?? uuid;
 }
 
-function profileOptions(profiles, selectedId) {
-  return Object.entries(profiles ?? {}).map(([id, profile]) => `
-    <option value="${escapeHtml(id)}" ${id === selectedId ? "selected" : ""}>${escapeHtml(profile?.name ?? id)}</option>
-  `).join("");
-}
-
-function terrainOptions(profile, selected) {
-  return terrainNames(profile).map(terrain => `
+function terrainOptions(rules, selected) {
+  return terrainNames(rules).map(terrain => `
     <option value="${escapeHtml(terrain)}" ${terrain === selected ? "selected" : ""}>${escapeHtml(terrain)}</option>
   `).join("");
 }
 
-function dangerOptions(profile, selected) {
-  return Object.entries(profile?.dangerLevels ?? {}).map(([id, data]) => `
+function dangerOptions(rules, selected) {
+  return Object.entries(rules?.dangerLevels ?? {}).map(([id, data]) => `
     <option value="${escapeHtml(id)}" ${id === selected ? "selected" : ""}>${escapeHtml(data?.label ?? id)}</option>
   `).join("");
 }
@@ -74,7 +69,7 @@ function tableOptions(tables, selectedUuid) {
     groups.get(group).push(table);
   }
 
-  const automatic = `<option value="" ${selectedUuid ? "" : "selected"}>Automatic / profile mapping</option>`;
+  const automatic = `<option value="" ${selectedUuid ? "" : "selected"}>Automatic / default mapping</option>`;
   const grouped = [...groups.entries()].map(([group, entries]) => `
     <optgroup label="${escapeHtml(group)}">
       ${entries.map(table => `
@@ -88,33 +83,29 @@ function tableOptions(tables, selectedUuid) {
 
 function buildEnvironmentEditorView({
   scene = currentScene(),
-  profiles = getEnvironmentProfiles(),
   tables = [],
   stored = getSceneEnvironmentContext(scene),
   resolved = resolveSceneEnvironmentContext(scene),
 } = {}) {
-  const profile = profiles?.[stored.profileId]
-    ?? profiles?.[resolved.profileId]
-    ?? Object.values(profiles ?? {})[0]
-    ?? {};
-  const danger = normalizeDangerDefinition(profile, stored.dangerLevel ?? resolved.dangerLevel ?? profile.defaultDangerLevel ?? "unsafe");
+  const rules = resolved?.profile ?? {};
+  const terrain = String(stored.terrain ?? resolved.terrain ?? rules.defaultTerrain ?? "Default");
+  const dangerLevel = String(stored.dangerLevel ?? resolved.dangerLevel ?? rules.defaultDangerLevel ?? "unsafe");
+  const danger = normalizeDangerDefinition(rules, dangerLevel);
   const effectiveTableUuid = String(resolved.tableUuid ?? "");
 
   return {
     scene,
     sceneName: String(scene?.name ?? "No active Scene"),
-    profiles,
     tables,
+    rules,
     stored: {
-      profileId: String(stored.profileId ?? resolved.profileId ?? "default"),
-      terrain: String(stored.terrain ?? resolved.terrain ?? profile.defaultTerrain ?? "Default"),
-      dangerLevel: String(stored.dangerLevel ?? resolved.dangerLevel ?? profile.defaultDangerLevel ?? "unsafe"),
+      terrain,
+      dangerLevel,
       period: String(stored.period ?? resolved.requestedPeriod ?? "auto"),
       tableUuid: String(stored.tableUuid ?? resolved.explicitTableUuid ?? ""),
     },
     resolved: {
-      profileName: String(resolved.profile?.name ?? profile.name ?? resolved.profileId ?? "Profile"),
-      terrain: String(resolved.terrain ?? "Default"),
+      terrain: String(resolved.terrain ?? terrain),
       period: String(resolved.period ?? "day"),
       dangerLabel: String(resolved.danger?.label ?? danger.label),
       interval: Number(resolved.encounter?.interval ?? danger.interval),
@@ -124,7 +115,6 @@ function buildEnvironmentEditorView({
       tableName: tableName(effectiveTableUuid, tables),
       tableConfigured: Boolean(effectiveTableUuid),
     },
-    profile,
   };
 }
 
@@ -133,86 +123,55 @@ function renderEnvironmentEditor(view) {
   const resolved = view.resolved;
 
   return `
-    <article class="mk-gm-panel is-wide" data-mk-gm-environment-editor>
-      <header><i class="fas fa-mountain-sun"></i><span>Scene / Environment</span></header>
+    <header><i class="fas fa-mountain-sun"></i><span>Scene Context</span></header>
 
-      ${resolved.tableConfigured ? "" : `
-        <div class="mk-gm-alert is-warning" data-mk-environment-table-warning>
-          <i class="fas fa-triangle-exclamation"></i>
-          <strong>Encounter table not configured.</strong> Encounter checks are blocked until the active profile/terrain/period resolves a table or you choose an override below.
-        </div>
-      `}
-
-      <form data-mk-environment-form>
-        <div class="mk-gm-panel-grid two-col">
-          <div>
-            <div class="form-group">
-              <label>Profile</label>
-              <select name="profileId">${profileOptions(view.profiles, stored.profileId)}</select>
-            </div>
-            <div class="form-group">
-              <label>Terrain</label>
-              <select name="terrain">${terrainOptions(view.profile, stored.terrain)}</select>
-            </div>
-            <div class="form-group">
-              <label>Danger</label>
-              <select name="dangerLevel">${dangerOptions(view.profile, stored.dangerLevel)}</select>
-            </div>
-          </div>
-          <div>
-            <div class="form-group">
-              <label>Requested Period</label>
-              <select name="period">
-                <option value="auto" ${stored.period === "auto" ? "selected" : ""}>Automatic from world time</option>
-                <option value="day" ${stored.period === "day" ? "selected" : ""}>Day</option>
-                <option value="night" ${stored.period === "night" ? "selected" : ""}>Night</option>
-              </select>
-            </div>
-            <div class="form-group">
-              <label>Encounter Table Override</label>
-              <select name="tableUuid">${tableOptions(view.tables, stored.tableUuid)}</select>
-            </div>
-          </div>
-        </div>
-      </form>
-
-      <dl class="mk-gm-data-list" data-mk-environment-resolved>
-        <div><dt>Scene</dt><dd>${escapeHtml(view.sceneName)}</dd></div>
-        <div><dt>Active Profile</dt><dd>${escapeHtml(resolved.profileName)}</dd></div>
-        <div><dt>Effective Terrain</dt><dd>${escapeHtml(resolved.terrain)}</dd></div>
-        <div><dt>Effective Period</dt><dd>${escapeHtml(resolved.period)}</dd></div>
-        <div><dt>Danger</dt><dd>${escapeHtml(resolved.dangerLabel)} · every ${resolved.interval} ${resolved.interval === 1 ? "turn" : "turns"}</dd></div>
-        <div><dt>Occurrence</dt><dd>${escapeHtml(resolved.formula)} · encounter on ${escapeHtml(resolved.encounterOn)}</dd></div>
-        <div><dt>Effective Table</dt><dd>${escapeHtml(resolved.tableName)}</dd></div>
-      </dl>
-
-      <div class="mk-gm-panel-actions">
-        <button type="button" data-mk-environment-save><i class="fas fa-floppy-disk"></i> Save Scene Context</button>
+    ${resolved.tableConfigured ? "" : `
+      <div class="mk-gm-alert is-warning" data-mk-environment-table-warning>
+        <i class="fas fa-triangle-exclamation"></i>
+        <strong>Encounter table not configured.</strong> Encounter checks remain blocked until a table is selected or the default mapping resolves one.
       </div>
-    </article>
+    `}
+
+    <form data-mk-environment-form>
+      <div class="mk-gm-scene-context-grid">
+        <div class="form-group">
+          <label>Terrain</label>
+          <select name="terrain">${terrainOptions(view.rules, stored.terrain)}</select>
+        </div>
+
+        <div class="form-group">
+          <label>Danger</label>
+          <select name="dangerLevel">${dangerOptions(view.rules, stored.dangerLevel)}</select>
+        </div>
+
+        <div class="form-group">
+          <label>Period</label>
+          <select name="period">
+            <option value="auto" ${stored.period === "auto" ? "selected" : ""}>Automatic from world time</option>
+            <option value="day" ${stored.period === "day" ? "selected" : ""}>Day</option>
+            <option value="night" ${stored.period === "night" ? "selected" : ""}>Night</option>
+          </select>
+        </div>
+
+        <div class="form-group">
+          <label>Encounter Table</label>
+          <select name="tableUuid">${tableOptions(view.tables, stored.tableUuid)}</select>
+        </div>
+      </div>
+    </form>
+
+    <dl class="mk-gm-data-list mk-gm-scene-context-summary" data-mk-environment-resolved>
+      <div><dt>Scene</dt><dd>${escapeHtml(view.sceneName)}</dd></div>
+      <div><dt>Effective Period</dt><dd>${escapeHtml(resolved.period)}</dd></div>
+      <div><dt>Encounter Cadence</dt><dd>${escapeHtml(resolved.dangerLabel)} · every ${resolved.interval} ${resolved.interval === 1 ? "turn" : "turns"}</dd></div>
+      <div><dt>Occurrence</dt><dd>${escapeHtml(resolved.formula)} · encounter on ${escapeHtml(resolved.encounterOn)}</dd></div>
+      <div><dt>Effective Table</dt><dd>${escapeHtml(resolved.tableName)}</dd></div>
+    </dl>
+
+    <div class="mk-gm-panel-actions">
+      <button type="button" data-mk-environment-save><i class="fas fa-floppy-disk"></i> Save Scene Context</button>
+    </div>
   `;
-}
-
-function replaceSelectOptions(select, html, preferredValue = "") {
-  if (!select) return;
-  select.innerHTML = html;
-  const available = Array.from(select.options ?? []).some(option => option.value === preferredValue);
-  if (available) select.value = preferredValue;
-}
-
-function bindProfileDependentFields(root, profiles) {
-  const profileSelect = root.querySelector('[name="profileId"]');
-  const terrainSelect = root.querySelector('[name="terrain"]');
-  const dangerSelect = root.querySelector('[name="dangerLevel"]');
-  if (!profileSelect) return;
-
-  profileSelect.addEventListener("change", () => {
-    const profile = profiles?.[profileSelect.value] ?? {};
-    const preferredTerrain = String(profile.defaultTerrain ?? "");
-    const preferredDanger = String(profile.defaultDangerLevel ?? "");
-    replaceSelectOptions(terrainSelect, terrainOptions(profile, preferredTerrain), preferredTerrain);
-    replaceSelectOptions(dangerSelect, dangerOptions(profile, preferredDanger), preferredDanger);
-  });
 }
 
 function readEnvironmentForm(root) {
@@ -220,7 +179,6 @@ function readEnvironmentForm(root) {
   if (!form) return null;
   const read = name => String(form.querySelector(`[name="${name}"]`)?.value ?? "");
   return {
-    profileId: read("profileId"),
     terrain: read("terrain"),
     dangerLevel: read("dangerLevel"),
     period: read("period"),
@@ -230,33 +188,15 @@ function readEnvironmentForm(root) {
 
 async function saveEnvironmentEditor(application, root, scene) {
   const value = readEnvironmentForm(root);
-  if (!value || !scene) return null;
-  const result = await setSceneEnvironmentContext(value, scene);
-  if (result) await application.render({ force: true });
-  return result;
-}
+  if (!value || !scene?.setFlag) return null;
+  if (!globalThis.game?.user?.isGM) {
+    globalThis.ui?.notifications?.warn?.("Only the GM can change the Scene context.");
+    return null;
+  }
 
-function addOverviewTableWarning(application, root, view) {
-  root.querySelector("[data-mk-overview-environment-warning]")?.remove();
-  if (view.resolved.tableConfigured) return false;
-
-  const panel = root.querySelector('[data-workspace-panel="overview"] .mk-gm-panel:first-child');
-  if (!panel) return false;
-  const warning = document.createElement("div");
-  warning.className = "mk-gm-alert is-warning";
-  warning.dataset.mkOverviewEnvironmentWarning = "true";
-  warning.innerHTML = `
-    <i class="fas fa-triangle-exclamation"></i>
-    <span><strong>Encounter table not configured.</strong> Encounter checks are blocked.</span>
-    <button type="button" data-mk-open-environment><i class="fas fa-sliders"></i> Configure</button>
-  `;
-  warning.querySelector("[data-mk-open-environment]")?.addEventListener("click", event => {
-    event.preventDefault();
-    application.workspace = "environment";
-    application.render({ force: true });
-  });
-  panel.append(warning);
-  return true;
+  await scene.setFlag(MODULE_ID, SCENE_CONTEXT_FLAG, value);
+  await application.render({ force: true });
+  return value;
 }
 
 async function decorateEnvironmentWorkspace(application, element) {
@@ -265,30 +205,26 @@ async function decorateEnvironmentWorkspace(application, element) {
   const scene = currentScene();
   if (!root || !scene) return false;
 
-  const profiles = getEnvironmentProfiles();
-  const tables = await availableRollTables();
-  const view = buildEnvironmentEditorView({ scene, profiles, tables });
-  const workspace = root.querySelector('[data-workspace-panel="environment"]');
-  if (!workspace) return false;
+  const editor = root.querySelector("[data-mk-gm-overview-scene-context]");
+  if (!editor) return false;
 
-  workspace.innerHTML = renderEnvironmentEditor(view);
-  const editor = workspace.querySelector("[data-mk-gm-environment-editor]");
-  bindProfileDependentFields(editor, profiles);
-  editor?.querySelector("[data-mk-environment-save]")?.addEventListener("click", async event => {
+  const tables = await availableRollTables();
+  const view = buildEnvironmentEditorView({ scene, tables });
+  editor.innerHTML = renderEnvironmentEditor(view);
+  editor.querySelector("[data-mk-environment-save]")?.addEventListener("click", async event => {
     event.preventDefault();
     const button = event.currentTarget;
     button.disabled = true;
     try {
       await saveEnvironmentEditor(application, editor, scene);
     } catch (error) {
-      console.error("mk-shadowdark | GM Screen Environment | Save failed", error);
+      console.error("mk-shadowdark | GM Screen Scene Context | Save failed", error);
       globalThis.ui?.notifications?.error?.(`Scene context update failed: ${error.message}`);
     } finally {
       button.disabled = false;
     }
   });
 
-  addOverviewTableWarning(application, root, view);
   return true;
 }
 
@@ -301,13 +237,18 @@ function registerGmScreenEnvironmentControls() {
 registerGmScreenEnvironmentControls();
 
 export {
+  MODULE_ID,
+  SCENE_CONTEXT_FLAG,
   gmScreenApplication,
   rollResultsLabel,
   tableName,
+  terrainOptions,
+  dangerOptions,
+  tableOptions,
   buildEnvironmentEditorView,
   renderEnvironmentEditor,
   readEnvironmentForm,
-  addOverviewTableWarning,
+  saveEnvironmentEditor,
   decorateEnvironmentWorkspace,
   registerGmScreenEnvironmentControls,
 };

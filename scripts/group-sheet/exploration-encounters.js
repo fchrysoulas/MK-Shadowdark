@@ -53,11 +53,28 @@ function calculateExplorationEncounterSchedule({
   turnSeconds = DEFAULT_EXPLORATION_TURN_SECONDS,
   intervalTurns = 1,
   consumedChecks = 0,
+  encountersDisabled = false,
 } = {}) {
   const elapsed = nonNegativeInteger(elapsedSeconds);
   const turnDuration = Math.max(1, nonNegativeInteger(turnSeconds) || DEFAULT_EXPLORATION_TURN_SECONDS);
-  const interval = Math.max(1, nonNegativeInteger(intervalTurns) || 1);
   const completedTurns = Math.floor(elapsed / turnDuration);
+
+  if (encountersDisabled || Number(intervalTurns) <= 0) {
+    return {
+      elapsedSeconds: elapsed,
+      turnSeconds: turnDuration,
+      completedTurns,
+      intervalTurns: 0,
+      scheduledChecks: 0,
+      consumedChecks: nonNegativeInteger(consumedChecks),
+      dueChecks: 0,
+      nextCheckTurn: null,
+      turnsUntilNextCheck: null,
+      encountersDisabled: true,
+    };
+  }
+
+  const interval = Math.max(1, nonNegativeInteger(intervalTurns) || 1);
   const scheduledChecks = Math.floor(completedTurns / interval);
   const consumed = Math.min(nonNegativeInteger(consumedChecks), scheduledChecks);
   const dueChecks = Math.max(0, scheduledChecks - consumed);
@@ -74,6 +91,7 @@ function calculateExplorationEncounterSchedule({
     dueChecks,
     nextCheckTurn,
     turnsUntilNextCheck,
+    encountersDisabled: false,
   };
 }
 
@@ -84,12 +102,14 @@ function getExplorationEncounterState(actor, {
   const progress = getExplorationEncounterProgress(actor);
   const elapsedSeconds = getGroupElapsedTime(actor, "exploration");
   const turnSeconds = getExplorationTurnSeconds();
-  const intervalTurns = Number(context?.encounter?.interval ?? 1);
+  const encountersDisabled = context?.encounter?.disabled === true || context?.dangerLevel === "safe";
+  const intervalTurns = encountersDisabled ? 0 : Number(context?.encounter?.interval ?? 1);
   const schedule = calculateExplorationEncounterSchedule({
     elapsedSeconds,
     turnSeconds,
     intervalTurns,
     consumedChecks: progress.consumedChecks,
+    encountersDisabled,
   });
 
   return {
@@ -115,6 +135,7 @@ async function reconcileExplorationEncounterProgress(actor, {
   if (!actor?.update || !isGroupActor(actor) || !user?.isGM) return false;
 
   const state = getExplorationEncounterState(actor, { scene });
+  if (state.encountersDisabled) return false;
   const target = consumeCurrentSchedule
     ? state.scheduledChecks
     : Math.min(state.progress.consumedChecks, state.scheduledChecks);
@@ -164,11 +185,12 @@ async function buildExplorationEncounterViewData(actor, {
     turnMinutes: state.turnSeconds / 60,
     isGm,
     dangerLabel: isGm ? state.context.danger?.label ?? state.context.dangerLevel : "",
+    encountersDisabled: Boolean(state.encountersDisabled),
     intervalTurns: isGm ? state.intervalTurns : 0,
     dueChecks: isGm ? state.dueChecks : 0,
     tableName,
     tableConfigured: Boolean(state.context.tableUuid),
-    canCheck: isGm && state.dueChecks > 0 && Boolean(state.context.tableUuid),
+    canCheck: isGm && !state.encountersDisabled && state.dueChecks > 0 && Boolean(state.context.tableUuid),
     latest,
   };
 }
@@ -184,10 +206,13 @@ function escapeHtml(value) {
 }
 
 function renderExplorationEncounterToolbar(view) {
+  const cadence = view.encountersDisabled
+    ? "<span><strong>No encounter checks</strong></span>"
+    : `<span>Check every <strong>${escapeHtml(view.intervalTurns)}</strong> ${view.intervalTurns === 1 ? "turn" : "turns"}</span>`;
   const gmDetails = view.isGm
     ? `
       <span><i class="fas fa-skull-crossbones"></i> Danger <strong>${escapeHtml(view.dangerLabel)}</strong></span>
-      <span>Check every <strong>${escapeHtml(view.intervalTurns)}</strong> ${view.intervalTurns === 1 ? "turn" : "turns"}</span>
+      ${cadence}
       <span>Due <strong>${escapeHtml(view.dueChecks)}</strong></span>
       <span title="Effective encounter RollTable">Table <strong>${escapeHtml(view.tableName)}</strong></span>
       <button type="button" data-action="check-due-exploration-encounters" ${view.canCheck ? "" : "disabled"}>
@@ -250,7 +275,9 @@ async function processDueExplorationEncounters(actor, {
 
   let state = getExplorationEncounterState(actor);
   if (state.dueChecks <= 0) {
-    if (notify) globalThis.ui?.notifications?.info?.("No exploration encounter check is due.");
+    if (notify) globalThis.ui?.notifications?.info?.(
+      state.encountersDisabled ? "Safe danger has no exploration encounter checks." : "No exploration encounter check is due."
+    );
     return {
       processed: 0,
       dueBefore: 0,

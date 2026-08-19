@@ -1,16 +1,17 @@
-import {
-  availableRollTables,
-} from "../encounter-engine/helpers.js";
+import { availableRollTables } from "../encounter-engine/helpers.js";
 import {
   getSceneEnvironmentContext,
   normalizeDangerDefinition,
   resolveSceneEnvironmentContext,
-  terrainNames,
+  setSceneEnvironmentContext,
 } from "../libs/environment-context.js";
 import { APP_ID } from "./gm-screen.js";
 
 const MODULE_ID = "mk-shadowdark";
 const SCENE_CONTEXT_FLAG = "encounterContext";
+
+let availableTableCache = null;
+let availableTablePromise = null;
 
 function gmScreenApplication(application) {
   return Boolean(
@@ -49,12 +50,6 @@ function tableName(tableUuid, tables = []) {
   return tables.find(table => String(table?.uuid ?? "") === uuid)?.name ?? uuid;
 }
 
-function terrainOptions(rules, selected) {
-  return terrainNames(rules).map(terrain => `
-    <option value="${escapeHtml(terrain)}" ${terrain === selected ? "selected" : ""}>${escapeHtml(terrain)}</option>
-  `).join("");
-}
-
 function dangerOptions(rules, selected) {
   return Object.entries(rules?.dangerLevels ?? {}).map(([id, data]) => `
     <option value="${escapeHtml(id)}" ${id === selected ? "selected" : ""}>${escapeHtml(data?.label ?? id)}</option>
@@ -69,7 +64,7 @@ function tableOptions(tables, selectedUuid) {
     groups.get(group).push(table);
   }
 
-  const automatic = `<option value="" ${selectedUuid ? "" : "selected"}>Automatic / default mapping</option>`;
+  const automatic = `<option value="" ${selectedUuid ? "" : "selected"}>Automatic / default table</option>`;
   const grouped = [...groups.entries()].map(([group, entries]) => `
     <optgroup label="${escapeHtml(group)}">
       ${entries.map(table => `
@@ -79,6 +74,27 @@ function tableOptions(tables, selectedUuid) {
   `).join("");
 
   return automatic + grouped;
+}
+
+async function cachedAvailableRollTables() {
+  if (availableTableCache) return availableTableCache;
+  if (availableTablePromise) return availableTablePromise;
+
+  availableTablePromise = availableRollTables()
+    .then(tables => {
+      availableTableCache = tables;
+      return tables;
+    })
+    .finally(() => {
+      availableTablePromise = null;
+    });
+
+  return availableTablePromise;
+}
+
+function invalidateAvailableRollTableCache() {
+  availableTableCache = null;
+  availableTablePromise = null;
 }
 
 function buildEnvironmentEditorView({
@@ -128,7 +144,7 @@ function renderEnvironmentEditor(view) {
     ${resolved.tableConfigured ? "" : `
       <div class="mk-gm-alert is-warning" data-mk-environment-table-warning>
         <i class="fas fa-triangle-exclamation"></i>
-        <strong>Encounter table not configured.</strong> Encounter checks remain blocked until a table is selected or the default mapping resolves one.
+        <strong>Encounter table not configured.</strong> Due checks remain pending until a table is selected or the default table is configured.
       </div>
     `}
 
@@ -136,7 +152,7 @@ function renderEnvironmentEditor(view) {
       <div class="mk-gm-scene-context-grid">
         <div class="form-group">
           <label>Terrain</label>
-          <select name="terrain">${terrainOptions(view.rules, stored.terrain)}</select>
+          <input type="text" name="terrain" value="${escapeHtml(stored.terrain)}" placeholder="Default" autocomplete="off">
         </div>
 
         <div class="form-group">
@@ -179,7 +195,7 @@ function readEnvironmentForm(root) {
   if (!form) return null;
   const read = name => String(form.querySelector(`[name="${name}"]`)?.value ?? "");
   return {
-    terrain: read("terrain"),
+    terrain: read("terrain").trim() || "Default",
     dangerLevel: read("dangerLevel"),
     period: read("period"),
     tableUuid: read("tableUuid"),
@@ -194,9 +210,9 @@ async function saveEnvironmentEditor(application, root, scene) {
     return null;
   }
 
-  await scene.setFlag(MODULE_ID, SCENE_CONTEXT_FLAG, value);
+  const result = await setSceneEnvironmentContext(value, scene);
   await application.render({ force: true });
-  return value;
+  return result;
 }
 
 async function decorateEnvironmentWorkspace(application, element) {
@@ -208,7 +224,11 @@ async function decorateEnvironmentWorkspace(application, element) {
   const editor = root.querySelector("[data-mk-gm-overview-scene-context]");
   if (!editor) return false;
 
-  const tables = await availableRollTables();
+  const renderToken = Number(application._mkSceneContextRenderToken ?? 0) + 1;
+  application._mkSceneContextRenderToken = renderToken;
+  const tables = await cachedAvailableRollTables();
+  if (application._mkSceneContextRenderToken !== renderToken || !editor.isConnected) return false;
+
   const view = buildEnvironmentEditorView({ scene, tables });
   editor.innerHTML = renderEnvironmentEditor(view);
   editor.querySelector("[data-mk-environment-save]")?.addEventListener("click", async event => {
@@ -232,6 +252,10 @@ function registerGmScreenEnvironmentControls() {
   globalThis.Hooks?.on?.("renderApplicationV2", (application, element) => {
     void decorateEnvironmentWorkspace(application, element);
   });
+
+  for (const hook of ["createRollTable", "updateRollTable", "deleteRollTable", "createCompendium", "updateCompendium", "deleteCompendium"]) {
+    globalThis.Hooks?.on?.(hook, invalidateAvailableRollTableCache);
+  }
 }
 
 registerGmScreenEnvironmentControls();
@@ -242,9 +266,10 @@ export {
   gmScreenApplication,
   rollResultsLabel,
   tableName,
-  terrainOptions,
   dangerOptions,
   tableOptions,
+  cachedAvailableRollTables,
+  invalidateAvailableRollTableCache,
   buildEnvironmentEditorView,
   renderEnvironmentEditor,
   readEnvironmentForm,

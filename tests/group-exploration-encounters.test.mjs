@@ -171,6 +171,7 @@ test("interval values are counts of completed exploration turns", () => {
     dueChecks: 2,
     nextCheckTurn: 3,
     turnsUntilNextCheck: 0,
+    encountersDisabled: false,
   });
 });
 
@@ -219,14 +220,15 @@ test("Group state derives turns from exploration elapsed seconds and Scene dange
     assert.equal(state.intervalTurns, 3);
     assert.equal(state.scheduledChecks, 2);
     assert.equal(state.dueChecks, 1);
+    assert.equal(state.nextCheckTurn, 6);
+    assert.equal(state.turnsUntilNextCheck, 0);
   } finally {
     runtime.restore();
   }
 });
 
-test("backward/reset exploration time reconciles consumed checks down to the current schedule", async () => {
-  const updates = [];
-  const actor = makeGroupActor({ elapsed: 360, consumedChecks: 3, updates });
+test("multiple elapsed intervals become multiple due checks", () => {
+  const actor = makeGroupActor({ elapsed: 12 * 360, consumedChecks: 1 });
   const runtime = installRuntime({
     sceneContext: {
       dangerLevel: "unsafe",
@@ -236,94 +238,42 @@ test("backward/reset exploration time reconciles consumed checks down to the cur
   });
 
   try {
-    assert.equal(await reconcileExplorationEncounterProgress(actor), true);
-    assert.equal(updates.length, 1);
-    assert.equal(updates[0]["flags.mk-shadowdark.group.encounters.exploration"].consumedChecks, 0);
+    const state = getExplorationEncounterState(actor);
+    assert.equal(state.completedTurns, 12);
+    assert.equal(state.scheduledChecks, 4);
+    assert.equal(state.dueChecks, 3);
   } finally {
     runtime.restore();
   }
 });
 
-test("explicit manual reconcile can still consume the current schedule when deliberately requested", async () => {
+test("ordinary Scene Context refresh does not consume a due exploration check", async () => {
   const updates = [];
-  const actor = makeGroupActor({ elapsed: 6 * 360, consumedChecks: 0, updates });
+  const actor = makeGroupActor({ elapsed: 3 * 360, consumedChecks: 0, updates });
   const runtime = installRuntime({
+    actors: [actor],
     sceneContext: {
       dangerLevel: "unsafe",
-      period: "day",
+      period: "night",
       tableUuid: "RollTable.encounters",
     },
   });
 
   try {
-    assert.equal(await reconcileExplorationEncounterProgress(actor, {
-      consumeCurrentSchedule: true,
-    }), true);
-    assert.equal(updates[0]["flags.mk-shadowdark.group.encounters.exploration"].consumedChecks, 2);
-  } finally {
-    runtime.restore();
-  }
-});
-
-test("automatic Scene Context refresh never consumes due checks", () => {
-  const updates = [];
-  const actor = makeGroupActor({ elapsed: 6 * 360, consumedChecks: 0, updates });
-  const runtime = installRuntime({ actors: [actor] });
-  let renders = 0;
-  actor.sheet.render = () => { renders += 1; };
-
-  try {
+    assert.equal(getExplorationEncounterState(actor).dueChecks, 1);
     refreshAllGroupsForEnvironmentChange();
-    assert.equal(renders, 1);
+    assert.equal(getExplorationEncounterState(actor).dueChecks, 1);
     assert.equal(updates.length, 0);
-    assert.equal(actor.flags["mk-shadowdark"].group.encounters.exploration.consumedChecks, 0);
   } finally {
     runtime.restore();
   }
 });
 
-test("processing multiple due checks calls the headless encounter service and consumes each successful check", async () => {
+test("missing encounter table preserves a due check for later processing", async () => {
   const updates = [];
-  const actor = makeGroupActor({ elapsed: 6 * 360, consumedChecks: 0, updates });
-  const table = {
-    uuid: "RollTable.encounters",
-    name: "Road Encounters",
-    documentName: "RollTable",
-  };
+  const actor = makeGroupActor({ elapsed: 3 * 360, consumedChecks: 0, updates });
   const runtime = installRuntime({
-    table,
-    rollTotals: [4, 5],
     sceneContext: {
-      terrain: "Default",
-      dangerLevel: "unsafe",
-      period: "day",
-      tableUuid: table.uuid,
-    },
-  });
-
-  try {
-    const result = await processDueExplorationEncounters(actor, { notify: false });
-    assert.equal(result.dueBefore, 2);
-    assert.equal(result.processed, 2);
-    assert.equal(result.results.length, 2);
-    assert.equal(result.results[0].isEncounter, false);
-    assert.equal(result.results[1].isEncounter, false);
-    assert.equal(result.dueAfter, 0);
-    assert.equal(
-      actor.flags["mk-shadowdark"].group.encounters.exploration.consumedChecks,
-      2
-    );
-  } finally {
-    runtime.restore();
-  }
-});
-
-test("missing encounter table blocks due processing before an occurrence roll is consumed", async () => {
-  const actor = makeGroupActor({ elapsed: 3 * 360, consumedChecks: 0 });
-  const runtime = installRuntime({
-    rollTotals: [1],
-    sceneContext: {
-      terrain: "Default",
       dangerLevel: "unsafe",
       period: "day",
       tableUuid: "",
@@ -332,70 +282,140 @@ test("missing encounter table blocks due processing before an occurrence roll is
 
   try {
     const result = await processDueExplorationEncounters(actor, { notify: false });
-    assert.equal(result.reason, "missing-table");
     assert.equal(result.processed, 0);
-    assert.equal(
-      actor.flags["mk-shadowdark"].group.encounters.exploration.consumedChecks,
-      0
-    );
+    assert.equal(result.reason, "missing-table");
+    assert.equal(getExplorationEncounterState(actor).dueChecks, 1);
+    assert.equal(getExplorationEncounterProgress(actor).consumedChecks, 0);
+    assert.equal(updates.length, 0);
   } finally {
     runtime.restore();
   }
 });
 
-test("fixing a missing table preserves the blocked due check and then processes it normally", async () => {
+test("fixing the table later processes the retained due check exactly once", async () => {
   const actor = makeGroupActor({ elapsed: 3 * 360, consumedChecks: 0 });
+  const table = {
+    uuid: "RollTable.encounters",
+    name: "Road Encounters",
+    documentName: "RollTable",
+    async draw() {
+      return { results: [] };
+    },
+  };
   const sceneContext = {
-    terrain: "Default",
     dangerLevel: "unsafe",
     period: "day",
     tableUuid: "",
   };
+  const runtime = installRuntime({ sceneContext, table, rollTotals: [4] });
+
+  try {
+    assert.equal((await processDueExplorationEncounters(actor, { notify: false })).reason, "missing-table");
+    sceneContext.tableUuid = table.uuid;
+
+    const processed = await processDueExplorationEncounters(actor, { notify: false });
+    assert.equal(processed.processed, 1);
+    assert.equal(processed.dueBefore, 1);
+    assert.equal(processed.dueAfter, 0);
+    assert.equal(getExplorationEncounterProgress(actor).consumedChecks, 1);
+  } finally {
+    runtime.restore();
+  }
+});
+
+test("manual processing of a due non-encounter consumes exactly one scheduled check", async () => {
+  const updates = [];
+  const actor = makeGroupActor({ elapsed: 3 * 360, consumedChecks: 0, updates });
   const table = {
     uuid: "RollTable.encounters",
     name: "Road Encounters",
     documentName: "RollTable",
   };
   const runtime = installRuntime({
+    sceneContext: {
+      dangerLevel: "unsafe",
+      period: "day",
+      tableUuid: table.uuid,
+    },
     table,
     rollTotals: [4],
-    sceneContext,
   });
 
   try {
-    const blocked = await processDueExplorationEncounters(actor, { notify: false });
-    assert.equal(blocked.reason, "missing-table");
-    assert.equal(getExplorationEncounterState(actor).dueChecks, 1);
-
-    sceneContext.tableUuid = table.uuid;
-    refreshAllGroupsForEnvironmentChange();
-    assert.equal(getExplorationEncounterState(actor).dueChecks, 1);
-
-    const processed = await processDueExplorationEncounters(actor, { notify: false });
-    assert.equal(processed.processed, 1);
-    assert.equal(processed.dueAfter, 0);
+    const result = await processDueExplorationEncounters(actor, { notify: false });
+    assert.equal(result.processed, 1);
+    assert.equal(result.dueBefore, 1);
+    assert.equal(result.dueAfter, 0);
+    assert.equal(result.results.length, 1);
+    assert.equal(result.results[0].isEncounter, false);
+    assert.equal(getExplorationEncounterProgress(actor).consumedChecks, 1);
+    assert.equal(updates.length, 1);
   } finally {
     runtime.restore();
   }
 });
 
-test("Group Traveling toolbar keeps pressure and Check Due but has no separate Context/Profile control", () => {
+test("reset reconciliation explicitly consumes the current schedule", async () => {
+  const updates = [];
+  const actor = makeGroupActor({ elapsed: 9 * 360, consumedChecks: 1, updates });
+  const runtime = installRuntime({
+    sceneContext: {
+      dangerLevel: "unsafe",
+      period: "day",
+      tableUuid: "RollTable.encounters",
+    },
+  });
+
+  try {
+    assert.equal(getExplorationEncounterState(actor).dueChecks, 2);
+    assert.equal(await reconcileExplorationEncounterProgress(actor, { consumeCurrentSchedule: true }), true);
+    assert.equal(getExplorationEncounterProgress(actor).consumedChecks, 3);
+    assert.equal(getExplorationEncounterState(actor).dueChecks, 0);
+    assert.equal(updates.length, 1);
+  } finally {
+    runtime.restore();
+  }
+});
+
+test("Group Traveling encounter toolbar is informational and uses the shared due-check action", () => {
   const html = renderExplorationEncounterToolbar({
-    isGm: true,
-    dangerLabel: "Unsafe",
-    intervalTurns: 3,
-    dueChecks: 1,
-    tableName: "Road Encounters",
-    canCheck: true,
-    terrain: "Road",
+    terrain: "Forest",
     period: "Day",
-    completedTurns: 3,
+    completedTurns: 4,
     turnMinutes: 6,
+    isGm: true,
+    dangerLabel: "Risky",
+    intervalTurns: 2,
+    dueChecks: 1,
+    tableName: "Forest Encounters",
+    canCheck: true,
     latest: null,
   });
 
+  assert.match(html, /Exploration turns <strong>4<\/strong>/);
+  assert.match(html, /Check every <strong>2<\/strong> turns/);
   assert.match(html, /Due <strong>1<\/strong>/);
-  assert.match(html, /check-due-exploration-encounters/);
-  assert.doesNotMatch(html, /configure-exploration-encounters/);
-  assert.doesNotMatch(html, /Profile|Encounter Context/);
+  assert.match(html, /Check Due/);
+  assert.doesNotMatch(html, /Context|Profile|Configure/);
+});
+
+test("legacy Group time metadata is ignored by the encounter cadence", () => {
+  const actor = makeGroupActor({ elapsed: 0, consumedChecks: 0 });
+  actor.flags["mk-shadowdark"].group.time.encounter = {
+    exploration: { elapsedSeconds: 99999 },
+  };
+  const runtime = installRuntime({
+    sceneContext: {
+      dangerLevel: "unsafe",
+      period: "day",
+      tableUuid: "RollTable.encounters",
+    },
+  });
+
+  try {
+    assert.equal(getExplorationEncounterState(actor).completedTurns, 0);
+    assert.equal(getExplorationEncounterState(actor).dueChecks, 0);
+  } finally {
+    runtime.restore();
+  }
 });

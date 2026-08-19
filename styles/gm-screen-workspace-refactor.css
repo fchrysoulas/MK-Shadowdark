@@ -1,5 +1,6 @@
 .mk-gm-screen[data-workspace="downtime"] .mk-gm-workspace[data-workspace-panel="downtime"],
 .mk-gm-screen[data-workspace="tables"] .mk-gm-workspace[data-workspace-panel="tables"],
+.mk-gm-screen[data-workspace="tools"] .mk-gm-workspace[data-workspace-panel="tools"],
 .mk-gm-screen[data-workspace="session-log"] .mk-gm-workspace[data-workspace-panel="session-log"] {
   display: block;
 }
@@ -17,6 +18,15 @@
 .mk-gm-workspace-nav button[data-workspace="downtime"].is-active {
   border-color: rgba(55, 84, 145, 0.95);
   background: rgba(55, 84, 145, 0.3);
+}
+
+.mk-gm-workspace-nav button[data-workspace="tools"].is-active {
+  border-color: rgba(170, 132, 71, 0.95);
+  background: rgba(170, 132, 71, 0.24);
+}
+
+.mk-gm-time-passes select {
+  width: 82px;
 }
 
 .mk-gm-scene-context-grid {

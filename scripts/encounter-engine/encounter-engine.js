@@ -1,10 +1,5 @@
+import { MODULE_ID } from "./constants.js";
 import {
-  DEFAULT_PROFILES,
-  MODULE_ID,
-} from "./constants.js";
-import {
-  deepClone,
-  getProfiles,
   getSceneEncounterContext,
   log,
   setSceneEncounterContext,
@@ -34,11 +29,12 @@ const GROUP_ENCOUNTER_SETTING_PRESENTATION = Object.freeze({
   },
   encounterEngineDefaultTableUuid: {
     name: "Group Encounters | Default Encounter Table UUID",
-    hint: "Fallback encounter RollTable UUID used when the active Scene environment profile has no matching terrain/time table.",
+    hint: "Fallback encounter RollTable UUID used when Scene Context does not specify a table.",
   },
   encounterEngineDefaultProfile: {
-    name: "Group Encounters | Default Environment Profile ID",
-    hint: "Environment profile used by Scenes that do not have their own Group encounter context.",
+    name: "Legacy Encounter Rules ID",
+    hint: "Deprecated internal compatibility storage. Current Scene Context does not use Profiles.",
+    config: false,
   },
   encounterEngineWhisperToGm: {
     name: "Group Encounters | GM-only Encounter Cards",
@@ -49,8 +45,8 @@ const GROUP_ENCOUNTER_SETTING_PRESENTATION = Object.freeze({
     hint: "Shows Group encounter procedure dice to GMs when Dice So Nice is active.",
   },
   encounterEngineProfiles: {
-    name: "Group Encounter Environment Profiles",
-    hint: "Internal JSON storage for Group encounter environment profiles. Configure the active Scene from Group Traveling.",
+    name: "Legacy Encounter Rules Storage",
+    hint: "Deprecated internal compatibility storage for rerolling older encounter records.",
     config: false,
   },
 });
@@ -85,7 +81,7 @@ function exposeApi() {
   module.api.encounterService = service;
   module.api.encounterStaging = staging;
   module.api.encounters = {
-    version: 3,
+    version: 4,
     headless: true,
     service,
     staging,
@@ -93,13 +89,11 @@ function exposeApi() {
     check: service.check,
     resolve: service.resolve,
     checkAndResolve: service.checkAndResolve,
-    getProfiles,
     getSceneContext: getSceneEncounterContext,
     setSceneContext: setSceneEncounterContext,
     rerollField: rerollEncounterField,
     rerollAll: rerollEntireEncounter,
     renderCard: renderEncounterCard,
-    defaults: () => deepClone(DEFAULT_PROFILES),
   };
 
   game.mkShadowdark ??= {};

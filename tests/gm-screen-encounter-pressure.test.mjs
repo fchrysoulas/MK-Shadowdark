@@ -53,10 +53,10 @@ test("GM Screen reports due checks instead of pretending the next boundary is fu
   assert.equal(formatExplorationNextCheck(multipleDue), "Due now (2)");
 });
 
-test("GM Screen template uses prepared next-check and turn-unit labels", () => {
+test("persistent strip owns cadence while Exploration uses only prepared next-check pressure", () => {
   assert.match(template, /\{\{exploration\.nextCheckLabel\}\}/);
   assert.match(template, /Every \{\{environment\.intervalTurns\}\} \{\{environment\.intervalUnit\}\}/);
-  assert.match(template, /\{\{exploration\.intervalTurns\}\} \{\{exploration\.intervalUnit\}\}/);
+  assert.doesNotMatch(template, /\{\{exploration\.intervalTurns\}\} \{\{exploration\.intervalUnit\}\}/);
   assert.doesNotMatch(template, /Turn \{\{exploration\.intervalTurns\}\}/);
   assert.doesNotMatch(template, /turn\{\{#unless environment\.intervalTurns\}\}/);
 });

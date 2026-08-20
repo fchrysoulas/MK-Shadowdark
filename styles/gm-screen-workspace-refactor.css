@@ -29,6 +29,86 @@
   width: 82px;
 }
 
+.mk-gm-screen-layout {
+  grid-template-columns: 225px minmax(0, 1fr);
+}
+
+.mk-gm-party-list {
+  padding: 5px;
+}
+
+.mk-gm-party-member {
+  grid-template-columns: 40px minmax(0, 1fr);
+  gap: 6px;
+  margin-bottom: 4px;
+  padding: 5px;
+}
+
+.mk-gm-member-open {
+  width: 40px !important;
+  height: 40px;
+}
+
+.mk-gm-member-body {
+  gap: 3px;
+}
+
+.mk-gm-member-name-row {
+  grid-template-columns: minmax(0, 1fr) 20px;
+  gap: 2px;
+}
+
+.mk-gm-member-status {
+  width: 20px !important;
+  height: 20px;
+}
+
+.mk-gm-member-stats,
+.mk-gm-member-flags {
+  gap: 3px 6px;
+  font-size: 9px;
+}
+
+.mk-gm-overview-summary {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 7px;
+  margin-bottom: 10px;
+}
+
+.mk-gm-overview-summary > div {
+  display: grid;
+  gap: 2px;
+  min-width: 0;
+  padding: 8px 9px;
+  border: 1px solid var(--mk-gm-border);
+  border-radius: 4px;
+  background: rgba(255, 255, 255, 0.035);
+}
+
+.mk-gm-overview-summary span,
+.mk-gm-overview-summary small {
+  color: var(--mk-gm-muted);
+  font-size: 9px;
+}
+
+.mk-gm-overview-summary span {
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.mk-gm-overview-summary strong {
+  overflow: hidden;
+  font-size: 12px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.mk-gm-overview-summary .is-warning strong {
+  color: var(--mk-gm-warn);
+}
+
 .mk-gm-tools-sections {
   display: grid;
   gap: 7px;
@@ -111,6 +191,16 @@
 .mk-gm-tool-inspector ul {
   margin: 0;
   padding-left: 20px;
+}
+
+.mk-gm-tool-rest-warning {
+  margin: 0 0 8px;
+  padding: 7px 9px;
+  border: 1px solid rgba(212, 154, 69, 0.55);
+  border-radius: 4px;
+  background: rgba(212, 154, 69, 0.1);
+  color: #e8c27f;
+  font-size: 10px;
 }
 
 .mk-gm-tools-actions {
@@ -226,6 +316,11 @@
 }
 
 @media (max-width: 800px) {
+  .mk-gm-screen-layout {
+    grid-template-columns: 200px minmax(0, 1fr);
+  }
+
+  .mk-gm-overview-summary,
   .mk-gm-tools-actions,
   .mk-gm-scene-context-grid {
     grid-template-columns: 1fr;

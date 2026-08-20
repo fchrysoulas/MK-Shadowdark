@@ -1,3 +1,4 @@
+import { getGroupRestState } from "../group-sheet/rest-encounters.js";
 import {
   getSceneEnvironmentContext,
   setSceneEnvironmentContext,
@@ -8,6 +9,7 @@ import {
   terrainOptions,
 } from "./environment-controls.js";
 import { APP_ID } from "./gm-screen.js";
+import { resolveGmScreenGroup } from "./view-model.js";
 
 function gmScreenApplication(application) {
   return Boolean(
@@ -109,7 +111,29 @@ function bindTopContextAutosave(application, strip, scene, controls = []) {
   return true;
 }
 
-function decorateTopContext(application, element) {
+function activeRestRetainsChecks(restState, dangerLevel) {
+  const active = ["checking", "interrupted"].includes(String(restState?.workflow?.status ?? ""));
+  return dangerLevel === "safe"
+    && active
+    && restState?.cadenceSnapshotted === true
+    && Array.isArray(restState?.checkTurns)
+    && restState.checkTurns.length > 0;
+}
+
+function renderRestSnapshotWarning(cell, visible) {
+  cell?.querySelector?.("[data-mk-rest-snapshot-warning]")?.remove?.();
+  if (!cell || !visible) return false;
+  const warning = globalThis.document?.createElement?.("small");
+  if (!warning) return false;
+  warning.dataset.mkRestSnapshotWarning = "true";
+  warning.className = "mk-gm-context-warning";
+  warning.textContent = "Active rest keeps its original encounter schedule";
+  warning.title = "This rest started before the Scene became Safe, so its snapshotted encounter checks still apply.";
+  cell.append(warning);
+  return true;
+}
+
+async function decorateTopContext(application, element) {
   if (!gmScreenApplication(application) || !globalThis.game?.user?.isGM) return false;
   const root = rootElement(element);
   const strip = root?.querySelector?.(".mk-gm-pressure-strip");
@@ -145,13 +169,20 @@ function decorateTopContext(application, element) {
     title: "Scene day/night period",
   });
 
+  const group = await resolveGmScreenGroup(application.groupActorUuid ?? "");
+  const restState = group ? getGroupRestState(group) : null;
+  renderRestSnapshotWarning(
+    dangerCell,
+    activeRestRetainsChecks(restState, view.stored.dangerLevel),
+  );
+
   bindTopContextAutosave(application, strip, view.scene, [terrainSelect, dangerSelect, periodSelect]);
   return true;
 }
 
 function registerTopContextControls() {
   globalThis.Hooks?.on?.("renderApplicationV2", (application, element) => {
-    decorateTopContext(application, element);
+    void decorateTopContext(application, element);
   });
 }
 
@@ -166,6 +197,8 @@ export {
   readTopContext,
   saveTopContext,
   bindTopContextAutosave,
+  activeRestRetainsChecks,
+  renderRestSnapshotWarning,
   decorateTopContext,
   registerTopContextControls,
 };

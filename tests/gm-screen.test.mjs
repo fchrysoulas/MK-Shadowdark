@@ -115,8 +115,9 @@ test("GM Screen owns the exact seven workspaces in order", () => {
   assert.match(template, /data-mk-gm-tools-panel/);
 });
 
-test("Overview is document shortcuts and top Scene Context auto-saves", () => {
-  assert.match(overviewLinks, /overview\.innerHTML = overviewShellHtml\(\)/);
+test("Overview combines canonical home summary, document shortcuts, and top Scene Context autosave", () => {
+  assert.match(overviewLinks, /const summary = await buildOverviewSummary\(application\)/);
+  assert.match(overviewLinks, /overview\.innerHTML = overviewShellHtml\(summary\)/);
   assert.match(overviewLinks, /data-mk-overview-shortcuts/);
   assert.doesNotMatch(overviewLinks, /Encounter Pressure|Combat \/ Morale|Resting/);
   assert.match(topContext, /pressureCell\(root, "Terrain"\)/);

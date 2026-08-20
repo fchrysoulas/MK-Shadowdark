@@ -9,11 +9,13 @@ import {
   normalizeOverviewLinkUuids,
   overviewLinkHtml,
   overviewShellHtml,
+  overviewSummaryHtml,
   setOverviewLinkUuids,
 } from "../scripts/gm-screen/overview-links.js";
 
 const runtime = fs.readFileSync(new URL("../scripts/gm-screen/overview-links.js", import.meta.url), "utf8");
 const stylesheet = fs.readFileSync(new URL("../styles/gm-screen-overview.css", import.meta.url), "utf8");
+const refactorStylesheet = fs.readFileSync(new URL("../styles/gm-screen-workspace-refactor.css", import.meta.url), "utf8");
 const manifest = JSON.parse(fs.readFileSync(new URL("../module.json", import.meta.url), "utf8"));
 
 test("Overview shortcut UUIDs are normalized and deduplicated", () => {
@@ -56,14 +58,35 @@ test("Foundry document drop data resolves by UUID", () => {
   assert.equal(dragDataUuid({ type: "Actor" }), "");
 });
 
-test("Overview shell is a document drop canvas, not a built-in status dashboard", () => {
-  const html = overviewShellHtml();
+test("Overview is a compact home dashboard above the document pin canvas", () => {
+  const html = overviewShellHtml({
+    procedure: "Exploration",
+    elapsed: "18m",
+    light: "2 sources · 1 carrier",
+    encounter: "1 due",
+    session: "14 Frostwane, 10 PM",
+  });
+  assert.match(html, /data-mk-overview-summary/);
+  assert.match(html, />Procedure</);
+  assert.match(html, />Light</);
+  assert.match(html, />Encounter</);
+  assert.match(html, />Session</);
+  assert.match(html, /Pinned Documents/);
   assert.match(html, /data-mk-overview-shortcuts/);
   assert.match(html, /Drop Journals, Actors, Items, RollTables/);
-  assert.doesNotMatch(html, /Scene Context/);
-  assert.doesNotMatch(html, /Encounter Pressure/);
-  assert.doesNotMatch(html, /Combat \/ Morale/);
-  assert.doesNotMatch(html, /Resting/);
+  assert.doesNotMatch(html, /Scene Context|Combat \/ Morale|Resting/);
+});
+
+test("Overview summary exposes a visible no-light warning state", () => {
+  const html = overviewSummaryHtml({
+    procedure: "Exploration",
+    elapsed: "6m",
+    light: "NO LIGHT",
+    encounter: "Turn 3",
+    session: "Not started",
+  });
+  assert.match(html, /class="is-warning"/);
+  assert.match(html, /NO LIGHT/);
 });
 
 test("Overview shortcut cards open the source document and expose a separate remove control", () => {
@@ -81,6 +104,16 @@ test("Overview shortcut cards open the source document and expose a separate rem
   assert.match(html, /hero\.webp/);
 });
 
+test("Overview derives home metrics from canonical Group state rather than persisted duplicates", () => {
+  assert.match(runtime, /getGroupProcedureState/);
+  assert.match(runtime, /getGroupElapsedTime/);
+  assert.match(runtime, /getExplorationEncounterState/);
+  assert.match(runtime, /buildPartyView/);
+  assert.match(runtime, /gmScreenSession/);
+  assert.match(runtime, /formatExplorationNextCheck/);
+  assert.doesNotMatch(runtime, /setFlag\(MODULE_ID, SESSION_FLAG/);
+});
+
 test("Overview uses Foundry drag-data and UUID document APIs without full GM Screen rerenders", () => {
   assert.match(runtime, /getDragEventData/);
   assert.match(runtime, /foundry\?\.utils\?\.fromUuid|globalThis\.fromUuid/);
@@ -93,11 +126,12 @@ test("Overview uses Foundry drag-data and UUID document APIs without full GM Scr
   assert.doesNotMatch(runtime, /updateActor|updateScene|updateCombat|updateToken/);
 });
 
-test("Overview shortcut styling and runtime are loaded", () => {
+test("Overview shortcut and summary styling are loaded", () => {
   assert.match(stylesheet, /\.mk-gm-overview-shortcuts/);
   assert.match(stylesheet, /\.mk-gm-overview-link-list/);
   assert.match(stylesheet, /\.mk-gm-overview-link-open/);
   assert.match(stylesheet, /\.mk-gm-overview-link-remove/);
+  assert.match(refactorStylesheet, /\.mk-gm-overview-summary/);
   assert.ok(manifest.esmodules.includes("scripts/gm-screen/overview-links.js"));
   assert.ok(manifest.styles.includes("styles/gm-screen-overview.css"));
 });

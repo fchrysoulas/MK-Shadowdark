@@ -1,8 +1,9 @@
+import test from "node:test";
 import assert from "node:assert/strict";
 import fs from "node:fs";
-import test from "node:test";
 
 import {
+  activeRestRetainsChecks,
   periodOptions,
   readTopContext,
 } from "../scripts/gm-screen/top-context-controls.js";
@@ -55,6 +56,27 @@ test("top context auto-saves on selector changes and has no Save Context button"
   assert.doesNotMatch(runtime, /Save Context|data-mk-context-save/);
   assert.doesNotMatch(runtime, /updateActor|updateScene|updateCombat|updateToken/);
   assert.doesNotMatch(runtime, /setInterval|setTimeout/);
+});
+
+test("Safe warns only when an active rest retains snapshotted encounter checks", () => {
+  const retained = {
+    workflow: { status: "checking" },
+    cadenceSnapshotted: true,
+    checkTurns: [2, 4, 6, 8],
+  };
+  assert.equal(activeRestRetainsChecks(retained, "safe"), true);
+  assert.equal(activeRestRetainsChecks(retained, "risky"), false);
+  assert.equal(activeRestRetainsChecks({ ...retained, checkTurns: [] }, "safe"), false);
+  assert.equal(activeRestRetainsChecks({ ...retained, workflow: { status: "completed" } }, "safe"), false);
+  assert.equal(activeRestRetainsChecks({ ...retained, workflow: { status: "interrupted" } }, "safe"), true);
+});
+
+test("Safe/rest mismatch is rendered as a compact persistent warning without a modal", () => {
+  assert.match(runtime, /Active rest keeps its original encounter schedule/);
+  assert.match(runtime, /data-mk-rest-snapshot-warning/);
+  assert.match(runtime, /getGroupRestState/);
+  assert.match(runtime, /resolveGmScreenGroup/);
+  assert.doesNotMatch(runtime, /confirmGmDialog|waitForGmDialog/);
 });
 
 test("top context runtime loads after environment helpers", () => {

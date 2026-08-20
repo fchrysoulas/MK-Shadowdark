@@ -1,5 +1,21 @@
 # Changelog
 
+## 1.9.15
+
+- Finalized the GM Screen top strip as the authoritative at-table control surface: Terrain, Danger, and Period now save immediately when changed, the old Save Context action is gone, and Encounter Zone / Encounter Table remain explicit-save configuration under Tables.
+- Added **Safe** danger as a real no-encounter state. Safe Exploration accrues no checks, direct encounter checks do not roll, and a rest begun while Safe snapshots zero encounter checks.
+- Reworked GM Screen time controls so clicking **Elapsed** advances exactly one canonical turn with no popup or custom-time dialog: Exploration advances 6 minutes, an active Rest advances 1 hour, Combat advances 6 seconds, and elapsed display is limited to hours/minutes.
+- Moved session controls into Session Log with a free-text starting date/time label, **Start Session**, and **Reset Timer**. Starting a session records its boundary and Session Log now shows only encounter history from that session onward before applying the existing recent-history cap.
+- Bound the GM Screen Resting procedure to the canonical Group rest workflow. Resting can no longer be manually entered or exited from the Procedure selector, while Elapsed remains available during a real active rest.
+- Removed the GM Screen presentation-only Hide/Show Active Party and Reset Presentation controls, widened the Time Passes dice selector, and kept Time Passes presentation-only and separate from canonical encounter scheduling.
+- Simplified Exploration to actionable pressure only: Turns, Next Check, Due, Encounter Table, latest check, and Process Due Checks. Terrain, Danger, Period, Turn Length, and Cadence are no longer duplicated inside the workspace.
+- Renamed the visible Downtime workspace to **Settlement** while preserving the internal `downtime` compatibility id; the workspace now focuses on Tavern and Shop generation and no longer displays Resting/Camp status.
+- Added a dedicated **Tools** workspace for hidden active mechanics. Scene/Encounter Context, encounter procedures, active light sources, Group assignments, rest schedule, and morale state are shown as inline expandable read-only inspectors, while Encounter Setup and Source Import remain explicit actions.
+- Compacted the permanent Active Party rail without restoring collapse controls, keeping HP, AC, status, wounds, Focus, light, effects, Death Timer, and sheet access visible in a denser layout.
+- Upgraded Overview into a true home dashboard with compact Procedure/Elapsed, Light, Encounter pressure, and Session summary above the existing per-GM pinned Foundry document shortcuts; pin/unpin remains local and does not force a full GM Screen rerender.
+- Added a persistent warning when Scene Danger is changed to Safe while an already-active rest still retains snapshotted encounter checks from the danger cadence that existed when that rest began.
+- Preserved the GM Screen's explicit-update architecture: no ambient Actor/Scene/Combat refresh hooks, no duplicate gameplay-state owner, Group Management remains authoritative for marching order/roles/watches/rest controls, Foundry Combat remains authoritative for combat state, and Scene Context remains authoritative for encounter environment state.
+
 ## 1.9.14
 
 - Moved GM Screen Terrain, Danger, and Period editing into the persistent top strip with a staged **Save Context** action; no Scene Context field auto-saves, and one explicit rerender occurs only after a successful save.
@@ -177,7 +193,7 @@
 
 ## 1.1.2
 
-- Added an optional per-item slot value to Quickdraw `gear()` expressions, such as `gear("bandolier", 2)`.
+- Added an optional per-item slot value to Quickdraw `gear("bandolier", 2)` expressions, such as `gear("bandolier", 2)`.
 - Added a native-style Quickdraw inventory sidebar card showing current/total selections and the evaluated actor and gear sources.
 
 ## 1.1.1
@@ -247,7 +263,7 @@
 - Fixed the Travelling splash broadcast so active player and observer clients receive it through a chat-flag fallback in addition to module sockets.
 - Added a settings-driven Travelling progress animation that resolves rolls at each icon breakpoint and shows success/failure marks under the progress bar.
 - Added double Travelling result marks for critical successes and critical failures.
-- Fixed Travelling result marks so successful automatic rolls render as green V markers instead of fallback failure X markers.
+- Fixed Travelling result marks so successful automatic rolls render as green V marks instead of fallback failure X marks.
 - Fixed Travelling prompts clearing stale success/failure marks before each new prompt starts.
 - Added automatic Travelling splash close after 20 seconds.
 - Updated Travelling rolls so Pathfind always uses WIS and Scavenge always uses INT.

@@ -154,14 +154,25 @@ function messageTimestamp(message, data) {
   return Number.isFinite(value) ? value : 0;
 }
 
-function findRecentEncounterMessages(groupActor, messages = globalThis.game?.messages, limit = ENCOUNTER_HISTORY_LIMIT) {
+function sessionHistoryBoundary(session) {
+  return normalizeSessionState(session).startedAt;
+}
+
+function findRecentEncounterMessages(
+  groupActor,
+  messages = globalThis.game?.messages,
+  limit = ENCOUNTER_HISTORY_LIMIT,
+  { startedAt = 0 } = {}
+) {
   if (!groupActor) return [];
   const groupUuid = String(groupActor.uuid ?? "");
   const max = Math.max(1, Math.floor(Number(limit) || ENCOUNTER_HISTORY_LIMIT));
+  const boundary = Math.max(0, Number(startedAt) || 0);
 
   return collectionValues(messages)
     .map(message => ({ message, data: messageEncounterData(message) }))
     .filter(entry => entry.data?.groupContext?.groupActorUuid === groupUuid)
+    .filter(entry => boundary <= 0 || messageTimestamp(entry.message, entry.data) >= boundary)
     .sort((left, right) => messageTimestamp(right.message, right.data) - messageTimestamp(left.message, left.data))
     .slice(0, max);
 }
@@ -189,14 +200,19 @@ function buildEncounterHistory(groupActor, {
   messages = globalThis.game?.messages,
   selectedMessageId = "",
   limit = ENCOUNTER_HISTORY_LIMIT,
+  session = null,
 } = {}) {
-  const recent = findRecentEncounterMessages(groupActor, messages, limit);
+  const sessionStartedAt = sessionHistoryBoundary(session);
+  const recent = findRecentEncounterMessages(groupActor, messages, limit, {
+    startedAt: sessionStartedAt,
+  });
   if (!recent.length) {
     return {
       entries: [],
       selected: null,
       latestMessageId: "",
       selectedMessageId: "",
+      sessionStartedAt,
     };
   }
 
@@ -211,6 +227,7 @@ function buildEncounterHistory(groupActor, {
     selected: entries.find(entry => entry.selected) ?? entries[0],
     latestMessageId,
     selectedMessageId: resolvedSelectedId,
+    sessionStartedAt,
   };
 }
 
@@ -249,10 +266,13 @@ function fieldRow(label, value, field, entry, { reroll = true } = {}) {
 function renderEncounterInspector(history) {
   const entry = history.selected;
   if (!entry) {
+    const emptyText = history.sessionStartedAt > 0
+      ? "No resolved encounter card exists for this Group in the current session yet."
+      : "No resolved encounter card exists for this Group yet.";
     return `
       <article class="mk-gm-panel is-wide">
         <header><i class="fas fa-book-open"></i><span>Encounter History</span></header>
-        <div class="mk-gm-empty">No resolved encounter card exists for this Group yet.</div>
+        <div class="mk-gm-empty">${emptyText}</div>
       </article>
     `;
   }
@@ -263,11 +283,12 @@ function renderEncounterInspector(history) {
   const treasure = String(data?.treasure?.label ?? "No treasure");
   const morale = String(data?.morale?.label ?? "DC 15 WIS");
   const numberFormula = String(data?.encounter?.numberFormula ?? "");
+  const historyTitle = history.sessionStartedAt > 0 ? "Current Session Encounters" : "Recent Encounters";
 
   return `
     <div class="mk-gm-encounter-history" data-mk-gm-encounter-history>
       <div class="mk-gm-encounter-history-head">
-        <strong>Recent Encounters</strong>
+        <strong>${historyTitle}</strong>
         <span>${history.entries.length} canonical chat record${history.entries.length === 1 ? "" : "s"}</span>
       </div>
       <div class="mk-gm-encounter-history-list">
@@ -347,14 +368,15 @@ async function decorateEncounterHistory(application, element) {
   if (!workspace) return false;
 
   const group = await resolveGmScreenGroup(application.groupActorUuid ?? "");
+  const session = getSessionState(group);
   const history = buildEncounterHistory(group, {
     selectedMessageId: application.encounterMessageId ?? "",
+    session,
   });
   application.encounterMessageId = history.selectedMessageId;
 
   const procedure = group ? getGroupProcedureState(group) : "downtime";
   const elapsedLabel = group ? formatDuration(getGroupElapsedTime(group, procedure)) : "0m";
-  const session = getSessionState(group);
   workspace.innerHTML = `${renderSessionControls(session, {
     procedure,
     elapsedLabel,
@@ -388,6 +410,7 @@ export {
   resetSessionTimer,
   bindSessionControls,
   messageTimestamp,
+  sessionHistoryBoundary,
   findRecentEncounterMessages,
   encounterHistoryEntry,
   buildEncounterHistory,

@@ -98,7 +98,7 @@
     <main class="mk-gm-workspace-shell">
       <nav class="mk-gm-workspace-nav" aria-label="GM Screen workspace">
         {{#each workspaces}}
-        <button type="button" data-action="workspace" data-workspace="{{id}}" class="{{#if active}}is-active{{/if}}"><i class="fas {{icon}}" aria-hidden="true"></i><span>{{label}}</span></button>
+        <button type="button" data-action="workspace" data-workspace="{{id}}" class="{{#if active}}is-active{{/if}}"><i class="fas {{icon}}" aria-hidden="true"></i><span>{{#if (eq id "downtime")}}Settlement{{else}}{{label}}{{/if}}</span></button>
         {{/each}}
       </nav>
 
@@ -126,17 +126,15 @@
           <article class="mk-gm-panel is-wide">
             <header><i class="fas fa-map"></i><span>Exploration</span></header>
             {{#if exploration}}
-            <div class="mk-gm-big-stats four-col">
+            <div class="mk-gm-big-stats three-col">
               <div><span>Turns</span><strong>{{exploration.completedTurns}}</strong></div>
-              <div><span>Turn Length</span><strong>{{exploration.turnMinutes}}m</strong></div>
-              <div><span>Cadence</span><strong>{{#if exploration.encountersDisabled}}No checks{{else}}{{exploration.intervalTurns}} {{exploration.intervalUnit}}{{/if}}</strong></div>
+              <div><span>Next Check</span><strong>{{exploration.nextCheckLabel}}</strong></div>
               <div><span>Due</span><strong>{{exploration.dueChecks}}</strong></div>
             </div>
+            {{#if exploration.encountersDisabled}}
+            <p class="mk-gm-secondary"><i class="fas fa-shield"></i> Safe: encounter checks are disabled.</p>
+            {{/if}}
             <dl class="mk-gm-data-list">
-              <div><dt>Next Check</dt><dd>{{exploration.nextCheckLabel}}</dd></div>
-              <div><dt>Terrain</dt><dd>{{exploration.terrain}}</dd></div>
-              <div><dt>Period</dt><dd>{{exploration.period}}</dd></div>
-              <div><dt>Danger</dt><dd>{{exploration.dangerLabel}}</dd></div>
               <div><dt>Encounter Table</dt><dd>{{exploration.tableName}}</dd></div>
               {{#if exploration.latest}}<div><dt>Latest Check</dt><dd>{{exploration.latest.label}}</dd></div>{{/if}}
             </dl>
@@ -181,8 +179,8 @@
 
         <section class="mk-gm-workspace" data-workspace-panel="downtime">
           <article class="mk-gm-panel is-wide">
-            <header><i class="fas fa-coins"></i><span>Downtime</span></header>
-            <p class="mk-gm-secondary">Settlement-facing generators and downtime tools.</p>
+            <header><i class="fas fa-coins"></i><span>Settlement</span></header>
+            <p class="mk-gm-secondary">Settlement-facing generators and tools.</p>
             <div class="mk-gm-panel-actions"></div>
           </article>
         </section>

@@ -21,9 +21,10 @@ test("GM Screen workspaces no longer expose rest-start, camping, or watch-edit c
   assert.doesNotMatch(template, /Edit Watches/);
 });
 
-test("Downtime contains no resting status surface", () => {
+test("Settlement workspace contains no resting status surface", () => {
   assert.doesNotMatch(template, /data-workspace-panel="resting"/);
   assert.match(template, /data-workspace-panel="downtime"/);
+  assert.match(template, />Settlement</);
   assert.doesNotMatch(template, /data-mk-gm-rest-panel/);
   assert.doesNotMatch(template, /resting\.status/);
   assert.doesNotMatch(template, /resting\.completedTurns/);
@@ -31,11 +32,13 @@ test("Downtime contains no resting status surface", () => {
   assert.doesNotMatch(template, /Stage Latest Encounter/);
 });
 
-test("rest schedule remains available as a read-only Tools inspector", () => {
+test("rest schedule remains available as a read-only inline Tools inspector", () => {
   assert.match(tools, /Rest Schedule/);
-  assert.match(tools, /openRestInspector/);
+  assert.match(tools, /restInspectorHtml/);
+  assert.match(tools, /toolSection\("rest"/);
   assert.match(tools, /getGroupRestState/);
   assert.match(tools, /Read-only here\. Rest controls remain in Group Management\./);
+  assert.doesNotMatch(tools, /openRestInspector|waitForGmDialog/);
 });
 
 test("removing GM Screen rest controls does not remove the canonical Group Rest service", () => {

@@ -70,7 +70,18 @@ test("Procedure and Elapsed are operational direct controls", () => {
   assert.doesNotMatch(runtime, /resetGroupTime/);
 });
 
-test("one-turn advancement is 6m Exploration, 1h Resting, and 6s Combat", () => {
+test("GM Screen cannot manually enter or exit the canonical Resting workflow", () => {
+  assert.match(runtime, /GM_SCREEN_MANUAL_PROCEDURE_STATES = Object\.freeze\([\s\S]*filter\(state => state !== "resting"\)/);
+  assert.match(runtime, /if \(next === "resting"\)/);
+  assert.match(runtime, /Resting is controlled by the Group rest workflow/);
+  assert.match(runtime, /if \(current === "resting"\)/);
+  assert.match(runtime, /Finish or resolve the active Group rest before changing procedure/);
+  assert.match(runtime, /const restingActive = value === "resting"/);
+  assert.match(runtime, /const states = restingActive \? \["resting"\] : GM_SCREEN_MANUAL_PROCEDURE_STATES/);
+  assert.match(runtime, /select\.disabled = disabled \|\| restingActive/);
+});
+
+test("one-turn advancement is 6m Exploration, 1h actual Resting, and 6s Combat", () => {
   assert.match(runtime, /procedure === "exploration"/);
   assert.match(runtime, /procedure === "resting"/);
   assert.match(runtime, /procedure === "combat"/);

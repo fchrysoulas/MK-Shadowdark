@@ -106,7 +106,7 @@ test("GM Screen owns the exact seven workspaces in order", () => {
   assert.doesNotMatch(template, /data-workspace-panel="environment"/);
   assert.doesNotMatch(template, /data-workspace-panel="rules"/);
   assert.doesNotMatch(template, /data-workspace-panel="resting"/);
-  assert.match(template, /<i class="fas \{\{icon\}\}" aria-hidden="true"><\/i><span>\{\{label\}\}<\/span>/);
+  assert.match(template, /<i class="fas \{\{icon\}\}" aria-hidden="true"><\/i><span>/);
   assert.doesNotMatch(template, /configureEnvironment/);
   assert.doesNotMatch(template, /profileName|Active Profile/);
   assert.doesNotMatch(template, /Group Traveling/);
@@ -126,15 +126,35 @@ test("Overview is document shortcuts and top Scene Context auto-saves", () => {
   assert.doesNotMatch(topContext, /Save Context|data-mk-context-save/);
 });
 
-test("Downtime contains no Resting or Camp status panel", () => {
-  const start = template.indexOf('data-workspace-panel="downtime"');
-  const end = template.indexOf('data-workspace-panel="tables"');
-  const downtime = template.slice(start, end);
-  assert.match(downtime, />Downtime</);
-  assert.doesNotMatch(downtime, /Resting \/ Camp|Checks Left|Stage Latest Encounter/);
+test("Exploration focuses on actionable procedure pressure instead of repeating top context", () => {
+  const start = template.indexOf('data-workspace-panel="exploration"');
+  const end = template.indexOf('data-workspace-panel="combat"');
+  const exploration = template.slice(start, end);
+  assert.match(exploration, />Turns</);
+  assert.match(exploration, />Next Check</);
+  assert.match(exploration, />Due</);
+  assert.match(exploration, />Encounter Table</);
+  assert.match(exploration, /Process Due Checks/);
+  assert.match(exploration, /Safe: encounter checks are disabled/);
+  assert.doesNotMatch(exploration, />Terrain</);
+  assert.doesNotMatch(exploration, />Danger</);
+  assert.doesNotMatch(exploration, />Period</);
+  assert.doesNotMatch(exploration, />Turn Length</);
+  assert.doesNotMatch(exploration, />Cadence</);
 });
 
-test("view model workspace contract matches the native template", () => {
+test("visible Downtime workspace is renamed Settlement without changing the internal workspace id", () => {
+  const start = template.indexOf('data-workspace-panel="downtime"');
+  const end = template.indexOf('data-workspace-panel="tables"');
+  const settlement = template.slice(start, end);
+  assert.match(settlement, />Settlement</);
+  assert.match(settlement, /Settlement-facing generators and tools/);
+  assert.doesNotMatch(settlement, /Resting \/ Camp|Checks Left|Stage Latest Encounter/);
+  assert.match(template, /eq id "downtime"/);
+  assert.match(template, /Settlement\{\{else\}\}\{\{label\}\}/);
+});
+
+test("view model workspace contract keeps downtime as the compatibility id", () => {
   for (const workspace of WORKSPACES) {
     assert.match(viewModel, new RegExp(`"${workspace.replace("-", "\\-")}"`));
   }
@@ -164,7 +184,7 @@ test("GM Screen exposes a wider standalone Time Passes dice selector", () => {
   assert.match(refactorStylesheet, /\.mk-gm-time-passes select[\s\S]*width: 82px/);
 });
 
-test("Tools exposes inspectors for hidden active selections", () => {
+test("Tools exposes hidden state inline and keeps only true actions as buttons", () => {
   for (const label of [
     "Scene / Encounter Context",
     "Encounter Procedures",
@@ -177,7 +197,14 @@ test("Tools exposes inspectors for hidden active selections", () => {
   ]) {
     assert.match(tools, new RegExp(label.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")));
   }
+  assert.match(tools, /<details class="mk-gm-tool-section"/);
+  assert.match(tools, /<summary>/);
+  assert.match(tools, /mk-gm-tools-sections/);
+  assert.match(tools, /mk-gm-tools-actions/);
+  assert.doesNotMatch(tools, /waitForGmDialog|showInspector/);
   assert.match(tools, /Read-only here/);
+  assert.match(refactorStylesheet, /\.mk-gm-tool-section/);
+  assert.match(refactorStylesheet, /\.mk-gm-tools-actions/);
 });
 
 test("Combat display converts Foundry's zero-based turn index to a human-facing number", () => {

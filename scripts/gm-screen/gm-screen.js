@@ -23,6 +23,9 @@ const MODULE_ID = "mk-shadowdark";
 const APP_ID = "mk-shadowdark-gm-screen";
 const CONTROL_TOOL_ID = "mk-shadowdark-gm-screen";
 const COMBAT_TURN_SECONDS = 6;
+const GM_SCREEN_MANUAL_PROCEDURE_STATES = Object.freeze(
+  GROUP_PROCEDURE_STATES.filter(state => state !== "resting")
+);
 
 let gmScreen = null;
 
@@ -95,7 +98,15 @@ async function actionSelectProcedure(next) {
   }
 
   const current = getGroupProcedureState(group);
-  if (!GROUP_PROCEDURE_STATES.includes(next) || next === current) return null;
+  if (next === "resting") {
+    globalThis.ui?.notifications?.info?.("Resting is controlled by the Group rest workflow. Start or resume the rest from Group Management.");
+    return null;
+  }
+  if (!GM_SCREEN_MANUAL_PROCEDURE_STATES.includes(next) || next === current) return null;
+  if (current === "resting") {
+    globalThis.ui?.notifications?.info?.("Finish or resolve the active Group rest before changing procedure.");
+    return null;
+  }
 
   const result = await setGroupProcedureState(group, next, {
     reason: "gm-screen-top-bar",
@@ -203,12 +214,17 @@ function installProcedureSelector(cell, {
   const select = globalThis.document?.createElement?.("select");
   if (!select) return null;
 
-  select.name = "procedure";
-  select.title = "Change Group procedure";
-  select.setAttribute("aria-label", "Change Group procedure");
-  select.disabled = disabled;
+  const restingActive = value === "resting";
+  const states = restingActive ? ["resting"] : GM_SCREEN_MANUAL_PROCEDURE_STATES;
 
-  for (const state of GROUP_PROCEDURE_STATES) {
+  select.name = "procedure";
+  select.title = restingActive
+    ? "Resting is controlled by the active Group rest workflow"
+    : "Change Group procedure";
+  select.setAttribute("aria-label", select.title);
+  select.disabled = disabled || restingActive;
+
+  for (const state of states) {
     const option = globalThis.document?.createElement?.("option");
     if (!option) continue;
     option.value = state;
@@ -502,6 +518,7 @@ export {
   APP_ID,
   CONTROL_TOOL_ID,
   COMBAT_TURN_SECONDS,
+  GM_SCREEN_MANUAL_PROCEDURE_STATES,
   MKGMscreen,
   canUseGmScreen,
   procedureLabel,

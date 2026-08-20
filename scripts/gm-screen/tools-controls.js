@@ -4,7 +4,6 @@ import {
   getSceneEnvironmentContext,
   resolveSceneEnvironmentContext,
 } from "../libs/environment-context.js";
-import { waitForGmDialog } from "../libs/dialog-v2.js";
 import { APP_ID } from "./gm-screen.js";
 import {
   encounterZoneTerrainNames,
@@ -55,40 +54,17 @@ function toolsButton(action, label, icon, hint) {
   `;
 }
 
-function toolsPanelHtml() {
+function toolSection(id, label, icon, hint, content) {
   return `
-    <article class="mk-gm-panel is-wide" data-mk-gm-tools-panel>
-      <header><i class="fas fa-toolbox"></i><span>GM Tools</span></header>
-      <p class="mk-gm-secondary">Inspect active mechanics and selections that normally run in the background. These inspectors are read-only unless the button explicitly opens another configuration surface.</p>
-      <div class="mk-gm-tools-grid">
-        ${toolsButton("context", "Scene / Encounter Context", "fa-mountain-sun", "Show saved and effective Scene encounter selections")}
-        ${toolsButton("procedures", "Encounter Procedures", "fa-dice-d20", "Show the canonical hidden encounter outcome procedures")}
-        ${toolsButton("lights", "Active Light Sources", "fa-fire-flame-simple", "Show active party light carriers and sources")}
-        ${toolsButton("assignments", "Group Assignments", "fa-list-ol", "Show marching order, roles, and camp watches")}
-        ${toolsButton("rest", "Rest Schedule", "fa-bed", "Show the current snapshotted rest encounter schedule")}
-        ${toolsButton("morale", "Morale State", "fa-flag", "Show current morale force, leader, immunity, and Fleeing")}
-        ${toolsButton("encounter-setup", "Encounter Setup", "fa-table-list", "Open Encounter Zone and Encounter Table setup")}
-        ${toolsButton("source-import", "Import Source Tables", "fa-file-import", "Open the Shadowdark source-table importer")}
-      </div>
-    </article>
+    <details class="mk-gm-tool-section" data-mk-gm-tool-section="${escapeHtml(id)}">
+      <summary>
+        <i class="fas ${escapeHtml(icon)}"></i>
+        <span><strong>${escapeHtml(label)}</strong><small>${escapeHtml(hint)}</small></span>
+        <i class="fas fa-chevron-down mk-gm-tool-chevron" aria-hidden="true"></i>
+      </summary>
+      <div class="mk-gm-tool-inspector">${content}</div>
+    </details>
   `;
-}
-
-async function showInspector(title, content) {
-  return waitForGmDialog({
-    title,
-    content: `<div class="mk-gm-tool-inspector">${content}</div>`,
-    buttons: [
-      {
-        action: "close",
-        icon: '<i class="fas fa-check"></i>',
-        label: "Close",
-        default: true,
-        callback: () => true,
-      },
-    ],
-    close: () => null,
-  });
 }
 
 async function resolveDocument(uuid) {
@@ -106,9 +82,9 @@ function listValues(values = []) {
   return entries.length ? entries.map(escapeHtml).join(", ") : "None";
 }
 
-async function openContextInspector() {
+async function contextInspectorHtml() {
   const scene = currentScene();
-  if (!scene) return showInspector("Scene / Encounter Context", "<p>No active Scene.</p>");
+  if (!scene) return "<p>No active Scene.</p>";
 
   const stored = getSceneEnvironmentContext(scene);
   const resolved = resolveSceneEnvironmentContext(scene);
@@ -123,7 +99,7 @@ async function openContextInspector() {
     ? "Disabled"
     : `${resolved.encounter?.formula ?? "1d6"} · encounter on ${(resolved.encounter?.encounterOn ?? [1]).join(", ")}`;
 
-  return showInspector("Scene / Encounter Context", `
+  return `
     <dl class="mk-gm-data-list">
       <div><dt>Scene</dt><dd>${escapeHtml(scene.name ?? "Active Scene")}</dd></div>
       <div><dt>Terrain</dt><dd>${escapeHtml(stored.terrain)}</dd></div>
@@ -136,7 +112,7 @@ async function openContextInspector() {
       <div><dt>Cadence</dt><dd>${escapeHtml(cadence)}</dd></div>
       <div><dt>Occurrence</dt><dd>${escapeHtml(occurrence)}</dd></div>
     </dl>
-  `);
+  `;
 }
 
 function rangeLabel(result) {
@@ -152,12 +128,12 @@ function outcomeRows(definition) {
   )).join("");
 }
 
-async function openProcedureInspector() {
+function procedureInspectorHtml() {
   const rules = resolveSceneEnvironmentContext(currentScene())?.profile ?? {};
   const optional = rules.optionalProcedures ?? {};
   const awareness = rules.awareness ?? {};
   const outcomes = rules.outcomes ?? {};
-  return showInspector("Encounter Procedures", `
+  return `
     <dl class="mk-gm-data-list">
       <div><dt>Distance</dt><dd>${escapeHtml(outcomes.distance?.formula ?? "—")}</dd></div>
       <div><dt>Activity</dt><dd>${escapeHtml(outcomes.activity?.formula ?? "—")}</dd></div>
@@ -172,10 +148,10 @@ async function openProcedureInspector() {
     <h3>Activity</h3><ul>${outcomeRows(outcomes.activity)}</ul>
     <h3>Reaction</h3><ul>${outcomeRows(outcomes.reaction)}</ul>
     <h3>Treasure</h3><ul>${outcomeRows(outcomes.treasure)}</ul>
-  `);
+  `;
 }
 
-async function openLightInspector(application) {
+async function lightInspectorHtml(application) {
   const group = await resolveGmScreenGroup(application.groupActorUuid ?? "");
   const party = await buildPartyView(group);
   const summary = buildLightPressure(party);
@@ -185,13 +161,13 @@ async function openLightInspector(application) {
       `).join("")
     : '<div><dt>Active Party</dt><dd>No active light sources</dd></div>';
 
-  return showInspector("Active Light Sources", `
+  return `
     <dl class="mk-gm-data-list">
       <div><dt>Total</dt><dd>${escapeHtml(summary.total)}</dd></div>
       <div><dt>Carriers</dt><dd>${escapeHtml(summary.carrierCount)}</dd></div>
       ${rows}
     </dl>
-  `);
+  `;
 }
 
 async function namesForUuids(uuids = []) {
@@ -203,9 +179,9 @@ async function namesForUuids(uuids = []) {
   return names;
 }
 
-async function openAssignmentsInspector(application) {
+async function assignmentsInspectorHtml(application) {
   const group = await resolveGmScreenGroup(application.groupActorUuid ?? "");
-  if (!group) return showInspector("Group Assignments", "<p>No Group selected.</p>");
+  if (!group) return "<p>No Group selected.</p>";
   const assignments = buildAssignmentsView(group);
   const order = await namesForUuids(assignments.order);
   const front = await namesForUuids(assignments.front);
@@ -215,10 +191,10 @@ async function openAssignmentsInspector(application) {
   const lightBearer = assignments.lightBearer ? (await namesForUuids([assignments.lightBearer]))[0] : "None";
   const watches = [];
   for (const watch of assignments.watches) {
-    watches.push(`${watch.label}: ${listValues(await namesForUuids(watch.actorUuids))}`);
+    watches.push(`${escapeHtml(watch.label)}: ${listValues(await namesForUuids(watch.actorUuids))}`);
   }
 
-  return showInspector("Group Assignments", `
+  return `
     <dl class="mk-gm-data-list">
       <div><dt>Marching Order</dt><dd>${listValues(order)}</dd></div>
       <div><dt>Front</dt><dd>${listValues(front)}</dd></div>
@@ -229,19 +205,19 @@ async function openAssignmentsInspector(application) {
       <div><dt>Camp Watches</dt><dd>${watches.length ? watches.join("<br>") : "None"}</dd></div>
     </dl>
     <p class="hint">Read-only here. Edit assignments from Group Management.</p>
-  `);
+  `;
 }
 
-async function openRestInspector(application) {
+async function restInspectorHtml(application) {
   const group = await resolveGmScreenGroup(application.groupActorUuid ?? "");
-  if (!group) return showInspector("Rest Schedule", "<p>No Group selected.</p>");
+  if (!group) return "<p>No Group selected.</p>";
   const state = getGroupRestState(group);
   const cadence = state.encountersDisabled
     ? "No encounter checks"
     : `Every ${state.intervalTurns} ${state.intervalTurns === 1 ? "turn" : "turns"}`;
   const checkTurns = state.checkTurns.length ? state.checkTurns.join(", ") : "None";
 
-  return showInspector("Rest Schedule", `
+  return `
     <dl class="mk-gm-data-list">
       <div><dt>Status</dt><dd>${escapeHtml(state.workflow.status)}</dd></div>
       <div><dt>Mode</dt><dd>${escapeHtml(state.workflow.mode)}</dd></div>
@@ -254,13 +230,13 @@ async function openRestInspector(application) {
       <div><dt>Next Check</dt><dd>${escapeHtml(state.nextCheckTurn ?? "None")}</dd></div>
     </dl>
     <p class="hint">Read-only here. Rest controls remain in Group Management.</p>
-  `);
+  `;
 }
 
-async function openMoraleInspector() {
+function moraleInspectorHtml() {
   const view = buildMoraleView(globalThis.game?.combat);
-  if (!view.available) return showInspector("Morale State", "<p>No active Combat or Morale service is available.</p>");
-  return showInspector("Morale State", `
+  if (!view.available) return "<p>No active Combat or Morale service is available.</p>";
+  return `
     <dl class="mk-gm-data-list">
       <div><dt>Enemy Force</dt><dd>${escapeHtml(view.livingCount)} / ${escapeHtml(view.initialCount)} living</dd></div>
       <div><dt>Threshold</dt><dd>${escapeHtml(view.thresholdLabel)}${view.thresholdReached ? " · reached" : ""}</dd></div>
@@ -271,7 +247,37 @@ async function openMoraleInspector() {
       <div><dt>Result</dt><dd>${escapeHtml(view.resultLabel)}</dd></div>
     </dl>
     <p class="hint">Use the Combat workspace for morale actions.</p>
-  `);
+  `;
+}
+
+async function toolsPanelHtml(application) {
+  const [context, lights, assignments, rest] = await Promise.all([
+    contextInspectorHtml(),
+    lightInspectorHtml(application),
+    assignmentsInspectorHtml(application),
+    restInspectorHtml(application),
+  ]);
+  const procedures = procedureInspectorHtml();
+  const morale = moraleInspectorHtml();
+
+  return `
+    <article class="mk-gm-panel is-wide" data-mk-gm-tools-panel>
+      <header><i class="fas fa-toolbox"></i><span>GM Tools</span></header>
+      <p class="mk-gm-secondary">Expand a section to inspect active mechanics and selections. These references are read-only unless an action explicitly opens an authoritative configuration surface.</p>
+      <div class="mk-gm-tools-sections">
+        ${toolSection("context", "Scene / Encounter Context", "fa-mountain-sun", "Saved and effective Scene encounter selections", context)}
+        ${toolSection("procedures", "Encounter Procedures", "fa-dice-d20", "Canonical hidden encounter outcome procedures", procedures)}
+        ${toolSection("lights", "Active Light Sources", "fa-fire-flame-simple", "Active party light carriers and sources", lights)}
+        ${toolSection("assignments", "Group Assignments", "fa-list-ol", "Marching order, roles, and camp watches", assignments)}
+        ${toolSection("rest", "Rest Schedule", "fa-bed", "Current snapshotted rest encounter schedule", rest)}
+        ${toolSection("morale", "Morale State", "fa-flag", "Current morale force, leader, immunity, and Fleeing", morale)}
+      </div>
+      <div class="mk-gm-tools-actions">
+        ${toolsButton("encounter-setup", "Encounter Setup", "fa-table-list", "Open Encounter Zone and Encounter Table setup")}
+        ${toolsButton("source-import", "Import Source Tables", "fa-file-import", "Open the Shadowdark source-table importer")}
+      </div>
+    </article>
+  `;
 }
 
 async function openEncounterSetup(application) {
@@ -296,25 +302,19 @@ function bindTools(application, panel) {
       event.preventDefault();
       event.stopPropagation();
       const action = String(button.dataset.mkGmTool ?? "");
-      if (action === "context") void openContextInspector();
-      else if (action === "procedures") void openProcedureInspector();
-      else if (action === "lights") void openLightInspector(application);
-      else if (action === "assignments") void openAssignmentsInspector(application);
-      else if (action === "rest") void openRestInspector(application);
-      else if (action === "morale") void openMoraleInspector();
-      else if (action === "encounter-setup") void openEncounterSetup(application);
+      if (action === "encounter-setup") void openEncounterSetup(application);
       else if (action === "source-import") void openSourceImporter(application);
     });
   });
   return true;
 }
 
-function decorateTools(application, element) {
+async function decorateTools(application, element) {
   if (!gmScreenApplication(application) || !globalThis.game?.user?.isGM) return false;
   const root = element?.querySelector ? element : element?.[0];
   const workspace = root?.querySelector?.('[data-workspace-panel="tools"]');
   if (!workspace) return false;
-  workspace.innerHTML = toolsPanelHtml();
+  workspace.innerHTML = await toolsPanelHtml(application);
   const panel = workspace.querySelector("[data-mk-gm-tools-panel]");
   if (!panel) return false;
   bindTools(application, panel);
@@ -323,7 +323,7 @@ function decorateTools(application, element) {
 
 function registerGmScreenTools() {
   globalThis.Hooks?.on?.("renderApplicationV2", (application, element) => {
-    decorateTools(application, element);
+    void decorateTools(application, element);
   });
 }
 
@@ -333,16 +333,16 @@ export {
   MODULE_ID,
   gmScreenApplication,
   toolsButton,
+  toolSection,
   toolsPanelHtml,
-  showInspector,
   resolveDocument,
-  openContextInspector,
-  openProcedureInspector,
-  openLightInspector,
+  contextInspectorHtml,
+  procedureInspectorHtml,
+  lightInspectorHtml,
   namesForUuids,
-  openAssignmentsInspector,
-  openRestInspector,
-  openMoraleInspector,
+  assignmentsInspectorHtml,
+  restInspectorHtml,
+  moraleInspectorHtml,
   openEncounterSetup,
   openSourceImporter,
   bindTools,

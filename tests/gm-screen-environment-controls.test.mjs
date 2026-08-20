@@ -104,7 +104,8 @@ test("visible Scene Context editing is owned by the top strip rather than Overvi
   assert.match(topRuntime, /pressureCell\(root, "Danger"\)/);
   assert.match(topRuntime, /pressureCell\(root, "Period"\)/);
   assert.doesNotMatch(topRuntime, /Save Context|data-mk-context-save/);
-  assert.match(overviewRuntime, /overview\.innerHTML = overviewShellHtml\(\)/);
+  assert.match(overviewRuntime, /const summary = await buildOverviewSummary\(application\)/);
+  assert.match(overviewRuntime, /overview\.innerHTML = overviewShellHtml\(summary\)/);
   assert.doesNotMatch(overviewRuntime, /Scene Context/);
   assert.doesNotMatch(overviewRuntime, /Encounter Pressure/);
   assert.doesNotMatch(overviewRuntime, /Combat \/ Morale/);

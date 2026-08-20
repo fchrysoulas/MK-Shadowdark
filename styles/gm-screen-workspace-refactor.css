@@ -29,7 +29,91 @@
   width: 82px;
 }
 
-.mk-gm-tools-grid {
+.mk-gm-tools-sections {
+  display: grid;
+  gap: 7px;
+  margin-top: 10px;
+}
+
+.mk-gm-tool-section {
+  overflow: hidden;
+  border: 1px solid var(--mk-gm-border);
+  border-radius: 4px;
+  background: rgba(255, 255, 255, 0.025);
+}
+
+.mk-gm-tool-section > summary {
+  display: grid;
+  grid-template-columns: 28px minmax(0, 1fr) 18px;
+  gap: 8px;
+  align-items: center;
+  min-height: 48px;
+  padding: 7px 10px;
+  cursor: pointer;
+  list-style: none;
+}
+
+.mk-gm-tool-section > summary::-webkit-details-marker {
+  display: none;
+}
+
+.mk-gm-tool-section > summary:hover {
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.mk-gm-tool-section > summary > i:first-child {
+  color: #cbbb80;
+  font-size: 17px;
+  text-align: center;
+}
+
+.mk-gm-tool-section > summary > span {
+  display: grid;
+  gap: 2px;
+  min-width: 0;
+}
+
+.mk-gm-tool-section > summary strong {
+  font-size: 11px;
+}
+
+.mk-gm-tool-section > summary small {
+  color: var(--mk-gm-muted);
+  font-size: 9px;
+  line-height: 1.3;
+}
+
+.mk-gm-tool-chevron {
+  color: var(--mk-gm-muted);
+  font-size: 10px;
+  transition: transform 120ms ease;
+}
+
+.mk-gm-tool-section[open] > summary {
+  border-bottom: 1px solid var(--mk-gm-border);
+  background: rgba(255, 255, 255, 0.035);
+}
+
+.mk-gm-tool-section[open] .mk-gm-tool-chevron {
+  transform: rotate(180deg);
+}
+
+.mk-gm-tool-inspector {
+  padding: 8px 10px 10px;
+}
+
+.mk-gm-tool-inspector h3 {
+  margin: 10px 0 4px;
+  font-size: 11px;
+  text-transform: uppercase;
+}
+
+.mk-gm-tool-inspector ul {
+  margin: 0;
+  padding-left: 20px;
+}
+
+.mk-gm-tools-actions {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 8px;
@@ -66,17 +150,6 @@
   color: var(--mk-gm-muted);
   font-size: 9px;
   line-height: 1.3;
-}
-
-.mk-gm-tool-inspector h3 {
-  margin: 10px 0 4px;
-  font-size: 11px;
-  text-transform: uppercase;
-}
-
-.mk-gm-tool-inspector ul {
-  margin: 0;
-  padding-left: 20px;
 }
 
 .mk-gm-session-controls {
@@ -153,7 +226,7 @@
 }
 
 @media (max-width: 800px) {
-  .mk-gm-tools-grid,
+  .mk-gm-tools-actions,
   .mk-gm-scene-context-grid {
     grid-template-columns: 1fr;
   }

@@ -263,7 +263,7 @@
 - Fixed the Travelling splash broadcast so active player and observer clients receive it through a chat-flag fallback in addition to module sockets.
 - Added a settings-driven Travelling progress animation that resolves rolls at each icon breakpoint and shows success/failure marks under the progress bar.
 - Added double Travelling result marks for critical successes and critical failures.
-- Fixed Travelling result marks so successful automatic rolls render as green V marks instead of fallback failure X markers.
+- Fixed Travelling result marks so successful automatic rolls render as green V markers instead of fallback failure X markers.
 - Fixed Travelling prompts clearing stale success/failure marks before each new prompt starts.
 - Added automatic Travelling splash close after 20 seconds.
 - Updated Travelling rolls so Pathfind always uses WIS and Scavenge always uses INT.

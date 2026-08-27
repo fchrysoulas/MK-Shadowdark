@@ -1,0 +1,43 @@
+<div class="mk-journal-sheet-shell">
+  <aside class="mk-journal-sheet-sidebar">
+    <div class="mk-journal-sheet-portrait">
+      <i class="{{icon}}"></i>
+    </div>
+    <h1 class="mk-journal-sheet-title">{{title}}</h1>
+    <div class="mk-journal-sheet-type"><i class="{{icon}}"></i> {{typeLabel}}</div>
+
+    <nav class="mk-journal-sheet-tabs" aria-label="Journal pages">
+      {{#each pages}}
+      <button type="button" class="mk-journal-sheet-tab {{#if active}}active{{/if}}"
+        data-mk-journal-page-id="{{id}}" data-mk-journal-page-name="{{name}}">
+        <i class="{{icon}}"></i><span>{{name}}</span>
+      </button>
+      {{/each}}
+    </nav>
+
+    <div class="mk-journal-sheet-meta">
+      <div><strong>Pages</strong><span>{{pageCount}}</span></div>
+    </div>
+  </aside>
+
+  <main class="mk-journal-sheet-main">
+    <header class="mk-journal-sheet-main-header">
+      <div>
+        <div class="mk-journal-sheet-eyebrow">MK SHADOWDARK</div>
+        <h2 data-mk-journal-active-page-title>{{#if hasPages}}{{pages.0.name}}{{else}}Journal{{/if}}</h2>
+      </div>
+    </header>
+
+    {{#if hasPages}}
+      <div class="mk-journal-sheet-page-stack">
+        {{#each pages}}
+        <section class="mk-journal-sheet-page-panel {{#if active}}active{{/if}}" data-mk-journal-page-panel="{{id}}">
+          <div class="mk-journal-sheet-page-body">{{{content}}}</div>
+        </section>
+        {{/each}}
+      </div>
+    {{else}}
+      <div class="mk-journal-sheet-empty-page"><p>This journal has no pages yet.</p></div>
+    {{/if}}
+  </main>
+</div>

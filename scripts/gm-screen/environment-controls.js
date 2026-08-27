@@ -163,7 +163,7 @@ function findWorldTable(tableUuid, tables = globalThis.game?.tables) {
 
 function terrainOptions(terrains, selected) {
   if (!terrains.length) {
-    return '<option value="Default" selected>Configure Encounter Zone in Tables</option>';
+    return '<option value="Default" selected>Select an imported Encounter Zone source</option>';
   }
   const resolved = terrains.includes(selected) ? selected : terrains[0];
   return terrains.map(terrain => `

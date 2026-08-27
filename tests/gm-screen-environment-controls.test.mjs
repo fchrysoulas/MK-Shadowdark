@@ -95,7 +95,7 @@ test("Terrain remains unavailable until an Encounter Zone supplies terrain colum
   });
 
   assert.deepEqual(view.terrains, []);
-  assert.match(topRuntime, /Configure an Encounter Zone in Tables to populate Terrain/);
+  assert.match(topRuntime, /No imported Encounter Zone source is configured for this scene/);
   assert.match(topRuntime, /disabled: view\.terrains\.length === 0/);
 });
 

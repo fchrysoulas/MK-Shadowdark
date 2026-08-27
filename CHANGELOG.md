@@ -2,7 +2,14 @@
 
 ## 1.9.15
 
-- Finalized the GM Screen top strip as the authoritative at-table control surface: Terrain, Danger, and Period now save immediately when changed, the old Save Context action is gone, and Encounter Zone / Encounter Table remain explicit-save configuration under Tables.
+- Added a custom Journal Entry sheet matching MK Sandbox Journal's two-pane page browser, including its dark sidebar, muted-gold accents, light content area, and responsive layout.
+- Simplified the GM Screen Tables workspace to show only imported source RollTables; Encounter Setup is no longer rendered there.
+- Removed the GM Screen Tools workspace, manual generator configuration, and its NPC/Journal creation actions.
+- Removed the source-driven NPC and Location generators and their creation buttons from the GM Screen workspaces.
+- Removed the hardcoded Overview NPC creation button and its missing-table hover status.
+- Removed the NPC Script Macro and its module API surface.
+- Split Core NPC Qualities into independent **Appearance**, **Does**, and **Secret** RollTables and rolls.
+- Finalized the GM Screen top strip as the authoritative at-table control surface: Terrain, Danger, and Period now save immediately when changed, and the old Save Context action is gone.
 - Added **Safe** danger as a real no-encounter state. Safe Exploration accrues no checks, direct encounter checks do not roll, and a rest begun while Safe snapshots zero encounter checks.
 - Reworked GM Screen time controls so clicking **Elapsed** advances exactly one canonical turn with no popup or custom-time dialog: Exploration advances 6 minutes, an active Rest advances 1 hour, Combat advances 6 seconds, and elapsed display is limited to hours/minutes.
 - Moved session controls into Session Log with a free-text starting date/time label, **Start Session**, and **Reset Timer**. Starting a session records its boundary and Session Log now shows only encounter history from that session onward before applying the existing recent-history cap.
@@ -10,7 +17,6 @@
 - Removed the GM Screen presentation-only Hide/Show Active Party and Reset Presentation controls, widened the Time Passes dice selector, and kept Time Passes presentation-only and separate from canonical encounter scheduling.
 - Simplified Exploration to actionable pressure only: Turns, Next Check, Due, Encounter Table, latest check, and Process Due Checks. Terrain, Danger, Period, Turn Length, and Cadence are no longer duplicated inside the workspace.
 - Renamed the visible Downtime workspace to **Settlement** while preserving the internal `downtime` compatibility id; the workspace now focuses on Tavern and Shop generation and no longer displays Resting/Camp status.
-- Added a dedicated **Tools** workspace for hidden active mechanics. Scene/Encounter Context, encounter procedures, active light sources, Group assignments, rest schedule, and morale state are shown as inline expandable read-only inspectors, while Encounter Setup and Source Import remain explicit actions.
 - Compacted the permanent Active Party rail without restoring collapse controls, keeping HP, AC, status, wounds, Focus, light, effects, Death Timer, and sheet access visible in a denser layout.
 - Upgraded Overview into a true home dashboard with compact Procedure/Elapsed, Light, Encounter pressure, and Session summary above the existing per-GM pinned Foundry document shortcuts; pin/unpin remains local and does not force a full GM Screen rerender.
 - Added a persistent warning when Scene Danger is changed to Safe while an already-active rest still retains snapshotted encounter checks from the danger cadence that existed when that rest began.

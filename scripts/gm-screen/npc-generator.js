@@ -8,7 +8,6 @@ import {
 const MODULE_ID = "mk-shadowdark";
 const DEFAULT_NPC_NAME = "New NPC";
 const NPC_PROFILE_NAME = "NPC Profile";
-const NPC_PROFILE_ITEM_TYPE = "NPC Feature";
 
 function escapeHtml(value) {
   return String(value ?? "").replace(/[&<>"']/g, character => ({
@@ -38,77 +37,52 @@ function configuredDocumentClass(baseClass) {
   return baseClass?.implementation ?? baseClass ?? null;
 }
 
-function profileSourcePages(profile) {
-  const pages = new Set();
-  for (const source of Object.values(profile?.sources ?? {})) {
-    for (const page of source?.pages ?? []) {
-      const number = Number(page);
-      if (Number.isFinite(number)) pages.add(number);
-    }
-  }
-  return [...pages].sort((left, right) => left - right);
+const NPC_PROFILE_FIELDS = Object.freeze([
+  ["Ancestry", "ancestry"],
+  ["Alignment", "alignment"],
+  ["Age", "age"],
+  ["Wealth", "wealth"],
+  ["Appearance", "appearance"],
+  ["Does", "does"],
+  ["Secret", "secret"],
+  ["Occupation", "occupation"],
+  ["Name", "name"],
+]);
+
+function npcProfileFields(profile) {
+  return NPC_PROFILE_FIELDS.map(([label, key]) => ({
+    label,
+    value: String(profile?.[key] ?? ""),
+  }));
 }
 
 function npcProfileDescription(profile) {
-  const pages = profileSourcePages(profile);
-  return `
-    <h2>${escapeHtml(NPC_PROFILE_NAME)}</h2>
-    <p><strong>Source:</strong> ${escapeHtml(profile?.sourceBookTitle || CORE_BOOK_TITLE)}${pages.length ? ` · PDF p. ${escapeHtml(pages.join(", "))}` : ""}</p>
-    <table>
-      <tbody>
-        <tr><th>Ancestry · d12 ${escapeHtml(profile?.rolls?.ancestry)}</th><td>${escapeHtml(profile?.ancestry)}</td></tr>
-        <tr><th>Alignment · d6 ${escapeHtml(profile?.rolls?.alignment)}</th><td>${escapeHtml(profile?.alignment)}</td></tr>
-        <tr><th>Age · d8 ${escapeHtml(profile?.rolls?.age)}</th><td>${escapeHtml(profile?.age)}</td></tr>
-        <tr><th>Wealth · d6 ${escapeHtml(profile?.rolls?.wealth)}</th><td>${escapeHtml(profile?.wealth)}</td></tr>
-        <tr><th>Appearance · d20 ${escapeHtml(profile?.rolls?.qualities)}</th><td>${escapeHtml(profile?.appearance)}</td></tr>
-        <tr><th>Does · same d20</th><td>${escapeHtml(profile?.does)}</td></tr>
-        <tr><th>Secret · same d20</th><td>${escapeHtml(profile?.secret)}</td></tr>
-        <tr><th>Occupation · d4 ${escapeHtml(profile?.rolls?.occupationRow)}, d4 ${escapeHtml(profile?.rolls?.occupationColumn)}</th><td>${escapeHtml(profile?.occupation)}</td></tr>
-        <tr><th>Name · d20 ${escapeHtml(profile?.rolls?.name)}</th><td>${escapeHtml(profile?.name)}</td></tr>
-      </tbody>
-    </table>
-  `.trim();
+  return [
+    `<h2>${escapeHtml(NPC_PROFILE_NAME)}</h2>`,
+    ...npcProfileFields(profile).map(({ label, value }) => (
+      `<p><strong>${escapeHtml(label)}:</strong> ${escapeHtml(value)}</p>`
+    )),
+  ].join("\n");
 }
 
-function buildNpcProfileItemData(profile) {
-  return {
-    name: NPC_PROFILE_NAME,
-    type: NPC_PROFILE_ITEM_TYPE,
-    system: {
-      description: npcProfileDescription(profile),
-      source: {
-        title: profile?.sourceBookTitle || CORE_BOOK_TITLE,
-      },
-    },
-  };
-}
-
-function buildNpcActorData(name = DEFAULT_NPC_NAME) {
-  return {
+function buildNpcActorData(name = DEFAULT_NPC_NAME, profile = null) {
+  const data = {
     name: String(name ?? "").trim() || DEFAULT_NPC_NAME,
     type: "NPC",
   };
+  if (profile) data.system = { notes: npcProfileDescription(profile) };
+  return data;
 }
 
 function npcGeneratorDialogContent(profile) {
-  const pages = profileSourcePages(profile);
   return `
     <div class="mk-gm-create-document-form mk-gm-npc-generator-form">
       <div class="form-group">
         <label>NPC Name</label>
         <input type="text" name="name" value="${escapeHtml(profile.name)}" autofocus autocomplete="off">
       </div>
-      <p class="mk-gm-secondary">${escapeHtml(profile.sourceBookTitle || CORE_BOOK_TITLE)}${pages.length ? ` · PDF p. ${escapeHtml(pages.join(", "))}` : ""}</p>
       <dl class="mk-gm-data-list">
-        <div><dt>Ancestry · d12 ${profile.rolls.ancestry}</dt><dd>${escapeHtml(profile.ancestry)}</dd></div>
-        <div><dt>Alignment · d6 ${profile.rolls.alignment}</dt><dd>${escapeHtml(profile.alignment)}</dd></div>
-        <div><dt>Age · d8 ${profile.rolls.age}</dt><dd>${escapeHtml(profile.age)}</dd></div>
-        <div><dt>Wealth · d6 ${profile.rolls.wealth}</dt><dd>${escapeHtml(profile.wealth)}</dd></div>
-        <div><dt>Appearance · d20 ${profile.rolls.qualities}</dt><dd>${escapeHtml(profile.appearance)}</dd></div>
-        <div><dt>Does · same d20</dt><dd>${escapeHtml(profile.does)}</dd></div>
-        <div><dt>Secret · same d20</dt><dd>${escapeHtml(profile.secret)}</dd></div>
-        <div><dt>Occupation · ${profile.rolls.occupationRow}, ${profile.rolls.occupationColumn}</dt><dd>${escapeHtml(profile.occupation)}</dd></div>
-        <div><dt>Name · d20 ${profile.rolls.name}</dt><dd>${escapeHtml(profile.name)}</dd></div>
+        ${npcProfileFields(profile).map(({ label, value }) => `<div><dt>${escapeHtml(label)}</dt><dd>${escapeHtml(value)}</dd></div>`).join("\n        ")}
       </dl>
     </div>
   `;
@@ -245,10 +219,7 @@ async function createNpcActor({ name, profile = null } = {}) {
     return null;
   }
 
-  const actor = await ActorClass.create(buildNpcActorData(name));
-  if (profile && actor?.createEmbeddedDocuments) {
-    await actor.createEmbeddedDocuments("Item", [buildNpcProfileItemData(profile)]);
-  }
+  const actor = await ActorClass.create(buildNpcActorData(name, profile));
   actor?.sheet?.render?.(true);
   return actor ?? null;
 }
@@ -261,7 +232,7 @@ async function createSourceDrivenNpc({
   promptBlank = promptForBlankNpcName,
 } = {}) {
   if (!globalThis.game?.user?.isGM) {
-    globalThis.ui?.notifications?.warn?.("Only the GM can create Exploration NPCs.");
+    globalThis.ui?.notifications?.warn?.("Only the GM can create NPCs.");
     return null;
   }
 
@@ -290,12 +261,10 @@ export {
   MODULE_ID,
   DEFAULT_NPC_NAME,
   NPC_PROFILE_NAME,
-  NPC_PROFILE_ITEM_TYPE,
   escapeHtml,
   configuredDocumentClass,
-  profileSourcePages,
+  npcProfileFields,
   npcProfileDescription,
-  buildNpcProfileItemData,
   buildNpcActorData,
   npcGeneratorDialogContent,
   promptForGeneratedNpc,

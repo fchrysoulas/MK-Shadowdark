@@ -401,13 +401,15 @@ test("Import / Update retries Shop source status before generated creation", asy
   }
 });
 
-test("Tavern and Shop controller is loaded after existing Exploration and NPC creation controls", () => {
+test("Tavern and Shop controller remains loaded without NPC and Location creation controls", () => {
+  const gmScreenIndex = manifest.esmodules.indexOf("scripts/gm-screen/gm-screen.js");
   const explorationIndex = manifest.esmodules.indexOf("scripts/gm-screen/exploration-creation-controls.js");
   const npcIndex = manifest.esmodules.indexOf("scripts/gm-screen/npc-creation-controls.js");
   const establishmentsIndex = manifest.esmodules.indexOf("scripts/gm-screen/tavern-shop-creation-controls.js");
-  assert.ok(explorationIndex >= 0);
-  assert.ok(npcIndex > explorationIndex);
-  assert.ok(establishmentsIndex > npcIndex);
+  assert.ok(gmScreenIndex >= 0);
+  assert.equal(explorationIndex, -1);
+  assert.equal(npcIndex, -1);
+  assert.ok(establishmentsIndex > gmScreenIndex);
 });
 
 test("public Tavern/Shop runtime contains procedures and resolvers without hardcoded result maps", () => {

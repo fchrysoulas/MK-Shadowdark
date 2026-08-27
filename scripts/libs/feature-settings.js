@@ -387,6 +387,5 @@ Hooks.once("init", () => {
     type: String,
     default: JSON.stringify(DEFAULT_PROFILES, null, 2)
   });
-
   registerMenus();
 });

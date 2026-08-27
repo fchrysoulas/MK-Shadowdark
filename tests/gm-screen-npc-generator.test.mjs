@@ -6,19 +6,21 @@ import {
   CORE_BOOK_ID,
   CORE_BOOK_TITLE,
   findNpcAlignmentTable,
+  findNpcAppearanceTable,
   findNpcAncestryTable,
+  findNpcDoesTable,
   findNpcNamesTable,
   findNpcOccupationTable,
-  findNpcQualitiesTable,
+  findNpcSecretTable,
   nameFieldForAncestry,
   npcSourceStatus,
+  occupationMatrixColumn,
   rollNpcProfileFromSource,
 } from "../scripts/gm-screen/npc-source-tables.js";
 import {
-  NPC_PROFILE_ITEM_TYPE,
   buildNpcActorData,
-  buildNpcProfileItemData,
   createNpcActor,
+  npcGeneratorDialogContent,
   npcProfileDescription,
 } from "../scripts/gm-screen/npc-generator.js";
 
@@ -98,12 +100,30 @@ function syntheticNpcTables() {
     results: [{ range: [1, 6], text: "Synthetic Wealth" }],
     totals: [5],
   });
-  const qualities = table({
-    id: "npc-qualities",
-    name: "Game Master — NPCs — NPC QUALITIES",
+  const appearance = table({
+    id: "npc-appearance",
+    name: "Game Master — NPCs — APPEARANCE",
     formula: "1d20",
-    columns: ["d20", "Appearance", "Does", "Secret"],
-    results: [{ range: [1, 20], text: "Appearance: Striking | Does: Hums | Secret: Owes a favor" }],
+    columns: ["d20", "Appearance"],
+    results: [{ range: [1, 20], text: "Striking" }],
+    totals: [13],
+    pages: [129],
+  });
+  const does = table({
+    id: "npc-does",
+    name: "Game Master — NPCs — DOES",
+    formula: "1d20",
+    columns: ["d20", "Does"],
+    results: [{ range: [1, 20], text: "Hums" }],
+    totals: [13],
+    pages: [129],
+  });
+  const secret = table({
+    id: "npc-secret",
+    name: "Game Master — NPCs — SECRET",
+    formula: "1d20",
+    columns: ["d20", "Secret"],
+    results: [{ range: [1, 20], text: "Owes a favor" }],
     totals: [13],
     pages: [129],
   });
@@ -130,7 +150,7 @@ function syntheticNpcTables() {
     totals: [9],
     pages: [132],
   });
-  return [ancestry, alignment, age, wealth, qualities, occupation, names];
+  return [ancestry, alignment, age, wealth, appearance, does, secret, occupation, names];
 }
 
 test("NPC source resolver selects NPC-scoped Ancestry and Alignment instead of rival crawler tables", () => {
@@ -148,18 +168,40 @@ test("NPC source resolver selects NPC-scoped Ancestry and Alignment instead of r
   const mixed = [rivalAncestry, rivalAlignment, ...tables];
   assert.equal(findNpcAncestryTable(mixed)?.id, "npc-ancestry");
   assert.equal(findNpcAlignmentTable(mixed)?.id, "npc-alignment");
-  assert.equal(findNpcQualitiesTable(mixed)?.id, "npc-qualities");
+  assert.equal(findNpcAppearanceTable(mixed)?.id, "npc-appearance");
+  assert.equal(findNpcDoesTable(mixed)?.id, "npc-does");
+  assert.equal(findNpcSecretTable(mixed)?.id, "npc-secret");
   assert.equal(findNpcOccupationTable(mixed)?.id, "npc-occupation");
   assert.equal(findNpcNamesTable(mixed)?.id, "npc-names");
 });
 
-test("NPC source status requires all seven Core NPC/name tables", () => {
+test("NPC source status requires all Core NPC/name tables, including split qualities", () => {
   const tables = syntheticNpcTables();
   assert.equal(npcSourceStatus(tables).available, true);
   const missingNames = tables.filter(entry => entry.id !== "npc-names");
   const status = npcSourceStatus(missingNames);
   assert.equal(status.available, false);
   assert.ok(status.missing.includes("NPC Names By Ancestry"));
+  const missingSecret = tables.filter(entry => entry.id !== "npc-secret");
+  const secretStatus = npcSourceStatus(missingSecret);
+  assert.ok(secretStatus.missing.includes("NPC Secret"));
+  assert.ok(secretStatus.missingTables.includes("NPCs — Secret"));
+});
+
+test("NPC source status honors value-specific table selections", () => {
+  const tables = syntheticNpcTables();
+  const customAncestry = {
+    ...tables[0],
+    id: "custom-ancestry",
+    uuid: "RollTable.custom-ancestry",
+  };
+  const status = npcSourceStatus([customAncestry, ...tables], {
+    tableUuids: { ancestry: customAncestry.uuid },
+  });
+
+  assert.equal(status.available, true);
+  assert.equal(status.tables.ancestry, customAncestry);
+  assert.equal(status.tables.fieldTables.appearance, tables[4]);
 });
 
 test("ancestry selects the matching ancestry-specific name column", () => {
@@ -169,7 +211,7 @@ test("ancestry selects the matching ancestry-specific name column", () => {
   assert.equal(nameFieldForAncestry("Unknown"), "");
 });
 
-test("Core NPC generation keeps qualities on one d20 row and resolves occupation with two independent d4s", async () => {
+test("Core NPC generation rolls split qualities independently and resolves occupation with two independent d4s", async () => {
   const tables = syntheticNpcTables();
   const profile = await rollNpcProfileFromSource({
     tables,
@@ -180,14 +222,46 @@ test("Core NPC generation keeps qualities on one d20 row and resolves occupation
   assert.equal(profile.appearance, "Striking");
   assert.equal(profile.does, "Hums");
   assert.equal(profile.secret, "Owes a favor");
-  assert.equal(profile.rolls.qualities, 13);
+  assert.equal(profile.rolls.appearance, 13);
+  assert.equal(profile.rolls.does, 13);
+  assert.equal(profile.rolls.secret, 13);
   assert.equal(profile.rolls.occupationRow, 3);
   assert.equal(profile.rolls.occupationColumn, 4);
   assert.equal(profile.occupation, "Job 3D");
   assert.equal(profile.rolls.name, 9);
 });
 
-test("generated profile uses native Shadowdark NPC Feature with native description/source fields", () => {
+test("NPC generation resolves flattened occupation matrix results", async () => {
+  const tables = syntheticNpcTables();
+  const occupation = tables.find(entry => entry.id === "npc-occupation");
+  occupation.results = [{
+    id: "occupation-14",
+    range: [14, 14],
+    description: "Blacksmith",
+    flags: {
+      "mk-shadowdark": {
+        occupationMatrix: { row: 1, column: 4, coordinate: 14, formula: "d4, d4" },
+      },
+    },
+  }];
+  occupation.roll = async () => ({
+    roll: { total: 14 },
+    results: [occupation.results[0]],
+  });
+  assert.equal(occupationMatrixColumn(occupation.results[0]), 4);
+
+  const profile = await rollNpcProfileFromSource({
+    tables,
+    rollOccupationColumn: async () => {
+      throw new Error("The flattened matrix should provide its own occupation column.");
+    },
+  });
+
+  assert.equal(profile.occupation, "Blacksmith");
+  assert.equal(profile.rolls.occupationColumn, 4);
+});
+
+test("generated profile formats result values one per line without roll or source metadata", () => {
   const profile = {
     name: "Daro",
     ancestry: "Dwarf",
@@ -206,22 +280,20 @@ test("generated profile uses native Shadowdark NPC Feature with native descripti
       names: { pages: [132] },
     },
   };
-  const item = buildNpcProfileItemData(profile);
-  assert.equal(NPC_PROFILE_ITEM_TYPE, "NPC Feature");
-  assert.equal(item.type, "NPC Feature");
-  assert.equal(item.name, "NPC Profile");
-  assert.equal(item.system.source.title, CORE_BOOK_TITLE);
-  assert.match(item.system.description, /Dwarf/);
-  assert.match(item.system.description, /Job 3D/);
-  assert.match(item.system.description, /PDF p\. 128, 129, 132/);
+  const description = npcProfileDescription(profile);
+  assert.match(description, /Ancestry:<\/strong> Dwarf/);
+  assert.match(description, /Occupation:<\/strong> Job 3D/);
+  assert.doesNotMatch(description, /d12|d6|d8|d20|PDF|Shadowdark RPG Core Rulebook|>7<|>13</);
+  const dialog = npcGeneratorDialogContent(profile);
+  assert.match(dialog, /<dt>Ancestry<\/dt><dd>Dwarf<\/dd>/);
+  assert.doesNotMatch(dialog, /d12|d6|d8|d20|PDF|Shadowdark RPG Core Rulebook|>7<|>13</);
   assert.equal(buildNpcActorData("Daro").type, "NPC");
   assert.match(npcProfileDescription(profile), /Appearance/);
 });
 
-test("Actor creation embeds exactly one native NPC Profile feature before opening sheet", async () => {
+test("Actor creation stores the generated profile on Description before opening the sheet", async () => {
   const previousActor = globalThis.Actor;
   let actorData = null;
-  let embedded = null;
   let rendered = false;
   try {
     globalThis.Actor = {
@@ -229,7 +301,6 @@ test("Actor creation embeds exactly one native NPC Profile feature before openin
         async create(data) {
           actorData = data;
           return {
-            async createEmbeddedDocuments(type, documents) { embedded = { type, documents }; },
             sheet: { render(force) { rendered = force; } },
           };
         },
@@ -253,10 +324,10 @@ test("Actor creation embeds exactly one native NPC Profile feature before openin
       },
     });
     assert.ok(actor);
-    assert.deepEqual(actorData, { name: "Synthetic NPC", type: "NPC" });
-    assert.equal(embedded.type, "Item");
-    assert.equal(embedded.documents.length, 1);
-    assert.equal(embedded.documents[0].type, "NPC Feature");
+    assert.equal(actorData.name, "Synthetic NPC");
+    assert.equal(actorData.type, "NPC");
+    assert.match(actorData.system.notes, /Ancestry:<\/strong> Human/);
+    assert.doesNotMatch(actorData.system.notes, /d20|PDF|Shadowdark RPG Core Rulebook/);
     assert.equal(rendered, true);
   } finally {
     globalThis.Actor = previousActor;
@@ -270,9 +341,13 @@ test("NPC generator runtime contains no copied Core NPC result arrays", () => {
   assert.match(generatorRuntime, /Create Blank NPC/);
 });
 
-test("source NPC controller loads after original Exploration creation controller", () => {
-  const base = manifest.esmodules.indexOf("scripts/gm-screen/exploration-creation-controls.js");
-  const sourceNpc = manifest.esmodules.indexOf("scripts/gm-screen/npc-creation-controls.js");
-  assert.ok(base >= 0);
-  assert.ok(sourceNpc > base);
+test("NPC creation has no macro or module API surface", () => {
+  assert.doesNotMatch(generatorRuntime, /module\.api\.npcGenerator|exposeNpcGeneratorApi|registerNpcGenerator/);
+  assert.doesNotMatch(manifest.esmodules.join("\n"), /macros\/create-npc\.js/);
+  assert.equal(fs.existsSync(new URL("../macros/create-npc.js", import.meta.url)), false);
+});
+
+test("source NPC creation controller is no longer loaded", () => {
+  assert.equal(manifest.esmodules.indexOf("scripts/gm-screen/exploration-creation-controls.js"), -1);
+  assert.equal(manifest.esmodules.indexOf("scripts/gm-screen/npc-creation-controls.js"), -1);
 });

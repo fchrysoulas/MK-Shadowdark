@@ -1,4 +1,5 @@
 import {
+  collectionValues,
   findImportedSourceTable,
   parseLabeledResultText,
   rollImportedSourceTable,
@@ -15,7 +16,9 @@ const NPC_SOURCE_COLUMNS = Object.freeze({
   alignment: Object.freeze(["d6", "Alignment"]),
   age: Object.freeze(["d8", "Age"]),
   wealth: Object.freeze(["d6", "Wealth"]),
-  qualities: Object.freeze(["d20", "Appearance", "Does", "Secret"]),
+  appearance: Object.freeze(["d20", "Appearance"]),
+  does: Object.freeze(["d20", "Does"]),
+  secret: Object.freeze(["d20", "Secret"]),
   occupation: Object.freeze(["d4, d4", "1", "2", "3", "4"]),
   names: Object.freeze(["d20", "Dwarf", "Elf", "Goblin", "Halfling", "Half-Orc", "Human"]),
 });
@@ -49,8 +52,29 @@ function findNpcWealthTable(tables = globalThis.game?.tables) {
   return npcTable({ nameIncludes: "npcs — wealth", requiredColumns: NPC_SOURCE_COLUMNS.wealth, tables });
 }
 
-function findNpcQualitiesTable(tables = globalThis.game?.tables) {
-  return npcTable({ nameIncludes: "npc qualities", requiredColumns: NPC_SOURCE_COLUMNS.qualities, tables });
+function findNpcQualityTable(field, tables = globalThis.game?.tables) {
+  const fieldName = normalize(field);
+  return collectionValues(tables).find(table => {
+    const metadata = sourceTableFlag(table);
+    const columns = Array.isArray(metadata?.columns) ? metadata.columns.map(normalize) : [];
+    const name = normalize(table?.name);
+    return metadata?.bookId === CORE_BOOK_ID
+      && name.includes("npc")
+      && name.includes(fieldName)
+      && columns.includes("d20");
+  }) ?? null;
+}
+
+function findNpcAppearanceTable(tables = globalThis.game?.tables) {
+  return findNpcQualityTable("appearance", tables);
+}
+
+function findNpcDoesTable(tables = globalThis.game?.tables) {
+  return findNpcQualityTable("does", tables);
+}
+
+function findNpcSecretTable(tables = globalThis.game?.tables) {
+  return findNpcQualityTable("secret", tables);
 }
 
 function findNpcOccupationTable(tables = globalThis.game?.tables) {
@@ -61,29 +85,82 @@ function findNpcNamesTable(tables = globalThis.game?.tables) {
   return npcTable({ nameIncludes: "npc names by ancestry", requiredColumns: NPC_SOURCE_COLUMNS.names, tables });
 }
 
-function npcSourceStatus(tables = globalThis.game?.tables) {
-  const resolved = {
+function configuredTable(tableUuids, key, tables = globalThis.game?.tables) {
+  const uuid = String(tableUuids?.[key] ?? "").trim();
+  if (!uuid) return undefined;
+  return collectionValues(tables).find(table => String(table?.uuid ?? "") === uuid);
+}
+
+function configuredOrDefault(defaultTable, tableUuids, key, tables) {
+  const configured = configuredTable(tableUuids, key, tables);
+  return configured === undefined ? defaultTable : configured;
+}
+
+function npcSourceStatus(tables = globalThis.game?.tables, {
+  tableUuids = {},
+} = {}) {
+  const defaults = {
     ancestry: findNpcAncestryTable(tables),
     alignment: findNpcAlignmentTable(tables),
     age: findNpcAgeTable(tables),
     wealth: findNpcWealthTable(tables),
-    qualities: findNpcQualitiesTable(tables),
+    appearance: findNpcAppearanceTable(tables),
+    does: findNpcDoesTable(tables),
+    secret: findNpcSecretTable(tables),
     occupation: findNpcOccupationTable(tables),
     names: findNpcNamesTable(tables),
   };
-  const labels = {
-    ancestry: "NPC Ancestry",
-    alignment: "NPC Alignment",
-    age: "NPC Age",
-    wealth: "NPC Wealth",
-    qualities: "NPC Qualities",
-    occupation: "NPC Occupation",
-    names: "NPC Names By Ancestry",
+  const fieldTables = {
+    ancestry: configuredOrDefault(defaults.ancestry, tableUuids, "ancestry", tables),
+    alignment: configuredOrDefault(defaults.alignment, tableUuids, "alignment", tables),
+    age: configuredOrDefault(defaults.age, tableUuids, "age", tables),
+    wealth: configuredOrDefault(defaults.wealth, tableUuids, "wealth", tables),
+    appearance: configuredOrDefault(defaults.appearance, tableUuids, "appearance", tables),
+    does: configuredOrDefault(defaults.does, tableUuids, "does", tables),
+    secret: configuredOrDefault(defaults.secret, tableUuids, "secret", tables),
+    occupation: configuredOrDefault(defaults.occupation, tableUuids, "occupation", tables),
+    name: configuredOrDefault(defaults.names, tableUuids, "name", tables),
   };
-  const missing = Object.entries(resolved)
-    .filter(([, table]) => !table)
-    .map(([key]) => labels[key]);
-  return { available: missing.length === 0, missing, tables: resolved };
+  const missingTables = [
+    ["ancestry", "NPCs — Ancestry"],
+    ["alignment", "NPCs — Alignment"],
+    ["age", "NPCs — Age"],
+    ["wealth", "NPCs — Wealth"],
+    ["appearance", "NPCs — Appearance"],
+    ["does", "NPCs — Does"],
+    ["secret", "NPCs — Secret"],
+    ["occupation", "NPC Occupation"],
+    ["name", "NPC Names by Ancestry"],
+  ].filter(([key]) => !fieldTables[key]).map(([, label]) => label);
+  const missing = [
+    ["ancestry", "NPC Ancestry"],
+    ["alignment", "NPC Alignment"],
+    ["age", "NPC Age"],
+    ["wealth", "NPC Wealth"],
+    ["appearance", "NPC Appearance"],
+    ["does", "NPC Does"],
+    ["secret", "NPC Secret"],
+    ["occupation", "NPC Occupation"],
+    ["name", "NPC Names By Ancestry"],
+  ].filter(([key]) => !fieldTables[key]).map(([, label]) => label);
+  return {
+    available: missing.length === 0,
+    missing,
+    missingTables,
+    tables: {
+      ...defaults,
+      ancestry: fieldTables.ancestry,
+      alignment: fieldTables.alignment,
+      age: fieldTables.age,
+      wealth: fieldTables.wealth,
+      appearance: fieldTables.appearance,
+      does: fieldTables.does,
+      secret: fieldTables.secret,
+      occupation: fieldTables.occupation,
+      names: fieldTables.name,
+      fieldTables,
+    },
+  };
 }
 
 function simpleResultValue(draw, field = "") {
@@ -112,7 +189,18 @@ async function rollSecondD4({ RollClass = globalThis.Roll } = {}) {
 function occupationField(result, column) {
   const fields = parseLabeledResultText(tableResultText(result));
   const match = Object.entries(fields).find(([label]) => normalize(label) === normalize(column));
-  return match?.[1] ?? "";
+  if (match?.[1]) return match[1];
+
+  // Current local imports may flatten the d4 x d4 occupation matrix into
+  // individual results. Those results carry their coordinate as metadata and
+  // expose the occupation directly instead of using 1: ..., 2: ... labels.
+  const matrix = result?.flags?.["mk-shadowdark"]?.occupationMatrix;
+  return matrix && tableResultText(result) ? tableResultText(result) : "";
+}
+
+function occupationMatrixColumn(result) {
+  const value = Number(result?.flags?.["mk-shadowdark"]?.occupationMatrix?.column);
+  return Number.isInteger(value) && value >= 1 && value <= 4 ? value : null;
 }
 
 function nameFieldForAncestry(ancestry) {
@@ -156,14 +244,22 @@ async function rollNpcProfileFromSource({
   const age = await rollSimple(source.tables.age, "Age", rollTable);
   const wealth = await rollSimple(source.tables.wealth, "Wealth", rollTable);
 
-  const qualitiesDraw = await rollTable(source.tables.qualities);
-  const qualities = parseLabeledResultText(tableResultText(qualitiesDraw.result));
-  const appearance = qualities.Appearance ?? "";
-  const does = qualities.Does ?? "";
-  const secret = qualities.Secret ?? "";
+  const qualityTables = source.tables.fieldTables ?? {
+    appearance: source.tables.appearance,
+    does: source.tables.does,
+    secret: source.tables.secret,
+  };
+  const [appearanceDraw, doesDraw, secretDraw] = await Promise.all([
+    rollSimple(qualityTables.appearance, "Appearance", rollTable),
+    rollSimple(qualityTables.does, "Does", rollTable),
+    rollSimple(qualityTables.secret, "Secret", rollTable),
+  ]);
+  const appearance = appearanceDraw.value;
+  const does = doesDraw.value;
+  const secret = secretDraw.value;
 
   const occupationRow = await rollTable(source.tables.occupation);
-  const occupationColumn = await rollOccupationColumn();
+  const occupationColumn = occupationMatrixColumn(occupationRow.result) ?? await rollOccupationColumn();
   const occupation = occupationField(occupationRow.result, occupationColumn);
 
   const nameField = nameFieldForAncestry(ancestry.value);
@@ -190,12 +286,24 @@ async function rollNpcProfileFromSource({
       alignment: alignment.roll,
       age: age.roll,
       wealth: wealth.roll,
-      qualities: qualitiesDraw.total,
+      appearance: appearanceDraw.roll,
+      does: doesDraw.roll,
+      secret: secretDraw.roll,
       occupationRow: occupationRow.total,
       occupationColumn,
       name: nameDraw.total,
     },
-    sources: Object.fromEntries(Object.entries(source.tables).map(([key, table]) => [key, tableProvenance(table)])),
+    sources: Object.fromEntries([
+      ["ancestry", source.tables.ancestry],
+      ["alignment", source.tables.alignment],
+      ["age", source.tables.age],
+      ["wealth", source.tables.wealth],
+      ["appearance", qualityTables.appearance],
+      ["does", qualityTables.does],
+      ["secret", qualityTables.secret],
+      ["occupation", source.tables.occupation],
+      ["names", source.tables.names],
+    ].map(([key, table]) => [key, tableProvenance(table)])),
     sourceBookTitle: CORE_BOOK_TITLE,
   };
 }
@@ -210,7 +318,10 @@ export {
   findNpcAlignmentTable,
   findNpcAgeTable,
   findNpcWealthTable,
-  findNpcQualitiesTable,
+  findNpcQualityTable,
+  findNpcAppearanceTable,
+  findNpcDoesTable,
+  findNpcSecretTable,
   findNpcOccupationTable,
   findNpcNamesTable,
   npcSourceStatus,
@@ -218,6 +329,7 @@ export {
   rollSimple,
   rollSecondD4,
   occupationField,
+  occupationMatrixColumn,
   nameFieldForAncestry,
   tableProvenance,
   rollNpcProfileFromSource,

@@ -185,8 +185,31 @@ function structureCoreDenseTable(table) {
   };
 }
 
+function sourceTableSlug(value) {
+  return normalize(value).replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "") || "table";
+}
+
+function splitNpcQualityTables(table) {
+  const structured = structureCoreDenseTable(table);
+  if (normalize(table?.title) !== "npc qualities") return [structured];
+
+  const schema = coreDenseSchema(table);
+  const values = (table.results ?? []).map(result => schema.split(result.text));
+  return schema.headers.map((header, index) => ({
+    ...structured,
+    title: header.toUpperCase(),
+    name: [...(table.context ?? []), header.toUpperCase()].filter(Boolean).join(" — "),
+    key: `${table.key}:${sourceTableSlug(header)}`,
+    columns: [table.formulaRaw, header],
+    results: (table.results ?? []).map((result, resultIndex) => ({
+      ...result,
+      text: values[resultIndex]?.[index] ?? result.text,
+    })),
+  }));
+}
+
 function structureCoreDenseTables(tables = []) {
-  return tables.map(structureCoreDenseTable);
+  return tables.flatMap(splitNpcQualityTables);
 }
 
 export {
@@ -203,5 +226,6 @@ export {
   splitGeneratorNameKnownFor,
   coreDenseSchema,
   structureCoreDenseTable,
+  splitNpcQualityTables,
   structureCoreDenseTables,
 };

@@ -321,14 +321,9 @@ test("Cancelling an NPC creation prompt creates nothing", async () => {
   }
 });
 
-test("Exploration creation buttons are GM-only but do not require a selected Group", () => {
-  assert.match(runtime, /data-workspace-panel=\\?"exploration\\?"/);
-  assert.match(runtime, /Create NPC/);
-  assert.match(runtime, /Create Location/);
-  assert.match(runtime, /game\?\.user\?\.isGM/);
-  assert.doesNotMatch(runtime, /resolveGmScreenGroup/);
-  assert.doesNotMatch(runtime, /groupActorUuid/);
-  assert.doesNotMatch(runtime, /setFlag\s*\(/);
+test("Exploration NPC and Location creation controls are no longer loaded", () => {
+  assert.equal(manifest.esmodules.indexOf("scripts/gm-screen/exploration-creation-controls.js"), -1);
+  assert.equal(manifest.esmodules.indexOf("scripts/gm-screen/npc-creation-controls.js"), -1);
 });
 
 test("Create Location no longer embeds verbatim Points of Interest arrays", () => {
@@ -339,10 +334,12 @@ test("Create Location no longer embeds verbatim Points of Interest arrays", () =
   assert.match(runtime, /Import \/ Update Source Tables/);
 });
 
-test("Exploration creation controller remains loaded without retired presentation controls", () => {
+test("Exploration creation controllers are retired without removing establishment tools", () => {
   const gmScreenIndex = manifest.esmodules.indexOf("scripts/gm-screen/gm-screen.js");
   const creationIndex = manifest.esmodules.indexOf("scripts/gm-screen/exploration-creation-controls.js");
+  const establishmentsIndex = manifest.esmodules.indexOf("scripts/gm-screen/tavern-shop-creation-controls.js");
   assert.ok(gmScreenIndex >= 0);
-  assert.ok(creationIndex > gmScreenIndex);
+  assert.equal(creationIndex, -1);
+  assert.ok(establishmentsIndex > gmScreenIndex);
   assert.ok(!manifest.esmodules.includes("scripts/gm-screen/presentation-controls.js"));
 });

@@ -9,7 +9,6 @@ const topContext = fs.readFileSync(new URL("../scripts/gm-screen/top-context-con
 const overviewLinks = fs.readFileSync(new URL("../scripts/gm-screen/overview-links.js", import.meta.url), "utf8");
 const stylesheet = fs.readFileSync(new URL("../styles/gm-screen.css", import.meta.url), "utf8");
 const refactorStylesheet = fs.readFileSync(new URL("../styles/gm-screen-workspace-refactor.css", import.meta.url), "utf8");
-const tools = fs.readFileSync(new URL("../scripts/gm-screen/tools-controls.js", import.meta.url), "utf8");
 const manifest = JSON.parse(fs.readFileSync(new URL("../module.json", import.meta.url), "utf8"));
 
 const WORKSPACES = [
@@ -18,7 +17,6 @@ const WORKSPACES = [
   "combat",
   "downtime",
   "tables",
-  "tools",
   "session-log",
 ];
 
@@ -90,7 +88,7 @@ test("one-turn advancement is 6m Exploration, 1h actual Resting, and 6s Combat",
   assert.doesNotMatch(viewModel, /return `\$\{total\}s`/);
 });
 
-test("GM Screen owns the exact seven workspaces in order", () => {
+test("GM Screen owns the exact six workspaces in order", () => {
   assert.match(template, /mk-gm-party-rail/);
   assert.match(template, /mk-gm-pressure-strip/);
 
@@ -111,8 +109,9 @@ test("GM Screen owns the exact seven workspaces in order", () => {
   assert.doesNotMatch(template, /profileName|Active Profile/);
   assert.doesNotMatch(template, /Group Traveling/);
   assert.doesNotMatch(template, /Group Camping/);
+  assert.doesNotMatch(template, /data-workspace-panel="tools"/);
+  assert.doesNotMatch(viewModel, /\"tools\"/);
   assert.match(template, /Process Due Checks/);
-  assert.match(template, /data-mk-gm-tools-panel/);
 });
 
 test("Overview combines canonical home summary, document shortcuts, and top Scene Context autosave", () => {
@@ -171,7 +170,6 @@ test("requested workspace active tints remain defined", () => {
   assert.match(refactorStylesheet, /data-workspace="exploration"/);
   assert.match(refactorStylesheet, /data-workspace="combat"/);
   assert.match(refactorStylesheet, /data-workspace="downtime"/);
-  assert.match(refactorStylesheet, /data-workspace="tools"/);
 });
 
 test("GM Screen exposes a wider standalone Time Passes dice selector", () => {
@@ -183,29 +181,6 @@ test("GM Screen exposes a wider standalone Time Passes dice selector", () => {
   assert.match(runtime, /const rollTimePasses = api\?\.roll \?\? api\?\.timePasses/);
   assert.match(runtime, /rollTimePasses\(\{ diceCount \}\)/);
   assert.match(refactorStylesheet, /\.mk-gm-time-passes select[\s\S]*width: 82px/);
-});
-
-test("Tools exposes hidden state inline and keeps only true actions as buttons", () => {
-  for (const label of [
-    "Scene / Encounter Context",
-    "Encounter Procedures",
-    "Active Light Sources",
-    "Group Assignments",
-    "Rest Schedule",
-    "Morale State",
-    "Encounter Setup",
-    "Import Source Tables",
-  ]) {
-    assert.match(tools, new RegExp(label.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")));
-  }
-  assert.match(tools, /<details class="mk-gm-tool-section"/);
-  assert.match(tools, /<summary>/);
-  assert.match(tools, /mk-gm-tools-sections/);
-  assert.match(tools, /mk-gm-tools-actions/);
-  assert.doesNotMatch(tools, /waitForGmDialog|showInspector/);
-  assert.match(tools, /Read-only here/);
-  assert.match(refactorStylesheet, /\.mk-gm-tool-section/);
-  assert.match(refactorStylesheet, /\.mk-gm-tools-actions/);
 });
 
 test("Combat display converts Foundry's zero-based turn index to a human-facing number", () => {
@@ -230,7 +205,8 @@ test("GM Screen runtime assets are loaded independently from Group Sheet", () =>
   assert.ok(manifest.esmodules.includes("scripts/gm-screen/gm-screen.js"));
   assert.ok(manifest.esmodules.includes("scripts/gm-screen/top-context-controls.js"));
   assert.ok(manifest.esmodules.includes("scripts/gm-screen/overview-links.js"));
-  assert.ok(manifest.esmodules.includes("scripts/gm-screen/tools-controls.js"));
+  assert.ok(!manifest.esmodules.includes("scripts/gm-screen/tools-controls.js"));
+  assert.ok(!manifest.esmodules.includes("scripts/gm-screen/generator-table-config.js"));
   assert.ok(manifest.styles.includes("styles/gm-screen.css"));
   assert.ok(manifest.esmodules.includes("scripts/gm-screen/source-table-browser.js"));
   assert.ok(manifest.styles.includes("styles/gm-screen-source-tables.css"));

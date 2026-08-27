@@ -1,10 +1,4 @@
 import { sourceTableFlag } from "../source-tables/source-table-importer.js";
-import {
-  bindEncounterSetupManualSave,
-  buildEncounterSetupView,
-  cachedAvailableRollTables,
-  renderEncounterSetup,
-} from "./environment-controls.js";
 
 const MODULE_ID = "mk-shadowdark";
 const GM_SCREEN_APP_ID = "mk-shadowdark-gm-screen";
@@ -111,13 +105,8 @@ function filterSourceTableEntries(entries = [], { query = "", bookId = "" } = {}
   });
 }
 
-function sourceTablePanelContent(entries = [], encounterSetupHtml = "") {
-  const encounterSetup = encounterSetupHtml
-    ? `<article class="mk-gm-panel is-wide" data-mk-gm-tables-encounter-setup>${encounterSetupHtml}</article>`
-    : "";
-
+function sourceTablePanelContent(entries = []) {
   return `
-    ${encounterSetup}
     <article class="mk-gm-panel is-wide" data-mk-gm-source-tables-panel>
       <header><i class="fas fa-table-list"></i><span>Source Tables</span></header>
       <div class="mk-gm-source-table-toolbar">
@@ -134,10 +123,10 @@ function sourceTablePanelContent(entries = [], encounterSetupHtml = "") {
   `;
 }
 
-function sourceTablePanelHtml(entries = [], encounterSetupHtml = "") {
+function sourceTablePanelHtml(entries = []) {
   return `
     <section class="mk-gm-workspace mk-gm-source-tables-workspace" data-workspace-panel="${WORKSPACE_ID}">
-      ${sourceTablePanelContent(entries, encounterSetupHtml)}
+      ${sourceTablePanelContent(entries)}
     </section>
   `;
 }
@@ -302,9 +291,6 @@ async function decorateSourceTableBrowser(application, element) {
   if (!nav || !body) return false;
 
   const entries = collectSourceTableEntries();
-  const tables = await cachedAvailableRollTables();
-  const encounterSetupView = buildEncounterSetupView({ tables });
-  const encounterSetupHtml = renderEncounterSetup(encounterSetupView);
 
   let button = findTablesNavButton(nav);
   let canonicalNavigation = button?.dataset?.action === "workspace";
@@ -323,20 +309,12 @@ async function decorateSourceTableBrowser(application, element) {
   if (!panel) {
     const wrapper = globalThis.document?.createElement?.("div");
     if (!wrapper) return false;
-    wrapper.innerHTML = sourceTablePanelHtml(entries, encounterSetupHtml).trim();
+    wrapper.innerHTML = sourceTablePanelHtml(entries).trim();
     panel = wrapper.firstElementChild;
     if (!panel) return false;
     body.append(panel);
   } else {
-    panel.innerHTML = sourceTablePanelContent(entries, encounterSetupHtml).trim();
-  }
-
-  const encounterSetup = panel.querySelector("[data-mk-gm-tables-encounter-setup]");
-  if (encounterSetup && encounterSetupView.scene) {
-    bindEncounterSetupManualSave(application, encounterSetup, encounterSetupView.scene, {
-      zoneTableUuid: encounterSetupView.zoneTableUuid,
-      tableUuid: encounterSetupView.encounterTableUuid,
-    });
+    panel.innerHTML = sourceTablePanelContent(entries).trim();
   }
 
   if (!canonicalNavigation) {

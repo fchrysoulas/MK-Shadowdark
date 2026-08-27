@@ -118,14 +118,20 @@ test("existing Settlement source resolver matches the actual imported RollTable 
   assert.equal(findCoreSettlementTypeTable(imported)?.title, "TYPE");
 });
 
-test("supported Core parser structures NPC Qualities, Occupation matrix, and ancestry name columns", () => {
+test("supported Core parser splits NPC Qualities into Appearance, Does, and Secret tables", () => {
   const parsed = parseSupportedSourceTables(SYNTHETIC_CORE, { filename: "shadowdark-core-rules-v4-9.md" });
-  const qualities = findByTitle(parsed.tables, "NPC QUALITIES");
+  const appearance = findByTitle(parsed.tables, "APPEARANCE");
+  const does = findByTitle(parsed.tables, "DOES");
+  const secret = findByTitle(parsed.tables, "SECRET");
   const occupation = findByTitle(parsed.tables, "OCCUPATION");
   const names = findByTitle(parsed.tables, "NPC NAMES BY ANCESTRY");
 
-  assert.deepEqual(qualities.columns, ["d20", "Appearance", "Does", "Secret"]);
-  assert.equal(qualities.results[0].text, "Appearance: Tall | Does: Whistles | Secret: Owes someone");
+  assert.deepEqual(appearance.columns, ["d20", "Appearance"]);
+  assert.equal(appearance.results[0].text, "Tall");
+  assert.deepEqual(does.columns, ["d20", "Does"]);
+  assert.equal(does.results[0].text, "Whistles");
+  assert.deepEqual(secret.columns, ["d20", "Secret"]);
+  assert.equal(secret.results[0].text, "Owes someone");
 
   assert.deepEqual(occupation.columns, ["d4, d4", "1", "2", "3", "4"]);
   assert.equal(occupation.results[0].text, "1: Baker | 2: Weaver | 3: Scribe | 4: Smith");

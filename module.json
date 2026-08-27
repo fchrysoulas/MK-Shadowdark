@@ -64,13 +64,13 @@
     "scripts/gm-screen/environment-controls.js",
     "scripts/gm-screen/top-context-controls.js",
     "scripts/gm-screen/light-pressure.js",
-    "scripts/gm-screen/overview-links.js",
-    "scripts/gm-screen/exploration-creation-controls.js",
-    "scripts/gm-screen/npc-creation-controls.js",
     "scripts/gm-screen/tavern-shop-creation-controls.js",
     "scripts/source-tables/source-table-importer.js",
+    "scripts/gm-screen/npc-source-tables.js",
+    "scripts/gm-screen/npc-generator.js",
+    "scripts/gm-screen/overview-links.js",
     "scripts/gm-screen/source-table-browser.js",
-    "scripts/gm-screen/tools-controls.js",
+    "scripts/journal-sheet/journal-sheet.js",
     "scripts/mk-shadowdark.js"
   ],
   "styles": [
@@ -98,7 +98,8 @@
     "styles/encounter-engine.css",
     "styles/summary-bar.css",
     "styles/focus-spell-tracker.css",
-    "styles/targeting-assistant.css"
+    "styles/targeting-assistant.css",
+    "styles/journal-sheet.css"
   ],
   "languages": [
     {

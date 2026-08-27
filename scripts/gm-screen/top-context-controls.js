@@ -154,7 +154,7 @@ async function decorateTopContext(application, element) {
     disabled: view.terrains.length === 0,
     title: view.terrains.length
       ? "Scene terrain"
-      : "Configure an Encounter Zone in Tables to populate Terrain",
+      : "No imported Encounter Zone source is configured for this scene",
   });
   const dangerSelect = installSelect(dangerCell, {
     label: "Danger",

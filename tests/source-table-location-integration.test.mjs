@@ -167,6 +167,38 @@ test("Location generation performs three independent RollTable rolls and preserv
   });
 });
 
+test("Location generation honors separate table selections for each value", async () => {
+  const descriptorTable = mockSourceTable({
+    rolls: [{ total: 2, text: "Descriptor: Mossy | Location: Ignored | Feature: Ignored" }],
+  });
+  descriptorTable.id = "descriptor-table";
+  descriptorTable.uuid = "RollTable.descriptor-table";
+  const locationTable = mockSourceTable({
+    rolls: [{ total: 11, text: "Descriptor: Ignored | Location: Shrine | Feature: Ignored" }],
+  });
+  locationTable.id = "location-table";
+  locationTable.uuid = "RollTable.location-table";
+  const featureTable = mockSourceTable({
+    rolls: [{ total: 17, text: "Descriptor: Ignored | Location: Ignored | Feature: Unstable" }],
+  });
+  featureTable.id = "feature-table";
+  featureTable.uuid = "RollTable.feature-table";
+
+  const point = await rollShadowdarkPointOfInterestFromSource({
+    tables: [descriptorTable, locationTable, featureTable],
+    tableUuids: {
+      descriptor: descriptorTable.uuid,
+      location: locationTable.uuid,
+      feature: featureTable.uuid,
+    },
+  });
+
+  assert.equal(point.descriptor, "Mossy");
+  assert.equal(point.location, "Shrine");
+  assert.equal(point.feature, "Unstable");
+  assert.deepEqual(Object.keys(point.sources), ["descriptor", "location", "feature"]);
+});
+
 test("public Location runtime does not contain the former sourcebook table arrays", () => {
   assert.doesNotMatch(locationRuntime, /SHADOWDARK_POI_DESCRIPTORS/);
   assert.doesNotMatch(locationRuntime, /SHADOWDARK_POI_LOCATIONS/);

@@ -4,7 +4,6 @@ import test from "node:test";
 
 const manifest = JSON.parse(fs.readFileSync(new URL("../module.json", import.meta.url), "utf8"));
 const template = fs.readFileSync(new URL("../templates/gm-screen.hbs", import.meta.url), "utf8");
-const tools = fs.readFileSync(new URL("../scripts/gm-screen/tools-controls.js", import.meta.url), "utf8");
 const groupRest = fs.readFileSync(new URL("../scripts/group-sheet/rest-encounters.js", import.meta.url), "utf8");
 
 test("GM Screen no longer loads its rest workflow controller", () => {
@@ -32,13 +31,9 @@ test("Settlement workspace contains no resting status surface", () => {
   assert.doesNotMatch(template, /Stage Latest Encounter/);
 });
 
-test("rest schedule remains available as a read-only inline Tools inspector", () => {
-  assert.match(tools, /Rest Schedule/);
-  assert.match(tools, /restInspectorHtml/);
-  assert.match(tools, /toolSection\("rest"/);
-  assert.match(tools, /getGroupRestState/);
-  assert.match(tools, /Read-only here\. Rest controls remain in Group Management\./);
-  assert.doesNotMatch(tools, /openRestInspector|waitForGmDialog/);
+test("GM Screen Tools workspace is retired", () => {
+  assert.doesNotMatch(template, /data-workspace-panel="tools"/);
+  assert.ok(!manifest.esmodules.includes("scripts/gm-screen/tools-controls.js"));
 });
 
 test("removing GM Screen rest controls does not remove the canonical Group Rest service", () => {

@@ -95,34 +95,35 @@ test("README documents direct one-turn Elapsed behavior", async () => {
   assert.match(readme, /There is no custom-time popup or Advance Custom action/i);
 });
 
-test("README documents auto-saving top context and explicit Encounter Setup saves", async () => {
+test("README documents auto-saving top context and source-only Tables", async () => {
   const readme = await readReadme();
 
   assert.match(readme, /Terrain, Danger, and Period dropdowns in the top strip/i);
   assert.match(readme, /save immediately when their dropdown changes/i);
   assert.match(readme, /There is no Save Context button/i);
-  assert.match(readme, /Save Encounter Setup/);
+  assert.match(readme, /Tables workspace is reserved for browsing imported source RollTables/i);
+  assert.doesNotMatch(readme, /Tables -> Encounter Setup/);
   assert.match(readme, /Marching order and exploration-role editing remain in Group Management/i);
   assert.match(readme, /production GM Screen no longer edits watches or starts\/resumes rests/i);
 });
 
-test("README documents Overview as per-GM document shortcuts", async () => {
+test("README documents Overview shortcuts without NPC macros", async () => {
   const readme = await readReadme();
 
   assert.match(readme, /Overview.*per-GM shortcut dashboard/is);
+  assert.doesNotMatch(readme, /Create NPC.*macro|macros\/create-npc\.js|npcGenerator/is);
   assert.match(readme, /Journal entries\/pages, Actors, Items, RollTables/i);
   assert.match(readme, /Clicking a pinned shortcut opens the original document/i);
   assert.match(readme, /presentation-only state stored on the current GM user as document UUIDs/i);
   assert.match(readme, /does not force a full GM Screen rerender/i);
 });
 
-test("README documents Downtime, Tools, and Session Log responsibilities", async () => {
+test("README documents Downtime and Session Log responsibilities", async () => {
   const readme = await readReadme();
 
   assert.match(readme, /Downtime.*Create Tavern.*Create Shop/is);
   assert.match(readme, /Resting\/Camp status and controls are intentionally absent/i);
-  assert.match(readme, /Tools.*Scene\/Encounter Context.*Encounter Procedures/is);
-  assert.match(readme, /Rest schedule.*read-only inspector/is);
+  assert.doesNotMatch(readme, /\*\*Tools\*\*|manual generator|Create Journal/i);
   assert.match(readme, /Starting date and time/i);
   assert.match(readme, /Start Session/);
   assert.match(readme, /Reset Timer/);

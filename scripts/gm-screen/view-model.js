@@ -18,7 +18,6 @@ const GM_SCREEN_WORKSPACES = Object.freeze([
   "combat",
   "downtime",
   "tables",
-  "tools",
   "session-log",
 ]);
 
@@ -28,7 +27,6 @@ const GM_SCREEN_WORKSPACE_LABELS = Object.freeze({
   combat: "Combat",
   downtime: "Downtime",
   tables: "Tables",
-  tools: "Tools",
   "session-log": "Session Log",
 });
 
@@ -38,7 +36,6 @@ const GM_SCREEN_WORKSPACE_ICONS = Object.freeze({
   combat: "fa-swords",
   downtime: "fa-coins",
   tables: "fa-table-list",
-  tools: "fa-toolbox",
   "session-log": "fa-book-open",
 });
 

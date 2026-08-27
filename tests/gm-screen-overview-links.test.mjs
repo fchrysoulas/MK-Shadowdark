@@ -126,6 +126,11 @@ test("Overview uses Foundry drag-data and UUID document APIs without full GM Scr
   assert.doesNotMatch(runtime, /updateActor|updateScene|updateCombat|updateToken/);
 });
 
+test("Overview does not own NPC creation controls", () => {
+  assert.doesNotMatch(runtime, /createSourceDrivenNpc|npcSourceStatus|data-mk-overview-create-npc|Create NPC/);
+  assert.doesNotMatch(stylesheet, /mk-gm-overview-create-npc|mk-gm-overview-action-tooltip/);
+});
+
 test("Overview shortcut and summary styling are loaded", () => {
   assert.match(stylesheet, /\.mk-gm-overview-shortcuts/);
   assert.match(stylesheet, /\.mk-gm-overview-link-list/);
@@ -133,5 +138,13 @@ test("Overview shortcut and summary styling are loaded", () => {
   assert.match(stylesheet, /\.mk-gm-overview-link-remove/);
   assert.match(refactorStylesheet, /\.mk-gm-overview-summary/);
   assert.ok(manifest.esmodules.includes("scripts/gm-screen/overview-links.js"));
+  const importerIndex = manifest.esmodules.indexOf("scripts/source-tables/source-table-importer.js");
+  const sourceIndex = manifest.esmodules.indexOf("scripts/gm-screen/npc-source-tables.js");
+  const generatorIndex = manifest.esmodules.indexOf("scripts/gm-screen/npc-generator.js");
+  const overviewIndex = manifest.esmodules.indexOf("scripts/gm-screen/overview-links.js");
+  assert.ok(importerIndex >= 0);
+  assert.ok(sourceIndex > importerIndex);
+  assert.ok(generatorIndex > sourceIndex);
+  assert.ok(overviewIndex > generatorIndex);
   assert.ok(manifest.styles.includes("styles/gm-screen-overview.css"));
 });

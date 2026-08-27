@@ -1,5 +1,4 @@
 import { APP_ID } from "./gm-screen.js";
-import { ensureActionRow } from "./exploration-creation-controls.js";
 import {
   createSourceDrivenShop,
   createSourceDrivenTavern,
@@ -14,6 +13,20 @@ function gmScreenApplication(application) {
       || application.constructor?.DEFAULT_OPTIONS?.id === APP_ID
     )
   );
+}
+
+function ensureActionRow(workspace) {
+  const panel = workspace?.querySelector?.(".mk-gm-panel");
+  if (!panel) return null;
+
+  let actions = panel.querySelector(".mk-gm-panel-actions");
+  if (!actions) {
+    actions = globalThis.document?.createElement?.("div");
+    if (!actions) return null;
+    actions.className = "mk-gm-panel-actions";
+    panel.append(actions);
+  }
+  return actions;
 }
 
 function createButton({ kind, label, icon, title }) {

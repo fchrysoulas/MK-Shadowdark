@@ -13,22 +13,22 @@ const environmentRuntime = fs.readFileSync(
   "utf8",
 );
 
-test("Tables workspace owns Encounter Setup", () => {
+test("Tables workspace contains only source tables", () => {
   const setup = '<header><span>Encounter Setup</span></header><select name="zoneTableUuid"></select>';
   const html = sourceTablePanelContent([], setup);
 
-  assert.match(html, /data-mk-gm-tables-encounter-setup/);
-  assert.match(html, /Encounter Setup/);
-  assert.match(html, /name="zoneTableUuid"/);
+  assert.match(html, /data-mk-gm-source-tables-panel/);
+  assert.doesNotMatch(html, /data-mk-gm-tables-encounter-setup/);
+  assert.doesNotMatch(html, /Encounter Setup/);
+  assert.doesNotMatch(html, /name="zoneTableUuid"/);
 });
 
-test("Tables hydrator builds Encounter Setup and binds explicit manual save", () => {
-  assert.match(browserRuntime, /cachedAvailableRollTables\(\)/);
-  assert.match(browserRuntime, /buildEncounterSetupView\(\{ tables \}\)/);
-  assert.match(browserRuntime, /renderEncounterSetup\(encounterSetupView\)/);
-  assert.match(browserRuntime, /bindEncounterSetupManualSave\(application, encounterSetup, encounterSetupView\.scene/);
-  assert.doesNotMatch(browserRuntime, /bindEncounterSetupAutoSave/);
-  assert.doesNotMatch(browserRuntime, /patchGmScreenPresentationPreferences/);
+test("Tables hydrator does not build or bind Encounter Setup", () => {
+  assert.doesNotMatch(browserRuntime, /cachedAvailableRollTables\(\)/);
+  assert.doesNotMatch(browserRuntime, /buildEncounterSetupView/);
+  assert.doesNotMatch(browserRuntime, /renderEncounterSetup/);
+  assert.doesNotMatch(browserRuntime, /bindEncounterSetupManualSave/);
+  assert.doesNotMatch(browserRuntime, /data-mk-gm-tables-encounter-setup/);
 });
 
 test("Overview decorator no longer owns or scans Encounter Setup", () => {

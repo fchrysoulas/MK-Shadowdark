@@ -7,6 +7,35 @@
     "minimum": "13",
     "verified": "14"
   },
+  "flags": {
+    "mk-module-hub": {
+      "schemaVersion": 1,
+      "category": "game-mechanics",
+      "status": "stable",
+      "icon": "fa-solid fa-swords",
+      "summary": "Quality-of-life extras and expansions for the Shadowdark RPG system.",
+      "tags": [
+        "Shadowdark",
+        "Automation",
+        "Combat",
+        "GM Tools",
+        "Character Sheets"
+      ],
+      "features": [
+        "Targeted attack and spell damage automation",
+        "Resistance, immunity, and vulnerability handling",
+        "Death timers, detailed wounds, and Focus tracking",
+        "Morale and death-state automation",
+        "Group Sheet for party travel, camping, and resources",
+        "GM Screen for exploration, combat, settlement, and session logs",
+        "Group exploration encounters and resting interruptions",
+        "Encounter staging with optional Foundry Combat handoff",
+        "Shadowdark source RollTable import",
+        "Token equipment display and Quickdraw",
+        "Token shadows and corpse token automation"
+      ]
+    }
+  },
   "authors": [
     {
       "name": "Mikrokouneli"

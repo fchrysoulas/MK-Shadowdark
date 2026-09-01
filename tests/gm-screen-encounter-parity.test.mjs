@@ -61,8 +61,8 @@ test("Session Log inspector exposes canonical encounter fields and actions witho
   assert.doesNotMatch(template, /data-workspace-panel="encounter"/);
 });
 
-test("GM Screen staging shortcuts no longer use the legacy direct Application action", () => {
+test("GM Screen staging shortcuts are excluded while the GM Screen is disabled", () => {
   assert.doesNotMatch(template, /data-action="stageLatestEncounter"/);
-  assert.ok(manifest.esmodules.includes("scripts/gm-screen/encounter-controls.js"));
-  assert.ok(manifest.styles.includes("styles/gm-screen-encounter-controls.css"));
+  assert.equal(manifest.esmodules.includes("scripts/gm-screen/encounter-controls.js"), false);
+  assert.equal(manifest.styles.includes("styles/gm-screen-encounter-controls.css"), false);
 });

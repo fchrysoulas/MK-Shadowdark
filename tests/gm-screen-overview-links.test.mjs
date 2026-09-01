@@ -131,20 +131,14 @@ test("Overview does not own NPC creation controls", () => {
   assert.doesNotMatch(stylesheet, /mk-gm-overview-create-npc|mk-gm-overview-action-tooltip/);
 });
 
-test("Overview shortcut and summary styling are loaded", () => {
+test("Overview shortcut runtime and styling are excluded while the GM Screen is disabled", () => {
   assert.match(stylesheet, /\.mk-gm-overview-shortcuts/);
   assert.match(stylesheet, /\.mk-gm-overview-link-list/);
   assert.match(stylesheet, /\.mk-gm-overview-link-open/);
   assert.match(stylesheet, /\.mk-gm-overview-link-remove/);
   assert.match(refactorStylesheet, /\.mk-gm-overview-summary/);
-  assert.ok(manifest.esmodules.includes("scripts/gm-screen/overview-links.js"));
-  const importerIndex = manifest.esmodules.indexOf("scripts/source-tables/source-table-importer.js");
-  const sourceIndex = manifest.esmodules.indexOf("scripts/gm-screen/npc-source-tables.js");
-  const generatorIndex = manifest.esmodules.indexOf("scripts/gm-screen/npc-generator.js");
-  const overviewIndex = manifest.esmodules.indexOf("scripts/gm-screen/overview-links.js");
-  assert.ok(importerIndex >= 0);
-  assert.ok(sourceIndex > importerIndex);
-  assert.ok(generatorIndex > sourceIndex);
-  assert.ok(overviewIndex > generatorIndex);
-  assert.ok(manifest.styles.includes("styles/gm-screen-overview.css"));
+  assert.equal(manifest.esmodules.includes("scripts/gm-screen/overview-links.js"), false);
+  assert.equal(manifest.esmodules.includes("scripts/gm-screen/npc-source-tables.js"), false);
+  assert.equal(manifest.esmodules.includes("scripts/gm-screen/npc-generator.js"), false);
+  assert.equal(manifest.styles.includes("styles/gm-screen-overview.css"), false);
 });

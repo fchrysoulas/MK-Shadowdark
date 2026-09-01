@@ -217,10 +217,8 @@ test("Encounter history binds canonical encounter actions after replacing the wo
   assert.match(runtime, /bindSessionControls\(application, workspace, group\)/);
 });
 
-test("Encounter history runtime and style load after canonical encounter controls", () => {
-  const controlsIndex = manifest.esmodules.indexOf("scripts/gm-screen/encounter-controls.js");
-  const historyIndex = manifest.esmodules.indexOf("scripts/gm-screen/encounter-history.js");
-  assert.ok(controlsIndex >= 0);
-  assert.ok(historyIndex > controlsIndex);
-  assert.ok(manifest.styles.includes("styles/gm-screen-encounter-history.css"));
+test("Encounter history runtime and style are excluded while the GM Screen is disabled", () => {
+  assert.equal(manifest.esmodules.includes("scripts/gm-screen/encounter-controls.js"), false);
+  assert.equal(manifest.esmodules.includes("scripts/gm-screen/encounter-history.js"), false);
+  assert.equal(manifest.styles.includes("styles/gm-screen-encounter-history.css"), false);
 });

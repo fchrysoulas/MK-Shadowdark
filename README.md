@@ -2,12 +2,9 @@
 
 Modular quality-of-life tools, gameplay automation, party management, GM tools, and character-sheet enhancements for the **Shadowdark RPG** system on **Foundry VTT**.
 
-MK-Shadowdark uses a **Group-first procedure architecture** while providing two complementary GM-facing surfaces:
+MK-Shadowdark uses a **Group-first procedure architecture** with Group Management as its active GM-facing party/procedure workspace.
 
-1. **Group Management** — the authoritative party/procedure workspace.
-2. **GM Screen** — a separate GM-only overview and command surface that consumes the same canonical Group, Scene, Encounter, Combat, and character-feature state.
-
-The Group Sheet remains the gameplay owner for party/procedure state. The GM Screen does not duplicate that state.
+The Group Sheet remains the gameplay owner for party/procedure state. The GM Screen is temporarily disabled.
 
 ## Compatibility
 
@@ -63,21 +60,13 @@ The old **MK-Shadowdark GM Screen Mock** prototype is not a dependency and is no
 - **Group Resting Interruptions** — Rest Party resolves required encounter checks before benefits/resources finalize.
 - **Encounter Staging** — preview-first deployment into the Scene with optional Foundry Combat handoff.
 - **GM Member Status** — compact GM-only status affordance for HP/AC/death/wounds/Focus/light/effects.
-- **Time Passes** — a GM Screen 1d6/2d6/3d6 selector, standalone public roll, and synchronized v1.6 visual cues with no encounter automation.
+- **Time Passes** — a standalone GM 1d6/2d6/3d6 public roll with synchronized v1.6 visual cues and no encounter automation.
 
-## Production GM Screen
+## GM Screen (Paused)
 
-MK-Shadowdark includes a **separate GM-only GM Screen** alongside Group Management.
+The GM Screen is **temporarily disabled**. Its Token Scene Controls button and `mk.gmScreen` API are not loaded while work on the feature is paused. Group Management, encounter services, source-table import, and standalone Time Passes remain available.
 
-Open it from the **shield button in Token Scene Controls**, or through the module API:
-
-```js
-const mk = game.modules.get("mk-shadowdark")?.api;
-mk.gmScreen.open();
-mk.gmScreen.toggle();
-```
-
-The GM Screen is a native Foundry ApplicationV2 surface. It is not a replacement for the Group Sheet and it does not own duplicate gameplay state.
+The paused GM Screen implementation is a native Foundry ApplicationV2 surface. It is not a replacement for the Group Sheet and it does not own duplicate gameplay state. The design notes below apply when it is re-enabled.
 
 The GM Screen is intentionally a **manual-update surface** for outside changes. It does not subscribe to ambient Actor, Scene, Combat, or MK workflow changes in order to force background rerenders, and it does not expose a generic Refresh button. Direct GM Screen actions rerender when they complete. Group/workspace selection is kept only in the currently open application and is not silently persisted as a presentation preference. The former Hide/Show Active Party rail and Reset GM Screen Presentation controls are retired.
 
@@ -125,9 +114,9 @@ All Foundry Journal Entries use the module's MK Sandbox Journal-matched two-pane
 
 # Source Table Import
 
-The GM Screen **Tables** workspace can import native Foundry RollTables from Markdown transcriptions supplied by the GM. MK-Shadowdark parses the selected files locally and does not bundle the sourcebook table content.
+The source-table importer can import native Foundry RollTables from Markdown transcriptions supplied by the GM. MK-Shadowdark parses the selected files locally and does not bundle the sourcebook table content. While the GM Screen is disabled, open it through `game.modules.get("mk-shadowdark").api.sourceTables.openImporter()`.
 
-The **Tables** workspace contains only the imported source-table browser. It does not configure encounter state; the persistent top strip continues to display and save the current Scene context.
+The paused **Tables** workspace contains only the imported source-table browser. It does not configure encounter state; the persistent top strip continues to display and save the current Scene context when the GM Screen is re-enabled.
 
 
 Supported source detection includes:
@@ -570,7 +559,6 @@ mk.timePasses
 mk.focus
 mk.morale
 mk.tokenEquipment
-mk.gmScreen
 ```
 
 The compatibility `mk.encounters` surface is headless. It exposes encounter services, not the retired standalone Encounter dialog.
@@ -587,7 +575,6 @@ const preview = await mk.encounterStaging.preview(encounterData, {
   addToCombat: false
 });
 
-mk.gmScreen.open();
 ```
 
 Prefer canonical service APIs over private flags or rendered DOM state.
@@ -598,7 +585,7 @@ Prefer canonical service APIs over private flags or rendered DOM state.
 
 ## The GM Screen button is missing
 
-The production GM Screen is GM-only. Use the **Token Scene Controls** and look for the shield button. The same screen can be opened with `game.modules.get("mk-shadowdark").api.gmScreen.open()` after the module is ready.
+This is expected while the GM Screen is temporarily disabled. Its shield button and `game.modules.get("mk-shadowdark").api.gmScreen` surface are not loaded.
 
 ## A Group encounter check is due but cannot run
 

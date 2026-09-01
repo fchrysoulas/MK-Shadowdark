@@ -334,12 +334,9 @@ test("Create Location no longer embeds verbatim Points of Interest arrays", () =
   assert.match(runtime, /Import \/ Update Source Tables/);
 });
 
-test("Exploration creation controllers are retired without removing establishment tools", () => {
-  const gmScreenIndex = manifest.esmodules.indexOf("scripts/gm-screen/gm-screen.js");
-  const creationIndex = manifest.esmodules.indexOf("scripts/gm-screen/exploration-creation-controls.js");
-  const establishmentsIndex = manifest.esmodules.indexOf("scripts/gm-screen/tavern-shop-creation-controls.js");
-  assert.ok(gmScreenIndex >= 0);
-  assert.equal(creationIndex, -1);
-  assert.ok(establishmentsIndex > gmScreenIndex);
+test("GM Screen controllers are excluded while the feature is disabled", () => {
+  assert.equal(manifest.esmodules.includes("scripts/gm-screen/gm-screen.js"), false);
+  assert.equal(manifest.esmodules.includes("scripts/gm-screen/exploration-creation-controls.js"), false);
+  assert.equal(manifest.esmodules.includes("scripts/gm-screen/tavern-shop-creation-controls.js"), false);
   assert.ok(!manifest.esmodules.includes("scripts/gm-screen/presentation-controls.js"));
 });

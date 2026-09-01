@@ -185,14 +185,10 @@ test("Encounter Setup form reader stages both selectors without persisting them"
   assert.deepEqual(readEncounterSetupForm(root), values);
 });
 
-test("GM Screen loads top context before Overview shortcuts and keeps Encounter Setup helpers", () => {
-  const environmentIndex = manifest.esmodules.indexOf("scripts/gm-screen/environment-controls.js");
-  const topIndex = manifest.esmodules.indexOf("scripts/gm-screen/top-context-controls.js");
-  const overviewIndex = manifest.esmodules.indexOf("scripts/gm-screen/overview-links.js");
-  const browserIndex = manifest.esmodules.indexOf("scripts/gm-screen/source-table-browser.js");
-  assert.ok(environmentIndex >= 0);
-  assert.ok(topIndex > environmentIndex);
-  assert.ok(overviewIndex > topIndex);
-  assert.ok(browserIndex > environmentIndex);
+test("GM Screen context and overview controllers are excluded while the GM Screen is disabled", () => {
+  assert.equal(manifest.esmodules.includes("scripts/gm-screen/environment-controls.js"), false);
+  assert.equal(manifest.esmodules.includes("scripts/gm-screen/top-context-controls.js"), false);
+  assert.equal(manifest.esmodules.includes("scripts/gm-screen/overview-links.js"), false);
+  assert.equal(manifest.esmodules.includes("scripts/gm-screen/source-table-browser.js"), false);
   assert.match(environmentRuntime, /bindEncounterSetupManualSave/);
 });

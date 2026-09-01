@@ -70,17 +70,12 @@ test("README documents Group Exploration, Resting, staging, morale, and GM statu
   assert.match(readme, /Encounter card -> Options -> Preview -> Deploy/);
 });
 
-test("README documents the production GM Screen as a manual-update surface", async () => {
+test("README documents the temporarily disabled GM Screen", async () => {
   const readme = await readReadme();
 
-  assert.match(readme, /Group Management.*GM Screen|GM Screen.*Group Management/is);
-  assert.match(readme, /separate GM-only GM Screen/i);
-  assert.match(readme, /shield button in Token Scene Controls/i);
-  assert.match(readme, /mk\.gmScreen\.open\(\)/);
-  assert.match(readme, /manual-update surface/i);
-  assert.match(readme, /does not subscribe to ambient Actor, Scene, Combat, or MK workflow changes/i);
-  assert.match(readme, /does not expose a generic Refresh button/i);
-  assert.match(readme, /Hide\/Show Active Party rail and Reset GM Screen Presentation controls are retired/i);
+  assert.match(readme, /GM Screen is \*\*temporarily disabled\*\*/i);
+  assert.match(readme, /Token Scene Controls button and `mk\.gmScreen` API are not loaded/i);
+  assert.match(readme, /Group Management, encounter services, source-table import, and standalone Time Passes remain available/i);
 });
 
 test("README documents direct one-turn Elapsed behavior", async () => {

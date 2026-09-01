@@ -201,15 +201,10 @@ test("retired presentation buttons are not loaded", () => {
   assert.ok(!manifest.styles.includes("styles/gm-screen-presentation.css"));
 });
 
-test("GM Screen runtime assets are loaded independently from Group Sheet", () => {
-  assert.ok(manifest.esmodules.includes("scripts/gm-screen/gm-screen.js"));
-  assert.ok(manifest.esmodules.includes("scripts/gm-screen/top-context-controls.js"));
-  assert.ok(manifest.esmodules.includes("scripts/gm-screen/overview-links.js"));
-  assert.ok(!manifest.esmodules.includes("scripts/gm-screen/tools-controls.js"));
-  assert.ok(!manifest.esmodules.includes("scripts/gm-screen/generator-table-config.js"));
-  assert.ok(manifest.styles.includes("styles/gm-screen.css"));
-  assert.ok(manifest.esmodules.includes("scripts/gm-screen/source-table-browser.js"));
-  assert.ok(manifest.styles.includes("styles/gm-screen-source-tables.css"));
-  assert.ok(!manifest.esmodules.includes("scripts/gm-screen/quick-rules.js"));
+test("GM Screen runtime assets are excluded while the feature is disabled", () => {
+  const gmScreenEntries = manifest.esmodules.filter(entry => entry.startsWith("scripts/gm-screen/"));
+  const gmScreenStyles = manifest.styles.filter(entry => entry.startsWith("styles/gm-screen"));
+  assert.deepEqual(gmScreenEntries, []);
+  assert.deepEqual(gmScreenStyles, []);
   assert.ok(!manifest.esmodules.includes("scripts/gm-screen-mock/gm-screen-mock.js"));
 });

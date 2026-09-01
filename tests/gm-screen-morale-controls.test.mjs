@@ -52,10 +52,8 @@ test("GM Screen morale controller has no ambient token-update refresh hook", () 
   assert.match(controls, /await application\.render\(\{ force: true \}\)/);
 });
 
-test("GM Screen morale controls load after the core GM Screen without the retired Rest controller", () => {
-  const gmIndex = manifest.esmodules.indexOf("scripts/gm-screen/gm-screen.js");
-  const moraleIndex = manifest.esmodules.indexOf("scripts/gm-screen/morale-controls.js");
-  assert.ok(gmIndex >= 0);
-  assert.ok(moraleIndex > gmIndex);
-  assert.ok(!manifest.esmodules.includes("scripts/gm-screen/rest-controls.js"));
+test("GM Screen morale controls are excluded while the feature is disabled", () => {
+  assert.equal(manifest.esmodules.includes("scripts/gm-screen/gm-screen.js"), false);
+  assert.equal(manifest.esmodules.includes("scripts/gm-screen/morale-controls.js"), false);
+  assert.equal(manifest.esmodules.includes("scripts/gm-screen/rest-controls.js"), false);
 });

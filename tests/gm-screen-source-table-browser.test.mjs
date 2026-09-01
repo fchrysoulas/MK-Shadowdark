@@ -183,12 +183,10 @@ test("world table resolution supports Foundry collections", () => {
   assert.equal(findWorldTable("missing", tables), null);
 });
 
-test("manifest loads the browser after the source importer and loads its stylesheet", () => {
-  const importerIndex = manifest.esmodules.indexOf("scripts/source-tables/source-table-importer.js");
-  const browserIndex = manifest.esmodules.indexOf("scripts/gm-screen/source-table-browser.js");
-  assert.ok(importerIndex >= 0);
-  assert.ok(browserIndex > importerIndex);
-  assert.ok(manifest.styles.includes("styles/gm-screen-source-tables.css"));
+test("manifest retains the source importer but excludes its GM Screen browser", () => {
+  assert.ok(manifest.esmodules.includes("scripts/source-tables/source-table-importer.js"));
+  assert.equal(manifest.esmodules.includes("scripts/gm-screen/source-table-browser.js"), false);
+  assert.equal(manifest.styles.includes("styles/gm-screen-source-tables.css"), false);
 });
 
 test("browser does not embed proprietary source table entries", () => {

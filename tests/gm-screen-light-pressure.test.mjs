@@ -66,15 +66,11 @@ test("GM Screen pressure strip adapts to Light and optional Combat cells", () =>
   assert.match(stylesheet, /\.mk-gm-light-pressure\.no-light/);
 });
 
-test("GM Screen light-pressure runtime and style are loaded", () => {
-  const environmentIndex = manifest.esmodules.indexOf("scripts/gm-screen/environment-controls.js");
-  const topContextIndex = manifest.esmodules.indexOf("scripts/gm-screen/top-context-controls.js");
-  const lightIndex = manifest.esmodules.indexOf("scripts/gm-screen/light-pressure.js");
-  const overviewIndex = manifest.esmodules.indexOf("scripts/gm-screen/overview-links.js");
-  assert.ok(environmentIndex >= 0);
-  assert.ok(topContextIndex > environmentIndex);
-  assert.ok(lightIndex > topContextIndex);
-  assert.ok(overviewIndex > lightIndex);
-  assert.ok(manifest.styles.includes("styles/gm-screen-light-pressure.css"));
-  assert.ok(manifest.styles.includes("styles/gm-screen-overview.css"));
+test("GM Screen light-pressure runtime and style are excluded while the feature is disabled", () => {
+  assert.equal(manifest.esmodules.includes("scripts/gm-screen/environment-controls.js"), false);
+  assert.equal(manifest.esmodules.includes("scripts/gm-screen/top-context-controls.js"), false);
+  assert.equal(manifest.esmodules.includes("scripts/gm-screen/light-pressure.js"), false);
+  assert.equal(manifest.esmodules.includes("scripts/gm-screen/overview-links.js"), false);
+  assert.equal(manifest.styles.includes("styles/gm-screen-light-pressure.css"), false);
+  assert.equal(manifest.styles.includes("styles/gm-screen-overview.css"), false);
 });

@@ -123,9 +123,7 @@ test("Quick Rules runtime is retired from the GM Screen manifest", () => {
   assert.equal(manifest.esmodules.includes("scripts/gm-screen/quick-rules.js"), false);
 });
 
-test("Quick Rules no longer load with GM Screen operational controllers", () => {
-  const moraleIndex = manifest.esmodules.indexOf("scripts/gm-screen/morale-controls.js");
-  const rulesIndex = manifest.esmodules.indexOf("scripts/gm-screen/quick-rules.js");
-  assert.ok(moraleIndex >= 0);
-  assert.equal(rulesIndex, -1);
+test("Quick Rules and GM Screen operational controllers are excluded while the feature is disabled", () => {
+  assert.equal(manifest.esmodules.includes("scripts/gm-screen/morale-controls.js"), false);
+  assert.equal(manifest.esmodules.includes("scripts/gm-screen/quick-rules.js"), false);
 });

@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.9.16
+
+- Temporarily disabled the GM Screen: its Scene Controls button, module API, scripts, and styles no longer load. Group Management, encounter services, and standalone Time Passes remain available.
+
 ## 1.9.15
 
 - Added a custom Journal Entry sheet matching MK Sandbox Journal's two-pane page browser, including its dark sidebar, muted-gold accents, light content area, and responsive layout.

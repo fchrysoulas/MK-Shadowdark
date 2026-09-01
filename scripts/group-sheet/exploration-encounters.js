@@ -242,15 +242,10 @@ function getRootElement(html) {
 
 async function openExplorationEncounterContextDialog(actor) {
   if (!globalThis.game?.user?.isGM) return null;
-  const gmScreen = globalThis.game?.modules?.get?.(MODULE_ID)?.api?.gmScreen;
-  if (typeof gmScreen?.open !== "function") {
-    globalThis.ui?.notifications?.warn?.("Open the MK-Shadowdark GM Screen to edit Scene Context.");
-    return null;
-  }
-  return gmScreen.open({
-    groupActorUuid: String(actor?.uuid ?? ""),
-    workspace: "overview",
-  });
+  globalThis.ui?.notifications?.warn?.(
+    "Scene Context editing is temporarily unavailable while the MK-Shadowdark GM Screen is disabled."
+  );
+  return null;
 }
 
 async function preflightEncounterTable(context) {

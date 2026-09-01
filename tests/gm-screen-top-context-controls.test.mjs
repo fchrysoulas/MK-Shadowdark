@@ -79,9 +79,7 @@ test("Safe/rest mismatch is rendered as a compact persistent warning without a m
   assert.doesNotMatch(runtime, /confirmGmDialog|waitForGmDialog/);
 });
 
-test("top context runtime loads after environment helpers", () => {
-  const environmentIndex = manifest.esmodules.indexOf("scripts/gm-screen/environment-controls.js");
-  const topIndex = manifest.esmodules.indexOf("scripts/gm-screen/top-context-controls.js");
-  assert.ok(environmentIndex >= 0);
-  assert.ok(topIndex > environmentIndex);
+test("top context runtime is excluded while the GM Screen is disabled", () => {
+  assert.equal(manifest.esmodules.includes("scripts/gm-screen/environment-controls.js"), false);
+  assert.equal(manifest.esmodules.includes("scripts/gm-screen/top-context-controls.js"), false);
 });

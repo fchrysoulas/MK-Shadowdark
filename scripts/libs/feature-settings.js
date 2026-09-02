@@ -133,7 +133,7 @@ function registerMenus() {
 Hooks.once("init", () => {
   registerSetting("detailedWoundsEnabled", {
     name: "Detailed Wounds | Enabled",
-    hint: "Adds a Wounds tab to Shadowdark player character sheets for tracking body-location status.",
+    hint: "Adds an active-wounds summary below Stats on Shadowdark player character sheets and opens the body-location board in a separate window.",
     scope: "world",
     config: true,
     type: Boolean,

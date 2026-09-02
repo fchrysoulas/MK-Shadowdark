@@ -3,12 +3,14 @@ import {
   setConfiguredStatus,
   statusLabel
 } from "./death-status.js";
+import { isPlayerAtZeroCon } from "./con-death.js";
 
 (() => {
   const MODULE_ID = "mk-shadowdark";
   const SUBMODULE = "Death Timer";
   const DEATH_TIMER_STATUS_ID = "mk-death-timer";
   const DEATH_TIMER_CHAT_ICON = "modules/mk-shadowdark/assets/icons/blood-drop-red.png";
+  const conDeathUpdates = new WeakSet();
 
   function getModuleVersion() {
     const mod = game.modules.get(MODULE_ID);
@@ -316,9 +318,37 @@ import {
   async function clearAllDeathState(actor) {
     if (actor.isOwner) {
       await removeDeathTimerEffect(actor);
-      await removeDeadEffect(actor);
+      if (!isPlayerAtZeroCon(actor)) await removeDeadEffect(actor);
       await actor.unsetFlag(MODULE_ID, "deathTimer");
     }
+  }
+
+  function getPrimaryActiveGM() {
+    return game.users
+      ?.filter(user => user.active && user.isGM)
+      ?.sort((left, right) => String(left.id).localeCompare(String(right.id)))[0] ?? null;
+  }
+
+  function getActiveOwners(actor) {
+    if (!actor) return [];
+    const ownerLevel = CONST.DOCUMENT_OWNERSHIP_LEVELS?.OWNER ?? 3;
+    return game.users
+      ?.filter(user => {
+        if (!user.active || user.isGM) return false;
+        try {
+          return actor.testUserPermission?.(user, ownerLevel);
+        } catch (_err) {
+          return false;
+        }
+      })
+      ?.sort((left, right) => String(left.id).localeCompare(String(right.id))) ?? [];
+  }
+
+  function isDeathAutomationAuthority(actor) {
+    const activeGM = getPrimaryActiveGM();
+    if (activeGM) return game.user?.id === activeGM.id;
+    const activeOwner = getActiveOwners(actor)[0];
+    return activeOwner ? game.user?.id === activeOwner.id : game.user?.isGM === true;
   }
 
   async function setDeathTimerFlag(actor, turns, conMod = null) {
@@ -389,6 +419,29 @@ import {
     });
   }
 
+  async function enforceZeroConDeath(actor) {
+    if (
+      game.system?.id !== "shadowdark"
+      || !isDeathAutomationAuthority(actor)
+      || !isPlayerAtZeroCon(actor)
+      || findDeadEffect(actor)
+      || conDeathUpdates.has(actor)
+    ) return false;
+
+    conDeathUpdates.add(actor);
+    try {
+      await markDead(
+        actor,
+        ChatMessage.getSpeaker({ actor }),
+        game.settings.get("core", "rollMode")
+      );
+      dtLog("CON reached 0 - marked Dead:", actor.name);
+      return true;
+    } finally {
+      conDeathUpdates.delete(actor);
+    }
+  }
+
   async function tickDeathTimer(actor, currentTurns) {
     const speaker = ChatMessage.getSpeaker({ actor });
     const rollMode = game.settings.get("core", "rollMode");
@@ -454,9 +507,16 @@ import {
     dtLog("init (settings registered in settings.js)");
   });
 
-  Hooks.once("ready", () => {
+  Hooks.once("ready", async () => {
     ensureStylesOnce();
     dtLog("ready | system:", game.system?.id, "| built-in DEAD:", getBuiltInDeadStatus());
+    for (const actor of game.actors ?? []) {
+      try {
+        await enforceZeroConDeath(actor);
+      } catch (err) {
+        console.error(`${MODULE_ID} | ${SUBMODULE} ready CON-death error`, actor?.name, err);
+      }
+    }
   });
 
   async function onSkullClick(actor) {
@@ -492,6 +552,8 @@ import {
     try {
       if (game.system?.id !== "shadowdark") return;
 
+      await enforceZeroConDeath(actor);
+
       const hasDeathState =
         !!findDeathTimerEffect(actor) ||
         !!findDeadEffect(actor) ||
@@ -514,12 +576,28 @@ import {
 
       if (healed || explicitPositiveHpSet) {
         await clearAllDeathState(actor);
-        dtLog("HP gained - removed Death Timer / Dead from", actor.name);
+        if (isPlayerAtZeroCon(actor)) {
+          dtLog("HP gained - removed Death Timer but preserved Dead at 0 CON for", actor.name);
+        } else {
+          dtLog("HP gained - removed Death Timer / Dead from", actor.name);
+        }
       }
     } catch (err) {
       console.error(`${MODULE_ID} | ${SUBMODULE} updateActor cleanup error`, err);
     }
   });
+
+  for (const hookName of ["createActiveEffect", "updateActiveEffect"]) {
+    Hooks.on(hookName, async effect => {
+      const actor = effect?.parent;
+      if (actor?.documentName !== "Actor") return;
+      try {
+        await enforceZeroConDeath(actor);
+      } catch (err) {
+        console.error(`${MODULE_ID} | ${SUBMODULE} ${hookName} CON-death error`, actor?.name, err);
+      }
+    });
+  }
 
   globalThis.MKShadowdarkDeathTimer = Object.freeze({
     activate: onSkullClick,

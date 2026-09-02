@@ -37,7 +37,8 @@ The old **MK-Shadowdark GM Screen Mock** prototype is not a dependency and is no
 - **Damage Traits** — Resistance, Immunity, and Vulnerability through Shadowdark Properties and transferring effects.
 - **Targeting Assistant** — validates and preserves selected targets for attack/spell automation.
 - **Death Timer** — manages Shadowdark death timers while death itself uses Foundry's native Dead status.
-- **Detailed Wounds** — GM-managed body-location wounds with automatic penalties for player characters.
+- Player characters are marked Dead when their effective CON reaches 0, including reductions from wound penalties.
+- **Detailed Wounds** — shows active injuries below character Stats and opens a GM-managed body-location wound board with automatic penalties.
 - **Editable Quantity** — inventory quantity editing with direct controls.
 - **Equipment Hands** — validates equipped weapons, shields, and hand-occupying gear against available hands.
 - **Token Equipment Display** — shows held equipment and Quickdraw gear around player tokens.

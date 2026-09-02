@@ -12,7 +12,7 @@ import {
   const SETTING_MIGRATION_VERSION = "detailedWoundsMigrationVersion";
   const FLAG_KEY = "detailedWounds";
   const EFFECT_FLAG = "woundPenalties";
-  const TAB_ID = "tab-mk-wounds";
+  const woundsWindows = new Map();
 
   function isPlayerActor(actor) {
     return actor?.documentName === "Actor" && actor.type === "Player";
@@ -38,17 +38,74 @@ import {
     { key: "destroyed", label: "Destroyed", rank: 4 }
   ]);
 
-  onCharacterSheetRender("Detailed Wounds", injectWoundsTabSafely, { priority: 30 });
+  const foundryApplicationApi = globalThis.foundry?.applications?.api ?? {};
+  const ApplicationV2 = foundryApplicationApi.ApplicationV2;
+  const HandlebarsApplicationMixin = foundryApplicationApi.HandlebarsApplicationMixin;
+  const WoundsApplicationBase = ApplicationV2 && HandlebarsApplicationMixin
+    ? HandlebarsApplicationMixin(ApplicationV2)
+    : class {};
 
-  function injectWoundsTabSafely(app, html) {
+  class DetailedWoundsApplication extends WoundsApplicationBase {
+    static DEFAULT_OPTIONS = {
+      classes: ["mk-wounds-window"],
+      position: {
+        width: 720,
+        height: 590
+      },
+      window: {
+        icon: "fa-solid fa-droplet",
+        resizable: true
+      }
+    };
+
+    static PARTS = {
+      main: {
+        template: `modules/${MODULE_ID}/templates/detailed-wounds.hbs`,
+        scrollable: [".mk-wounds-map"]
+      }
+    };
+
+    constructor(actor, options = {}) {
+      super({
+        ...options,
+        id: `mk-detailed-wounds-${actor.id}`,
+        window: {
+          ...options.window,
+          title: `Wounds - ${actor.name}`
+        }
+      });
+      this.actor = actor;
+    }
+
+    async _prepareContext(options) {
+      const context = typeof super._prepareContext === "function"
+        ? await super._prepareContext(options)
+        : {};
+      return { ...context, woundsHtml: renderWoundsHtml(this.actor) };
+    }
+
+    _onRender(context, options) {
+      super._onRender?.(context, options);
+      bindStatusControls(this.actor, this.element, () => this.render({ force: true }));
+    }
+
+    async close(options = {}) {
+      woundsWindows.delete(this.actor.uuid);
+      return super.close(options);
+    }
+  }
+
+  onCharacterSheetRender("Detailed Wounds", injectWoundsSummarySafely, { priority: 30 });
+
+  function injectWoundsSummarySafely(app, html) {
     try {
-      injectWoundsTab(app, html);
+      injectWoundsSummary(app, html);
     } catch (err) {
       console.error(`${MODULE_ID} v${getModuleVersion()} | ${SUBMODULE} | render error`, err);
     }
   }
 
-  function injectWoundsTab(app, html) {
+  function injectWoundsSummary(app, html) {
     if (game.system?.id !== "shadowdark" || !getSetting(SETTING_ENABLED, true)) return;
 
     const actor = app?.actor ?? app?.object;
@@ -58,62 +115,32 @@ import {
     if (!root?.querySelector) return;
 
     const sheet = getSheetForm(root) ?? root;
-    const nav = sheet.querySelector?.(".SD-nav[data-group='primary'], .SD-nav");
-    const content = sheet.querySelector?.(".SD-content-body");
-    if (!nav || !content || !nav.querySelector('[data-tab="tab-abilities"]')) return;
+    const statsBox = sheet.querySelector?.(".tab-abilities .ability-score")?.closest?.(".SD-box");
+    if (!statsBox) return;
 
-    nav.querySelector(".mk-wounds-nav")?.remove();
-    content.querySelector(`.${TAB_ID}`)?.remove();
+    statsBox.parentElement?.querySelector(":scope > .mk-wounds-summary")?.remove();
 
-    const navButton = document.createElement("a");
-    navButton.className = "navigation-tab mk-wounds-nav";
-    navButton.dataset.tab = TAB_ID;
-    navButton.textContent = "Wounds";
-
-    const notesTab = nav.querySelector('[data-tab="tab-notes"]');
-    if (notesTab) nav.insertBefore(navButton, notesTab);
-    else nav.appendChild(navButton);
-
-    const section = document.createElement("section");
-    section.className = `tab ${TAB_ID} mk-wounds-tab`;
-    section.dataset.group = "primary";
-    section.dataset.tab = TAB_ID;
-    section.innerHTML = renderWoundsHtml(actor);
-    content.appendChild(section);
-
-    bindTabNavigation(app, nav, content, navButton, section);
-    bindStatusControls(app, actor, section);
-
-    if (app.__mkWoundsActive) activateWoundsTab(app, nav, content, navButton, section);
-  }
-
-  function bindTabNavigation(app, nav, content, navButton, section) {
-    navButton.addEventListener("click", event => {
+    const summary = document.createElement("section");
+    summary.className = "SD-box grid-colspan-2 mk-wounds-summary";
+    summary.dataset.action = "open-wounds";
+    summary.tabIndex = 0;
+    summary.setAttribute("role", "button");
+    summary.setAttribute("aria-label", `Open wounds for ${actor.name}`);
+    summary.title = "Open Wounds";
+    summary.innerHTML = renderWoundsSummaryHtml(actor);
+    statsBox.insertAdjacentElement("afterend", summary);
+    summary.addEventListener("click", event => {
       event.preventDefault();
-      event.stopPropagation();
-      app.__mkWoundsActive = true;
-      activateWoundsTab(app, nav, content, navButton, section);
+      openWoundsApplication(actor);
     });
-
-    for (const nativeTab of nav.querySelectorAll(".navigation-tab:not(.mk-wounds-nav)")) {
-      nativeTab.addEventListener("click", () => {
-        app.__mkWoundsActive = false;
-        navButton.classList.remove("active");
-        section.classList.remove("active");
-      });
-    }
+    summary.addEventListener("keydown", event => {
+      if (!["Enter", " "].includes(event.key)) return;
+      event.preventDefault();
+      openWoundsApplication(actor);
+    });
   }
 
-  function activateWoundsTab(app, nav, content, navButton, section) {
-    for (const tab of nav.querySelectorAll(".navigation-tab")) tab.classList.remove("active");
-    for (const panel of content.querySelectorAll(":scope > .tab[data-group='primary']")) panel.classList.remove("active");
-
-    navButton.classList.add("active");
-    section.classList.add("active");
-    app.__mkWoundsActive = true;
-  }
-
-  function bindStatusControls(app, actor, section) {
+  function bindStatusControls(actor, section, rerender) {
     if (!game.user?.isGM) return;
 
     for (const button of section.querySelectorAll("[data-wound-location]")) {
@@ -123,7 +150,7 @@ import {
         if (!getLocation(location)) return;
 
         await worsenLocationStatus(actor, location);
-        rerenderWoundsSection(app, actor, section);
+        rerender();
       });
 
       button.addEventListener("contextmenu", async event => {
@@ -132,20 +159,56 @@ import {
         if (!getLocation(location)) return;
 
         await improveLocationStatus(actor, location);
-        rerenderWoundsSection(app, actor, section);
+        rerender();
       });
     }
 
     section.querySelector("[data-action='roll-random-wound']")?.addEventListener("click", async event => {
       event.preventDefault();
       await rollRandomWound(actor);
-      rerenderWoundsSection(app, actor, section);
+      rerender();
     });
   }
 
-  function rerenderWoundsSection(app, actor, section) {
-    section.innerHTML = renderWoundsHtml(actor);
-    bindStatusControls(app, actor, section);
+  function openWoundsApplication(actor) {
+    if (!ApplicationV2 || !HandlebarsApplicationMixin) {
+      ui.notifications?.error?.("Foundry ApplicationV2 is unavailable; the Wounds screen cannot open.");
+      return null;
+    }
+
+    let application = woundsWindows.get(actor.uuid);
+    if (!application) {
+      application = new DetailedWoundsApplication(actor);
+      woundsWindows.set(actor.uuid, application);
+    }
+    application.render({ force: true });
+    return application;
+  }
+
+  function renderWoundsSummaryHtml(actor) {
+    const data = normalizeData(actor.getFlag(MODULE_ID, FLAG_KEY));
+    const activeWounds = LOCATIONS
+      .map(location => ({ location, status: getLocationStatus(data, location.key) }))
+      .filter(entry => entry.status.key !== "ok");
+
+    const entries = activeWounds.length
+      ? activeWounds.map(({ location, status }) => `
+          <span class="mk-wounds-summary-entry status-${status.key}">
+            <i class="${location.icon}" aria-hidden="true"></i>
+            <span>${escapeHtml(location.label)}</span>
+          </span>
+        `).join("")
+      : '<span class="mk-wounds-summary-empty">No active wounds</span>';
+
+    return `
+      <div class="header mk-wounds-summary-header">
+        <label>Wounds</label>
+        <span>
+          <i class="fa-solid fa-up-right-from-square" aria-hidden="true"></i>
+        </span>
+      </div>
+      <div class="content mk-wounds-summary-list">${entries}</div>
+    `;
   }
 
   function renderWoundsHtml(actor) {
@@ -504,6 +567,7 @@ import {
         worsen: (actor, location) => worsenLocationStatus(actor, location),
         improve: (actor, location) => improveLocationStatus(actor, location),
         rollRandom: actor => rollRandomWound(actor),
+        open: actor => isPlayerActor(actor) ? openWoundsApplication(actor) : null,
         migrateLegacyData: () => migrateDetailedWounds()
       };
     }

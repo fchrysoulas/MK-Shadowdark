@@ -2,6 +2,8 @@
 
 ## 1.9.16
 
+- Player characters whose effective CON falls to 0 are now marked Dead; HP healing no longer clears Dead while CON remains at 0.
+- Replaced the Detailed Wounds character-sheet tab with an active-wounds summary below Stats; clicking Wounds now opens the full body-location board in a separate window.
 - Temporarily disabled the GM Screen: its Scene Controls button, module API, scripts, and styles no longer load. Group Management, encounter services, and standalone Time Passes remain available.
 
 ## 1.9.15

@@ -122,6 +122,30 @@ test("Detailed Wounds summary counts only affected canonical locations", () => {
   ]);
 });
 
+test("Detailed Wounds summary recognizes canonical status/result records and ignores scars", () => {
+  const actor = makeActor({
+    flags: {
+      detailedWounds: {
+        version: 3,
+        locations: {
+          head: { status: "ok", hits: 1, severityRoll: 1, resultKey: "scar" },
+          body: { status: "wounded", hits: 1, severityRoll: 7, resultKey: "brokenRibs" },
+          rightArm: { status: "critical", hits: 1, severityRoll: 9, resultKey: "lostHand" },
+        },
+      },
+    },
+  });
+
+  const summary = woundsSummary(actor);
+  assert.equal(summary.total, 2);
+  assert.equal(summary.wound, 1);
+  assert.equal(summary.critical, 1);
+  assert.deepEqual(summary.entries, [
+    { locationId: "body", level: "wound", damage: 0, resultLabel: "Broken Ribs" },
+    { locationId: "rightArm", level: "critical", damage: 0, resultLabel: "Lost Hand" },
+  ]);
+});
+
 test("Focus public API is preferred over raw actor flag state", () => {
   let apiCalls = 0;
   const runtime = installRuntime({

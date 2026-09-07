@@ -83,7 +83,22 @@ function deathTimerSummary(actor) {
 
 function normalizeWoundLevel(level) {
   const normalized = String(level ?? "ok").trim().toLowerCase();
+  if (normalized === "wounded") return "wound";
   return WOUND_LEVELS.includes(normalized) ? normalized : "ok";
+}
+
+function formatWoundResultKey(resultKey) {
+  const normalized = String(resultKey ?? "").trim();
+  if (!normalized || normalized.toLowerCase() === "scar") return "";
+  return normalized
+    .replace(/([a-z])([A-Z])/g, "$1 $2")
+    .replace(/^./, character => character.toUpperCase());
+}
+
+function hasActiveWoundResult(raw, level) {
+  const resultKey = String(raw?.resultKey ?? "").trim().toLowerCase();
+  if (resultKey && resultKey !== "scar") return true;
+  return level !== "ok";
 }
 
 function woundsSummary(actor) {
@@ -99,15 +114,19 @@ function woundsSummary(actor) {
   const entries = [];
 
   for (const [locationId, raw] of Object.entries(locations)) {
-    const level = normalizeWoundLevel(raw?.level);
-    if (level === "ok") continue;
+    const level = normalizeWoundLevel(raw?.status ?? raw?.level);
+    if (!hasActiveWoundResult(raw, level)) continue;
 
     counts[level] += 1;
-    entries.push({
+    const entry = {
       locationId,
       level,
       damage: Math.max(0, numberOrZero(raw?.damage)),
-    });
+    };
+    const resultLabel = String(raw?.resultLabel ?? formatWoundResultKey(raw?.resultKey) ?? "").trim();
+    if (resultLabel) entry.resultLabel = resultLabel;
+    if (raw?.consequence) entry.consequence = String(raw.consequence);
+    entries.push(entry);
   }
 
   return {
@@ -299,7 +318,7 @@ function renderGroupMemberStatus(status) {
           <h3>Detailed Wounds</h3>
           <p>${escapeHtml(status.wounds.total)} affected location${status.wounds.total === 1 ? "" : "s"}</p>
           <p>Wound <strong>${escapeHtml(status.wounds.wound)}</strong> · Critical <strong>${escapeHtml(status.wounds.critical)}</strong> · Destroyed <strong>${escapeHtml(status.wounds.destroyed)}</strong></p>
-          ${listOrEmpty(status.wounds.entries, wound => `<li>${escapeHtml(wound.locationId)}: ${escapeHtml(wound.level)}${wound.damage ? ` (${escapeHtml(wound.damage)} damage)` : ""}</li>`)}
+          ${listOrEmpty(status.wounds.entries, wound => `<li>${escapeHtml(wound.locationId)}: ${escapeHtml(wound.resultLabel ?? wound.level)}${wound.consequence ? ` - ${escapeHtml(wound.consequence)}` : ""}${wound.damage ? ` (${escapeHtml(wound.damage)} damage)` : ""}</li>`)}
         </section>
         <section>
           <h3>Focus</h3>

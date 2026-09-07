@@ -73,7 +73,7 @@
   margin: 0;
   border: 0;
   color: #fff;
-  text-align: center;
+  text-align: left;
   text-transform: uppercase;
   letter-spacing: 0.075em;
   font-size: 1.45rem;
@@ -84,7 +84,7 @@
 .mk-journal-sheet-type {
   display: flex;
   align-items: center;
-  justify-content: center;
+  justify-content: flex-start;
   gap: 7px;
   margin: 7px 0 18px;
   color: var(--mk-journal-accent-soft);
@@ -99,10 +99,34 @@
   padding: 5px 0 12px;
 }
 
+.mk-journal-sheet-category {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 12px;
+  padding: 7px 18px 5px;
+  border-top: 1px solid rgba(182, 165, 126, 0.18);
+  color: var(--mk-journal-accent-soft);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  font-size: 0.62rem;
+  font-weight: 800;
+}
+
+.mk-journal-sheet-category:first-child {
+  margin-top: 0;
+  border-top: 0;
+}
+
+.mk-journal-sheet-category i {
+  color: var(--mk-journal-accent);
+}
+
 .mk-journal-sheet-tab {
   width: 100%;
   display: flex;
   align-items: center;
+  justify-content: flex-start !important;
   gap: 10px;
   padding: 10px 18px;
   border: 0;
@@ -110,7 +134,7 @@
   border-radius: 0;
   background: transparent;
   color: #f4f4f4;
-  text-align: left;
+  text-align: left !important;
   box-shadow: none;
   cursor: pointer;
   font-size: 0.78rem;
@@ -209,6 +233,10 @@
 .mk-journal-sheet-page-body {
   color: var(--mk-journal-text);
   line-height: 1.52;
+}
+
+.mk-journal-sheet-page-body :is(h1, h2, h3) {
+  color: #292724;
 }
 
 .mk-journal-sheet-page-body > footer {

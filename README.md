@@ -38,7 +38,7 @@ The old **MK-Shadowdark GM Screen Mock** prototype is not a dependency and is no
 - **Targeting Assistant** — validates and preserves selected targets for attack/spell automation.
 - **Death Timer** — manages Shadowdark death timers while death itself uses Foundry's native Dead status.
 - Player characters are marked Dead when their effective CON reaches 0, including reductions from wound penalties.
-- **Detailed Wounds** — shows active injuries below character Stats and opens a GM-managed body-location wound board with automatic penalties.
+- **Detailed Wounds** — shows active injuries below character Stats and opens a GM-managed six-zone wound board. A `2d10` roll selects one of Head, Right/Left Arm, Body, or Right/Left Leg and then resolves a location-specific severity result, including stored rest durations, CON saves, native Dead status, automatic ability penalties, and named consequences in Group status summaries.
 - **Editable Quantity** — inventory quantity editing with direct controls.
 - **Equipment Hands** — validates equipped weapons, shields, and hand-occupying gear against available hands.
 - **Token Equipment Display** — shows held equipment and Quickdraw gear around player tokens.
@@ -109,7 +109,7 @@ The GM Screen reads canonical state from Group, Scene Context, internal encounte
 
 ## Journal Entries
 
-All Foundry Journal Entries use the module's MK Sandbox Journal-matched two-pane sheet by default. It presents Journal Entry pages through a dark sidebar with page navigation and a light content area with the same spacing, typography, muted-gold accents, and responsive layout.
+The **Journal Sheet | Use as Default** world setting is enabled by default. When enabled, all Foundry Journal Entries use the module's MK Sandbox Journal-matched two-pane sheet, presenting their pages through a dark sidebar with category headings and page navigation plus a light content area with the same spacing, typography, muted-gold accents, and responsive layout. The custom sheet is display-only; use Foundry's native Journal Page editor to edit page content. Disable it to leave Foundry's normal Journal sheet as the default; the MK-Shadowdark sheet remains available for individual selection.
 
 ---
 

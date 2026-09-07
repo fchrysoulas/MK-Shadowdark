@@ -91,6 +91,13 @@
       ]
     },
     {
+      key: "journalSheet",
+      title: "Journal Sheet",
+      hint: "Configure whether the MK-Shadowdark Journal sheet is the world default.",
+      icon: "fas fa-book-open",
+      settings: ["journalSheetDefault"]
+    },
+    {
       key: "summaryBar",
       title: "Summary Bar",
       hint: "Configure the independent character summary bar, its contents, appearance, position, and diagnostics.",
@@ -497,6 +504,20 @@
 
   Hooks.once("init", () => {
     log("registering settings");
+
+    /* -------------------- */
+    /* Journal Sheet        */
+    /* -------------------- */
+
+    registerSetting("journalSheetDefault", {
+      name: "Journal Sheet | Use as Default",
+      hint: "When enabled, the MK-Shadowdark Journal sheet is used as the default for Journal Entries and their pages.",
+      scope: "world",
+      config: true,
+      type: Boolean,
+      default: true,
+      onChange: value => globalThis.MKShadowdarkJournalSheet?.setDefault?.(value)
+    });
 
     /* -------------------- */
     /* Paper Chat           */

@@ -7,11 +7,16 @@
     <div class="mk-journal-sheet-type"><i class="{{icon}}"></i> {{typeLabel}}</div>
 
     <nav class="mk-journal-sheet-tabs" aria-label="Journal pages">
-      {{#each pages}}
-      <button type="button" class="mk-journal-sheet-tab {{#if active}}active{{/if}}"
-        data-mk-journal-page-id="{{id}}" data-mk-journal-page-name="{{name}}">
-        <i class="{{icon}}"></i><span>{{name}}</span>
-      </button>
+      {{#each navigationGroups}}
+        {{#if showHeading}}
+        <div class="mk-journal-sheet-category"><i class="fas fa-folder-open"></i><span>{{name}}</span></div>
+        {{/if}}
+        {{#each pages}}
+        <button type="button" class="mk-journal-sheet-tab {{#if active}}active{{/if}}"
+          data-mk-journal-page-id="{{id}}" data-mk-journal-page-name="{{name}}">
+          <i class="{{icon}}"></i><span>{{name}}</span>
+        </button>
+        {{/each}}
       {{/each}}
     </nav>
 
@@ -24,7 +29,7 @@
     <header class="mk-journal-sheet-main-header">
       <div>
         <div class="mk-journal-sheet-eyebrow">MK SHADOWDARK</div>
-        <h2 data-mk-journal-active-page-title>{{#if hasPages}}{{pages.0.name}}{{else}}Journal{{/if}}</h2>
+        <h2 data-mk-journal-active-page-title>{{#if hasPages}}{{activePageName}}{{else}}Journal{{/if}}</h2>
       </div>
     </header>
 

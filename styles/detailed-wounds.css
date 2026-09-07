@@ -35,6 +35,19 @@
   font-size: 0.72rem;
 }
 
+.shadowdark.sheet.player .mk-wounds-summary-entry > span {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+
+.shadowdark.sheet.player .mk-wounds-summary-entry small {
+  color: currentColor;
+  font-family: "Montserrat-Regular", sans-serif;
+  font-size: 0.62rem;
+  opacity: 0.82;
+}
+
 .shadowdark.sheet.player .mk-wounds-summary-entry.status-wounded { color: #9b7200; }
 .shadowdark.sheet.player .mk-wounds-summary-entry.status-critical { color: #b32d2d; }
 .shadowdark.sheet.player .mk-wounds-summary-entry.status-destroyed { color: #5d1720; }
@@ -113,6 +126,15 @@
 :is(.shadowdark.sheet.player, .mk-wounds-window) .mk-wounds-random-roll:disabled {
   cursor: default;
   opacity: 0.56;
+}
+
+:is(.shadowdark.sheet.player, .mk-wounds-window) .mk-wounds-rules-note {
+  margin: 0;
+  padding: 0.25rem 0.6rem 0.45rem;
+  color: var(--mk-wounds-muted);
+  font-size: 0.63rem;
+  line-height: 1.35;
+  text-align: center;
 }
 
 :is(.shadowdark.sheet.player, .mk-wounds-window) .mk-wounds-legend {
@@ -240,6 +262,16 @@
   font-size: 0.67rem;
 }
 
+:is(.shadowdark.sheet.player, .mk-wounds-window) .mk-wounds-location-copy em {
+  overflow: hidden;
+  color: var(--mk-wounds-muted);
+  font-size: 0.58rem;
+  font-style: normal;
+  line-height: 1.25;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 :is(.shadowdark.sheet.player, .mk-wounds-window) .mk-wounds-body {
   position: relative;
   z-index: 1;
@@ -320,15 +352,11 @@
 }
 
 :is(.shadowdark.sheet.player, .mk-wounds-window) .marker-head { left: 50%; top: 11%; }
-:is(.shadowdark.sheet.player, .mk-wounds-window) .marker-torso { left: 50%; top: 41%; }
+:is(.shadowdark.sheet.player, .mk-wounds-window) .marker-body { left: 50%; top: 41%; }
 :is(.shadowdark.sheet.player, .mk-wounds-window) .marker-leftArm { left: 31%; top: 36%; }
 :is(.shadowdark.sheet.player, .mk-wounds-window) .marker-rightArm { left: 69%; top: 36%; }
-:is(.shadowdark.sheet.player, .mk-wounds-window) .marker-leftHand { left: 20%; top: 56%; }
-:is(.shadowdark.sheet.player, .mk-wounds-window) .marker-rightHand { left: 80%; top: 56%; }
 :is(.shadowdark.sheet.player, .mk-wounds-window) .marker-leftLeg { left: 40%; top: 73%; }
 :is(.shadowdark.sheet.player, .mk-wounds-window) .marker-rightLeg { left: 60%; top: 73%; }
-:is(.shadowdark.sheet.player, .mk-wounds-window) .marker-leftFoot { left: 38%; top: 84%; }
-:is(.shadowdark.sheet.player, .mk-wounds-window) .marker-rightFoot { left: 62%; top: 84%; }
 
 :is(.shadowdark.sheet.player, .mk-wounds-window) .mk-wounds-shell .status-ok { color: var(--mk-wounds-ok); }
 :is(.shadowdark.sheet.player, .mk-wounds-window) .mk-wounds-shell .status-wounded { color: var(--mk-wounds-wounded); }
@@ -369,6 +397,10 @@
 
   :is(.shadowdark.sheet.player, .mk-wounds-window) .mk-wounds-location-copy small {
     font-size: 0.57rem;
+  }
+
+  :is(.shadowdark.sheet.player, .mk-wounds-window) .mk-wounds-location-copy em {
+    font-size: 0.52rem;
   }
 
   :is(.shadowdark.sheet.player, .mk-wounds-window) .mk-wounds-person {

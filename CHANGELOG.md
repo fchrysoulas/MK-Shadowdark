@@ -4,6 +4,13 @@
 
 - Player characters whose effective CON falls to 0 are now marked Dead; HP healing no longer clears Dead while CON remains at 0.
 - Replaced the Detailed Wounds character-sheet tab with an active-wounds summary below Stats; clicking Wounds now opens the full body-location board in a separate window.
+- Reworked Detailed Wounds into the requested six-zone location distribution with location-specific severity tables, stored concussion/rest durations, Heart CON saves, fatal wound handling, and exact ability penalties.
+- Updated Group Sheet wound summaries to recognize six-zone result records, ignore scars, and show named consequences.
+- Added the **Journal Sheet | Use as Default** world setting to enable or disable the MK-Shadowdark Journal sheet as the default for all Journal Entries.
+- Set Journal page `h1`, `h2`, and `h3` headings to the dark journal text color.
+- Added Journal Entry page categories to the MK-Shadowdark Journal sidebar, with uncategorized pages grouped separately.
+- Left-aligned the Journal sidebar title, type, category labels, and page rows.
+- The custom Journal Sheet remains display-only; page editing continues through Foundry's native Journal Page editor.
 - Temporarily disabled the GM Screen: its Scene Controls button, module API, scripts, and styles no longer load. Group Management, encounter services, and standalone Time Passes remain available.
 
 ## 1.9.15

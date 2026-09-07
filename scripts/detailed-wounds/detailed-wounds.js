@@ -1,6 +1,11 @@
 import { onCharacterSheetRender } from "../libs/sheet-render-adapter.js";
 import {
   WOUND_MIGRATION_VERSION,
+  WOUND_LOCATION_RULES,
+  getNextWoundSeverityRoll,
+  getPreviousWoundSeverityRoll,
+  getWoundLocationForRoll,
+  getWoundOutcome,
   migrateLegacyWoundData,
   normalizeCurrentWoundData
 } from "./detailed-wounds-migration.js";
@@ -18,18 +23,31 @@ import {
     return actor?.documentName === "Actor" && actor.type === "Player";
   }
 
-  const LOCATIONS = Object.freeze([
-    { key: "head", label: "Head", roll: 10, icon: "fa-solid fa-brain", side: "left" },
-    { key: "leftArm", label: "Left Arm", roll: 8, icon: "fa-solid fa-hand-fist", side: "left" },
-    { key: "leftHand", label: "Left Hand", roll: 6, icon: "fa-solid fa-hand", side: "left" },
-    { key: "leftLeg", label: "Left Leg", roll: 4, icon: "fa-solid fa-person-walking", side: "left" },
-    { key: "leftFoot", label: "Left Foot", roll: 2, icon: "fa-solid fa-shoe-prints", side: "left" },
-    { key: "torso", label: "Torso", roll: 9, icon: "fa-solid fa-heart-pulse", side: "right" },
-    { key: "rightArm", label: "Right Arm", roll: 7, icon: "fa-solid fa-hand-fist", side: "right" },
-    { key: "rightHand", label: "Right Hand", roll: 5, icon: "fa-solid fa-hand", side: "right" },
-    { key: "rightLeg", label: "Right Leg", roll: 3, icon: "fa-solid fa-person-walking", side: "right" },
-    { key: "rightFoot", label: "Right Foot", roll: 1, icon: "fa-solid fa-shoe-prints", side: "right" }
-  ]);
+  const LOCATION_PRESENTATION = Object.freeze({
+    head: { icon: "fa-solid fa-brain", side: "left" },
+    rightArm: { icon: "fa-solid fa-hand-fist", side: "right" },
+    leftArm: { icon: "fa-solid fa-hand-fist", side: "left" },
+    body: { icon: "fa-solid fa-heart-pulse", side: "right" },
+    rightLeg: { icon: "fa-solid fa-person-walking", side: "right" },
+    leftLeg: { icon: "fa-solid fa-person-walking", side: "left" }
+  });
+
+  const LOCATION_ALIASES = Object.freeze({
+    torso: "body",
+    leftHand: "leftArm",
+    rightHand: "rightArm",
+    leftFoot: "leftLeg",
+    rightFoot: "rightLeg"
+  });
+
+  const LOCATIONS = Object.freeze(WOUND_LOCATION_RULES.map(location => ({
+    ...location,
+    roll: location.rolls[0],
+    rollLabel: location.rolls.length === 1
+      ? String(location.rolls[0])
+      : `${location.rolls[0]}-${location.rolls[location.rolls.length - 1]}`,
+    ...LOCATION_PRESENTATION[location.key]
+  })));
 
   const STATUSES = Object.freeze([
     { key: "ok", label: "OK", rank: 1 },
@@ -188,16 +206,24 @@ import {
   function renderWoundsSummaryHtml(actor) {
     const data = normalizeData(actor.getFlag(MODULE_ID, FLAG_KEY));
     const activeWounds = LOCATIONS
-      .map(location => ({ location, status: getLocationStatus(data, location.key) }))
-      .filter(entry => entry.status.key !== "ok");
+      .map(location => ({
+        location,
+        wound: getLocationEntry(data, location.key),
+        status: getLocationStatus(data, location.key)
+      }))
+      .filter(entry => isActiveWound(entry.wound));
 
     const entries = activeWounds.length
-      ? activeWounds.map(({ location, status }) => `
+      ? activeWounds.map(({ location, wound, status }) => {
+        const outcome = getStoredWoundOutcome(location.key, wound);
+        const label = outcome?.label ?? status.label;
+        return `
           <span class="mk-wounds-summary-entry status-${status.key}">
             <i class="${location.icon}" aria-hidden="true"></i>
-            <span>${escapeHtml(location.label)}</span>
+            <span>${escapeHtml(location.label)}<small>${escapeHtml(label)}</small></span>
           </span>
-        `).join("")
+        `;
+      }).join("")
       : '<span class="mk-wounds-summary-empty">No active wounds</span>';
 
     return `
@@ -228,6 +254,7 @@ import {
           <button type="button" class="mk-wounds-random-roll" data-action="roll-random-wound"${editable ? "" : " disabled"}>
             <i class="fa-solid fa-dice-d10"></i><span>Random Wound</span><b>2d10</b>
           </button>
+          <p class="mk-wounds-rules-note">Location d10: 1 Head · 2-3 Right Arm · 4-5 Left Arm · 6-8 Body · 9 Right Leg · 10 Left Leg. Roll a second d10 on that location's severity table.</p>
         </header>
 
         <div class="mk-wounds-map">
@@ -245,48 +272,62 @@ import {
 
   function renderLocationCard(location, data, editable) {
     const status = getLocationStatus(data, location.key);
-    const rollResult = location.roll;
-    const penalties = formatLocationPenalties(location, status);
+    const wound = getLocationEntry(data, location.key);
+    const outcome = getStoredWoundOutcome(location.key, wound);
+    const resultLabel = outcome?.label ?? status.label;
+    const consequence = formatWoundDetails(outcome, wound);
+    const penalties = formatLocationPenalties(location, wound);
     const action = editable ? "Left-click to worsen; right-click to improve" : "GM only";
 
     return `
       <button type="button" class="mk-wounds-location-card status-${status.key}" data-wound-location="${location.key}"
-        title="${escapeHtml(location.label)}: ${escapeHtml(status.label)}. ${action}"${editable ? "" : " disabled"}>
+        title="${escapeHtml(location.label)}: ${escapeHtml(resultLabel)}. ${escapeHtml(consequence)} ${action}"${editable ? "" : " disabled"}>
         <span class="mk-wounds-location-icon"><i class="${location.icon}"></i></span>
-        <span class="mk-wounds-location-copy"><strong>${rollResult}. ${escapeHtml(location.label)}</strong><small>${escapeHtml(status.label)}${penalties ? ` · ${escapeHtml(penalties)}` : ""}</small></span>
+        <span class="mk-wounds-location-copy">
+          <strong>${escapeHtml(location.rollLabel)}. ${escapeHtml(location.label)}</strong>
+          <small>${escapeHtml(resultLabel)}${penalties ? ` · ${escapeHtml(penalties)}` : ""}</small>
+          <em>${escapeHtml(consequence)}</em>
+        </span>
       </button>
     `;
   }
 
   function renderBodyMarker(location, data, editable) {
     const status = getLocationStatus(data, location.key);
+    const wound = getLocationEntry(data, location.key);
+    const outcome = getStoredWoundOutcome(location.key, wound);
+    const resultLabel = outcome?.label ?? status.label;
     const action = editable ? "Left-click to worsen; right-click to improve" : "GM only";
 
     return `
       <button type="button" class="mk-wounds-marker marker-${location.key} status-${status.key}" data-wound-location="${location.key}"
-        title="${escapeHtml(location.label)}: ${escapeHtml(status.label)}. ${action}"
-        aria-label="${escapeHtml(location.label)}: ${escapeHtml(status.label)}"${editable ? "" : " disabled"}></button>
+        title="${escapeHtml(location.label)}: ${escapeHtml(resultLabel)}. ${escapeHtml(formatWoundDetails(outcome, wound))} ${action}"
+        aria-label="${escapeHtml(location.label)}: ${escapeHtml(resultLabel)}"${editable ? "" : " disabled"}></button>
     `;
   }
 
   async function worsenLocationStatus(actor, location) {
-    if (!game.user?.isGM || !isPlayerActor(actor) || !getLocation(location)) return;
+    const resolvedLocation = getLocation(location);
+    if (!game.user?.isGM || !isPlayerActor(actor) || !resolvedLocation) return;
+    const locationKey = resolvedLocation.key;
 
     const data = normalizeData(actor.getFlag(MODULE_ID, FLAG_KEY));
-    const current = getLocationStatus(data, location);
-    const next = STATUSES[Math.min(current.rank, STATUSES.length - 1)];
-    data.locations[location] = { ...data.locations[location], status: next.key };
-    await actor.setFlag(MODULE_ID, FLAG_KEY, data);
-    await syncWoundPenaltyEffect(actor, data);
+    const current = getLocationEntry(data, locationKey);
+    const nextSeverity = getNextWoundSeverityRoll(Number(current.severityRoll) || minimumSeverityForStatus(current.status));
+    await setWoundResult(actor, locationKey, nextSeverity, data, true);
   }
 
   async function improveLocationStatus(actor, location) {
-    if (!game.user?.isGM || !isPlayerActor(actor) || !getLocation(location)) return;
+    const resolvedLocation = getLocation(location);
+    if (!game.user?.isGM || !isPlayerActor(actor) || !resolvedLocation) return;
+    const locationKey = resolvedLocation.key;
 
     const data = normalizeData(actor.getFlag(MODULE_ID, FLAG_KEY));
-    const current = getLocationStatus(data, location);
-    const next = STATUSES[Math.max(current.rank - 2, 0)];
-    data.locations[location] = { ...data.locations[location], status: next.key };
+    const current = getLocationEntry(data, locationKey);
+    const nextSeverity = getPreviousWoundSeverityRoll(Number(current.severityRoll) || 0);
+    data.locations[locationKey] = nextSeverity > 0
+      ? await createWoundEntry(locationKey, nextSeverity, Number(current.hits) || 1)
+      : createEmptyWoundEntry();
     await actor.setFlag(MODULE_ID, FLAG_KEY, data);
     await syncWoundPenaltyEffect(actor, data);
   }
@@ -299,16 +340,20 @@ import {
     setSeverityDieAppearance(roll);
     await roll.evaluate();
     const [locationResult = 1, severityResult = 1] = getDieResults(roll);
-    const locationRoll = Math.min(Math.max(locationResult, 1), LOCATIONS.length);
-    const location = LOCATIONS.find(entry => entry.roll === locationRoll) ?? LOCATIONS[0];
-    const severity = getRandomWoundSeverity(severityResult);
-    await applyRandomWound(actor, location.key, severity);
+    const locationRoll = Math.min(Math.max(locationResult, 1), 10);
+    const locationRule = getWoundLocationForRoll(locationRoll);
+    const location = getLocation(locationRule.key) ?? LOCATIONS[0];
+    const severity = getRandomWoundSeverity(location.key, severityResult);
+    const applied = await applyRandomWound(actor, location.key, severity);
+    const appliedOutcome = applied?.outcome ?? severity.outcome;
+    const appliedEntry = applied?.entry ?? null;
+    const resultDetails = formatWoundDetails(appliedOutcome, appliedEntry);
 
     const publicMode = globalThis.CONST?.DICE_ROLL_MODES?.PUBLIC ?? "publicroll";
     await roll.toMessage(
       {
         speaker: ChatMessage.getSpeaker({ actor }),
-        flavor: `Random Wound: ${escapeHtml(actor.name)} - ${locationRoll}. ${escapeHtml(location.label)} / ${severity.label} (severity ${severityResult})`
+        flavor: `Random Wound: ${escapeHtml(actor.name)} - ${locationRoll}. ${escapeHtml(location.label)} / ${escapeHtml(appliedOutcome?.label ?? severity.label)} (severity ${severityResult})${resultDetails ? `: ${escapeHtml(resultDetails)}` : ""}`
       },
       { rollMode: publicMode }
     );
@@ -345,31 +390,168 @@ import {
     };
   }
 
-  function getRandomWoundSeverity(severityRoll) {
-    if (severityRoll >= 10) return { label: "Destroyed", status: getStatus("destroyed") };
-    if (severityRoll >= 8) return { label: "Critical", status: getStatus("critical") };
-    if (severityRoll >= 5) return { label: "Wounded", status: getStatus("wounded") };
-    return { label: "Scratch", status: getStatus("ok") };
+  function getRandomWoundSeverity(location, severityRoll) {
+    const outcome = getWoundOutcome(location, severityRoll);
+    return {
+      label: outcome?.label ?? "Scar",
+      status: getStatus(outcome?.status ?? "ok"),
+      outcome,
+      severityRoll: Math.min(Math.max(Math.floor(Number(severityRoll) || 1), 1), 10)
+    };
   }
 
   async function applyRandomWound(actor, location, severity) {
-    if (!game.user?.isGM || !isPlayerActor(actor) || !getLocation(location) || !severity?.status) return;
-
-    // Scratches are reported in chat but never alter or accumulate against a
-    // location's condition.
-    if (severity.status.key === "ok") return;
+    const resolvedLocation = getLocation(location);
+    if (!game.user?.isGM || !isPlayerActor(actor) || !resolvedLocation || !severity?.outcome) return null;
+    const locationKey = resolvedLocation.key;
 
     const data = normalizeData(actor.getFlag(MODULE_ID, FLAG_KEY));
-    const currentLocation = data.locations[location];
-    const current = getLocationStatus(data, location);
-    const hits = current.key === "ok" ? 0 : Number(currentLocation.hits) || 1;
-    const baseRank = Math.max(current.rank, severity.status.rank);
-    const nextRank = hits > 0 ? Math.min(baseRank + 1, STATUSES.length) : baseRank;
-    const next = STATUSES[nextRank - 1];
+    const currentLocation = data.locations[locationKey];
+    const currentSeverity = Number(currentLocation?.severityRoll) || minimumSeverityForStatus(currentLocation?.status);
+    const currentOutcome = getStoredWoundOutcome(locationKey, currentLocation);
+    const currentIsActive = isActiveWound(currentLocation) && currentOutcome?.key !== "scar";
+    const rolledSeverity = severity.severityRoll;
 
-    data.locations[location] = { status: next.key, hits: hits + 1 };
+    if (currentIsActive && rolledSeverity <= 2 && currentOutcome) {
+      return { entry: currentLocation, outcome: currentOutcome };
+    }
+
+    // A new injury can worsen an existing location, but a scar cannot erase a
+    // wound that is already recorded there.
+    const nextSeverity = currentIsActive && rolledSeverity <= 2
+      ? currentSeverity
+      : currentIsActive
+        ? Math.max(rolledSeverity, getNextWoundSeverityRoll(currentSeverity))
+        : rolledSeverity;
+    const hits = Math.max(0, Number(currentLocation?.hits) || 0) + 1;
+    const result = await setWoundResult(actor, locationKey, nextSeverity, data, true, hits);
+    return result;
+  }
+
+  async function setWoundResult(actor, location, severityRoll, data, resolveConsequences = false, hitCount = null) {
+    const outcome = getWoundOutcome(location, severityRoll);
+    if (!outcome) return null;
+
+    const current = data.locations[location] ?? createEmptyWoundEntry();
+    const hits = hitCount === null
+      ? Math.max(1, Number(current.hits) || 0)
+      : Math.max(1, Number(hitCount) || 1);
+    const entry = await createWoundEntry(location, severityRoll, hits);
+    data.locations[location] = entry;
     await actor.setFlag(MODULE_ID, FLAG_KEY, data);
     await syncWoundPenaltyEffect(actor, data);
+
+    if (resolveConsequences) await resolveWoundConsequences(actor, location, entry, outcome, data);
+    return { entry, outcome };
+  }
+
+  async function createWoundEntry(location, severityRoll, hits) {
+    const roll = Math.min(Math.max(Math.floor(Number(severityRoll) || 1), 1), 10);
+    const outcome = getWoundOutcome(location, roll);
+    const entry = {
+      status: outcome?.status ?? "ok",
+      hits: Math.max(1, Number(hits) || 1),
+      severityRoll: roll,
+      resultKey: outcome?.key ?? null
+    };
+
+    if (outcome?.durationFormula) {
+      const durationRoll = new Roll(outcome.durationFormula);
+      await durationRoll.evaluate();
+      entry.durationValue = Number(durationRoll.total) || 0;
+    }
+
+    return entry;
+  }
+
+  function createEmptyWoundEntry() {
+    return { status: "ok", hits: 0, severityRoll: 0, resultKey: null };
+  }
+
+  async function resolveWoundConsequences(actor, location, entry, outcome, data) {
+    if (outcome?.prone) await applyConfiguredStatus(actor, "prone");
+
+    let died = Boolean(outcome?.fatal);
+    if (outcome?.save?.dc) {
+      const save = await rollConstitutionSave(actor, outcome.save.dc);
+      entry.saveTotal = save.total;
+      entry.saveSuccess = save.success;
+      data.locations[location] = entry;
+      await actor.setFlag(MODULE_ID, FLAG_KEY, data);
+      died = !save.success;
+    }
+
+    if (died) await markActorDead(actor);
+  }
+
+  async function rollConstitutionSave(actor, dc) {
+    const modifier = getConstitutionModifier(actor);
+    const formula = `1d20${modifier >= 0 ? ` + ${modifier}` : ` - ${Math.abs(modifier)}`}`;
+    const roll = new Roll(formula);
+    await roll.evaluate();
+    const total = Number(roll.total) || 0;
+    const success = total >= dc;
+    const publicMode = globalThis.CONST?.DICE_ROLL_MODES?.PUBLIC ?? "publicroll";
+    await roll.toMessage(
+      {
+        speaker: ChatMessage.getSpeaker({ actor }),
+        flavor: `Heart wound: ${escapeHtml(actor.name)} rolls CON ${total} vs DC ${dc} - ${success ? "Success" : "Failure"}`
+      },
+      { rollMode: publicMode }
+    );
+    return { total, success };
+  }
+
+  function getConstitutionModifier(actor) {
+    const paths = [
+      "system.abilities.con.mod",
+      "system.abilities.con.modifier",
+      "system.abilities.con.bonus",
+      "system.attributes.con.mod",
+      "system.con.mod",
+      "system.conMod"
+    ];
+    for (const path of paths) {
+      const value = getProperty(actor, path);
+      if (Number.isFinite(Number(value))) return Number(value);
+    }
+
+    const scorePaths = [
+      "system.abilities.con.value",
+      "system.abilities.con.score",
+      "system.attributes.con.value",
+      "system.con.value"
+    ];
+    for (const path of scorePaths) {
+      const score = Number(getProperty(actor, path));
+      if (Number.isFinite(score)) return Math.floor((score - 10) / 2);
+    }
+    return 0;
+  }
+
+  function getProperty(object, path) {
+    const utility = globalThis.foundry?.utils?.getProperty;
+    if (typeof utility === "function") return utility(object, path);
+    return String(path).split(".").reduce((value, key) => value?.[key], object);
+  }
+
+  async function applyConfiguredStatus(actor, preferredId) {
+    if (typeof actor?.toggleStatusEffect !== "function") return false;
+    const specialStatuses = globalThis.CONFIG?.specialStatusEffects ?? {};
+    const fallbackId = specialStatuses[String(preferredId).toUpperCase()] ?? preferredId;
+    const configured = (globalThis.CONFIG?.statusEffects ?? []).find(status => (
+      status.id === fallbackId || (preferredId === "dead" && status.id === "dead")
+    ));
+    const statusId = configured?.id ?? fallbackId;
+    if (!configured?.id && !statusId) return false;
+    await actor.toggleStatusEffect(statusId, { active: true, overlay: false });
+    return true;
+  }
+
+  async function markActorDead(actor) {
+    const marked = await applyConfiguredStatus(actor, "dead");
+    if (!marked) globalThis.ui?.notifications?.warn?.("The wound was fatal, but the Dead status could not be applied automatically.");
+    return marked;
   }
 
   async function syncWoundPenaltyEffect(actor, woundData = null) {
@@ -411,8 +593,8 @@ import {
     };
 
     for (const location of LOCATIONS) {
-      const status = getLocationStatus(data, location.key);
-      for (const [ability, value] of getLocationPenaltyValues(location, status)) addPenalty(ability, value);
+      const wound = getLocationEntry(data, location.key);
+      for (const [ability, value] of getLocationPenaltyValues(location, wound)) addPenalty(ability, value);
     }
 
     const activeEffectMode = globalThis.CONST?.ACTIVE_EFFECT_MODES?.ADD ?? 2;
@@ -423,17 +605,22 @@ import {
     }));
   }
 
-  function getLocationPenaltyValues(location, status) {
+  function getLocationPenaltyValues(location, wound) {
+    const outcome = getStoredWoundOutcome(location.key, wound);
+    if (outcome?.changes) return outcome.changes.map(([ability, value]) => [ability, value]);
+    if (!wound?.legacy) return [];
+
+    // Preserve the penalty behavior of records created by the previous
+    // ten-location implementation until the GM edits or clears them.
+    const status = getStatus(wound.status) ?? STATUSES[0];
     if (status.rank < getStatus("wounded").rank) return [];
 
     const penalties = [["con", -1]];
     if (status.rank < getStatus("critical").rank) return penalties;
 
-    if (["leftHand", "rightHand", "leftFoot", "rightFoot"].includes(location.key)) {
-      penalties.push(["dex", -1], ["str", -1]);
-    } else if (["leftArm", "rightArm", "leftLeg", "rightLeg"].includes(location.key)) {
+    if (["leftArm", "rightArm", "leftLeg", "rightLeg"].includes(location.key)) {
       penalties.push(["str", -1], ["con", -1]);
-    } else if (location.key === "torso") {
+    } else if (location.key === "body") {
       penalties.push(["con", -2]);
     } else if (location.key === "head") {
       penalties.push(["wis", -1], ["int", -1]);
@@ -442,15 +629,56 @@ import {
     return penalties;
   }
 
-  function formatLocationPenalties(location, status) {
+  function formatLocationPenalties(location, wound) {
     const totals = new Map();
-    for (const [ability, value] of getLocationPenaltyValues(location, status)) {
+    for (const [ability, value] of getLocationPenaltyValues(location, wound)) {
       totals.set(ability, (totals.get(ability) ?? 0) + value);
     }
 
     return [...totals.entries()]
       .map(([ability, value]) => `${value} ${ability.toUpperCase()}`)
       .join(" · ");
+  }
+
+  function getLocationEntry(data, location) {
+    return data.locations?.[location] ?? createEmptyWoundEntry();
+  }
+
+  function getStoredWoundOutcome(location, wound) {
+    if (!wound || Number(wound.severityRoll) <= 0) return null;
+    const outcome = getWoundOutcome(location, wound.severityRoll);
+    if (!outcome) return null;
+    return !wound.resultKey || wound.resultKey === outcome.key ? outcome : null;
+  }
+
+  function isActiveWound(wound) {
+    if (!wound) return false;
+    if (wound.resultKey && wound.resultKey !== "scar") return true;
+    return getStatus(wound.status)?.key !== "ok";
+  }
+
+  function minimumSeverityForStatus(statusKey) {
+    if (statusKey === "destroyed") return 10;
+    if (statusKey === "critical") return 9;
+    if (statusKey === "wounded") return 3;
+    return 0;
+  }
+
+  function formatWoundDetails(outcome, wound) {
+    if (!outcome) {
+      return isActiveWound(wound)
+        ? `${getStatus(wound?.status)?.label ?? "Wound"} (legacy record)`
+        : "No wound recorded.";
+    }
+
+    let details = outcome.consequence ?? outcome.label;
+    if (outcome.durationFormula && Number(wound?.durationValue) > 0) {
+      details += ` Rolled ${wound.durationValue} ${outcome.durationUnit}.`;
+    }
+    if (outcome.save && Number.isFinite(Number(wound?.saveTotal))) {
+      details += ` Save ${wound.saveTotal}: ${wound.saveSuccess ? "success" : "failure"}.`;
+    }
+    return details;
   }
 
   function normalizeData(raw) {
@@ -466,7 +694,8 @@ import {
   }
 
   function getLocation(key) {
-    return LOCATIONS.find(location => location.key === key) ?? null;
+    const canonicalKey = LOCATION_ALIASES[key] ?? key;
+    return LOCATIONS.find(location => location.key === canonicalKey) ?? null;
   }
 
   function getRootElement(html) {
@@ -559,7 +788,8 @@ import {
       mod.api = mod.api ?? {};
       mod.api.wounds = {
         locations: LOCATIONS.map(location => ({ ...location })),
-        statuses: foundry.utils.deepClone(STATUSES),
+        statuses: globalThis.foundry?.utils?.deepClone?.(STATUSES) ?? STATUSES.map(status => ({ ...status })),
+        getOutcome: (location, severityRoll) => getWoundOutcome(LOCATION_ALIASES[location] ?? location, severityRoll),
         get: actor => isPlayerActor(actor) ? normalizeData(actor.getFlag(MODULE_ID, FLAG_KEY)) : null,
         getPenaltyChanges: actor => isPlayerActor(actor)
           ? buildWoundPenaltyChanges(normalizeData(actor.getFlag(MODULE_ID, FLAG_KEY)))

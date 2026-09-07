@@ -13,7 +13,7 @@ test("Quickdraw relies on the manifest for its stylesheet", async () => {
 });
 
 test("Quickdraw collects inventory rows once per logical render", async () => {
-  const source = await readFile(sourceUrl, "utf8");
+  const source = (await readFile(sourceUrl, "utf8")).replace(/\r\n/g, "\n");
   const processBlock = source.match(/function processSheet\(app, html\) \{([\s\S]*?)\n  \}\n\n  function onRender/);
 
   assert.ok(processBlock, "processSheet block must exist");

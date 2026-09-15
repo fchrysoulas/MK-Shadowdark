@@ -65,6 +65,7 @@
     "scripts/auto-damage/auto-apply-damage.js",
     "scripts/character-sheet-tweaks/character-sheet-tweaks.js",
     "scripts/detailed-wounds/detailed-wounds.js",
+    "scripts/detailed-wounds/survival-trigger.js",
     "scripts/chat-reporting/chat-reporting.js",
     "scripts/summary-bar/summary-bar.js",
     "scripts/minimize-sheet/minimize-sheet.js",

@@ -199,25 +199,6 @@ async function processSurvival(actor) {
   }
 }
 
-Hooks.once("init", () => {
-  const fullKey = `${MODULE_ID}.${SETTING_TRIGGER}`;
-  if (game.settings?.settings?.has(fullKey)) return;
-
-  game.settings.register(MODULE_ID, SETTING_TRIGGER, {
-    name: "Detailed Wounds | Surviving 0 HP Trigger",
-    hint: "Choose whether surviving the Death Timer does nothing, prompts the GM, or automatically rolls a DC 12 CON check. A failed check rolls the existing MK Detailed Wounds 2d10 wound table.",
-    scope: "world",
-    config: true,
-    type: String,
-    default: SURVIVAL_TRIGGER_MODES.PROMPT,
-    choices: {
-      [SURVIVAL_TRIGGER_MODES.OFF]: "Off",
-      [SURVIVAL_TRIGGER_MODES.PROMPT]: "GM Prompt",
-      [SURVIVAL_TRIGGER_MODES.AUTOMATIC]: "Automatic"
-    }
-  });
-});
-
 Hooks.on("updateActor", (actor, change) => {
   if (game.system?.id !== "shadowdark" || !isPlayerActor(actor) || !isPrimaryActiveGM()) return;
 

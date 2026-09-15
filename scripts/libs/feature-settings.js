@@ -2,6 +2,14 @@ import {
   DEFAULT_PROFILE_ID,
   DEFAULT_PROFILES
 } from "../encounter-engine/constants.js";
+import {
+  PROFILE_MENU_DEFINITION,
+  PROFILE_SETTING,
+  PROFILE_SETTING_DEFINITION,
+  TABLE_SETTING,
+  TABLE_SETTING_DEFINITION,
+  getSurvivalWoundProfileSettingsClass
+} from "../detailed-wounds/survival-profile-settings.js";
 
 const MODULE_ID = "mk-shadowdark";
 const FEATURE_SETTINGS_TEMPLATE = `modules/${MODULE_ID}/templates/feature-settings.hbs`;
@@ -128,6 +136,14 @@ function registerMenus() {
       restricted: true
     });
   }
+
+  const SurvivalWoundProfileSettings = getSurvivalWoundProfileSettingsClass();
+  if (SurvivalWoundProfileSettings) {
+    game.settings.registerMenu(MODULE_ID, "survivalWoundProfileSettings", {
+      ...PROFILE_MENU_DEFINITION,
+      type: SurvivalWoundProfileSettings
+    });
+  }
 }
 
 Hooks.once("init", () => {
@@ -146,7 +162,7 @@ Hooks.once("init", () => {
   });
   registerSetting("detailedWoundsSurvivalTrigger", {
     name: "Detailed Wounds | Surviving 0 HP Trigger",
-    hint: "Choose whether surviving the Death Timer does nothing, prompts the GM, or automatically rolls a DC 12 CON check. A failed check rolls the existing MK Detailed Wounds 2d10 wound table.",
+    hint: "Choose whether surviving the Death Timer does nothing, prompts the GM, or automatically rolls a DC 12 CON check. A failed check uses the configured survival wound profile.",
     scope: "world",
     config: true,
     type: String,
@@ -157,6 +173,8 @@ Hooks.once("init", () => {
       automatic: "Automatic"
     }
   });
+  registerSetting(PROFILE_SETTING, PROFILE_SETTING_DEFINITION);
+  registerSetting(TABLE_SETTING, TABLE_SETTING_DEFINITION);
   registerSetting("detailedWoundsMigrationVersion", {
     name: "Detailed Wounds Migration Version",
     scope: "world",

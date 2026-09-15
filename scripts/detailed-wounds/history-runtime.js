@@ -29,6 +29,10 @@ function isPrimaryActiveGM() {
   return authority ? game.user?.id === authority.id : game.user?.isGM === true;
 }
 
+function canEditHistory() {
+  return game.user?.isGM === true;
+}
+
 function hasWoundFlagChange(change) {
   if (!change || typeof change !== "object") return false;
   const directPath = `flags.${MODULE_ID}.${FLAG_KEY}`;
@@ -118,7 +122,7 @@ async function appendTransitionHistory(actor, beforeData) {
 async function addHistoryNote(actor, locationKey, note) {
   const location = WOUND_LOCATION_RULES.find(entry => entry.key === locationKey);
   const text = String(note ?? "").replace(/\s+/g, " ").trim();
-  if (!isPrimaryActiveGM() || !isPlayerActor(actor) || !location || !text) return false;
+  if (!canEditHistory() || !isPlayerActor(actor) || !location || !text) return false;
 
   const data = normalizeCurrentWoundData(actor.getFlag(MODULE_ID, FLAG_KEY));
   const record = data.locations[locationKey];
@@ -139,7 +143,7 @@ async function addHistoryNote(actor, locationKey, note) {
 }
 
 async function updateHistoryNote(actor, locationKey, entryId, note) {
-  if (!isPrimaryActiveGM() || !isPlayerActor(actor)) return false;
+  if (!canEditHistory() || !isPlayerActor(actor)) return false;
   const data = normalizeCurrentWoundData(actor.getFlag(MODULE_ID, FLAG_KEY));
   const record = data.locations?.[locationKey];
   if (!record) return false;
@@ -150,7 +154,7 @@ async function updateHistoryNote(actor, locationKey, entryId, note) {
 }
 
 async function deleteHistoryEntry(actor, locationKey, entryId) {
-  if (!isPrimaryActiveGM() || !isPlayerActor(actor)) return false;
+  if (!canEditHistory() || !isPlayerActor(actor)) return false;
   const data = normalizeCurrentWoundData(actor.getFlag(MODULE_ID, FLAG_KEY));
   const record = data.locations?.[locationKey];
   if (!record) return false;
@@ -233,7 +237,7 @@ function injectHistoryUi(actor, root) {
   if (!isPlayerActor(actor) || !element?.querySelectorAll) return;
 
   const data = normalizeCurrentWoundData(actor.getFlag(MODULE_ID, FLAG_KEY));
-  const editable = Boolean(game.user?.isGM);
+  const editable = canEditHistory();
 
   for (const card of element.querySelectorAll(".mk-wounds-location-card[data-wound-location]")) {
     const locationKey = card.dataset.woundLocation;
@@ -257,7 +261,7 @@ function injectHistoryUi(actor, root) {
 }
 
 function bindHistoryControls(actor, root) {
-  if (!game.user?.isGM) return;
+  if (!canEditHistory()) return;
 
   for (const control of root.querySelectorAll("[data-history-action]")) {
     control.addEventListener("click", async event => {
@@ -340,6 +344,7 @@ Hooks.once("ready", registerHistoryApi);
 export {
   addHistoryNote,
   appendTransitionHistory,
+  canEditHistory,
   deleteHistoryEntry,
   hasWoundFlagChange,
   historyEntryText,

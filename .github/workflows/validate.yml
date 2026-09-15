@@ -24,7 +24,7 @@ jobs:
           node-version: 22
 
       - name: Install development dependencies
-        run: npm install --ignore-scripts --no-audit --no-fund
+        run: npm ci --ignore-scripts --no-audit --no-fund
 
       - name: Syntax and manifest validation
         run: npm run syntax

@@ -8,6 +8,7 @@ import {
   isTwoHandedWeapon,
   occupiesOneHand
 } from "../libs/equipment.js";
+import { deriveWoundFunctionalState } from "../detailed-wounds/functional-consequences-core.js";
 
 (() => {
   const MODULE_ID = "mk-shadowdark";
@@ -75,9 +76,16 @@ import {
     return classifyItemHandUse(item, proposed, { ignoreStashed: ignoreStashedItems() });
   }
 
+  function getActorFunctionalState(actor, baseHands = getMaxHands()) {
+    const woundData = actor?.getFlag?.(MODULE_ID, "detailedWounds");
+    return deriveWoundFunctionalState(woundData, { baseHands });
+  }
+
   function buildHandsReport(actor, proposed = null) {
     const entries = [];
-    const maxHands = getMaxHands();
+    const baseMaxHands = getMaxHands();
+    const woundFunctionalState = getActorFunctionalState(actor, baseMaxHands);
+    const maxHands = woundFunctionalState.usableHands;
     const dualWieldAllowed = allowDualWielding();
 
     for (const item of actor?.items ?? []) {
@@ -108,7 +116,9 @@ import {
       actorName: actor?.name ?? "Unknown Actor",
       entries,
       totalHands,
+      baseMaxHands,
       maxHands,
+      woundFunctionalState,
       weapons,
       twoHandedWeapons,
       dualWieldAllowed,
@@ -132,6 +142,7 @@ import {
       report.actorId,
       report.totalHands,
       report.maxHands,
+      report.woundFunctionalState?.unavailableHands ?? 0,
       report.problems.join("|"),
       report.entries.map(entry => `${entry.id}:${entry.hands}`).join("|")
     ].join("::");
@@ -172,6 +183,9 @@ import {
       actor: actor?.name,
       valid: report.valid,
       totalHands: report.totalHands,
+      baseMaxHands: report.baseMaxHands,
+      maxHands: report.maxHands,
+      unavailableHands: report.woundFunctionalState.unavailableHands,
       entries: report.entries.map(e => ({ name: e.name, hands: e.hands, category: e.category })),
       problems: report.problems
     });
@@ -254,6 +268,7 @@ import {
       mod.api.equipmentHands = {
         checkActorHands,
         buildHandsReport,
+        getActorFunctionalState,
         getItemHandUse,
         isOneHandedWeapon,
         isTwoHandedWeapon,

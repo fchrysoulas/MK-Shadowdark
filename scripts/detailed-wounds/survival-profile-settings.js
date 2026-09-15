@@ -8,24 +8,42 @@ const PROFILE_SETTING = "detailedWoundsSurvivalProfile";
 const TABLE_SETTING = "enduringWoundsTableUuid";
 const TEMPLATE = `modules/${MODULE_ID}/templates/survival-wound-profile-settings.hbs`;
 
-function settingExists(key) {
-  return game.settings?.settings?.has(`${MODULE_ID}.${key}`) ?? false;
-}
+const PROFILE_SETTING_DEFINITION = Object.freeze({
+  name: "Survival Wounds | Profile",
+  hint: "Choose the wound source used after a failed survival CON check. The Enduring Wounds option draws only from the RollTable supplied by the GM and never changes MK Detailed Wounds v3 data.",
+  scope: "world",
+  config: true,
+  type: String,
+  default: SURVIVAL_WOUND_PROFILES.MK_DETAILED_WOUNDS,
+  choices: Object.freeze({
+    [SURVIVAL_WOUND_PROFILES.MK_DETAILED_WOUNDS]: "MK Detailed Wounds",
+    [SURVIVAL_WOUND_PROFILES.ENDURING_WOUNDS_ROLLTABLE]: "Enduring Wounds RollTable",
+    [SURVIVAL_WOUND_PROFILES.DISABLED]: "Disabled"
+  })
+});
 
-function registerSetting(key, definition) {
-  if (settingExists(key)) return;
+const TABLE_SETTING_DEFINITION = Object.freeze({
+  name: "Survival Wounds | Enduring Wounds RollTable UUID",
+  hint: "World or compendium RollTable UUID supplied by the GM. MK-Shadowdark does not include, copy, interpret, or map the table's results.",
+  scope: "world",
+  config: true,
+  type: String,
+  default: ""
+});
+
+const PROFILE_MENU_DEFINITION = Object.freeze({
+  name: "Survival Wound Profile",
+  label: "Configure",
+  hint: "Choose whether surviving 0 HP uses MK Detailed Wounds, an external Enduring Wounds RollTable, or no wound profile.",
+  icon: "fas fa-notes-medical",
+  restricted: true
+});
+
+function getSurvivalWoundProfileSettingsClass() {
   const FormApplicationBase = globalThis.foundry?.appv1?.api?.FormApplication;
-  game.settings.register(MODULE_ID, key, {
-    ...definition,
-    config: FormApplicationBase ? false : definition.config
-  });
-}
+  if (!FormApplicationBase) return null;
 
-function registerProfileMenu() {
-  const FormApplicationBase = globalThis.foundry?.appv1?.api?.FormApplication;
-  if (!FormApplicationBase) return;
-
-  class SurvivalWoundProfileSettings extends FormApplicationBase {
+  return class SurvivalWoundProfileSettings extends FormApplicationBase {
     static get defaultOptions() {
       return foundry.utils.mergeObject(super.defaultOptions, {
         id: `${MODULE_ID}-survival-wound-profile-settings`,
@@ -82,47 +100,14 @@ function registerProfileMenu() {
       await game.settings.set(MODULE_ID, PROFILE_SETTING, profile);
       await game.settings.set(MODULE_ID, TABLE_SETTING, tableUuid);
     }
-  }
-
-  game.settings.registerMenu(MODULE_ID, "survivalWoundProfileSettings", {
-    name: "Survival Wound Profile",
-    label: "Configure",
-    hint: "Choose whether surviving 0 HP uses MK Detailed Wounds, an external Enduring Wounds RollTable, or no wound profile.",
-    icon: "fas fa-notes-medical",
-    type: SurvivalWoundProfileSettings,
-    restricted: true
-  });
+  };
 }
 
-Hooks.once("init", () => {
-  registerSetting(PROFILE_SETTING, {
-    name: "Survival Wounds | Profile",
-    hint: "Choose the wound source used after a failed survival CON check. The Enduring Wounds option draws only from the RollTable supplied by the GM and never changes MK Detailed Wounds v3 data.",
-    scope: "world",
-    config: true,
-    type: String,
-    default: SURVIVAL_WOUND_PROFILES.MK_DETAILED_WOUNDS,
-    choices: {
-      [SURVIVAL_WOUND_PROFILES.MK_DETAILED_WOUNDS]: "MK Detailed Wounds",
-      [SURVIVAL_WOUND_PROFILES.ENDURING_WOUNDS_ROLLTABLE]: "Enduring Wounds RollTable",
-      [SURVIVAL_WOUND_PROFILES.DISABLED]: "Disabled"
-    }
-  });
-
-  registerSetting(TABLE_SETTING, {
-    name: "Survival Wounds | Enduring Wounds RollTable UUID",
-    hint: "World or compendium RollTable UUID supplied by the GM. MK-Shadowdark does not include, copy, interpret, or map the table's results.",
-    scope: "world",
-    config: true,
-    type: String,
-    default: ""
-  });
-
-  registerProfileMenu();
-});
-
 export {
+  PROFILE_MENU_DEFINITION,
   PROFILE_SETTING,
+  PROFILE_SETTING_DEFINITION,
   TABLE_SETTING,
-  registerProfileMenu
+  TABLE_SETTING_DEFINITION,
+  getSurvivalWoundProfileSettingsClass
 };

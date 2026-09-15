@@ -56,6 +56,7 @@
     "scripts/libs/settings.js",
     "scripts/libs/retired-settings.js",
     "scripts/libs/feature-settings.js",
+    "scripts/detailed-wounds/survival-profile-settings.js",
     "scripts/paper-chat/paper-chat.js",
     "scripts/chat-style-editor/chat-style-editor.js",
     "scripts/libs/predefined-effects.js",

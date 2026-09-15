@@ -1,3 +1,5 @@
+import { normalizeWoundHistory } from "./history-core.js";
+
 const CURRENT_WOUND_DATA_VERSION = 3;
 const WOUND_MIGRATION_VERSION = 2;
 
@@ -311,6 +313,9 @@ function normalizeWoundLocation(value) {
   if (Number.isFinite(saveTotal)) normalized.saveTotal = saveTotal;
   if (typeof objectValue?.saveSuccess === "boolean") normalized.saveSuccess = objectValue.saveSuccess;
 
+  const history = normalizeWoundHistory(objectValue?.history);
+  if (history.length) normalized.history = history;
+
   return normalized;
 }
 
@@ -337,6 +342,7 @@ function isCurrentLocation(value) {
     && Number(value.severityRoll) >= 0
     && Number(value.severityRoll) <= 10
     && (value.resultKey === null || typeof value.resultKey === "string" || value.resultKey === undefined)
+    && (value.history === undefined || Array.isArray(value.history))
   );
 }
 

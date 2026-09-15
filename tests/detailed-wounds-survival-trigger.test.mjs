@@ -10,6 +10,7 @@ import {
 } from "../scripts/detailed-wounds/survival-trigger-core.js";
 
 const runtimeUrl = new URL("../scripts/detailed-wounds/survival-trigger.js", import.meta.url);
+const settingsUrl = new URL("../scripts/libs/feature-settings.js", import.meta.url);
 const manifestUrl = new URL("../module.json", import.meta.url);
 
 test("survival wound trigger modes resolve deterministically", () => {
@@ -45,14 +46,24 @@ test("survival wound trigger rejects non-survival states", () => {
   assert.equal(survivalTriggerAction({ ...base, isGm: false }), "none");
 });
 
-test("runtime exposes Off, GM Prompt, and Automatic with GM Prompt default", async () => {
+test("shared Detailed Wounds settings expose Off, GM Prompt, and Automatic with GM Prompt default", async () => {
+  const source = await readFile(settingsUrl, "utf8");
+
+  assert.match(source, /settings: \["detailedWoundsEnabled", "detailedWoundsSurvivalTrigger"\]/);
+  assert.match(source, /registerSetting\("detailedWoundsSurvivalTrigger"/);
+  assert.match(source, /Detailed Wounds \| Surviving 0 HP Trigger/);
+  assert.match(source, /default: "prompt"/);
+  assert.match(source, /off: "Off"/);
+  assert.match(source, /prompt: "GM Prompt"/);
+  assert.match(source, /automatic: "Automatic"/);
+});
+
+test("runtime consumes the shared setting without registering settings itself", async () => {
   const source = await readFile(runtimeUrl, "utf8");
 
-  assert.match(source, /Detailed Wounds \| Surviving 0 HP Trigger/);
-  assert.match(source, /default: SURVIVAL_TRIGGER_MODES\.PROMPT/);
-  assert.match(source, /\[SURVIVAL_TRIGGER_MODES\.OFF\]: "Off"/);
-  assert.match(source, /\[SURVIVAL_TRIGGER_MODES\.PROMPT\]: "GM Prompt"/);
-  assert.match(source, /\[SURVIVAL_TRIGGER_MODES\.AUTOMATIC\]: "Automatic"/);
+  assert.match(source, /SETTING_TRIGGER = "detailedWoundsSurvivalTrigger"/);
+  assert.match(source, /getSetting\(SETTING_TRIGGER, SURVIVAL_TRIGGER_MODES\.PROMPT\)/);
+  assert.doesNotMatch(source, /game\.settings\.register\(/);
 });
 
 test("failed survival CON check delegates to the existing Detailed Wounds random-wound API", async () => {

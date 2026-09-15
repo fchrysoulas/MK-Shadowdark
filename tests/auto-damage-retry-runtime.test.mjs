@@ -11,7 +11,10 @@ test("Auto Damage persists a complete target plan before applying HP changes", a
   assert.match(source, /autoDamageProcessing/);
 
   const persistIndex = source.indexOf("await persistProcessingState(message, processingState);");
-  const applyIndex = source.indexOf("processingState = await applyProcessingPlan(message, processingState);");
+  const applyIndex = source.indexOf(
+    "processingState = await applyProcessingPlan(message, processingState);",
+    persistIndex
+  );
   assert.ok(persistIndex >= 0, "processing plan must be persisted");
   assert.ok(applyIndex > persistIndex, "processing plan must be persisted before Actor HP application");
 });

@@ -102,7 +102,7 @@ test("Equipment Hands derives effective capacity from Detailed Wounds without mu
   assert.match(source, /deriveWoundFunctionalState/);
   assert.match(source, /const maxHands = woundFunctionalState\.usableHands/);
   assert.match(source, /baseMaxHands/);
-  assert.match(source, /actorUpdateTouchesDetailedWounds/);
+  assert.doesNotMatch(source, /Hooks\.on\(["']updateActor["']/);
   assert.doesNotMatch(source, /setFlag\([^\n]*detailedWounds/);
   assert.doesNotMatch(source, /updateEmbeddedDocuments\([^\n]*Item/);
 });

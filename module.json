@@ -54,6 +54,7 @@
   },
   "esmodules": [
     "scripts/libs/settings.js",
+    "scripts/libs/retired-settings.js",
     "scripts/libs/feature-settings.js",
     "scripts/paper-chat/paper-chat.js",
     "scripts/chat-style-editor/chat-style-editor.js",

@@ -1,6 +1,16 @@
 import { confirmGmDialog } from "../libs/dialog-v2.js";
 import { isPlayerAtZeroCon } from "../death-timer/con-death.js";
 import {
+  ENDURING_WOUNDS_FAILURE,
+  drawEnduringWound
+} from "./enduring-wounds.js";
+import {
+  SURVIVAL_WOUND_PROFILES,
+  normalizeSurvivalWoundProfile,
+  survivalWoundProfileEnabled,
+  survivalWoundProfileLabel
+} from "./survival-profile-core.js";
+import {
   SURVIVAL_TRIGGER_MODES,
   SURVIVAL_WOUND_DC,
   getConModifier,
@@ -10,7 +20,9 @@ import {
 const MODULE_ID = "mk-shadowdark";
 const SUBMODULE = "Detailed Wounds Survival";
 const SETTING_ENABLED = "detailedWoundsEnabled";
+const SETTING_PROFILE = "detailedWoundsSurvivalProfile";
 const SETTING_TRIGGER = "detailedWoundsSurvivalTrigger";
+const SETTING_ENDURING_TABLE = "enduringWoundsTableUuid";
 const DEATH_TIMER_STATUS_ID = "mk-death-timer";
 const pendingActors = new WeakSet();
 
@@ -129,9 +141,16 @@ function escapeHtml(value) {
   return div.innerHTML;
 }
 
-async function confirmSurvivalCheck(actor) {
+function getSurvivalProfile() {
+  return normalizeSurvivalWoundProfile(
+    getSetting(SETTING_PROFILE, SURVIVAL_WOUND_PROFILES.MK_DETAILED_WOUNDS)
+  );
+}
+
+async function confirmSurvivalCheck(actor, profile) {
+  const profileLabel = survivalWoundProfileLabel(profile);
   const confirmed = await confirmGmDialog({
-    title: "Detailed Wounds - Survived 0 HP",
+    title: `${profileLabel} - Survived 0 HP`,
     content: `<p><strong>${escapeHtml(actor.name)}</strong> survived the dying state. Roll a DC ${SURVIVAL_WOUND_DC} CON check for an enduring wound?</p>`,
     yes: { label: "Roll CON" },
     no: { label: "Skip" }
@@ -158,9 +177,47 @@ async function rollSurvivalCheck(actor) {
   return { roll, total, success };
 }
 
+function notifyEnduringFailure(actor, reason) {
+  let message = `Enduring Wounds could not draw a result for ${actor.name}.`;
+  if (reason === ENDURING_WOUNDS_FAILURE.MISSING_TABLE) {
+    message = "Configure an Enduring Wounds RollTable UUID before using the Enduring Wounds profile.";
+  } else if (reason === ENDURING_WOUNDS_FAILURE.INVALID_TABLE) {
+    message = "The configured Enduring Wounds UUID does not resolve to a valid RollTable.";
+  } else if (reason === ENDURING_WOUNDS_FAILURE.EMPTY_TABLE) {
+    message = "The configured Enduring Wounds RollTable returned no result.";
+  }
+  ui.notifications?.warn?.(message);
+}
+
+async function resolveFailedSurvival(actor, profile) {
+  if (profile === SURVIVAL_WOUND_PROFILES.ENDURING_WOUNDS_ROLLTABLE) {
+    const result = await drawEnduringWound(getSetting(SETTING_ENDURING_TABLE, ""));
+    if (result.reason) notifyEnduringFailure(actor, result.reason);
+    return {
+      profile,
+      type: "rolltable",
+      result
+    };
+  }
+
+  const wound = await game.modules.get(MODULE_ID)?.api?.wounds?.rollRandom?.(actor) ?? null;
+  if (!wound) {
+    ui.notifications?.warn?.(`Detailed Wounds could not apply a random wound to ${actor.name}.`);
+  }
+  return {
+    profile,
+    type: "mk-detailed-wounds",
+    result: wound
+  };
+}
+
 async function resolveSurvivalTrigger(actor) {
+  const profile = getSurvivalProfile();
+  const enabled = survivalWoundProfileEnabled(profile, {
+    detailedWoundsEnabled: getSetting(SETTING_ENABLED, true)
+  });
   const action = survivalTriggerAction({
-    enabled: getSetting(SETTING_ENABLED, true),
+    enabled,
     mode: getSetting(SETTING_TRIGGER, SURVIVAL_TRIGGER_MODES.PROMPT),
     wasDying: true,
     zeroCon: isPlayerAtZeroCon(actor),
@@ -168,21 +225,17 @@ async function resolveSurvivalTrigger(actor) {
     isGm: isPrimaryActiveGM()
   });
 
-  if (action === "none") return { triggered: false, action };
-  if (action === "prompt" && !(await confirmSurvivalCheck(actor))) {
-    return { triggered: false, action, skipped: true };
+  if (action === "none") return { triggered: false, action, profile };
+  if (action === "prompt" && !(await confirmSurvivalCheck(actor, profile))) {
+    return { triggered: false, action, profile, skipped: true };
   }
 
   const check = await rollSurvivalCheck(actor);
-  let wound = null;
-  if (!check.success) {
-    wound = await game.modules.get(MODULE_ID)?.api?.wounds?.rollRandom?.(actor) ?? null;
-    if (!wound) {
-      ui.notifications?.warn?.(`Detailed Wounds could not apply a random wound to ${actor.name}.`);
-    }
-  }
+  const resolution = check.success
+    ? null
+    : await resolveFailedSurvival(actor, profile);
 
-  return { triggered: true, action, check, wound };
+  return { triggered: true, action, profile, check, resolution };
 }
 
 async function processSurvival(actor) {
@@ -215,7 +268,10 @@ Hooks.on("updateActor", (actor, change) => {
 export {
   getChangedHpValue,
   getHpValue,
+  getSurvivalProfile,
   hasDeathTimerState,
+  notifyEnduringFailure,
+  resolveFailedSurvival,
   resolveSurvivalTrigger,
   waitForResolvedSurvival
 };

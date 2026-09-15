@@ -40,22 +40,37 @@ function pageCategoryId(page) {
   return category?.id ?? category?._id ?? category ?? null;
 }
 
+function textPageFallback(rawContent, journal) {
+  if (journal?.isOwner === true) return rawContent;
+  return '<div class="mk-journal-sheet-empty-page"><p>Journal page content is unavailable.</p></div>';
+}
+
+function logTextEnrichmentFailure(page, error) {
+  const pageId = page?.id ?? "unknown";
+  const errorName = typeof error?.name === "string" && error.name ? ` (${error.name})` : "";
+  console.error(`${MODULE_ID} | Journal text enrichment failed for page ${pageId}${errorName}.`);
+}
+
 async function enrichPage(page, journal) {
   let content = "";
 
   if (page.type === "text") {
-    content = String(page.text?.content ?? "");
+    const rawContent = String(page.text?.content ?? "");
     const editor = globalThis.foundry?.applications?.ux?.TextEditor;
-    if (editor?.enrichHTML) {
+
+    if (typeof editor?.enrichHTML === "function") {
       try {
-        content = await editor.enrichHTML(content, {
+        content = await editor.enrichHTML(rawContent, {
           async: true,
-          secrets: journal.isOwner,
+          secrets: journal?.isOwner === true,
           relativeTo: page
         });
-      } catch (_error) {
-        // Keep the stored HTML if enrichment is unavailable on a version.
+      } catch (error) {
+        logTextEnrichmentFailure(page, error);
+        content = textPageFallback(rawContent, journal);
       }
+    } else {
+      content = textPageFallback(rawContent, journal);
     }
   } else if (page.type === "image" && page.src) {
     content = `<figure class="mk-journal-sheet-image-page"><img src="${escapeHtml(page.src)}" alt="${escapeHtml(page.name)}"></figure>`;
@@ -243,3 +258,5 @@ globalThis.MKShadowdarkJournalSheet = {
 };
 
 globalThis.Hooks?.once?.("init", registerJournalSheet);
+
+export { enrichPage };

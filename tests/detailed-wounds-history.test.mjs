@@ -165,14 +165,16 @@ test("history runtime observes mechanical transitions and exposes GM-only note c
   assert.doesNotMatch(source, /buildWoundPenaltyChanges|resolveWoundConsequences|classifyWoundRecovery/);
 });
 
-test("history runtime and stylesheet load alongside Detailed Wounds without replacing its source of truth", async () => {
+test("history loads after canonical recovery while remaining ahead of later wound consumers", async () => {
   const manifest = JSON.parse(await readFile(manifestUrl, "utf8"));
   const woundsIndex = manifest.esmodules.indexOf("scripts/detailed-wounds/detailed-wounds.js");
-  const historyIndex = manifest.esmodules.indexOf("scripts/detailed-wounds/history-runtime.js");
   const recoveryIndex = manifest.esmodules.indexOf("scripts/detailed-wounds/recovery-runtime.js");
+  const historyIndex = manifest.esmodules.indexOf("scripts/detailed-wounds/history-runtime.js");
+  const consequencesIndex = manifest.esmodules.indexOf("scripts/detailed-wounds/functional-consequences-runtime.js");
 
   assert.ok(woundsIndex >= 0);
-  assert.ok(historyIndex > woundsIndex);
-  assert.ok(recoveryIndex > historyIndex);
+  assert.equal(recoveryIndex, woundsIndex + 1);
+  assert.ok(historyIndex > recoveryIndex);
+  assert.ok(consequencesIndex > historyIndex);
   assert.ok(manifest.styles.includes("styles/detailed-wounds-history.css"));
 });

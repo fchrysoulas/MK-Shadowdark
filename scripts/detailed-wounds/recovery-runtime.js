@@ -127,7 +127,9 @@ function handleCombatUpdate(combat, changes) {
   const previousRound = combatRounds.get(combat.id);
   combatRounds.set(combat.id, nextRound);
 
-  if (!Number.isFinite(previousRound)) return;
+  // Moving from the pre-combat state (round 0) into round 1 starts the
+  // duration clock; it does not mean a combat round has already elapsed.
+  if (!Number.isFinite(previousRound) || previousRound <= 0) return;
   const elapsedRounds = nextRound - previousRound;
   if (elapsedRounds <= 0) return;
 

@@ -466,11 +466,7 @@ import { isPlayerAtZeroCon } from "./con-death.js";
         { rollMode }
       );
 
-      if (actor.isOwner) {
-        await removeDeathTimerEffect(actor);
-        await clearDeathTimerFlag(actor);
-        await removeDeadEffect(actor);
-      }
+      await clearAllDeathState(actor);
 
       return { done: true, turns: null };
     }

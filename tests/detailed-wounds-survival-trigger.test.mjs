@@ -58,7 +58,7 @@ test("shared Detailed Wounds settings expose Off, GM Prompt, and Automatic with 
   assert.match(source, /automatic: "Automatic"/);
 });
 
-test("runtime consumes the shared setting without registering settings itself", async () => {
+test("runtime consumes the shared trigger setting without registering settings itself", async () => {
   const source = await readFile(runtimeUrl, "utf8");
 
   assert.match(source, /SETTING_TRIGGER = "detailedWoundsSurvivalTrigger"/);
@@ -66,11 +66,13 @@ test("runtime consumes the shared setting without registering settings itself", 
   assert.doesNotMatch(source, /game\.settings\.register\(/);
 });
 
-test("failed survival CON check delegates to the existing Detailed Wounds random-wound API", async () => {
+test("failed survival CON check delegates through the selected wound profile", async () => {
   const source = await readFile(runtimeUrl, "utf8");
 
-  assert.match(source, /if \(!check\.success\)/);
+  assert.match(source, /const resolution = check\.success/);
+  assert.match(source, /resolveFailedSurvival\(actor, profile\)/);
   assert.match(source, /api\?\.wounds\?\.rollRandom\?\.\(actor\)/);
+  assert.match(source, /drawEnduringWound\(getSetting\(SETTING_ENDURING_TABLE, ""\)\)/);
   assert.match(source, /waitForResolvedSurvival\(actor\)/);
   assert.match(source, /!hasDeathTimerState\(actor\)/);
   assert.match(source, /!isPlayerAtZeroCon\(actor\)/);

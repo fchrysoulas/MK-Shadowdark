@@ -168,22 +168,6 @@ import { deriveWoundFunctionalState } from "../detailed-wounds/functional-conseq
     return equipmentChangeTouchesClassification(changes);
   }
 
-  function actorUpdateTouchesDetailedWounds(changes) {
-    if (!changes || typeof changes !== "object") return false;
-
-    const nestedFlags = changes.flags?.[MODULE_ID];
-    if (nestedFlags && Object.prototype.hasOwnProperty.call(nestedFlags, "detailedWounds")) {
-      return true;
-    }
-
-    const prefix = `flags.${MODULE_ID}.detailedWounds`;
-    return Object.keys(changes).some(key => (
-      key === prefix
-      || key.startsWith(`${prefix}.`)
-      || key === `flags.${MODULE_ID}.-=detailedWounds`
-    ));
-  }
-
   function canCheckActor(actor) {
     return !!actor && actor.documentName === "Actor" && (actor.isOwner || game.user?.isGM);
   }
@@ -259,19 +243,6 @@ import { deriveWoundFunctionalState } from "../detailed-wounds/functional-conseq
       scheduleActorCheck(item.parent, { reason: "updateItem", once: true });
     } catch (err) {
       warn("updateItem error", err);
-    }
-  });
-
-  Hooks.on("updateActor", (actor, changes) => {
-    try {
-      if (!isEnabled()) return;
-      if (game.system?.id !== "shadowdark") return;
-      if (!canCheckActor(actor)) return;
-      if (!actorUpdateTouchesDetailedWounds(changes)) return;
-
-      scheduleActorCheck(actor, { reason: "detailedWounds", once: true });
-    } catch (err) {
-      warn("updateActor wound check error", err);
     }
   });
 

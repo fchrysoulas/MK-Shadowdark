@@ -122,6 +122,8 @@ export async function restActor(actor, mode) {
     await actor.update({ "system.attributes.hp.value": hpAfter });
   }
 
+  await advanceDetailedWoundRestRecovery(actor);
+
   return {
     mode,
     hpBefore,
@@ -307,6 +309,21 @@ export async function reportRest(actor, result) {
       </div>
     `
   });
+}
+
+async function advanceDetailedWoundRestRecovery(actor) {
+  const recovery = globalThis.game?.modules?.get?.(MODULE_ID)?.api?.woundRecovery;
+  if (typeof recovery?.advanceActor !== "function") return null;
+
+  try {
+    return await recovery.advanceActor(actor, {
+      restDays: 1,
+      source: "rest"
+    });
+  } catch (error) {
+    console.warn(`${MODULE_ID} v${getModuleVersion()} | ${SUBMODULE} | wound recovery error`, error);
+    return null;
+  }
 }
 
 function getHpMax(actor) {

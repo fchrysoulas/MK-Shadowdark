@@ -12,7 +12,7 @@ const FEATURE_MENUS = Object.freeze([
     title: "Detailed Wounds",
     hint: "Configure body-location wound tracking on Shadowdark player sheets.",
     icon: "fas fa-heart-crack",
-    settings: ["detailedWoundsEnabled"]
+    settings: ["detailedWoundsEnabled", "detailedWoundsSurvivalTrigger"]
   },
   {
     key: "initiative",
@@ -142,6 +142,19 @@ Hooks.once("init", () => {
       for (const app of Object.values(ui.windows ?? {})) {
         if (app?.actor || app?.object?.documentName === "Actor") app.render(false);
       }
+    }
+  });
+  registerSetting("detailedWoundsSurvivalTrigger", {
+    name: "Detailed Wounds | Surviving 0 HP Trigger",
+    hint: "Choose whether surviving the Death Timer does nothing, prompts the GM, or automatically rolls a DC 12 CON check. A failed check rolls the existing MK Detailed Wounds 2d10 wound table.",
+    scope: "world",
+    config: true,
+    type: String,
+    default: "prompt",
+    choices: {
+      off: "Off",
+      prompt: "GM Prompt",
+      automatic: "Automatic"
     }
   });
   registerSetting("detailedWoundsMigrationVersion", {

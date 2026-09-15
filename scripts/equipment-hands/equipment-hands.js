@@ -8,6 +8,7 @@ import {
   isTwoHandedWeapon,
   occupiesOneHand
 } from "../libs/equipment.js";
+import { deriveWoundFunctionalState } from "../detailed-wounds/functional-consequences-core.js";
 
 (() => {
   const MODULE_ID = "mk-shadowdark";
@@ -75,9 +76,16 @@ import {
     return classifyItemHandUse(item, proposed, { ignoreStashed: ignoreStashedItems() });
   }
 
+  function getActorFunctionalState(actor, baseHands = getMaxHands()) {
+    const woundData = actor?.getFlag?.(MODULE_ID, "detailedWounds");
+    return deriveWoundFunctionalState(woundData, { baseHands });
+  }
+
   function buildHandsReport(actor, proposed = null) {
     const entries = [];
-    const maxHands = getMaxHands();
+    const baseMaxHands = getMaxHands();
+    const woundFunctionalState = getActorFunctionalState(actor, baseMaxHands);
+    const maxHands = woundFunctionalState.usableHands;
     const dualWieldAllowed = allowDualWielding();
 
     for (const item of actor?.items ?? []) {
@@ -108,7 +116,9 @@ import {
       actorName: actor?.name ?? "Unknown Actor",
       entries,
       totalHands,
+      baseMaxHands,
       maxHands,
+      woundFunctionalState,
       weapons,
       twoHandedWeapons,
       dualWieldAllowed,
@@ -132,6 +142,7 @@ import {
       report.actorId,
       report.totalHands,
       report.maxHands,
+      report.woundFunctionalState?.unavailableHands ?? 0,
       report.problems.join("|"),
       report.entries.map(entry => `${entry.id}:${entry.hands}`).join("|")
     ].join("::");
@@ -157,6 +168,22 @@ import {
     return equipmentChangeTouchesClassification(changes);
   }
 
+  function actorUpdateTouchesDetailedWounds(changes) {
+    if (!changes || typeof changes !== "object") return false;
+
+    const nestedFlags = changes.flags?.[MODULE_ID];
+    if (nestedFlags && Object.prototype.hasOwnProperty.call(nestedFlags, "detailedWounds")) {
+      return true;
+    }
+
+    const prefix = `flags.${MODULE_ID}.detailedWounds`;
+    return Object.keys(changes).some(key => (
+      key === prefix
+      || key.startsWith(`${prefix}.`)
+      || key === `flags.${MODULE_ID}.-=detailedWounds`
+    ));
+  }
+
   function canCheckActor(actor) {
     return !!actor && actor.documentName === "Actor" && (actor.isOwner || game.user?.isGM);
   }
@@ -172,6 +199,9 @@ import {
       actor: actor?.name,
       valid: report.valid,
       totalHands: report.totalHands,
+      baseMaxHands: report.baseMaxHands,
+      maxHands: report.maxHands,
+      unavailableHands: report.woundFunctionalState.unavailableHands,
       entries: report.entries.map(e => ({ name: e.name, hands: e.hands, category: e.category })),
       problems: report.problems
     });
@@ -232,6 +262,19 @@ import {
     }
   });
 
+  Hooks.on("updateActor", (actor, changes) => {
+    try {
+      if (!isEnabled()) return;
+      if (game.system?.id !== "shadowdark") return;
+      if (!canCheckActor(actor)) return;
+      if (!actorUpdateTouchesDetailedWounds(changes)) return;
+
+      scheduleActorCheck(actor, { reason: "detailedWounds", once: true });
+    } catch (err) {
+      warn("updateActor wound check error", err);
+    }
+  });
+
   // UI-driven equipment buttons eventually resolve through item updates, but a
   // post-render check keeps warn mode aligned with the final visible sheet state.
   function onRenderActorSheet(app) {
@@ -254,6 +297,7 @@ import {
       mod.api.equipmentHands = {
         checkActorHands,
         buildHandsReport,
+        getActorFunctionalState,
         getItemHandUse,
         isOneHandedWeapon,
         isTwoHandedWeapon,

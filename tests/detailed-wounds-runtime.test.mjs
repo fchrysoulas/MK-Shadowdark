@@ -25,3 +25,22 @@ test("Detailed Wounds generated output contains no em dash punctuation", async (
   const source = await readFile(sourceUrl, "utf8");
   assert.doesNotMatch(source, /—/);
 });
+
+test("Detailed Wounds exposes a separate informational history surface", async () => {
+  const source = (await readFile(sourceUrl, "utf8")).replace(/\r\n/g, "\n");
+
+  assert.match(source, /renderWoundHistoryHtml\(data, editable\)/);
+  assert.match(source, /data-action="add-wound-history"/);
+  assert.match(source, /data-action="edit-wound-history"/);
+  assert.match(source, /data-action="remove-wound-history"/);
+  assert.match(source, /Informational only/);
+});
+
+test("Detailed Wounds history is not used to calculate penalties", async () => {
+  const source = (await readFile(sourceUrl, "utf8")).replace(/\r\n/g, "\n");
+  const penaltyBlock = source.match(/function buildWoundPenaltyChanges\(data\) \{([\s\S]*?)\n  \}\n\n  function getLocationPenaltyValues/);
+
+  assert.ok(penaltyBlock, "buildWoundPenaltyChanges block must exist");
+  assert.doesNotMatch(penaltyBlock[1], /history/);
+  assert.match(source, /appendAutomaticWoundHistory\(entry, current, outcome, historyContext\)/);
+});

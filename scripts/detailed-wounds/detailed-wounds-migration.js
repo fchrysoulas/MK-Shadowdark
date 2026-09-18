@@ -259,6 +259,64 @@ function clonePlain(value) {
   return JSON.parse(JSON.stringify(value));
 }
 
+const HISTORY_ID_MAX_LENGTH = 80;
+const HISTORY_SESSION_MAX_LENGTH = 80;
+const HISTORY_TEXT_MAX_LENGTH = 160;
+
+function normalizeHistoryText(value, maximum) {
+  if (typeof value !== "string") return "";
+  return value.trim().slice(0, maximum);
+}
+
+function normalizeHistoryTimestamp(value) {
+  const numeric = Number(value);
+  if (Number.isFinite(numeric) && numeric > 0) return Math.floor(numeric);
+
+  if (typeof value !== "string" || !value.trim()) return null;
+  const parsed = Date.parse(value);
+  return Number.isFinite(parsed) && parsed > 0 ? parsed : null;
+}
+
+function normalizeWoundHistoryEntry(value) {
+  if (!value || Array.isArray(value) || typeof value !== "object") return null;
+
+  const normalized = {};
+  const id = normalizeHistoryText(value.id, HISTORY_ID_MAX_LENGTH);
+  const timestamp = normalizeHistoryTimestamp(value.timestamp);
+  const session = normalizeHistoryText(value.session, HISTORY_SESSION_MAX_LENGTH);
+  const source = normalizeHistoryText(value.source ?? value.note, HISTORY_TEXT_MAX_LENGTH);
+  const outcome = normalizeHistoryText(value.outcome ?? value.result, HISTORY_TEXT_MAX_LENGTH);
+
+  if (!timestamp && !session && !source && !outcome) return null;
+
+  if (id) normalized.id = id;
+  if (timestamp) normalized.timestamp = timestamp;
+  if (session) normalized.session = session;
+  if (source) normalized.source = source;
+  if (outcome) normalized.outcome = outcome;
+
+  return Object.keys(normalized).length ? normalized : null;
+}
+
+function normalizeWoundHistory(value) {
+  if (!Array.isArray(value)) return [];
+  return value.map(normalizeWoundHistoryEntry).filter(Boolean);
+}
+
+function isCurrentHistoryEntry(value) {
+  if (!value || Array.isArray(value) || typeof value !== "object") return false;
+
+  const allowedKeys = new Set(["id", "timestamp", "session", "source", "outcome"]);
+  if (Object.keys(value).some(key => !allowedKeys.has(key))) return false;
+
+  const normalized = normalizeWoundHistoryEntry(value);
+  if (!normalized) return false;
+
+  return ["id", "timestamp", "session", "source", "outcome"].every(key => (
+    !Object.prototype.hasOwnProperty.call(value, key) || value[key] === normalized[key]
+  ));
+}
+
 function statusForRank(rank) {
   return Object.entries(STATUS_RANKS).find(([, value]) => value === rank)?.[0] ?? "ok";
 }
@@ -304,6 +362,9 @@ function normalizeWoundLocation(value) {
 
   if (objectValue?.legacy === true) normalized.legacy = true;
 
+  const history = normalizeWoundHistory(objectValue?.history);
+  if (history.length) normalized.history = history;
+
   const durationValue = Math.floor(Number(objectValue?.durationValue));
   if (Number.isFinite(durationValue) && durationValue > 0) normalized.durationValue = durationValue;
 
@@ -338,6 +399,12 @@ function isCurrentLocation(value) {
     && Number(value.severityRoll) <= 10
     && (value.resultKey === null || typeof value.resultKey === "string" || value.resultKey === undefined)
   );
+}
+
+function hasHistoryNormalizationMismatch(value) {
+  if (value?.history === undefined) return false;
+  if (!Array.isArray(value.history)) return true;
+  return value.history.some(entry => !isCurrentHistoryEntry(entry));
 }
 
 function getWoundLocationForRoll(locationRoll) {
@@ -402,7 +469,8 @@ function migrateLegacyWoundData(raw) {
     for (const key of LOCATION_KEYS) data.locations[key] = normalizeWoundLocation(locations[key]);
 
     const hasObsoleteLocations = Object.keys(locations).some(key => !LOCATION_KEYS.includes(key));
-    return { data, needsWrite: hasObsoleteLocations };
+    const hasInvalidHistory = LOCATION_KEYS.some(key => hasHistoryNormalizationMismatch(locations[key]));
+    return { data, needsWrite: hasObsoleteLocations || hasInvalidHistory };
   }
 
   for (const location of WOUND_LOCATION_RULES) {
@@ -430,6 +498,8 @@ export {
   getWoundLocationForRoll,
   getWoundOutcome,
   migrateLegacyWoundData,
+  normalizeWoundHistory,
+  normalizeWoundHistoryEntry,
   normalizeCurrentWoundData,
   normalizeWoundLocation
 };

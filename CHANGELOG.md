@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.9.17
+
+- Added optional Detailed Wounds history with compact timestamps, session markers, source notes, and outcome transitions; history is informational only, can be edited or removed by the GM, and does not affect wound mechanics.
+
 ## 1.9.16
 
 - Player characters whose effective CON falls to 0 are now marked Dead; HP healing no longer clears Dead while CON remains at 0.

@@ -78,8 +78,8 @@ import {
         return "modules/mk-shadowdark/templates/character-dashboard.hbs";
       }
       async getData(options) {
-        const context = await super.getData(options);
-        context.dashboard = buildDashboardContext(this.actor, {
+      const context = await super.getData(options);
+      context.dashboard = buildDashboardContext(this.actor, {
           className: context.characterClass?.name,
           title: context.classTitle,
           level: context.actor?.system?.level?.value,
@@ -93,8 +93,8 @@ import {
           showSpellsButton: context.showSpellsTab,
           background: context.backgroundSelectors?.background?.item?.name,
           ancestry: context.backgroundSelectors?.ancestry?.item?.name,
-          deity: context.backgroundSelectors?.deity?.item?.name
-        });
+        deity: context.backgroundSelectors?.deity?.item?.name
+      });
         return context;
       }
       activateListeners(html) {
@@ -299,6 +299,7 @@ import {
         subtitle: ""
       },
       canEdit,
+      themeClass: getDashboardThemeClass(),
       stats,
       armorClass,
       luckToggle: luck,
@@ -322,6 +323,17 @@ import {
       backpackUsed,
       backpackCapacity
     };
+  }
+
+  function getDashboardThemeClass() {
+    let theme = "classic";
+    try {
+      const configured = String(globalThis.game?.settings?.get?.(MODULE_ID, "characterDashboardTheme") ?? "").toLowerCase();
+      if (["classic", "osr"].includes(configured)) theme = configured;
+    } catch (_error) {
+      // Keep the default theme available during early sheet/test rendering.
+    }
+    return "mk-dashboard-theme-" + theme;
   }
 
   function getActorSlotUsage(actor) {

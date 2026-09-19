@@ -5,6 +5,19 @@
 
   const FEATURE_SETTINGS = [
     {
+      key: "characterDashboard",
+      title: "Character Dashboard",
+      hint: "Configure the alternative Shadowdark character sheet and its visual theme.",
+      icon: "fas fa-user",
+      settings: ["characterDashboardEnabled", "characterDashboardTheme"],
+      sections: [
+        {
+          title: "General",
+          settings: ["characterDashboardEnabled", "characterDashboardTheme"]
+        }
+      ]
+    },
+    {
       key: "autoDamage",
       title: "Auto Damage",
       hint: "Configure automatic damage and healing application, timing, dice, and token feedback.",
@@ -516,6 +529,20 @@
       config: false,
       type: Boolean,
       default: true,
+      onChange: refreshOpenActorSheets
+    });
+
+    registerSetting("characterDashboardTheme", {
+      name: "MK_SHADOWDARK.dashboard.themeName",
+      hint: "MK_SHADOWDARK.dashboard.themeHint",
+      scope: "world",
+      config: true,
+      type: String,
+      default: "classic",
+      choices: {
+        classic: "MK_SHADOWDARK.dashboard.theme.classic",
+        osr: "MK_SHADOWDARK.dashboard.theme.osr"
+      },
       onChange: refreshOpenActorSheets
     });
 

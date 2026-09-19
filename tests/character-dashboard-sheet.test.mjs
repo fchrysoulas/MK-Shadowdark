@@ -27,7 +27,8 @@ test("dashboard registers an optional native Player sheet without standard-sheet
   globalThis.Hooks = { once: (name, callback) => hooks.set(name, callback) };
   globalThis.game = {
     system: { id: "shadowdark", sheets: { PlayerSheetSD: NativeSheet } }, user: { isGM: true },
-    i18n: { localize: key => key }, modules: new Map(), settings: { get: () => false }
+    i18n: { localize: key => key }, modules: new Map(),
+    settings: { get: (_module, key) => key === "characterDashboardTheme" ? "osr" : false }
   };
   globalThis.foundry = {
     utils: { mergeObject: (base, options) => ({ ...base, ...options }) },
@@ -73,6 +74,7 @@ test("dashboard registers an optional native Player sheet without standard-sheet
   assert.equal(context.dashboard.stats.some(stat => stat.key === "luck"), false);
   assert.equal(context.dashboard.editingStats, false);
   assert.equal(context.dashboard.showSpellsButton, true);
+  assert.equal(context.dashboard.themeClass, "mk-dashboard-theme-osr");
   assert.deepEqual(
     {
       available: context.dashboard.luckToggle.available,

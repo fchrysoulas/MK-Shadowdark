@@ -1,6 +1,7 @@
 # Changelog
 
 ## 1.9.17
+- Added a Character Dashboard theme setting with the original Midnight Cyan look and a darker, grittier Ashen OSR theme.
 - Redesigned the Backpack extension as a fixed-square slot grid where items span their required number of slots.
 - Reduced the Character Dashboard navigation tab text size to better balance the new icons.
 - Added icons to the visible Character Dashboard navigation tabs.

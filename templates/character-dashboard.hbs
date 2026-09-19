@@ -1,4 +1,4 @@
-<form class="{{cssClass}} mk-dashboard-sheet flexcol" autocomplete="off">
+<form class="{{cssClass}} mk-dashboard-sheet flexcol {{dashboard.themeClass}}" autocomplete="off">
   <nav class="SD-nav mk-dashboard-nav flex0" data-group="primary" aria-label="Character sections">
     <a class="navigation-tab" data-tab="tab-body"><i class="fa-solid fa-user" aria-hidden="true"></i><span>Character</span></a>
     <a class="navigation-tab" data-tab="tab-inventory"><i class="fa-solid fa-backpack" aria-hidden="true"></i><span>Inventory</span></a>
@@ -11,7 +11,7 @@
   <section class="SD-content-body flex1">
     <div class="tab mk-dashboard-overview" data-group="primary" data-tab="tab-body">
     {{#with dashboard}}
-<div class="mk-character-dashboard" data-actor-id="{{actor.id}}">
+<div class="mk-character-dashboard {{themeClass}}" data-actor-id="{{actor.id}}">
 
   <div class="mk-dashboard-layout">
     <aside class="mk-dashboard-left">

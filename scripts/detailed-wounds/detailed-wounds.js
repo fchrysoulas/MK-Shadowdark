@@ -1,5 +1,4 @@
 import { onCharacterSheetRender } from "../libs/sheet-render-adapter.js";
-import { confirmGmDialog, waitForGmDialog } from "../libs/dialog-v2.js";
 import {
   WOUND_MIGRATION_VERSION,
   WOUND_LOCATION_RULES,
@@ -8,9 +7,7 @@ import {
   getWoundLocationForRoll,
   getWoundOutcome,
   migrateLegacyWoundData,
-  normalizeCurrentWoundData,
-  normalizeWoundHistory,
-  normalizeWoundHistoryEntry
+  normalizeCurrentWoundData
 } from "./detailed-wounds-migration.js";
 
 (() => {
@@ -58,9 +55,6 @@ import {
     { key: "critical", label: "Critical", rank: 3 },
     { key: "destroyed", label: "Destroyed", rank: 4 }
   ]);
-
-  const HISTORY_SESSION_MAX_LENGTH = 80;
-  const HISTORY_TEXT_MAX_LENGTH = 160;
 
   const foundryApplicationApi = globalThis.foundry?.applications?.api ?? {};
   const ApplicationV2 = foundryApplicationApi.ApplicationV2;
@@ -192,37 +186,6 @@ import {
       await rollRandomWound(actor);
       rerender();
     });
-
-    section.querySelector("[data-action='add-wound-history']")?.addEventListener("click", async event => {
-      event.preventDefault();
-      if (await addWoundHistoryNote(actor)) rerender();
-    });
-
-    for (const button of section.querySelectorAll("[data-action='edit-wound-history']")) {
-      button.addEventListener("click", async event => {
-        event.preventDefault();
-        event.stopPropagation();
-        const changed = await editWoundHistory(
-          actor,
-          button.dataset.historyLocation,
-          Number(button.dataset.historyIndex)
-        );
-        if (changed) rerender();
-      });
-    }
-
-    for (const button of section.querySelectorAll("[data-action='remove-wound-history']")) {
-      button.addEventListener("click", async event => {
-        event.preventDefault();
-        event.stopPropagation();
-        const changed = await removeWoundHistory(
-          actor,
-          button.dataset.historyLocation,
-          Number(button.dataset.historyIndex)
-        );
-        if (changed) rerender();
-      });
-    }
   }
 
   function openWoundsApplication(actor) {
@@ -303,275 +266,8 @@ import {
           </div>
           <div class="mk-wounds-location-column mk-wounds-location-column-right">${rightCards}</div>
         </div>
-
-        ${renderWoundHistoryHtml(data, editable)}
       </div>
     `;
-  }
-
-  function renderWoundHistoryHtml(data, editable) {
-    let sequence = 0;
-    const entries = LOCATIONS.flatMap(location => (
-      normalizeWoundHistory(data.locations?.[location.key]?.history).map((entry, index) => ({
-        entry,
-        index,
-        location,
-        sequence: sequence++
-      }))
-    ));
-
-    entries.sort((left, right) => {
-      const timestampDifference = (Number(right.entry.timestamp) || 0) - (Number(left.entry.timestamp) || 0);
-      return timestampDifference || right.sequence - left.sequence;
-    });
-
-    const countLabel = `${entries.length} entr${entries.length === 1 ? "y" : "ies"}`;
-    const body = entries.length
-      ? entries.map(({ entry, index, location }) => renderHistoryEntry(location, entry, index, editable)).join("")
-      : '<p class="mk-wounds-history-empty">No history recorded.</p>';
-
-    return `
-      <details class="mk-wounds-history">
-        <summary>
-          <span><i class="fa-solid fa-book-open" aria-hidden="true"></i> Wound History</span>
-          <small>${countLabel}</small>
-        </summary>
-        <div class="mk-wounds-history-content">
-          <p class="mk-wounds-history-note">Informational only. History does not affect wound penalties or resolution.</p>
-          <div class="mk-wounds-history-list">${body}</div>
-          ${editable ? `
-            <button type="button" class="mk-wounds-history-add" data-action="add-wound-history">
-              <i class="fa-solid fa-plus" aria-hidden="true"></i><span>Add GM note</span>
-            </button>
-          ` : ""}
-        </div>
-      </details>
-    `;
-  }
-
-  function renderHistoryEntry(location, entry, index, editable) {
-    const timestamp = formatHistoryTimestamp(entry.timestamp);
-    const date = new Date(Number(entry.timestamp));
-    const datetime = Number.isFinite(date.getTime()) ? date.toISOString() : "";
-    const metadata = [
-      timestamp ? `<time${datetime ? ` datetime="${escapeHtml(datetime)}"` : ""}>${escapeHtml(timestamp)}</time>` : "",
-      entry.session ? `<span>Session: ${escapeHtml(entry.session)}</span>` : ""
-    ].filter(Boolean).join(" · ");
-    const source = entry.source ? `<p class="mk-wounds-history-source">${escapeHtml(entry.source)}</p>` : "";
-    const outcome = entry.outcome ? `<p class="mk-wounds-history-outcome">${escapeHtml(entry.outcome)}</p>` : "";
-    const controls = editable
-      ? `
-        <span class="mk-wounds-history-actions">
-          <button type="button" data-action="edit-wound-history" data-history-location="${escapeHtml(location.key)}" data-history-index="${index}" title="Edit history entry" aria-label="Edit history entry">
-            <i class="fa-solid fa-pen" aria-hidden="true"></i>
-          </button>
-          <button type="button" data-action="remove-wound-history" data-history-location="${escapeHtml(location.key)}" data-history-index="${index}" title="Remove history entry" aria-label="Remove history entry">
-            <i class="fa-solid fa-trash" aria-hidden="true"></i>
-          </button>
-        </span>
-      `
-      : "";
-
-    return `
-      <article class="mk-wounds-history-entry" data-history-location="${escapeHtml(location.key)}" data-history-index="${index}">
-        <header>
-          <strong>${escapeHtml(location.label)}</strong>
-          ${metadata ? `<span class="mk-wounds-history-meta">${metadata}</span>` : ""}
-          ${controls}
-        </header>
-        ${source}${outcome}
-      </article>
-    `;
-  }
-
-  function renderHistoryForm(entry = {}, { includeLocation = false, locationKey = "" } = {}) {
-    const locationOptions = LOCATIONS.map(location => `
-      <option value="${escapeHtml(location.key)}"${location.key === locationKey ? " selected" : ""}>${escapeHtml(location.label)}</option>
-    `).join("");
-
-    return `
-      <div class="mk-wounds-history-form">
-        <p class="mk-wounds-history-note">History is informational only and cannot change the wound state.</p>
-        ${includeLocation ? `
-          <div class="form-group">
-            <label for="mk-wounds-history-location">Location</label>
-            <select id="mk-wounds-history-location" name="location">${locationOptions}</select>
-          </div>
-        ` : ""}
-        <div class="form-group">
-          <label for="mk-wounds-history-session">Session marker</label>
-          <input id="mk-wounds-history-session" type="text" name="session" maxlength="${HISTORY_SESSION_MAX_LENGTH}" value="${escapeHtml(entry.session)}" placeholder="Session 4">
-        </div>
-        <div class="form-group">
-          <label for="mk-wounds-history-source">Source / note</label>
-          <input id="mk-wounds-history-source" type="text" name="source" maxlength="${HISTORY_TEXT_MAX_LENGTH}" value="${escapeHtml(entry.source)}" placeholder="Ogre maul">
-        </div>
-        <div class="form-group">
-          <label for="mk-wounds-history-outcome">Outcome / transition</label>
-          <input id="mk-wounds-history-outcome" type="text" name="outcome" maxlength="${HISTORY_TEXT_MAX_LENGTH}" value="${escapeHtml(entry.outcome)}" placeholder="Broken Arm">
-        </div>
-      </div>
-    `;
-  }
-
-  function readHistoryForm(form) {
-    const value = name => String(form?.elements?.[name]?.value ?? "").trim();
-    return {
-      location: value("location"),
-      session: value("session"),
-      source: value("source"),
-      outcome: value("outcome")
-    };
-  }
-
-  function hasHistoryContent(entry) {
-    return Boolean(entry?.session || entry?.source || entry?.outcome);
-  }
-
-  async function promptWoundHistory({ title, entry = {}, includeLocation = false, locationKey = "" }) {
-    return waitForGmDialog({
-      title,
-      content: renderHistoryForm(entry, { includeLocation, locationKey }),
-      buttons: [
-        {
-          action: "save",
-          icon: '<i class="fas fa-check"></i>',
-          label: "Save",
-          default: true,
-          callback: (_event, button) => readHistoryForm(button.form)
-        },
-        {
-          action: "cancel",
-          icon: '<i class="fas fa-times"></i>',
-          label: "Cancel",
-          callback: () => null
-        }
-      ],
-      close: () => null,
-      position: { width: 460 }
-    });
-  }
-
-  async function addWoundHistoryNote(actor) {
-    if (!game.user?.isGM || !isPlayerActor(actor)) return false;
-
-    const values = await promptWoundHistory({
-      title: `Add Wound History: ${actor.name}`,
-      includeLocation: true,
-      locationKey: LOCATIONS[0]?.key ?? ""
-    });
-    if (!values) return false;
-
-    const location = getLocation(values.location);
-    if (!location || !hasHistoryContent(values)) {
-      ui.notifications?.warn?.("Choose a location and enter at least one history field.");
-      return false;
-    }
-
-    const entry = normalizeWoundHistoryEntry({
-      ...values,
-      id: createHistoryId(),
-      timestamp: Date.now()
-    });
-    if (!entry) return false;
-
-    const data = normalizeData(actor.getFlag(MODULE_ID, FLAG_KEY));
-    const current = getLocationEntry(data, location.key);
-    data.locations[location.key] = withWoundHistory(current, [
-      ...normalizeWoundHistory(current.history),
-      entry
-    ]);
-    await actor.setFlag(MODULE_ID, FLAG_KEY, data);
-    return true;
-  }
-
-  async function editWoundHistory(actor, locationKey, historyIndex) {
-    if (!game.user?.isGM || !isPlayerActor(actor)) return false;
-
-    const location = getLocation(locationKey);
-    if (!location || !Number.isInteger(historyIndex) || historyIndex < 0) return false;
-
-    const data = normalizeData(actor.getFlag(MODULE_ID, FLAG_KEY));
-    const current = getLocationEntry(data, location.key);
-    const history = normalizeWoundHistory(current.history);
-    const existing = history[historyIndex];
-    if (!existing) return false;
-
-    const values = await promptWoundHistory({
-      title: `Edit Wound History: ${location.label}`,
-      entry: existing,
-      locationKey: location.key
-    });
-    if (!values || !hasHistoryContent(values)) {
-      if (values) ui.notifications?.warn?.("Enter at least one history field, or remove the entry instead.");
-      return false;
-    }
-
-    const updated = normalizeWoundHistoryEntry({ ...existing, ...values });
-    if (!updated) return false;
-
-    history[historyIndex] = updated;
-    data.locations[location.key] = withWoundHistory(current, history);
-    await actor.setFlag(MODULE_ID, FLAG_KEY, data);
-    return true;
-  }
-
-  async function removeWoundHistory(actor, locationKey, historyIndex) {
-    if (!game.user?.isGM || !isPlayerActor(actor)) return false;
-
-    const location = getLocation(locationKey);
-    if (!location || !Number.isInteger(historyIndex) || historyIndex < 0) return false;
-
-    const data = normalizeData(actor.getFlag(MODULE_ID, FLAG_KEY));
-    const current = getLocationEntry(data, location.key);
-    const history = normalizeWoundHistory(current.history);
-    const existing = history[historyIndex];
-    if (!existing) return false;
-
-    const confirmed = await confirmGmDialog({
-      title: "Remove Wound History",
-      content: `<p>Remove the informational history entry for <strong>${escapeHtml(location.label)}</strong>?</p>`,
-      yes: { label: "Remove" },
-      no: { label: "Cancel", default: true }
-    });
-    if (!confirmed) return false;
-
-    history.splice(historyIndex, 1);
-    data.locations[location.key] = withWoundHistory(current, history);
-    await actor.setFlag(MODULE_ID, FLAG_KEY, data);
-    return true;
-  }
-
-  function withWoundHistory(entry, history) {
-    const next = { ...entry };
-    const normalized = normalizeWoundHistory(history);
-    if (normalized.length) next.history = normalized;
-    else delete next.history;
-    return next;
-  }
-
-  function createHistoryId() {
-    const randomId = globalThis.foundry?.utils?.randomID;
-    if (typeof randomId === "function") return randomId(16);
-    if (typeof globalThis.crypto?.randomUUID === "function") return globalThis.crypto.randomUUID();
-    return `history-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
-  }
-
-  function formatHistoryTimestamp(value) {
-    const timestamp = Number(value);
-    if (!Number.isFinite(timestamp) || timestamp <= 0) return "";
-
-    const date = new Date(timestamp);
-    if (!Number.isFinite(date.getTime())) return "";
-
-    try {
-      return new Intl.DateTimeFormat(undefined, {
-        dateStyle: "medium",
-        timeStyle: "short"
-      }).format(date);
-    } catch (_error) {
-      return date.toLocaleString();
-    }
   }
 
   function renderLocationCard(location, data, editable) {
@@ -618,9 +314,7 @@ import {
     const data = normalizeData(actor.getFlag(MODULE_ID, FLAG_KEY));
     const current = getLocationEntry(data, locationKey);
     const nextSeverity = getNextWoundSeverityRoll(Number(current.severityRoll) || minimumSeverityForStatus(current.status));
-    await setWoundResult(actor, locationKey, nextSeverity, data, true, null, {
-      source: "GM wound update"
-    });
+    await setWoundResult(actor, locationKey, nextSeverity, data, true);
   }
 
   async function improveLocationStatus(actor, location) {
@@ -632,8 +326,8 @@ import {
     const current = getLocationEntry(data, locationKey);
     const nextSeverity = getPreviousWoundSeverityRoll(Number(current.severityRoll) || 0);
     data.locations[locationKey] = nextSeverity > 0
-      ? await createWoundEntry(locationKey, nextSeverity, Number(current.hits) || 1, current.history)
-      : createEmptyWoundEntry(current.history);
+      ? await createWoundEntry(locationKey, nextSeverity, Number(current.hits) || 1)
+      : createEmptyWoundEntry();
     await actor.setFlag(MODULE_ID, FLAG_KEY, data);
     await syncWoundPenaltyEffect(actor, data);
   }
@@ -730,21 +424,11 @@ import {
         ? Math.max(rolledSeverity, getNextWoundSeverityRoll(currentSeverity))
         : rolledSeverity;
     const hits = Math.max(0, Number(currentLocation?.hits) || 0) + 1;
-    const result = await setWoundResult(actor, locationKey, nextSeverity, data, true, hits, {
-      source: "Random wound roll"
-    });
+    const result = await setWoundResult(actor, locationKey, nextSeverity, data, true, hits);
     return result;
   }
 
-  async function setWoundResult(
-    actor,
-    location,
-    severityRoll,
-    data,
-    resolveConsequences = false,
-    hitCount = null,
-    historyContext = {}
-  ) {
+  async function setWoundResult(actor, location, severityRoll, data, resolveConsequences = false, hitCount = null) {
     const outcome = getWoundOutcome(location, severityRoll);
     if (!outcome) return null;
 
@@ -752,8 +436,7 @@ import {
     const hits = hitCount === null
       ? Math.max(1, Number(current.hits) || 0)
       : Math.max(1, Number(hitCount) || 1);
-    const entry = await createWoundEntry(location, severityRoll, hits, current.history);
-    if (resolveConsequences) appendAutomaticWoundHistory(entry, current, outcome, historyContext);
+    const entry = await createWoundEntry(location, severityRoll, hits);
     data.locations[location] = entry;
     await actor.setFlag(MODULE_ID, FLAG_KEY, data);
     await syncWoundPenaltyEffect(actor, data);
@@ -762,7 +445,7 @@ import {
     return { entry, outcome };
   }
 
-  async function createWoundEntry(location, severityRoll, hits, history = null) {
+  async function createWoundEntry(location, severityRoll, hits) {
     const roll = Math.min(Math.max(Math.floor(Number(severityRoll) || 1), 1), 10);
     const outcome = getWoundOutcome(location, roll);
     const entry = {
@@ -778,33 +461,11 @@ import {
       entry.durationValue = Number(durationRoll.total) || 0;
     }
 
-    return withWoundHistory(entry, history);
-  }
-
-  function createEmptyWoundEntry(history = null) {
-    return withWoundHistory({ status: "ok", hits: 0, severityRoll: 0, resultKey: null }, history);
-  }
-
-  function appendAutomaticWoundHistory(entry, current, outcome, { source = "Detailed Wounds update" } = {}) {
-    const previousStatus = getStatus(current?.status)?.label ?? "OK";
-    const nextStatus = getStatus(entry?.status)?.label ?? "OK";
-    const result = outcome?.label ?? "Wound update";
-    const transition = previousStatus === nextStatus
-      ? result
-      : `${result} (${previousStatus} to ${nextStatus})`;
-    const historyEntry = normalizeWoundHistoryEntry({
-      id: createHistoryId(),
-      timestamp: Date.now(),
-      source,
-      outcome: transition
-    });
-
-    if (!historyEntry) return entry;
-    entry.history = [
-      ...normalizeWoundHistory(current?.history),
-      historyEntry
-    ];
     return entry;
+  }
+
+  function createEmptyWoundEntry() {
+    return { status: "ok", hits: 0, severityRoll: 0, resultKey: null };
   }
 
   async function resolveWoundConsequences(actor, location, entry, outcome, data) {

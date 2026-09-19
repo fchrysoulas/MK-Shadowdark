@@ -11,6 +11,13 @@ import {
   calculateHpChange,
   resolveAutoDamageOperation
 } from "./auto-damage-operation.js";
+import {
+  createProcessingState,
+  hasLegacyProcessed,
+  isTerminalProcessingState,
+  readProcessingState,
+  runProcessingState
+} from "./auto-damage-processing-state.js";
 
 (() => {
   const MODULE_ID = "mk-shadowdark";
@@ -65,11 +72,8 @@ import {
   }
 
   function hasAutoDamageProcessed(message) {
-    try {
-      return message?.getFlag?.(MODULE_ID, "autoDamageProcessed") === true;
-    } catch (_err) {
-      return false;
-    }
+    if (hasLegacyProcessed(message, MODULE_ID)) return true;
+    return isTerminalProcessingState(readProcessingState(message, MODULE_ID));
   }
 
   const PROCESSING_MESSAGES = new Set();
@@ -99,6 +103,10 @@ import {
         err
       );
     }
+  }
+
+  async function persistProcessingState(message, state) {
+    await message.setFlag(MODULE_ID, "autoDamageProcessing", state);
   }
 
   function scrollChatToBottom(delay = 75) {
@@ -404,30 +412,42 @@ import {
     return null;
   }
 
-  async function applyAmountToTargets(message, amount, operation, sourceContext = {}, targetUuids = []) {
-    const targets = await resolveTargetDocuments(targetUuids);
-    if (!targets.length) {
-      adLog(`Message ${message.id}: target snapshot has no resolvable tokens; nothing to ${operation}.`);
-      return [];
-    }
-
-    const shakeEnabled = game.settings.get(MODULE_ID, "autoDamageShakeTokens");
+  async function buildProcessingPlan(message, amount, operation, sourceContext = {}, targetUuids = [], display = null) {
     const damageTraitsApi = game.modules.get(MODULE_ID)?.api?.damageTraits;
     const sourceProperties = Array.from(sourceContext?.properties ?? []);
-    const results = [];
+    const targets = [];
 
-    for (const token of targets) {
+    for (const uuid of targetUuids) {
+      const [token] = await resolveTargetDocuments([uuid]);
       const actor = token?.actor ?? token?.document?.actor;
-      if (!actor) continue;
-
       const tokenId = token?.id ?? token?.document?.id ?? "unknown";
-      const hpInfo = resolveHpField(actor);
 
+      if (!token || !actor) {
+        targets.push({
+          uuid,
+          state: "conflict",
+          conflictReason: "target-unavailable",
+          operation,
+          amount
+        });
+        continue;
+      }
+
+      const hpInfo = resolveHpField(actor);
       if (!hpInfo) {
         adLog(
           `Token ${tokenId} (${actor.name}): could not resolve numeric HP field; system.hp =`,
           actor.system?.hp
         );
+        targets.push({
+          uuid,
+          state: "conflict",
+          conflictReason: "hp-unavailable",
+          actorName: actor.name,
+          tokenId,
+          operation,
+          amount
+        });
         continue;
       }
 
@@ -464,42 +484,111 @@ import {
         adjustedAmount,
         operation
       );
-      const appliedDamage = operation === "damage" ? appliedAmount : 0;
-      const appliedHealing = operation === "healing" ? appliedAmount : 0;
 
-      adLog(
-        `Token ${tokenId} (${actor.name}): HP via "${hpPath}" ${currentHP} -> ${newHP} ` +
-        (operation === "healing"
-          ? `(healing ${amount}, applied ${appliedHealing})`
-          : `(damage ${amount}, trait ${traitMode ?? "none"}, applied ${appliedDamage})`)
-      );
-
-      if (newHP !== currentHP) {
-        await actor.update({ [hpPath]: newHP });
-      }
-
-      results.push({
+      targets.push({
+        uuid,
+        state: "planned",
+        hpPath,
+        beforeHp: currentHP,
+        afterHp: newHP,
+        appliedAmount,
+        operation,
         actorName: actor.name,
         tokenId,
-        operation,
-        damage: operation === "damage" ? amount : 0,
-        healing: operation === "healing" ? amount : 0,
+        amount,
         reduction,
         damageIncrease,
         traitMode,
-        appliedDamage,
-        appliedHealing,
-        propertyNames: reductionProperties,
-        currentHP,
-        newHP
+        propertyNames: reductionProperties
       });
+    }
 
-      if (shakeEnabled && newHP < currentHP) {
-        await shakeToken(token);
+    return createProcessingState({ operation, amount, display, targets });
+  }
+
+  async function resolvePlannedTarget(target) {
+    const [token] = await resolveTargetDocuments([target.uuid]);
+    const actor = token?.actor ?? token?.document?.actor;
+    if (!token || !actor) throw new Error(`Target ${target.uuid} is unavailable.`);
+    return { token, actor };
+  }
+
+  async function readPlannedHp(target) {
+    const { actor } = await resolvePlannedTarget(target);
+    let value = foundry.utils.getProperty(actor, target.hpPath);
+    if (typeof value === "string") value = Number(value);
+    if (!Number.isFinite(value)) throw new Error(`Target ${target.uuid} no longer has numeric HP.`);
+    return value;
+  }
+
+  async function applyPlannedTarget(target) {
+    const { token, actor } = await resolvePlannedTarget(target);
+
+    adLog(
+      `Token ${target.tokenId} (${target.actorName}): HP via "${target.hpPath}" ${target.beforeHp} -> ${target.afterHp} ` +
+      (target.operation === "healing"
+        ? `(healing ${target.amount}, applied ${target.appliedAmount})`
+        : `(damage ${target.amount}, trait ${target.traitMode ?? "none"}, applied ${target.appliedAmount})`)
+    );
+
+    if (target.afterHp !== target.beforeHp) {
+      await actor.update({ [target.hpPath]: target.afterHp });
+    }
+
+    if (game.settings.get(MODULE_ID, "autoDamageShakeTokens") && target.afterHp < target.beforeHp) {
+      await shakeToken(token);
+    }
+  }
+
+  function processingResults(state) {
+    return Array.from(state?.targets ?? [])
+      .filter(target => target.state === "applied")
+      .map(target => ({
+        actorName: target.actorName,
+        tokenId: target.tokenId,
+        operation: target.operation,
+        damage: target.operation === "damage" ? target.amount : 0,
+        healing: target.operation === "healing" ? target.amount : 0,
+        reduction: target.reduction,
+        damageIncrease: target.damageIncrease,
+        traitMode: target.traitMode,
+        appliedDamage: target.operation === "damage" ? target.appliedAmount : 0,
+        appliedHealing: target.operation === "healing" ? target.appliedAmount : 0,
+        propertyNames: target.propertyNames,
+        currentHP: target.beforeHp,
+        newHP: target.afterHp
+      }));
+  }
+
+  async function applyProcessingPlan(message, state) {
+    const finalState = await runProcessingState(state, {
+      readCurrentHp: readPlannedHp,
+      applyTarget: applyPlannedTarget,
+      persistState: nextState => persistProcessingState(message, nextState),
+      onConflict: async target => {
+        const hpDetail = Number.isFinite(target.observedHp) ? ` Current HP is ${target.observedHp}.` : "";
+        const label = target.actorName || target.uuid;
+        console.warn(
+          `${MODULE_ID} | ${SUBMODULE} v${getModuleVersion()} | Auto Damage conflict for ${label}: ${target.conflictReason}.${hpDetail}`
+        );
+        ui.notifications?.warn?.(
+          `Auto Damage conflict for ${label}. HP was not changed automatically.${hpDetail}`
+        );
+      }
+    });
+
+    if (finalState.status === "complete") {
+      try {
+        await message.setFlag(MODULE_ID, "autoDamageProcessed", true);
+      } catch (err) {
+        console.error(
+          `${MODULE_ID} | ${SUBMODULE} v${getModuleVersion()} | Could not set legacy processed flag on message ${message.id}`,
+          err
+        );
       }
     }
 
-    return results;
+    return finalState;
   }
 
   async function appendDamageReductionDisplay(message, results) {
@@ -609,7 +698,7 @@ import {
     }
   }
 
-  async function handleChatMessage(message, context) {
+  async function handleChatMessage(message, context = {}) {
     try {
       if (!isPrimaryActiveGM()) return;
       if (!game.settings.get(MODULE_ID, "autoDamageEnabled")) return;
@@ -617,7 +706,28 @@ import {
       if (PROCESSING_MESSAGES.has(message.id)) return;
       if (hasAutoDamageProcessed(message)) return;
 
+      PROCESSING_MESSAGES.add(message.id);
+
       const targetUuids = getTargetSnapshot(message);
+      await persistTargetSnapshot(message, targetUuids);
+
+      let processingState = readProcessingState(message, MODULE_ID);
+      if (processingState) {
+        adLog(`Message ${message.id}: resuming pending auto-damage processing state.`);
+        processingState = await applyProcessingPlan(message, processingState);
+
+        if (processingState.display) {
+          await appendDamageDisplayToMessage(message, processingState.display, processingState.operation);
+        } else {
+          scrollChatToBottom();
+        }
+
+        if (processingState.operation === "damage") {
+          await appendDamageReductionDisplay(message, processingResults(processingState));
+        }
+        return;
+      }
+
       let damageDisplay = null;
       const operation = await resolveAutoDamageOperation(message);
 
@@ -670,7 +780,7 @@ import {
 
       if (damage == null) {
         adLog(
-          `Message ${message.id}: no ${operation} amount detected (${context.source});`,
+          `Message ${message.id}: no ${operation} amount detected (${context.source ?? "unknown"});`,
           debug?.reason ?? "no reason",
           debug
         );
@@ -683,18 +793,6 @@ import {
           debug
         );
         return;
-      }
-
-      PROCESSING_MESSAGES.add(message.id);
-      await persistTargetSnapshot(message, targetUuids);
-
-      try {
-        await message.setFlag(MODULE_ID, "autoDamageProcessed", true);
-      } catch (err) {
-        console.error(
-          `${MODULE_ID} | ${SUBMODULE} v${getModuleVersion()} | Could not set processed flag on message ${message.id}`,
-          err
-        );
       }
 
       const delayMs = Number(game.settings.get(MODULE_ID, "autoDamageDelayMs")) || 0;
@@ -736,27 +834,48 @@ import {
         }
       }
 
-      const damageResults = await applyAmountToTargets(
+      processingState = await buildProcessingPlan(
         message,
         damage,
         operation,
         sourceContext,
-        targetUuids
+        targetUuids,
+        damageDisplay
       );
 
-      if (damageDisplay) {
-        await appendDamageDisplayToMessage(message, damageDisplay, operation);
+      // Persist the complete target plan before the first Actor HP update.
+      await persistProcessingState(message, processingState);
+      processingState = await applyProcessingPlan(message, processingState);
+
+      if (processingState.display) {
+        await appendDamageDisplayToMessage(message, processingState.display, operation);
       } else {
         scrollChatToBottom();
       }
 
       if (operation === "damage") {
-        await appendDamageReductionDisplay(message, damageResults);
+        await appendDamageReductionDisplay(message, processingResults(processingState));
       }
     } catch (err) {
       console.error(`${MODULE_ID} | ${SUBMODULE} v${getModuleVersion()} | Error in handleChatMessage`, err);
     } finally {
       if (message?.id) PROCESSING_MESSAGES.delete(message.id);
+    }
+  }
+
+  async function resumePendingProcessing() {
+    if (!isPrimaryActiveGM()) return;
+    if (!game.settings.get(MODULE_ID, "autoDamageEnabled")) return;
+
+    const messages = Array.isArray(game.messages?.contents)
+      ? [...game.messages.contents]
+      : Array.from(game.messages ?? []);
+
+    for (const message of messages) {
+      if (hasLegacyProcessed(message, MODULE_ID)) continue;
+      const state = readProcessingState(message, MODULE_ID);
+      if (state?.status !== "pending") continue;
+      await handleChatMessage(message, { source: "ready-resume" });
     }
   }
 
@@ -767,6 +886,7 @@ import {
   Hooks.once("ready", () => {
     installTokenShakeSocket();
     adLog("ready; hooks active; primary active GM applies damage");
+    void resumePendingProcessing();
   });
 
   Hooks.on("createChatMessage", (message, options, userId) => {

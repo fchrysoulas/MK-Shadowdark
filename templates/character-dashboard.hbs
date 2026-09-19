@@ -1,0 +1,262 @@
+<div class="mk-character-dashboard" data-actor-id="{{actor.id}}">
+  <header class="mk-dashboard-header">
+    <div class="mk-dashboard-profile">
+      <div class="mk-dashboard-portrait-frame">
+        <img class="mk-dashboard-portrait" src="{{actor.img}}" alt="">
+      </div>
+      <div class="mk-dashboard-profile-copy">
+        <span class="mk-dashboard-kicker">Character</span>
+        <h1>{{actor.name}}</h1>
+        <p>{{actor.subtitle}}</p>
+      </div>
+    </div>
+
+    <div class="mk-dashboard-header-title">
+      <i class="fa-solid fa-person" aria-hidden="true"></i>
+      <span>Body & Equipment</span>
+    </div>
+  </header>
+
+  <div class="mk-dashboard-layout">
+    <aside class="mk-dashboard-left">
+      <section class="mk-dashboard-panel mk-dashboard-stats-panel">
+        <div class="mk-dashboard-panel-title">
+          <span>Core Stats</span>
+        </div>
+
+        <div class="mk-dashboard-stat-list">
+          {{#each stats}}
+          <div class="mk-dashboard-stat tone-{{tone}}">
+            <div class="mk-dashboard-stat-icon">
+              <i class="{{icon}}" aria-hidden="true"></i>
+            </div>
+            <div class="mk-dashboard-stat-copy">
+              <span>{{label}}</span>
+              {{#if hasBar}}
+              <div class="mk-dashboard-stat-bar" aria-hidden="true">
+                <span style="width: {{percent}}%;"></span>
+              </div>
+              {{/if}}
+            </div>
+            <strong>{{value}}</strong>
+          </div>
+          {{/each}}
+        </div>
+      </section>
+
+      <section class="mk-dashboard-panel">
+        <div class="mk-dashboard-panel-title">
+          <span>Abilities</span>
+        </div>
+        <div class="mk-dashboard-abilities">
+          {{#each abilities}}
+          <div class="mk-dashboard-ability">
+            <span>{{label}}</span>
+            <strong>{{value}}</strong>
+            <em>{{modifier}}</em>
+          </div>
+          {{/each}}
+        </div>
+      </section>
+
+      <section class="mk-dashboard-panel">
+        <div class="mk-dashboard-panel-title">
+          <span>Conditions</span>
+          <span class="mk-dashboard-count">{{conditions.length}}</span>
+        </div>
+        {{#if hasConditions}}
+        <div class="mk-dashboard-condition-list">
+          {{#each conditions}}
+          <div class="mk-dashboard-condition">
+            <img src="{{img}}" alt="">
+            <span>{{name}}</span>
+          </div>
+          {{/each}}
+        </div>
+        {{else}}
+        <div class="mk-dashboard-empty-state">No active conditions</div>
+        {{/if}}
+      </section>
+    </aside>
+
+    <main class="mk-dashboard-body-panel">
+      <div class="mk-dashboard-body-heading">
+        <span>Front View</span>
+        <small>Drag gear onto a slot to assign it. Right-click a custom slot to clear it.</small>
+      </div>
+
+      <div class="mk-dashboard-body-grid">
+        <div class="mk-dashboard-slot-column mk-dashboard-slot-column-left">
+          {{#each leftSlots}}
+          <div class="mk-body-slot {{woundClass}} {{#if item}}has-item{{else}}is-empty{{/if}} {{#if manual}}is-manual{{/if}}"
+               data-body-slot="{{key}}"
+               {{#if item}}data-item-id="{{item.id}}"{{/if}}
+               tabindex="0">
+            <div class="mk-body-slot-heading">
+              <i class="{{icon}}" aria-hidden="true"></i>
+              <span>{{label}}</span>
+              {{#if manual}}
+              <button type="button"
+                      class="mk-body-slot-clear"
+                      data-action="clear-slot"
+                      data-body-slot="{{key}}"
+                      title="Clear custom slot assignment"
+                      aria-label="Clear custom slot assignment">
+                <i class="fa-solid fa-xmark" aria-hidden="true"></i>
+              </button>
+              {{/if}}
+            </div>
+            {{#if item}}
+            <div class="mk-body-slot-item">
+              <img src="{{item.img}}" alt="">
+              <div>
+                <strong>{{item.name}}</strong>
+                <small>{{item.type}}{{#if secondary}} / supporting slot{{/if}}</small>
+              </div>
+            </div>
+            {{else}}
+            <div class="mk-body-slot-empty">
+              <i class="fa-solid fa-plus" aria-hidden="true"></i>
+              <span>Empty</span>
+            </div>
+            {{/if}}
+          </div>
+          {{/each}}
+        </div>
+
+        <div class="mk-dashboard-figure-wrap">
+          <div class="mk-dashboard-figure-rings" aria-hidden="true"></div>
+          <img class="mk-dashboard-figure"
+               src="modules/mk-shadowdark/assets/ui/body-silhouette.svg"
+               alt="Body diagram">
+
+          {{#each woundMarkers}}
+          <button type="button"
+                  class="mk-dashboard-wound-marker marker-{{key}} {{statusClass}}"
+                  data-action="open-wounds"
+                  title="{{label}}: {{result}}"
+                  aria-label="{{label}}: {{result}}">
+            <span></span>
+          </button>
+          {{/each}}
+        </div>
+
+        <div class="mk-dashboard-slot-column mk-dashboard-slot-column-right">
+          {{#each rightSlots}}
+          <div class="mk-body-slot {{woundClass}} {{#if item}}has-item{{else}}is-empty{{/if}} {{#if manual}}is-manual{{/if}}"
+               data-body-slot="{{key}}"
+               {{#if item}}data-item-id="{{item.id}}"{{/if}}
+               tabindex="0">
+            <div class="mk-body-slot-heading">
+              <i class="{{icon}}" aria-hidden="true"></i>
+              <span>{{label}}</span>
+              {{#if manual}}
+              <button type="button"
+                      class="mk-body-slot-clear"
+                      data-action="clear-slot"
+                      data-body-slot="{{key}}"
+                      title="Clear custom slot assignment"
+                      aria-label="Clear custom slot assignment">
+                <i class="fa-solid fa-xmark" aria-hidden="true"></i>
+              </button>
+              {{/if}}
+            </div>
+            {{#if item}}
+            <div class="mk-body-slot-item">
+              <img src="{{item.img}}" alt="">
+              <div>
+                <strong>{{item.name}}</strong>
+                <small>{{item.type}}{{#if secondary}} / supporting slot{{/if}}</small>
+              </div>
+            </div>
+            {{else}}
+            <div class="mk-body-slot-empty">
+              <i class="fa-solid fa-plus" aria-hidden="true"></i>
+              <span>Empty</span>
+            </div>
+            {{/if}}
+          </div>
+          {{/each}}
+        </div>
+      </div>
+    </main>
+
+    <aside class="mk-dashboard-right">
+      <section class="mk-dashboard-panel">
+        <div class="mk-dashboard-panel-title">
+          <span>Injuries</span>
+          <span class="mk-dashboard-count">{{wounds.length}}</span>
+        </div>
+        {{#if hasWounds}}
+        <div class="mk-dashboard-wound-list">
+          {{#each wounds}}
+          <button type="button"
+                  class="mk-dashboard-wound-row {{statusClass}}"
+                  data-action="open-wounds">
+            <span class="mk-dashboard-wound-dot"></span>
+            <span class="mk-dashboard-wound-copy">
+              <strong>{{label}} / {{result}}</strong>
+              <small>{{details}}</small>
+            </span>
+            <i class="fa-solid fa-chevron-right" aria-hidden="true"></i>
+          </button>
+          {{/each}}
+        </div>
+        {{else}}
+        <button type="button" class="mk-dashboard-empty-action" data-action="open-wounds">
+          <i class="fa-solid fa-shield-heart" aria-hidden="true"></i>
+          <span>No active wounds</span>
+          <i class="fa-solid fa-chevron-right" aria-hidden="true"></i>
+        </button>
+        {{/if}}
+      </section>
+
+      <section class="mk-dashboard-panel">
+        <div class="mk-dashboard-panel-title">
+          <span>Worn & Held</span>
+          <span class="mk-dashboard-count">{{equipped.length}}</span>
+        </div>
+        {{#if hasEquipped}}
+        <div class="mk-dashboard-equipment-list">
+          {{#each equipped}}
+          <div class="mk-dashboard-equipment-row" data-item-id="{{id}}" tabindex="0">
+            <img src="{{img}}" alt="">
+            <div>
+              <strong>{{name}}</strong>
+              <small>{{type}}</small>
+            </div>
+            {{#if quickdraw}}
+            <i class="fa-solid fa-bolt mk-dashboard-quickdraw" title="Quickdraw" aria-hidden="true"></i>
+            {{/if}}
+          </div>
+          {{/each}}
+        </div>
+        {{else}}
+        <div class="mk-dashboard-empty-state">No worn or held gear</div>
+        {{/if}}
+      </section>
+
+      <section class="mk-dashboard-panel mk-dashboard-carried-panel">
+        <div class="mk-dashboard-panel-title">
+          <span>Carried Gear</span>
+          <span class="mk-dashboard-count">{{carriedCount}}</span>
+        </div>
+        {{#if hasCarried}}
+        <div class="mk-dashboard-carried-grid">
+          {{#each carried}}
+          <div class="mk-dashboard-carried-item" data-item-id="{{id}}" tabindex="0" title="{{name}}">
+            <img src="{{img}}" alt="">
+            <span>{{name}}</span>
+            {{#if quickdraw}}
+            <i class="fa-solid fa-bolt" aria-hidden="true"></i>
+            {{/if}}
+          </div>
+          {{/each}}
+        </div>
+        {{else}}
+        <div class="mk-dashboard-empty-state">No carried gear</div>
+        {{/if}}
+      </section>
+    </aside>
+  </div>
+</div>

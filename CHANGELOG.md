@@ -6,6 +6,7 @@
 
 ## 1.9.16
 
+- Added a body-centric **Character Dashboard** opened from player sheets, with a central figure, live Detailed Wounds markers, worn/held and carried gear, and drag-and-drop item assignment to body slots.
 - Player characters whose effective CON falls to 0 are now marked Dead; HP healing no longer clears Dead while CON remains at 0.
 - Replaced the Detailed Wounds character-sheet tab with an active-wounds summary below Stats; clicking Wounds now opens the full body-location board in a separate window.
 - Reworked Detailed Wounds into the requested six-zone location distribution with location-specific severity tables, stored concussion/rest durations, Heart CON saves, fatal wound handling, and exact ability penalties.

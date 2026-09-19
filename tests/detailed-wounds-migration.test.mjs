@@ -7,8 +7,7 @@ import {
   getWoundLocationForRoll,
   getWoundOutcome,
   migrateLegacyWoundData,
-  normalizeCurrentWoundData,
-  normalizeWoundHistory
+  normalizeCurrentWoundData
 } from "../scripts/detailed-wounds/detailed-wounds-migration.js";
 
 test("Detailed Wounds migration versions are explicit", () => {
@@ -69,79 +68,6 @@ test("current v3 data does not request another migration", () => {
   const result = migrateLegacyWoundData(current);
   assert.equal(result.needsWrite, false);
   assert.deepEqual(result.data, current);
-});
-
-test("current v3 data preserves optional informational history", () => {
-  const history = [{
-    id: "injury-1",
-    timestamp: 1787227200000,
-    session: "Session 4",
-    source: "Ogre maul",
-    outcome: "Broken Arm (OK to Wounded)"
-  }];
-  const current = normalizeCurrentWoundData({
-    version: 3,
-    locations: Object.fromEntries([
-      "head", "rightArm", "leftArm", "body", "rightLeg", "leftLeg"
-    ].map(key => [key, {
-      status: "ok",
-      hits: 0,
-      severityRoll: 0,
-      resultKey: null,
-      ...(key === "rightArm" ? { history } : {})
-    }]))
-  });
-
-  assert.deepEqual(current.locations.rightArm.history, history);
-  assert.equal(current.locations.head.history, undefined);
-
-  const result = migrateLegacyWoundData(current);
-  assert.equal(result.needsWrite, false);
-  assert.deepEqual(result.data, current);
-});
-
-test("history normalization accepts short notes without changing wound mechanics", () => {
-  const normalizedHistory = normalizeWoundHistory([
-    {
-      timestamp: "2026-08-20T12:00:00.000Z",
-      session: " Session 5 ",
-      note: " Wyvern bite ",
-      result: "Lost Hand"
-    },
-    null,
-    { source: "   " }
-  ]);
-
-  assert.deepEqual(normalizedHistory, [{
-    timestamp: Date.parse("2026-08-20T12:00:00.000Z"),
-    session: "Session 5",
-    source: "Wyvern bite",
-    outcome: "Lost Hand"
-  }]);
-});
-
-test("invalid optional history does not downgrade current v3 wound records", () => {
-  const result = migrateLegacyWoundData({
-    version: 3,
-    locations: Object.fromEntries([
-      "head", "rightArm", "leftArm", "body", "rightLeg", "leftLeg"
-    ].map(key => [key, {
-      status: key === "body" ? "critical" : "ok",
-      hits: key === "body" ? 2 : 0,
-      severityRoll: key === "body" ? 9 : 0,
-      resultKey: key === "body" ? "internalOrganBleeding" : null,
-      ...(key === "body" ? { history: [{ note: "Pit fight" }] } : {})
-    }]))
-  });
-
-  assert.equal(result.needsWrite, true);
-  assert.deepEqual(result.data.locations.body, {
-    status: "critical",
-    hits: 2,
-    severityRoll: 9,
-    resultKey: "internalOrganBleeding",
-    history: [{ source: "Pit fight" }]
-  });
 });
 
 test("normal current-data reads ignore obsolete abdomen instead of re-merging it", () => {

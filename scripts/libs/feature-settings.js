@@ -2,6 +2,14 @@ import {
   DEFAULT_PROFILE_ID,
   DEFAULT_PROFILES
 } from "../encounter-engine/constants.js";
+import {
+  PROFILE_MENU_DEFINITION,
+  PROFILE_SETTING,
+  PROFILE_SETTING_DEFINITION,
+  TABLE_SETTING,
+  TABLE_SETTING_DEFINITION,
+  getSurvivalWoundProfileSettingsClass
+} from "../detailed-wounds/survival-profile-settings.js";
 
 const MODULE_ID = "mk-shadowdark";
 const FEATURE_SETTINGS_TEMPLATE = `modules/${MODULE_ID}/templates/feature-settings.hbs`;
@@ -12,7 +20,7 @@ const FEATURE_MENUS = Object.freeze([
     title: "Detailed Wounds",
     hint: "Configure body-location wound tracking on Shadowdark player sheets.",
     icon: "fas fa-heart-crack",
-    settings: ["detailedWoundsEnabled"]
+    settings: ["detailedWoundsEnabled", "detailedWoundsSurvivalTrigger"]
   },
   {
     key: "initiative",
@@ -128,6 +136,14 @@ function registerMenus() {
       restricted: true
     });
   }
+
+  const SurvivalWoundProfileSettings = getSurvivalWoundProfileSettingsClass();
+  if (SurvivalWoundProfileSettings) {
+    game.settings.registerMenu(MODULE_ID, "survivalWoundProfileSettings", {
+      ...PROFILE_MENU_DEFINITION,
+      type: SurvivalWoundProfileSettings
+    });
+  }
 }
 
 Hooks.once("init", () => {
@@ -144,6 +160,21 @@ Hooks.once("init", () => {
       }
     }
   });
+  registerSetting("detailedWoundsSurvivalTrigger", {
+    name: "Detailed Wounds | Surviving 0 HP Trigger",
+    hint: "Choose whether surviving the Death Timer does nothing, prompts the GM, or automatically rolls a DC 12 CON check. A failed check uses the configured survival wound profile.",
+    scope: "world",
+    config: true,
+    type: String,
+    default: "prompt",
+    choices: {
+      off: "Off",
+      prompt: "GM Prompt",
+      automatic: "Automatic"
+    }
+  });
+  registerSetting(PROFILE_SETTING, PROFILE_SETTING_DEFINITION);
+  registerSetting(TABLE_SETTING, TABLE_SETTING_DEFINITION);
   registerSetting("detailedWoundsMigrationVersion", {
     name: "Detailed Wounds Migration Version",
     scope: "world",

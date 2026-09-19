@@ -1,0 +1,55 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 220 520" role="img" aria-labelledby="title desc">
+  <title id="title">Human body silhouette</title>
+  <desc id="desc">Front-facing anatomical silhouette used by the MK-Shadowdark character dashboard.</desc>
+  <defs>
+    <linearGradient id="bodyFill" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#254b42" stop-opacity=".72"/>
+      <stop offset=".52" stop-color="#17352f" stop-opacity=".62"/>
+      <stop offset="1" stop-color="#102924" stop-opacity=".68"/>
+    </linearGradient>
+    <filter id="softGlow" x="-30%" y="-20%" width="160%" height="140%">
+      <feGaussianBlur stdDeviation="2.4" result="blur"/>
+      <feMerge>
+        <feMergeNode in="blur"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+  </defs>
+
+  <g fill="url(#bodyFill)" stroke="#6fd0b1" stroke-width="2" stroke-linejoin="round" stroke-linecap="round" filter="url(#softGlow)">
+    <ellipse cx="110" cy="48" rx="28" ry="35"/>
+    <path d="M92 78 C91 92 86 102 75 111 L58 128 L70 219 L86 249 L82 294 L65 404 L80 500 L102 500 L108 392 L110 306 L112 392 L118 500 L140 500 L155 404 L138 294 L134 249 L150 219 L162 128 L145 111 C134 102 129 92 128 78 Z"/>
+    <path d="M59 126 C44 139 34 160 30 190 L19 277 L37 282 L54 208 L73 156 Z"/>
+    <path d="M161 126 C176 139 186 160 190 190 L201 277 L183 282 L166 208 L147 156 Z"/>
+    <path d="M19 277 C15 302 12 329 16 350 C18 362 25 369 32 367 C39 365 42 356 40 344 L37 282 Z"/>
+    <path d="M201 277 C205 302 208 329 204 350 C202 362 195 369 188 367 C181 365 178 356 180 344 L183 282 Z"/>
+    <path d="M65 404 L52 486 C50 500 57 510 72 510 L92 508 L80 500 Z"/>
+    <path d="M155 404 L168 486 C170 500 163 510 148 510 L128 508 L140 500 Z"/>
+  </g>
+
+  <g fill="none" stroke="#8dd9c1" stroke-opacity=".42" stroke-width="1">
+    <path d="M110 83 V300"/>
+    <path d="M79 122 C91 136 129 136 141 122"/>
+    <path d="M76 162 C92 174 128 174 144 162"/>
+    <path d="M78 206 C92 196 128 196 142 206"/>
+    <path d="M86 249 C96 258 124 258 134 249"/>
+    <path d="M82 294 C96 306 124 306 138 294"/>
+    <path d="M62 143 L37 282"/>
+    <path d="M158 143 L183 282"/>
+    <path d="M82 294 L65 404"/>
+    <path d="M138 294 L155 404"/>
+  </g>
+
+  <g fill="#9fe2ce" fill-opacity=".36" stroke="#9fe2ce" stroke-opacity=".6">
+    <circle cx="110" cy="48" r="4"/>
+    <circle cx="110" cy="154" r="4"/>
+    <circle cx="49" cy="196" r="3.5"/>
+    <circle cx="171" cy="196" r="3.5"/>
+    <circle cx="27" cy="281" r="3.5"/>
+    <circle cx="193" cy="281" r="3.5"/>
+    <circle cx="91" cy="305" r="3.5"/>
+    <circle cx="129" cy="305" r="3.5"/>
+    <circle cx="69" cy="405" r="3.5"/>
+    <circle cx="151" cy="405" r="3.5"/>
+  </g>
+</svg>

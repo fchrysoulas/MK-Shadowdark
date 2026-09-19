@@ -1,4 +1,8 @@
 {
+  "MK_SHADOWDARK.dashboard.sheetName": "MK-Shadowdark: Character Dashboard",
+  "MK_SHADOWDARK.dashboard.itemSheetName": "MK-Shadowdark: Dashboard Item Sheet",
+  "MK_SHADOWDARK.dashboard.settingName": "Character Dashboard",
+  "MK_SHADOWDARK.dashboard.settingHint": "Choose MK-Shadowdark: Character Dashboard in the character's Sheet Configuration to use the alternative sheet.",
   "SHADOWDARK.item.effect.predefined_effect.onlyMagicalDamageSources": "Only Damaged by Magical Sources",
   "SHADOWDARK.item.effect.predefined_effect.magicalAttacks": "Magical Attacks",
   "SHADOWDARK.item.effect.predefined_effect.targetedSpellDc": "Targeted Spell DC",

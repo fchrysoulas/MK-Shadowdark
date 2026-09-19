@@ -1,6 +1,81 @@
 # Changelog
 
 ## 1.9.17
+- Redesigned the Backpack extension as a fixed-square slot grid where items span their required number of slots.
+- Reduced the Character Dashboard navigation tab text size to better balance the new icons.
+- Added icons to the visible Character Dashboard navigation tabs.
+- Restyled the Spells, Notes, and Effects tabs to match the Character and Inventory dashboard theme.
+- Restyled the Inventory tab to match the Character dashboard’s dark cyan panels, lists, and controls.
+- Removed the underline from the selected Character Dashboard tab text while retaining its active highlight.
+- Hid the unused Combat navigation tab without removing its underlying content.
+- Equipped weapon hover details now use Shadowdark's native actor-derived attack bonus, including ability, finesse, and active-effect modifiers.
+- Dashboard layout now keeps only the left panel fixed at 220 pixels; Backpack and Spells open as floating extensions beside the paper-doll instead of occupying an internal sheet column.
+- Moved Injuries beneath Conditions, replaced the large paper-doll Spells box with compact controls, and added right-side Backpack and Spells extensions that expand and collapse with their controls.
+- Left-clicking a weapon in the Right Hand paper-doll slot now opens the native Shadowdark attack roll.
+- Changed Luck hover feedback to highlight only the icon without a rectangle button treatment.
+- Removed the persistent Luck circle, enlarged the icon, and added a hover/focus highlight.
+- Moved Luck to the upper-right character header as an icon-only Ready/Spent toggle.
+- Prevented the central paper-doll panel from stretching to the full dashboard height so Quick Slots move up with the shorter layout.
+- Reduced the paper-doll panel minimum height so its Quick Slot row sits higher.
+- Reduced the right dashboard panel minimum width to 220 pixels.
+- Raised the hand and torso slot group above the Quick Slots and expanded the horizontal Quick Slot row across the paper-doll width.
+- Moved the three Quick Slots into a horizontal row beneath the paper-doll image.
+- Increased the fixed central paper-doll panel width to 400 pixels.
+- Fixed the central paper-doll panel width and rebalanced its slot columns.
+- Fixed the dashboard left panel width at 220 pixels.
+- Reduced the paper-doll panel minimum width and enlarged the central character image.
+- Renamed Core Stats to Vitals and moved each stat value above its progress bar in a compact reference-style layout.
+- Fixed dashboard language rendering and restored the Languages edit button.
+- Restyled the Languages panel to match the Conditions panel while retaining its native edit control.
+- Kept paper-doll and Backpack item controls above full-area artwork so buttons and values remain usable.
+- Expanded item artwork to fill paper-doll and Backpack slots.
+- Made the character class value editable from the dashboard header.
+
+- Enlarged the paper-doll image, equalized equipment slot sizes, shortened Armor Class to centered AC, and moved Spells above Right Hand as an item-style slot.
+- Added a dashboard-styled default Shadowdark Item sheet that preserves native item tabs, fields, selectors, effects, and forms.
+- Talents and Boons in the dashboard now open their Item sheets when clicked.
+- Restyled the Talents tab to match the Character dashboard and moved Boons into the Talents view.
+- Reduced the Character Dashboard paper-doll column minimum width, added editable current/max HP controls, and added a level-up indicator at the XP threshold.
+- Moved the editable Stats panel into the second position of the Character Dashboard's left column.
+- Added a paper-doll Spells button that opens a popup with native Shadowdark cast controls.
+- Self-range spells selected from the paper-doll popup now automatically target the caster's active token.
+- Backpack now renders a fixed grid with one box for every character gear slot.
+- Made the entire Stats card clickable and hover-highlighted for ability checks, with centered stat labels.
+- Restored the Shadowdark label and score fonts for the editable Stats cards.
+- Renamed the dashboard Abilities panel to Stats, added the native edit-stats toggle, and centered the score/modifier values.
+- Added an inline edit button for Alignment in the dashboard identity facts.
+- Renown now displays its current value as current / 20 in Core Stats.
+- Set the Character Dashboard Renown maximum to 20 for its progress bar and adjustment controls.
+- Constrained the paper-doll Luck toggle to its compact top-right control instead of allowing it to stretch across the panel.
+- Moved Luck out of Core Stats into a paper-doll side toggle for quickly marking classic Luck ready or spent.
+- Removed the redundant Level row from Core Stats; level remains in the character identity header.
+- Positioned the paper-doll Armor Class badge in the paper-doll panel's top-left corner.
+- Moved the Armor Class icon and value into the central paper-doll area.
+- Renamed the dashboard's Carried Gear panel to Backpack and added an empty box for every available backpack slot.
+- Removed the redundant Worn & Held sidebar list; held and worn gear is represented only by the paper-doll hand and torso boxes.
+- Registered paper-doll item sources and slots with Foundry's native drag/drop pipeline so drops work even when custom DOM listeners are unavailable.
+- Added a render-lifecycle fallback so Character Dashboard drag-and-drop controls bind across Shadowdark sheet render generations.
+- Fixed Character Dashboard drag-and-drop binding when Foundry provides a native sheet element instead of a jQuery wrapper.
+- Character Dashboard items can now be dragged from carried gear, hand/body slots, and Quick Slots into any compatible slot; moving between Quick Slots no longer duplicates the assignment.
+- Quick Slots now accept every Item type and can import dropped items from native inventory lists, other actors, world items, or compendiums onto the character.
+- Added three vertical paper-doll Quick Slots beside the character portrait. Any item owned by the character can be dragged into a slot, clicked to open, or cleared for reuse.
+- Replaced the Character Dashboard launch button with a selectable player sheet in Sheet Configuration. The cyan body overview includes equipment connections, live injuries and ability checks, alongside native Shadowdark combat, inventory, spells, talents, details, effects and notes tabs.
+- The Character Dashboard central display now uses the character's portrait instead of the paperdoll silhouette.
+- Reduced dashboard equipment slots to both hands and torso armor; other body locations now appear only for active wounds.
+- Moved editable character details into the dashboard's main Character view instead of a separate Details tab.
+- Added the character's Level, Title, and Class directly beneath the dashboard nameplate.
+- Removed duplicate Level and Title detail boxes from the main details panel.
+- Moved editable XP and next-level values into the Core Stats Level row.
+- Marked the dashboard XP field as an integer so Shadowdark actor updates pass validation.
+- Added update-time integer coercion as a fallback for browsers that submit the XP input as text.
+- Moved Background, Ancestry, Alignment, and Deity into the identity area and removed the redundant Shadowdark Character subtitle and XP detail box.
+- Moved Boons directly below Abilities in the dashboard's left column.
+- Added an XP progress bar beneath Health and +/- controls for HP and XP adjustments.
+- Carried gear now shows an item quantity when more than one is carried.
+- Moved the character identity header to the top of the central paperdoll area, moved Renown beneath XP with a progress bar and +/- controls, moved Class into the identity header, and moved Languages beneath Boons.
+- Removed the redundant Front View heading and helper text above the paperdoll.
+- Changed the paperdoll frame to a shorter square, borderless, transparent presentation.
+- Allowed the character image to extend beyond the paperdoll wrapper.
 
 - Added optional Detailed Wounds history with compact timestamps, session markers, source notes, and outcome transitions; history is informational only, can be edited or removed by the GM, and does not affect wound mechanics.
 

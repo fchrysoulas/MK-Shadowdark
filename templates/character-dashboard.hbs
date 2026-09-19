@@ -1,27 +1,23 @@
+<form class="{{cssClass}} mk-dashboard-sheet flexcol" autocomplete="off">
+  <nav class="SD-nav mk-dashboard-nav flex0" data-group="primary" aria-label="Character sections">
+    <a class="navigation-tab" data-tab="tab-body"><i class="fa-solid fa-user" aria-hidden="true"></i><span>Character</span></a>
+    <a class="navigation-tab" data-tab="tab-inventory"><i class="fa-solid fa-backpack" aria-hidden="true"></i><span>Inventory</span></a>
+    {{#if showSpellsTab}}<a class="navigation-tab" data-tab="tab-spells"><i class="fa-solid fa-wand-sparkles" aria-hidden="true"></i><span>Spells</span></a>{{/if}}
+    <a class="navigation-tab" data-tab="tab-talents"><i class="fa-solid fa-star" aria-hidden="true"></i><span>Talents</span></a>
+    <a class="navigation-tab" data-tab="tab-notes"><i class="fa-solid fa-note-sticky" aria-hidden="true"></i><span>Notes</span></a>
+    <a class="navigation-tab" data-tab="tab-effects"><i class="fa-solid fa-sparkles" aria-hidden="true"></i><span>Effects</span></a>
+    <span class="mk-dashboard-nav-brand">SHADOWDARK / CHARACTER RECORD</span>
+  </nav>
+  <section class="SD-content-body flex1">
+    <div class="tab mk-dashboard-overview" data-group="primary" data-tab="tab-body">
+    {{#with dashboard}}
 <div class="mk-character-dashboard" data-actor-id="{{actor.id}}">
-  <header class="mk-dashboard-header">
-    <div class="mk-dashboard-profile">
-      <div class="mk-dashboard-portrait-frame">
-        <img class="mk-dashboard-portrait" src="{{actor.img}}" alt="">
-      </div>
-      <div class="mk-dashboard-profile-copy">
-        <span class="mk-dashboard-kicker">Character</span>
-        <h1>{{actor.name}}</h1>
-        <p>{{actor.subtitle}}</p>
-      </div>
-    </div>
-
-    <div class="mk-dashboard-header-title">
-      <i class="fa-solid fa-person" aria-hidden="true"></i>
-      <span>Body & Equipment</span>
-    </div>
-  </header>
 
   <div class="mk-dashboard-layout">
     <aside class="mk-dashboard-left">
       <section class="mk-dashboard-panel mk-dashboard-stats-panel">
         <div class="mk-dashboard-panel-title">
-          <span>Core Stats</span>
+          <span>Vitals</span>
         </div>
 
         <div class="mk-dashboard-stat-list">
@@ -31,14 +27,52 @@
               <i class="{{icon}}" aria-hidden="true"></i>
             </div>
             <div class="mk-dashboard-stat-copy">
-              <span>{{label}}</span>
+              <div class="mk-dashboard-stat-header">
+                <div class="mk-dashboard-stat-label">
+                <span>{{label}}</span>
+                {{#if isHealth}}
+                {{#if canEdit}}
+                <a class="item-selector fas {{#if editing}}fa-square-xmark{{else}}fa-pen-to-square{{/if}} edit-button mk-dashboard-stat-edit"
+                   data-action="toggle-edit-hp"
+                   data-tooltip="Edit hit points"
+                   role="button"
+                   tabindex="0"
+                   aria-label="{{#if editing}}Stop editing hit points{{else}}Edit hit points{{/if}}"></a>
+                {{/if}}
+                {{/if}}
+                </div>
+                {{#if adjustPath}}
+                {{#if isHealth}}
+                {{#if editing}}
+                <div class="mk-dashboard-stat-hp-edit">
+                  <input class="mk-dashboard-stat-input" name="system.attributes.hp.value" type="number" value="{{currentValue}}" min="0" aria-label="Current hit points">
+                  <span>/</span>
+                  <input class="mk-dashboard-stat-input" name="system.attributes.hp.max" type="number" value="{{maxValue}}" min="0" aria-label="Maximum hit points">
+                </div>
+                {{else}}
+                <div class="mk-dashboard-stat-adjusted-value">
+                  {{#if ../canEdit}}<button type="button" class="mk-dashboard-stat-adjust" data-dashboard-adjust data-dashboard-path="{{adjustPath}}" data-dashboard-delta="-1" aria-label="Decrease {{adjustLabel}}">-</button>{{/if}}
+                  <strong>{{value}}</strong>
+                  {{#if ../canEdit}}<button type="button" class="mk-dashboard-stat-adjust" data-dashboard-adjust data-dashboard-path="{{adjustPath}}" data-dashboard-delta="1" aria-label="Increase {{adjustLabel}}">+</button>{{/if}}
+                </div>
+                {{/if}}
+                {{else}}
+                <div class="mk-dashboard-stat-adjusted-value">
+                  {{#if ../canEdit}}<button type="button" class="mk-dashboard-stat-adjust" data-dashboard-adjust data-dashboard-path="{{adjustPath}}" data-dashboard-delta="-1" aria-label="Decrease {{adjustLabel}}">-</button>{{/if}}
+                  <strong>{{value}}</strong>
+                  {{#if ../canEdit}}<button type="button" class="mk-dashboard-stat-adjust" data-dashboard-adjust data-dashboard-path="{{adjustPath}}" data-dashboard-delta="1" aria-label="Increase {{adjustLabel}}">+</button>{{/if}}
+                </div>
+                {{/if}}
+                {{else}}
+                <strong>{{value}}</strong>
+                {{/if}}
+              </div>
               {{#if hasBar}}
               <div class="mk-dashboard-stat-bar" aria-hidden="true">
                 <span style="width: {{percent}}%;"></span>
               </div>
               {{/if}}
             </div>
-            <strong>{{value}}</strong>
           </div>
           {{/each}}
         </div>
@@ -46,17 +80,52 @@
 
       <section class="mk-dashboard-panel">
         <div class="mk-dashboard-panel-title">
-          <span>Abilities</span>
+          <span>Stats</span>
+          {{#if canEdit}}
+          <a class="item-selector fas {{#if editingStats}}fa-square-xmark{{else}}fa-pen-to-square{{/if}} edit-button mk-dashboard-identity-edit"
+             data-action="toggle-edit-stats"
+             data-tooltip="Edit stats"
+             role="button"
+             tabindex="0"
+             aria-label="{{#if editingStats}}Stop editing stats{{else}}Edit stats{{/if}}"></a>
+          {{/if}}
         </div>
         <div class="mk-dashboard-abilities">
           {{#each abilities}}
-          <div class="mk-dashboard-ability">
-            <span>{{label}}</span>
-            <strong>{{value}}</strong>
-            <em>{{modifier}}</em>
+          <div class="mk-dashboard-ability" data-ability="{{key}}" role="button" tabindex="0" aria-label="Roll {{label}} check">
+            <a class="mk-dashboard-ability-label" data-action="roll-ability-check" data-ability="{{key}}">{{label}}</a>
+            <div class="mk-dashboard-ability-value">
+              {{#if ../editingStats}}
+              <input class="mk-dashboard-ability-input" name="system.abilities.{{key}}.value" type="number" value="{{value}}" placeholder="10" aria-label="{{label}} score">
+              {{else}}
+              <strong>{{value}}</strong>
+              {{/if}}
+              <em>{{modifier}}</em>
+            </div>
           </div>
           {{/each}}
         </div>
+      </section>
+
+      <section class="mk-dashboard-panel mk-dashboard-languages-panel">
+        {{#with @root}}
+          <div class="mk-dashboard-panel-title">
+            <span>Languages</span>
+            {{#if owner}}<a class="item-selector fas fa-pen-to-square edit-button mk-dashboard-panel-edit" data-options="language" for="system.languages" aria-label="Edit languages"></a>{{/if}}
+            <span class="mk-dashboard-count">{{knownLanguages.length}}</span>
+          </div>
+          {{#if knownLanguages.length}}
+          <div class="mk-dashboard-language-list">
+            {{#each knownLanguages}}
+            <div class="mk-dashboard-language {{#ifEq this.system.rarity "common"}}is-common{{else}}is-rare{{/ifEq}}">
+              <span>{{this.name}}</span>
+            </div>
+            {{/each}}
+          </div>
+          {{else}}
+          <div class="mk-dashboard-empty-state">No known languages</div>
+          {{/if}}
+        {{/with}}
       </section>
 
       <section class="mk-dashboard-panel">
@@ -77,111 +146,7 @@
         <div class="mk-dashboard-empty-state">No active conditions</div>
         {{/if}}
       </section>
-    </aside>
 
-    <main class="mk-dashboard-body-panel">
-      <div class="mk-dashboard-body-heading">
-        <span>Front View</span>
-        <small>Drag gear onto a slot to assign it. Right-click a custom slot to clear it.</small>
-      </div>
-
-      <div class="mk-dashboard-body-grid">
-        <div class="mk-dashboard-slot-column mk-dashboard-slot-column-left">
-          {{#each leftSlots}}
-          <div class="mk-body-slot {{woundClass}} {{#if item}}has-item{{else}}is-empty{{/if}} {{#if manual}}is-manual{{/if}}"
-               data-body-slot="{{key}}"
-               {{#if item}}data-item-id="{{item.id}}"{{/if}}
-               tabindex="0">
-            <div class="mk-body-slot-heading">
-              <i class="{{icon}}" aria-hidden="true"></i>
-              <span>{{label}}</span>
-              {{#if manual}}
-              <button type="button"
-                      class="mk-body-slot-clear"
-                      data-action="clear-slot"
-                      data-body-slot="{{key}}"
-                      title="Clear custom slot assignment"
-                      aria-label="Clear custom slot assignment">
-                <i class="fa-solid fa-xmark" aria-hidden="true"></i>
-              </button>
-              {{/if}}
-            </div>
-            {{#if item}}
-            <div class="mk-body-slot-item">
-              <img src="{{item.img}}" alt="">
-              <div>
-                <strong>{{item.name}}</strong>
-                <small>{{item.type}}{{#if secondary}} / supporting slot{{/if}}</small>
-              </div>
-            </div>
-            {{else}}
-            <div class="mk-body-slot-empty">
-              <i class="fa-solid fa-plus" aria-hidden="true"></i>
-              <span>Empty</span>
-            </div>
-            {{/if}}
-          </div>
-          {{/each}}
-        </div>
-
-        <div class="mk-dashboard-figure-wrap">
-          <div class="mk-dashboard-figure-rings" aria-hidden="true"></div>
-          <img class="mk-dashboard-figure"
-               src="modules/mk-shadowdark/assets/ui/body-silhouette.svg"
-               alt="Body diagram">
-
-          {{#each woundMarkers}}
-          <button type="button"
-                  class="mk-dashboard-wound-marker marker-{{key}} {{statusClass}}"
-                  data-action="open-wounds"
-                  title="{{label}}: {{result}}"
-                  aria-label="{{label}}: {{result}}">
-            <span></span>
-          </button>
-          {{/each}}
-        </div>
-
-        <div class="mk-dashboard-slot-column mk-dashboard-slot-column-right">
-          {{#each rightSlots}}
-          <div class="mk-body-slot {{woundClass}} {{#if item}}has-item{{else}}is-empty{{/if}} {{#if manual}}is-manual{{/if}}"
-               data-body-slot="{{key}}"
-               {{#if item}}data-item-id="{{item.id}}"{{/if}}
-               tabindex="0">
-            <div class="mk-body-slot-heading">
-              <i class="{{icon}}" aria-hidden="true"></i>
-              <span>{{label}}</span>
-              {{#if manual}}
-              <button type="button"
-                      class="mk-body-slot-clear"
-                      data-action="clear-slot"
-                      data-body-slot="{{key}}"
-                      title="Clear custom slot assignment"
-                      aria-label="Clear custom slot assignment">
-                <i class="fa-solid fa-xmark" aria-hidden="true"></i>
-              </button>
-              {{/if}}
-            </div>
-            {{#if item}}
-            <div class="mk-body-slot-item">
-              <img src="{{item.img}}" alt="">
-              <div>
-                <strong>{{item.name}}</strong>
-                <small>{{item.type}}{{#if secondary}} / supporting slot{{/if}}</small>
-              </div>
-            </div>
-            {{else}}
-            <div class="mk-body-slot-empty">
-              <i class="fa-solid fa-plus" aria-hidden="true"></i>
-              <span>Empty</span>
-            </div>
-            {{/if}}
-          </div>
-          {{/each}}
-        </div>
-      </div>
-    </main>
-
-    <aside class="mk-dashboard-right">
       <section class="mk-dashboard-panel">
         <div class="mk-dashboard-panel-title">
           <span>Injuries</span>
@@ -210,53 +175,374 @@
         </button>
         {{/if}}
       </section>
-
-      <section class="mk-dashboard-panel">
-        <div class="mk-dashboard-panel-title">
-          <span>Worn & Held</span>
-          <span class="mk-dashboard-count">{{equipped.length}}</span>
-        </div>
-        {{#if hasEquipped}}
-        <div class="mk-dashboard-equipment-list">
-          {{#each equipped}}
-          <div class="mk-dashboard-equipment-row" data-item-id="{{id}}" tabindex="0">
-            <img src="{{img}}" alt="">
-            <div>
-              <strong>{{name}}</strong>
-              <small>{{type}}</small>
-            </div>
-            {{#if quickdraw}}
-            <i class="fa-solid fa-bolt mk-dashboard-quickdraw" title="Quickdraw" aria-hidden="true"></i>
-            {{/if}}
-          </div>
-          {{/each}}
-        </div>
-        {{else}}
-        <div class="mk-dashboard-empty-state">No worn or held gear</div>
-        {{/if}}
-      </section>
-
-      <section class="mk-dashboard-panel mk-dashboard-carried-panel">
-        <div class="mk-dashboard-panel-title">
-          <span>Carried Gear</span>
-          <span class="mk-dashboard-count">{{carriedCount}}</span>
-        </div>
-        {{#if hasCarried}}
-        <div class="mk-dashboard-carried-grid">
-          {{#each carried}}
-          <div class="mk-dashboard-carried-item" data-item-id="{{id}}" tabindex="0" title="{{name}}">
-            <img src="{{img}}" alt="">
-            <span>{{name}}</span>
-            {{#if quickdraw}}
-            <i class="fa-solid fa-bolt" aria-hidden="true"></i>
-            {{/if}}
-          </div>
-          {{/each}}
-        </div>
-        {{else}}
-        <div class="mk-dashboard-empty-state">No carried gear</div>
-        {{/if}}
-      </section>
     </aside>
+
+    <main class="mk-dashboard-body-panel">
+      <section class="mk-dashboard-body-identity">
+        <div class="mk-dashboard-profile">
+          <div class="mk-dashboard-portrait-frame">
+            <img class="mk-dashboard-portrait" src="{{actor.img}}" data-edit="img" alt="">
+          </div>
+          <div class="mk-dashboard-profile-copy">
+            <span class="mk-dashboard-kicker">Character</span>
+            <input class="mk-dashboard-name" name="name" value="{{actor.name}}" aria-label="Character name" {{#unless canEdit}}disabled{{/unless}}>
+            <div class="mk-dashboard-identity-meta">
+              {{#if actor.level}}
+              <span>Level {{actor.level}}</span>
+              {{#if actor.levelUp}}
+              <a class="mk-dashboard-level-up fa-solid fa-arrow-up fa-beat" data-action="level-up" data-tooltip="Level up available" role="button" tabindex="0" aria-label="Level up available"></a>
+              {{/if}}
+              {{/if}}
+              {{#if actor.title}}<span>{{actor.title}}</span>{{/if}}
+              {{#if actor.className}}
+              <span class="mk-dashboard-class-meta">
+                {{actor.className}}
+                {{#if canEdit}}<a class="item-selector fas fa-pen-to-square edit-button mk-dashboard-identity-edit" data-options="class" for="system.class" aria-label="Edit class"></a>{{/if}}
+              </span>
+              {{/if}}
+            </div>
+          </div>
+        </div>
+        <button type="button"
+                class="mk-dashboard-luck-toggle {{#if luckToggle.available}}is-available{{else}}is-spent{{/if}}"
+                data-action="toggle-luck"
+                aria-pressed="{{luckToggle.available}}"
+                aria-label="Toggle Luck: {{#if luckToggle.pulpMode}}{{luckToggle.remaining}}{{else}}{{luckToggle.stateLabel}}{{/if}}"
+                title="{{#if luckToggle.pulpMode}}Luck points are edited in the native sheet{{else}}Luck: {{luckToggle.stateLabel}}{{/if}}"
+                {{#if luckToggle.pulpMode}}disabled{{/if}}
+                {{#unless canEdit}}disabled{{/unless}}>
+          <i class="fa-solid fa-clover" aria-hidden="true"></i>
+        </button>
+        <div class="mk-dashboard-identity-facts">
+          <div class="mk-dashboard-identity-fact">
+            <span>Background {{#if canEdit}}<a class="item-selector fas fa-pen-to-square edit-button mk-dashboard-identity-edit" data-options="background" for="system.background" aria-label="Edit background"></a>{{/if}}</span>
+            <strong>{{#if actor.background}}{{actor.background}}{{else}}—{{/if}}</strong>
+          </div>
+          <div class="mk-dashboard-identity-fact">
+            <span>Ancestry {{#if canEdit}}<a class="item-selector fas fa-pen-to-square edit-button mk-dashboard-identity-edit" data-options="ancestry" for="system.ancestry" aria-label="Edit ancestry"></a>{{/if}}</span>
+            <strong>{{#if actor.ancestry}}{{actor.ancestry}}{{else}}—{{/if}}</strong>
+          </div>
+          <div class="mk-dashboard-identity-fact">
+            <span>Alignment {{#if canEdit}}<a class="fas fa-pen-to-square edit-button mk-dashboard-identity-edit" data-action="edit-alignment" role="button" tabindex="0" aria-label="Edit alignment"></a>{{/if}}</span>
+            <strong>{{#if actor.alignment}}{{actor.alignment}}{{else}}—{{/if}}</strong>
+          </div>
+          <div class="mk-dashboard-identity-fact">
+            <span>Deity {{#if canEdit}}<a class="item-selector fas fa-pen-to-square edit-button mk-dashboard-identity-edit" data-options="deity" for="system.deity" aria-label="Edit deity"></a>{{/if}}</span>
+            <strong>{{#if actor.deity}}{{actor.deity}}{{else}}—{{/if}}</strong>
+          </div>
+        </div>
+      </section>
+      <div class="mk-dashboard-body-grid">
+        <div class="mk-dashboard-paperdoll-ac" title="{{armorClass.label}}">
+          <i class="{{armorClass.icon}}" aria-hidden="true"></i>
+          <span>AC</span>
+          <strong>{{armorClass.value}}</strong>
+        </div>
+
+        <div class="mk-dashboard-slot-column mk-dashboard-slot-column-left">
+          <button type="button" class="mk-dashboard-paperdoll-tool mk-dashboard-backpack-button" data-action="open-backpack" title="Open Backpack" aria-label="Open Backpack">
+            <i class="fa-solid fa-backpack" aria-hidden="true"></i>
+            <span>Backpack</span>
+          </button>
+          {{#each leftSlots}}
+          <div class="mk-body-slot {{woundClass}} {{#if item}}has-item{{else}}is-empty{{/if}} {{#if manual}}is-manual{{/if}}"
+               data-body-slot="{{key}}"
+               {{#if item}}data-item-id="{{item.id}}"{{/if}}
+               tabindex="0">
+            <div class="mk-body-slot-heading">
+              <i class="{{icon}}" aria-hidden="true"></i>
+              <span>{{label}}</span>
+              {{#if item}}
+              <button type="button"
+                      class="mk-body-slot-clear"
+                      data-action="clear-slot"
+                      data-body-slot="{{key}}"
+                      data-item-id="{{item.id}}"
+                      title="Remove item from paper doll"
+                      aria-label="Remove item from paper doll">
+                <i class="fa-solid fa-xmark" aria-hidden="true"></i>
+              </button>
+              {{/if}}
+            </div>
+            {{#if item}}
+            <div class="mk-body-slot-item">
+              <img src="{{item.img}}" alt="">
+              <div>
+                <strong>{{item.name}}</strong>
+                <small>{{item.type}}{{#if secondary}} / supporting slot{{/if}}</small>
+              </div>
+              {{#if item.weaponDetails}}
+              <div class="mk-dashboard-weapon-tooltip" role="tooltip">
+                <strong>{{item.name}}</strong>
+                <span><b>Attack</b> {{item.weaponDetails.attackBonus}}</span>
+                <span><b>Damage</b> {{item.weaponDetails.damage}}</span>
+                <span><b>Properties</b> {{item.weaponDetails.properties}}</span>
+              </div>
+              {{/if}}
+            </div>
+            {{else}}
+            <div class="mk-body-slot-empty">
+              <i class="fa-solid fa-plus" aria-hidden="true"></i>
+              <span>Empty</span>
+            </div>
+            {{/if}}
+          </div>
+          {{/each}}
+        </div>
+
+        <div class="mk-dashboard-figure-wrap">
+<svg class="mk-dashboard-connectors" viewBox="0 0 220 520" preserveAspectRatio="none" aria-hidden="true"><g fill="none" stroke="currentColor" stroke-width="0.8"><path d="M0 260 H18 L27 281 M220 120 H170 L110 154 M220 300 H202 L193 281"/></g></svg>
+          <div class="mk-dashboard-figure-rings" aria-hidden="true"></div>
+          <img class="mk-dashboard-figure"
+               src="{{actor.img}}"
+               alt="{{actor.name}}">
+
+          {{#each woundMarkers}}
+          <button type="button"
+                  class="mk-dashboard-wound-marker marker-{{key}} {{statusClass}}"
+                  data-action="open-wounds"
+                  title="{{label}}: {{result}}"
+                  aria-label="{{label}}: {{result}}">
+            <span></span>
+          </button>
+           {{/each}}
+         </div>
+
+        <div class="mk-dashboard-quickslot-column" aria-label="Quick slots">
+          <div class="mk-dashboard-quickslot-title">Quick Slots</div>
+          {{#each quickSlots}}
+          <div class="mk-dashboard-quickslot {{#if item}}has-item{{else}}is-empty{{/if}}"
+               data-quick-slot="{{key}}"
+               {{#if item}}data-item-id="{{item.id}}"{{/if}}
+               tabindex="0">
+            <div class="mk-dashboard-quickslot-heading">
+              <span class="mk-dashboard-quickslot-number">{{number}}</span>
+              <span>{{label}}</span>
+              {{#if item}}
+              <button type="button"
+                      class="mk-dashboard-quickslot-clear"
+                      data-action="clear-quick-slot"
+                      data-quick-slot="{{key}}"
+                      title="Clear quick slot"
+                      aria-label="Clear {{label}}">
+                <i class="fa-solid fa-xmark" aria-hidden="true"></i>
+              </button>
+              {{/if}}
+            </div>
+            {{#if item}}
+            <div class="mk-dashboard-quickslot-item">
+              <img src="{{item.img}}" alt="">
+              <strong>{{item.name}}</strong>
+              <small>{{item.type}}</small>
+            </div>
+            {{else}}
+            <div class="mk-dashboard-quickslot-empty">
+              <i class="fa-solid fa-plus" aria-hidden="true"></i>
+              <span>Drop item</span>
+            </div>
+            {{/if}}
+          </div>
+          {{/each}}
+        </div>
+
+        <div class="mk-dashboard-slot-column mk-dashboard-slot-column-right">
+          {{#if showSpellsButton}}
+          <button type="button" class="mk-dashboard-paperdoll-tool mk-dashboard-spell-button" data-action="open-spells" title="Open spells" aria-label="Open spells">
+            <i class="fa-solid fa-wand-sparkles" aria-hidden="true"></i>
+            <span>Spells</span>
+          </button>
+          {{/if}}
+          {{#each rightSlots}}
+          <div class="mk-body-slot {{woundClass}} {{#if item}}has-item{{else}}is-empty{{/if}} {{#if manual}}is-manual{{/if}}"
+               data-body-slot="{{key}}"
+               {{#if item}}data-item-id="{{item.id}}"{{/if}}
+               tabindex="0">
+            <div class="mk-body-slot-heading">
+              <i class="{{icon}}" aria-hidden="true"></i>
+              <span>{{label}}</span>
+              {{#if item}}
+              <button type="button"
+                      class="mk-body-slot-clear"
+                      data-action="clear-slot"
+                      data-body-slot="{{key}}"
+                      data-item-id="{{item.id}}"
+                      title="Remove item from paper doll"
+                      aria-label="Remove item from paper doll">
+                <i class="fa-solid fa-xmark" aria-hidden="true"></i>
+              </button>
+              {{/if}}
+            </div>
+            {{#if item}}
+            <div class="mk-body-slot-item">
+              <img src="{{item.img}}" alt="">
+              <div>
+                <strong>{{item.name}}</strong>
+                <small>{{item.type}}{{#if secondary}} / supporting slot{{/if}}</small>
+              </div>
+              {{#if item.weaponDetails}}
+              <div class="mk-dashboard-weapon-tooltip" role="tooltip">
+                <strong>{{item.name}}</strong>
+                <span><b>Attack</b> {{item.weaponDetails.attackBonus}}</span>
+                <span><b>Damage</b> {{item.weaponDetails.damage}}</span>
+                <span><b>Properties</b> {{item.weaponDetails.properties}}</span>
+              </div>
+              {{/if}}
+            </div>
+            {{else}}
+            <div class="mk-body-slot-empty">
+              <i class="fa-solid fa-plus" aria-hidden="true"></i>
+              <span>Empty</span>
+            </div>
+            {{/if}}
+          </div>
+          {{/each}}
+        </div>
+      </div>
+      <aside class="mk-dashboard-side-extensions" aria-label="Dashboard side extensions">
+        <section class="mk-dashboard-side-extension" data-dashboard-drawer="backpack" hidden>
+          <div class="mk-dashboard-side-extension-header">
+            <span>Backpack</span>
+            <span class="mk-dashboard-count">{{backpackUsed}} / {{backpackCapacity}}</span>
+            <button type="button" class="mk-dashboard-side-extension-close" data-action="close-dashboard-drawer" aria-label="Close Backpack" title="Close Backpack">
+              <i class="fa-solid fa-xmark" aria-hidden="true"></i>
+            </button>
+          </div>
+          <div class="mk-dashboard-side-extension-body">
+            <div class="mk-dashboard-carried-grid">
+              {{#each backpackItems}}
+              <div class="mk-dashboard-carried-item" data-item-id="{{item.id}}" style="grid-column: span {{slotSpan}};" tabindex="0" title="{{item.name}} ({{slotSpan}} slots)">
+                <img src="{{item.img}}" alt="">
+                <span>{{item.name}}</span>
+                {{#if item.hasQuantity}}
+                <small class="mk-dashboard-item-quantity">x{{item.quantity}}</small>
+                {{/if}}
+                {{#if item.quickdraw}}
+                <i class="fa-solid fa-bolt" aria-hidden="true"></i>
+                {{/if}}
+              </div>
+              {{/each}}
+              {{#each backpackEmptySlots}}
+              <div class="mk-dashboard-backpack-empty" title="Empty backpack slot" aria-label="Empty backpack slot">
+                <i class="fa-solid fa-square" aria-hidden="true"></i>
+                <span>Empty</span>
+              </div>
+              {{/each}}
+            </div>
+          </div>
+        </section>
+
+        <section class="mk-dashboard-side-extension" data-dashboard-drawer="spells" hidden>
+          <div class="mk-dashboard-side-extension-header">
+            <span>Spells</span>
+            <button type="button" class="mk-dashboard-side-extension-close" data-action="close-dashboard-drawer" aria-label="Close Spells" title="Close Spells">
+              <i class="fa-solid fa-xmark" aria-hidden="true"></i>
+            </button>
+          </div>
+          <div class="mk-dashboard-side-extension-body mk-dashboard-spell-drawer-content"></div>
+        </section>
+      </aside>
+    </main>
+
   </div>
 </div>
+    {{/with}}
+    </div>
+    {{> actors/player/abilities }}
+    {{> actors/player/spells }}
+    <section class="tab mk-dashboard-talents-tab" data-group="primary" data-tab="tab-talents">
+      <div class="mk-dashboard-talents-grid">
+        <section class="mk-dashboard-panel mk-dashboard-talents-panel">
+          <div class="mk-dashboard-panel-title">
+            <span>Ancestry &amp; Class</span>
+          </div>
+          <ol class="mk-dashboard-talent-list">
+            <li class="mk-dashboard-talent-header">
+              <span>Talent</span>
+              <span>Type</span>
+            </li>
+            {{#each talents.ancestry.items}}
+            <li class="mk-dashboard-talent-row" data-item-id="{{this._id}}" data-uuid="Actor.{{../actor._id}}.Item.{{this._id}}" tabindex="0">
+              <div class="mk-dashboard-talent-main">
+                <div class="mk-dashboard-talent-image" style="background-image: url({{this.img}})"><i class="fas fa-comment fa-lg"></i></div>
+                <a class="mk-dashboard-talent-name">{{this.name}}</a>
+              </div>
+              <span>Ancestry</span>
+            </li>
+            {{/each}}
+            {{#each talents.class.items}}
+            <li class="mk-dashboard-talent-row" data-item-id="{{this._id}}" data-uuid="Actor.{{../actor._id}}.Item.{{this._id}}" tabindex="0">
+              <div class="mk-dashboard-talent-main">
+                <div class="mk-dashboard-talent-image" style="background-image: url({{this.img}})"><i class="fas fa-comment fa-lg"></i></div>
+                <a class="mk-dashboard-talent-name">{{this.name}}</a>
+              </div>
+              <span>Class</span>
+            </li>
+            {{/each}}
+            {{#unless talents.ancestry.items.length}}{{#unless talents.class.items.length}}
+            <li class="mk-dashboard-talent-empty">No ancestry or class talents</li>
+            {{/unless}}{{/unless}}
+          </ol>
+        </section>
+
+        <section class="mk-dashboard-panel mk-dashboard-talents-panel">
+          <div class="mk-dashboard-panel-title">
+            <span>Level Talents</span>
+          </div>
+          <ol class="mk-dashboard-talent-list">
+            <li class="mk-dashboard-talent-header">
+              <span>Talent</span>
+              <span>Level</span>
+            </li>
+            {{#each talents.level.items}}
+            <li class="mk-dashboard-talent-row" data-item-id="{{this._id}}" data-uuid="Actor.{{../actor._id}}.Item.{{this._id}}" tabindex="0">
+              <div class="mk-dashboard-talent-main">
+                <div class="mk-dashboard-talent-image" style="background-image: url({{this.img}})"><i class="fas fa-comment fa-lg"></i></div>
+                <a class="mk-dashboard-talent-name">
+                  {{this.name}}
+                  {{#ifEq this.system.talentClass "patronBoon"}}<i class="fa-solid fa-eye-evil" data-tooltip="Patron boon"></i>{{/ifEq}}
+                </a>
+              </div>
+              <span>{{this.system.level}}</span>
+            </li>
+            {{/each}}
+            {{#unless talents.level.items.length}}
+            <li class="mk-dashboard-talent-empty">No level talents</li>
+            {{/unless}}
+          </ol>
+        </section>
+
+        <section class="mk-dashboard-panel mk-dashboard-talents-panel mk-dashboard-boons-panel">
+          <div class="mk-dashboard-panel-title">
+            <span>Boons</span>
+            {{#if owner}}<a class="mk-dashboard-create-boon fa-solid fa-square-plus" data-action="create-boon" data-tooltip="Create boon" role="button" tabindex="0" aria-label="Create boon"></a>{{/if}}
+          </div>
+          <ol class="mk-dashboard-talent-list mk-dashboard-boon-list">
+            <li class="mk-dashboard-talent-header">
+              <span>Boon</span>
+              <span>Type</span>
+              <span>Level</span>
+            </li>
+            {{#each boons as |boonType|}}
+              {{#each boonType.items as |boon|}}
+              <li class="mk-dashboard-talent-row" data-item-id="{{boon._id}}" data-uuid="Actor.{{../../actor._id}}.Item.{{boon._id}}" tabindex="0">
+                <div class="mk-dashboard-talent-main">
+                  <div class="mk-dashboard-talent-image" style="background-image: url({{boon.img}})"><i class="fas fa-comment fa-lg"></i></div>
+                  <a class="mk-dashboard-talent-name">{{boon.name}}</a>
+                </div>
+                <span>{{boonType.label}}</span>
+                <span>{{#ifCond boon.system.level ">" 0}}{{boon.system.level}}{{/ifCond}}</span>
+              </li>
+              {{/each}}
+            {{/each}}
+            {{#unless boons.length}}
+            <li class="mk-dashboard-talent-empty">No boons</li>
+            {{/unless}}
+          </ol>
+        </section>
+      </div>
+    </section>
+    {{> actors/player/inventory }}
+    {{> actors/_partials/effects-tab }}
+    {{> actors/player/notes }}
+  </section>
+</form>

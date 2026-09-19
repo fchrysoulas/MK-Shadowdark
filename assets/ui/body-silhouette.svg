@@ -3,9 +3,9 @@
   <desc id="desc">Front-facing anatomical silhouette used by the MK-Shadowdark character dashboard.</desc>
   <defs>
     <linearGradient id="bodyFill" x1="0" y1="0" x2="0" y2="1">
-      <stop offset="0" stop-color="#254b42" stop-opacity=".72"/>
-      <stop offset=".52" stop-color="#17352f" stop-opacity=".62"/>
-      <stop offset="1" stop-color="#102924" stop-opacity=".68"/>
+      <stop offset="0" stop-color="#174756" stop-opacity=".72"/>
+      <stop offset=".52" stop-color="#0c3245" stop-opacity=".62"/>
+      <stop offset="1" stop-color="#082335" stop-opacity=".68"/>
     </linearGradient>
     <filter id="softGlow" x="-30%" y="-20%" width="160%" height="140%">
       <feGaussianBlur stdDeviation="2.4" result="blur"/>
@@ -16,7 +16,7 @@
     </filter>
   </defs>
 
-  <g fill="url(#bodyFill)" stroke="#6fd0b1" stroke-width="2" stroke-linejoin="round" stroke-linecap="round" filter="url(#softGlow)">
+  <g fill="url(#bodyFill)" stroke="#76dcec" stroke-width="2" stroke-linejoin="round" stroke-linecap="round" filter="url(#softGlow)">
     <ellipse cx="110" cy="48" rx="28" ry="35"/>
     <path d="M92 78 C91 92 86 102 75 111 L58 128 L70 219 L86 249 L82 294 L65 404 L80 500 L102 500 L108 392 L110 306 L112 392 L118 500 L140 500 L155 404 L138 294 L134 249 L150 219 L162 128 L145 111 C134 102 129 92 128 78 Z"/>
     <path d="M59 126 C44 139 34 160 30 190 L19 277 L37 282 L54 208 L73 156 Z"/>
@@ -27,7 +27,7 @@
     <path d="M155 404 L168 486 C170 500 163 510 148 510 L128 508 L140 500 Z"/>
   </g>
 
-  <g fill="none" stroke="#8dd9c1" stroke-opacity=".42" stroke-width="1">
+  <g fill="none" stroke="#9de7ff" stroke-opacity=".42" stroke-width="1">
     <path d="M110 83 V300"/>
     <path d="M79 122 C91 136 129 136 141 122"/>
     <path d="M76 162 C92 174 128 174 144 162"/>
@@ -40,7 +40,21 @@
     <path d="M138 294 L155 404"/>
   </g>
 
-  <g fill="#9fe2ce" fill-opacity=".36" stroke="#9fe2ce" stroke-opacity=".6">
+  <g fill="none" stroke="#b6edff" stroke-opacity=".48" stroke-width="1.3">
+    <path d="M101 24 Q88 39 97 59 L103 66 H117 L123 59 Q132 39 119 24 M97 43 L104 42 M116 42 L123 43 M106 56 H114"/>
+    <path d="M110 91 V255 M94 107 Q76 99 63 125 M126 107 Q144 99 157 125"/>
+    <path d="M108 122 C79 113 68 132 78 144 L107 152 M112 122 C141 113 152 132 142 144 L113 152"/>
+    <path d="M108 135 C78 123 71 143 81 155 L107 164 M112 135 C142 123 149 143 139 155 L113 164"/>
+    <path d="M108 148 C80 136 74 156 84 168 L107 178 M112 148 C140 136 146 156 136 168 L113 178"/>
+    <path d="M108 163 C81 150 79 170 87 181 L107 191 M112 163 C139 150 141 170 133 181 L113 191"/>
+    <path d="M108 178 C85 166 83 182 91 193 L106 200 M112 178 C135 166 137 182 129 193 L114 200"/>
+    <path d="M92 217 Q110 207 128 217 M90 230 Q110 218 130 230 M91 243 Q110 231 129 243"/>
+    <path d="M86 253 Q67 277 86 295 L107 271 M134 253 Q153 277 134 295 L113 271 M86 295 L110 306 L134 295"/>
+    <path d="M64 139 L44 200 M68 141 L48 200 M41 211 L27 276 M47 211 L32 276 M156 139 L176 200 M152 141 L172 200 M179 211 L193 276 M173 211 L188 276"/>
+    <path d="M94 298 L78 397 M87 298 L71 397 M126 298 L142 397 M133 298 L149 397 M73 416 L79 481 M79 416 L85 481 M147 416 L141 481 M141 416 L135 481"/>
+    <ellipse cx="75" cy="406" rx="8" ry="10"/><ellipse cx="145" cy="406" rx="8" ry="10"/>
+  </g>
+  <g fill="#88eaff" fill-opacity=".36" stroke="#88eaff" stroke-opacity=".6">
     <circle cx="110" cy="48" r="4"/>
     <circle cx="110" cy="154" r="4"/>
     <circle cx="49" cy="196" r="3.5"/>

@@ -66,13 +66,6 @@
       ]
     },
     {
-      key: "characterDashboard",
-      title: "Character Dashboard",
-      hint: "Configure the body-centric player view for wounds and equipment.",
-      icon: "fas fa-person",
-      settings: ["characterDashboardEnabled"]
-    },
-    {
       key: "paperChat",
       title: "Paper Chat",
       hint: "Configure chat-message themes and the GM visual style editor.",
@@ -517,10 +510,10 @@
     /* -------------------- */
 
     registerSetting("characterDashboardEnabled", {
-      name: "Character Dashboard | Enabled",
-      hint: "Adds a Body button to Shadowdark player sheets that opens the body-centric wounds and equipment view.",
+      name: "MK_SHADOWDARK.dashboard.settingName",
+      hint: "MK_SHADOWDARK.dashboard.settingHint",
       scope: "world",
-      config: true,
+      config: false,
       type: Boolean,
       default: true,
       onChange: refreshOpenActorSheets

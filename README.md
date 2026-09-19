@@ -33,13 +33,40 @@ The old **MK-Shadowdark GM Screen Mock** prototype is not a dependency and is no
 
 ## Character and combat automation
 
+- **Character Dashboard paper-doll layout** -- the enlarged figure uses consistent equipment slot sizing, a compact centered AC badge, and an item-style Spells slot above Right Hand.
+- The character class value in the dashboard header can be edited with the native Shadowdark class selector.
+- Paper-doll and Backpack item cards use full-area artwork.
+- Item controls and values remain interactive above the expanded artwork.
+- The Languages panel uses the same dashboard panel layout as Conditions and retains native language editing.
+- The Vitals panel presents stat labels and values above compact progress bars.
+- The paper-doll panel supports a narrower minimum width and a larger central character image.
+- The dashboard left panel uses a fixed 220-pixel width.
+- The three Quick Slots are arranged horizontally below the paper-doll image.
+- The side hand and torso slots stay in the upper paper-doll area while Quick Slots use the full row width below it.
+- The paper-doll panel uses a shorter minimum height with Quick Slots positioned higher beneath the image.
+- Luck is toggled from an icon-only control in the upper-right character header.
+- The Luck icon uses a larger borderless presentation with a hover highlight.
+- Luck hover feedback is applied to the icon itself without a visible button rectangle.
+- Left-click a weapon in the Right Hand paper-doll slot to use the native Shadowdark attack roll; Shift-click skips its prompt.
+- Injuries appear below Conditions, while compact paper-doll Backpack and Spells controls expand and collapse a floating extension beside the sheet. Backpack uses fixed-size slots and item cards span their required slot count. Hovering an equipped weapon shows its native actor-derived attack bonus, damage, and properties.
+- The Inventory tab uses the same dark cyan dashboard styling as the Character tab while retaining native inventory controls.
+- The Spells, Notes, and Effects tabs use the same dark cyan dashboard styling while retaining native controls and editors.
+
+- **Dashboard Item Sheet** -- Shadowdark Items open in the same dark cyan visual language as the Character Dashboard while retaining native item editing and tabs.
+
+- **Character Dashboard talents** -- the Talents tab uses the dashboard theme and includes Boons alongside ancestry, class, and level talents.
+
+- **Character Dashboard progression controls** -- edit current/max HP from the Core Stats card and see a level-up indicator when XP reaches the next-level threshold.
+
+- **Character Dashboard spell casting** -- self-range spells selected from the paper-doll Spells popup automatically target the caster's active token.
+
 - **Auto Damage** — applies targeted attack/spell damage or healing with Shadowdark damage properties and optional token shake feedback.
 - **Damage Traits** — Resistance, Immunity, and Vulnerability through Shadowdark Properties and transferring effects.
 - **Targeting Assistant** — validates and preserves selected targets for attack/spell automation.
 - **Death Timer** — manages Shadowdark death timers while death itself uses Foundry's native Dead status.
 - Player characters are marked Dead when their effective CON reaches 0, including reductions from wound penalties.
 - **Detailed Wounds** — shows active injuries below character Stats and opens a GM-managed six-zone wound board. A `2d10` roll selects one of Head, Right/Left Arm, Body, or Right/Left Leg and then resolves a location-specific severity result, including stored rest durations, CON saves, native Dead status, automatic ability penalties, and named consequences in Group status summaries. The collapsed Wound History panel records optional informational timestamps, session markers, source notes, and outcome transitions; GMs can add, edit, or remove history without changing the mechanical wound record.
-- **Character Dashboard** — opens a modern body-centric player view with core stats, live Detailed Wounds markers, worn/held equipment, carried gear, and drag-and-drop body-slot assignments around a central figure.
+- **Character Dashboard** — an alternative player sheet selected through **Sheet Configuration → This Sheet → MK-Shadowdark: Character Dashboard**. Its cyan overview shows the character portrait, core stats, a paper-doll Armor Class badge, a side Luck toggle, clickable ability checks, live Detailed Wounds markers, hand equipment, body armor, three paper-doll Quick Slots, a Backpack with empty boxes for available gear slots, and the editable character details. Drag existing gear onto the hand or torso slots to assign it; drag any Item type into a Quick Slot for one-click access, including items from native inventory lists, other actors, world items, or compendiums. Other body locations appear only when wounded. Native Shadowdark combat, inventory, spells, talents, effects and notes remain available in the top tabs. No launch button is added to the standard sheet.
 - **Editable Quantity** — inventory quantity editing with direct controls.
 - **Equipment Hands** — validates equipped weapons, shields, and hand-occupying gear against available hands.
 - **Token Equipment Display** — shows held equipment and Quickdraw gear around player tokens.

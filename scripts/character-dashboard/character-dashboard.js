@@ -509,7 +509,7 @@ import {
     }
 
     const item = await getDroppedActorItem(event, actor);
-    if (!item) {
+    if (!item || !isGearItem(item)) {
       ui.notifications?.warn?.("MK-Shadowdark | Drop one of this character's gear items onto the body slot.");
       return;
     }
@@ -519,7 +519,7 @@ import {
   }
 
   async function assignBodySlot(item, slotKey) {
-    if (!item?.parent || !SLOT_KEYS.has(slotKey)) return false;
+    if (!item?.parent || !isGearItem(item) || !SLOT_KEYS.has(slotKey)) return false;
     const actor = item.parent;
     if (!(actor.isOwner || game.user?.isGM)) return false;
 

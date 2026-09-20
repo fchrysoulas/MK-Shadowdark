@@ -1,9 +1,17 @@
 # Changelog
 
 ## 1.9.17
+- Summary Bar shortcut buttons are now fixed 1:1 squares, centered as a group with consistent edge spacing instead of stretching across the row.
+- Kept the Character Sheet Tweaks navigation uniformly black while carrying the sheet background through the spacing below it.
+- Matched the active Character Sheet Tweaks tab background to Foundry’s parchment sheet surface instead of using a separate fixed beige color.
+- Removed the Character Sheet Tweaks character-name input styling override so Shadowdark controls its native title presentation.
+- Removed the Character Sheet Tweaks content-body padding override so Shadowdark controls its native content spacing.
+- Moved Character Sheet Tweaks base styling into fixed module CSS and made the Shadowdark logo hide automatically whenever the tweaks are enabled; the separate Hide Logo setting is retired.
+- Character Sheet Tweaks now use the standard evenly spaced navigation layout, including 7px tab padding and an 8px bottom margin.
 - Character Dashboard enablement now controls the Dashboard Item Sheet: enabled uses the MK-Shadowdark style, while disabled restores Shadowdark's default item sheets.
 - Removed the Survival Wound Profile feature and its post-dying CON check, external Enduring Wounds RollTable integration, settings menu, and legacy setting registrations.
 - Auto Damage now reads Shadowdark's native main and damage rolls and routes HP changes through the system's `Actor.applyDamage` API instead of parsing chat text.
+- Auto Damage now locks Shadowdark's native Apply Damage controls while a roll is being processed or after it has been applied, preventing accidental duplicate HP changes and floating numbers.
 - Added an Auto Damage Debug Mode setting so detailed processing logs stay hidden unless explicitly enabled; warnings and errors remain visible.
 - Removed the obsolete Auto Damage Show 3D Dice setting now that native Shadowdark rolls provide their own dice visuals.
 - Corpse Token Auto Restore When Healed now defaults to enabled, and Corpse Token has a Debug Mode for detailed browser-console diagnostics.

@@ -7,20 +7,12 @@ import { onCharacterSheetRender } from "../libs/sheet-render-adapter.js";
   const CSS_SETTING = "sheetStyleEditorCss";
   const TYPOGRAPHY_MIGRATION_SETTING = "sheetStyleEditorTypographyMigrated";
   const MK_PREFIX_MIGRATION_SETTING = "sheetStyleEditorMkPrefixMigrated";
-  const DEFAULTS_SEEDED_SETTING = "sheetStyleEditorDefaultsSeeded";
-  const SUMMARY_CSS_SPLIT_SETTING = "sheetStyleEditorSummaryCssSplit";
-  const QUICKDRAW_CSS_FIXED_SETTING = "sheetStyleEditorQuickdrawStylesExtracted";
-  const EXPANDED_CONTROLS_SETTING = "sheetStyleEditorExpandedControls";
-  const SOLID_NAVIGATION_SETTING = "sheetStyleEditorSolidNavigationBackground";
-  const FIXED_EDITOR_CSS_SETTING = "sheetStyleEditorUiStylesExtracted";
-  const FIXED_CONTEXT_MENU_CSS_SETTING = "sheetStyleEditorContextMenuStylesExtracted";
-  const FIXED_ATTACK_PROPERTIES_CSS_SETTING = "sheetStyleEditorAttackPropertiesStylesExtracted";
-  const HIDE_LOGO_SETTING = "characterSheetTweaksHideLogo";
+  const FIXED_CHARACTER_SHEET_CSS_SETTING = "sheetStyleEditorCharacterSheetCssFixed";
   const HEADER_BACKGROUND_SETTING = "characterSheetTweaksHeaderBackgroundImage";
   const STYLE_ELEMENT_ID = "mk-shadowdark-global-sheet-styles";
   const RULE_MARKER_PREFIX = "mk-shadowdark-style-editor";
   const SETTING_MARKER_PREFIX = "mk-shadowdark-setting";
-  const EDITABLE_DEFAULT_STYLESHEETS = Object.freeze([
+  const FIXED_STYLESHEETS = Object.freeze([
     `modules/${MODULE_ID}/styles/character-sheet-tweaks.css`
   ]);
   const LEGACY_TYPOGRAPHY_SETTINGS = Object.freeze({
@@ -34,7 +26,7 @@ import { onCharacterSheetRender } from "../libs/sheet-render-adapter.js";
 
   let activeMenu = null;
   let cssUpdateQueue = Promise.resolve();
-  let editableTemplateCssPromise = null;
+  let fixedTemplateCssPromise = null;
   const renderedSheetRoots = new WeakMap();
 
   globalThis.MKShadowdarkSheetStyleEditor = {
@@ -44,18 +36,10 @@ import { onCharacterSheetRender } from "../libs/sheet-render-adapter.js";
 
   Hooks.once("ready", async () => {
     applyCss(getSetting(CSS_SETTING, ""));
-    removeDirectEditableStyleLinks();
     if (!game.user?.isGM) return;
 
     await runInitializationStep("mk CSS prefix migration", migrateCssPrefixToMk);
-    await runInitializationStep("Summary Bar CSS split migration", migrateSummaryBarCssSplit);
-    await runInitializationStep("fixed Quickdraw CSS migration", migrateQuickdrawCssToFixedStylesheet);
-    await runInitializationStep("expanded style controls migration", migrateExpandedStyleControls);
-    await runInitializationStep("solid navigation background migration", migrateSolidNavigationBackground);
-    await runInitializationStep("fixed Style Editor CSS migration", migrateStyleEditorCssToFixedStylesheet);
-    await runInitializationStep("fixed context menu CSS migration", migrateContextMenuCssToFixedStylesheet);
-    await runInitializationStep("fixed attack properties CSS migration", migrateAttackPropertiesCssToFixedStylesheet);
-    await runInitializationStep("editable default CSS seed", seedEditableDefaultCss);
+    await runInitializationStep("fixed character-sheet CSS migration", migrateCharacterSheetCssToFixedStylesheet);
     await runInitializationStep("legacy typography migration", migrateLegacyTypographySettings);
     await runInitializationStep("managed setting CSS sync", syncCharacterSheetSettings);
   });
@@ -435,7 +419,7 @@ import { onCharacterSheetRender } from "../libs/sheet-render-adapter.js";
   }
 
   async function resolveBaseStyleSource(target, selector) {
-    const templateCss = await loadEditableTemplateCss();
+    const templateCss = await loadFixedTemplateCss();
     if (cssTextMatchesTarget(templateCss, target)) return "MK-Shadowdark Tweaks CSS";
 
     const globalCssWithoutOverride = removeGeneratedRule(String(getSetting(CSS_SETTING, "") ?? ""), selector);
@@ -449,19 +433,19 @@ import { onCharacterSheetRender } from "../libs/sheet-render-adapter.js";
     return "Shadowdark original / inherited";
   }
 
-  function loadEditableTemplateCss() {
-    if (!editableTemplateCssPromise) {
-      editableTemplateCssPromise = (async () => {
-        const route = toFoundryRoute(EDITABLE_DEFAULT_STYLESHEETS[0]);
+  function loadFixedTemplateCss() {
+    if (!fixedTemplateCssPromise) {
+      fixedTemplateCssPromise = (async () => {
+        const route = toFoundryRoute(FIXED_STYLESHEETS[0]);
         const response = await fetch(route, { cache: "no-store" });
         if (!response.ok) throw new Error(`Could not load ${route}: HTTP ${response.status}`);
         return response.text();
       })().catch(error => {
-        editableTemplateCssPromise = null;
+        fixedTemplateCssPromise = null;
         throw error;
       });
     }
-    return editableTemplateCssPromise;
+    return fixedTemplateCssPromise;
   }
 
   function cssTextMatchesTarget(cssText, target) {
@@ -628,14 +612,6 @@ import { onCharacterSheetRender } from "../libs/sheet-render-adapter.js";
     style.textContent = expandPaperThemeRuleScopes(cssText);
   }
 
-  function removeDirectEditableStyleLinks() {
-    const templateNames = EDITABLE_DEFAULT_STYLESHEETS.map(path => path.split("/").pop());
-    document.querySelectorAll('link[rel="stylesheet"][href]').forEach(link => {
-      const href = String(link.getAttribute("href") ?? "");
-      if (templateNames.some(name => href.includes(`/styles/${name}`))) link.remove();
-    });
-  }
-
   async function runInitializationStep(label, callback) {
     try {
       await callback();
@@ -651,132 +627,25 @@ import { onCharacterSheetRender } from "../libs/sheet-render-adapter.js";
     await game.settings.set(MODULE_ID, MK_PREFIX_MIGRATION_SETTING, true);
   }
 
-  async function seedEditableDefaultCss() {
-    if (getSetting(DEFAULTS_SEEDED_SETTING, false)) return;
+  async function migrateCharacterSheetCssToFixedStylesheet() {
+    if (getSetting(FIXED_CHARACTER_SHEET_CSS_SETTING, false)) return;
 
-    const defaultCss = await loadEditableDefaultCss();
-    await updateGlobalCss(currentCss => upsertManagedBlockAtStart(
-      currentCss,
-      "editable-character-sheet-defaults",
-      defaultCss
-    ));
-    await game.settings.set(MODULE_ID, DEFAULTS_SEEDED_SETTING, true);
-  }
-
-  async function migrateSummaryBarCssSplit() {
-    if (getSetting(SUMMARY_CSS_SPLIT_SETTING, false)) return;
-
-    const defaultCss = await loadEditableDefaultCss();
-    await updateGlobalCss(currentCss => upsertManagedBlockAtStart(
-      currentCss,
-      "editable-character-sheet-defaults",
-      defaultCss
-    ));
-    await game.settings.set(MODULE_ID, DEFAULTS_SEEDED_SETTING, true);
-    await game.settings.set(MODULE_ID, SUMMARY_CSS_SPLIT_SETTING, true);
-  }
-
-  async function migrateQuickdrawCssToFixedStylesheet() {
-    if (getSetting(QUICKDRAW_CSS_FIXED_SETTING, false)) return;
-
-    const defaultCss = await loadEditableDefaultCss();
-    await updateGlobalCss(currentCss => upsertManagedBlockAtStart(
-      currentCss,
-      "editable-character-sheet-defaults",
-      defaultCss
-    ));
-    await game.settings.set(MODULE_ID, DEFAULTS_SEEDED_SETTING, true);
-    await game.settings.set(MODULE_ID, QUICKDRAW_CSS_FIXED_SETTING, true);
-  }
-
-  async function migrateExpandedStyleControls() {
-    if (getSetting(EXPANDED_CONTROLS_SETTING, false)) return;
-
-    const defaultCss = await loadEditableDefaultCss();
-    await updateGlobalCss(currentCss => upsertManagedBlockAtStart(
-      currentCss,
-      "editable-character-sheet-defaults",
-      defaultCss
-    ));
-    await game.settings.set(MODULE_ID, DEFAULTS_SEEDED_SETTING, true);
-    await game.settings.set(MODULE_ID, EXPANDED_CONTROLS_SETTING, true);
-  }
-
-  async function migrateSolidNavigationBackground() {
-    if (getSetting(SOLID_NAVIGATION_SETTING, false)) return;
-
-    const defaultCss = await loadEditableDefaultCss();
-    await updateGlobalCss(currentCss => upsertManagedBlockAtStart(
-      currentCss,
-      "editable-character-sheet-defaults",
-      defaultCss
-    ));
-    await game.settings.set(MODULE_ID, DEFAULTS_SEEDED_SETTING, true);
-    await game.settings.set(MODULE_ID, SOLID_NAVIGATION_SETTING, true);
-  }
-
-  async function migrateStyleEditorCssToFixedStylesheet() {
-    if (getSetting(FIXED_EDITOR_CSS_SETTING, false)) return;
-
-    const defaultCss = await loadEditableDefaultCss();
-    await updateGlobalCss(currentCss => upsertManagedBlockAtStart(
-      currentCss,
-      "editable-character-sheet-defaults",
-      defaultCss
-    ));
-    await game.settings.set(MODULE_ID, DEFAULTS_SEEDED_SETTING, true);
-    await game.settings.set(MODULE_ID, FIXED_EDITOR_CSS_SETTING, true);
-  }
-
-  async function migrateContextMenuCssToFixedStylesheet() {
-    if (getSetting(FIXED_CONTEXT_MENU_CSS_SETTING, false)) return;
-
-    const defaultCss = await loadEditableDefaultCss();
-    await updateGlobalCss(currentCss => upsertManagedBlockAtStart(
-      currentCss,
-      "editable-character-sheet-defaults",
-      defaultCss
-    ));
-    await game.settings.set(MODULE_ID, DEFAULTS_SEEDED_SETTING, true);
-    await game.settings.set(MODULE_ID, FIXED_CONTEXT_MENU_CSS_SETTING, true);
-  }
-
-  async function migrateAttackPropertiesCssToFixedStylesheet() {
-    if (getSetting(FIXED_ATTACK_PROPERTIES_CSS_SETTING, false)) return;
-
-    const defaultCss = await loadEditableDefaultCss();
-    await updateGlobalCss(currentCss => upsertManagedBlockAtStart(
-      currentCss,
-      "editable-character-sheet-defaults",
-      defaultCss
-    ));
-    await game.settings.set(MODULE_ID, DEFAULTS_SEEDED_SETTING, true);
-    await game.settings.set(MODULE_ID, FIXED_ATTACK_PROPERTIES_CSS_SETTING, true);
-  }
-
-  async function loadEditableDefaultCss() {
-    const stylesheetTexts = await Promise.all(EDITABLE_DEFAULT_STYLESHEETS.map(async path => {
-      const route = toFoundryRoute(path);
-      const response = await fetch(route, { cache: "no-store" });
-      if (!response.ok) throw new Error(`Could not load ${route}: HTTP ${response.status}`);
-      return (await response.text()).trim();
-    }));
-    const defaultCss = stylesheetTexts.filter(Boolean).join("\n\n");
-    if (!defaultCss) throw new Error("Editable character-sheet default CSS is empty.");
-    return defaultCss;
+    await updateGlobalCss(currentCss => {
+      let updatedCss = removeManagedBlock(currentCss, "editable-character-sheet-defaults");
+      updatedCss = removeManagedBlock(updatedCss, "hide-shadowdark-logo");
+      return updatedCss;
+    });
+    await game.settings.set(MODULE_ID, FIXED_CHARACTER_SHEET_CSS_SETTING, true);
   }
 
   function syncCharacterSheetSettings() {
     return updateGlobalCss(currentCss => {
-      const hideLogo = Boolean(getSetting(HIDE_LOGO_SETTING, true));
       const headerBackground = normalizeImagePath(getSetting(HEADER_BACKGROUND_SETTING, ""));
-      let updatedCss = upsertManagedBlock(currentCss, "hide-shadowdark-logo", hideLogo ? buildHideLogoCss() : "");
-      updatedCss = upsertManagedBlock(
-        updatedCss,
+      return upsertManagedBlock(
+        currentCss,
         "header-background-image",
         headerBackground ? buildHeaderBackgroundCss(headerBackground) : ""
       );
-      return updatedCss;
     });
   }
 
@@ -791,12 +660,6 @@ import { onCharacterSheetRender } from "../libs/sheet-render-adapter.js";
       await updateGlobalCss(currentCss => upsertManagedBlock(currentCss, "legacy-typography", migrationCss));
     }
     await game.settings.set(MODULE_ID, TYPOGRAPHY_MIGRATION_SETTING, true);
-  }
-
-  function buildHideLogoCss() {
-    return `.shadowdark.sheet.player.mk-character-sheet-tweaks .SD-header .shadowdark-logo {
-  display: none !important;
-}`;
   }
 
   function buildHeaderBackgroundCss(imagePath) {
@@ -869,15 +732,6 @@ import { onCharacterSheetRender } from "../libs/sheet-render-adapter.js";
 
     const block = `/* ${SETTING_MARKER_PREFIX}:start ${key} */\n${body}\n/* ${SETTING_MARKER_PREFIX}:end ${key} */`;
     return withoutExisting ? `${withoutExisting}\n\n${block}\n` : `${block}\n`;
-  }
-
-  function upsertManagedBlockAtStart(cssText, key, content) {
-    const withoutExisting = removeManagedBlock(cssText, key).trimStart();
-    const body = String(content ?? "").trim();
-    if (!body) return withoutExisting;
-
-    const block = `/* ${SETTING_MARKER_PREFIX}:start ${key} */\n${body}\n/* ${SETTING_MARKER_PREFIX}:end ${key} */`;
-    return withoutExisting ? `${block}\n\n${withoutExisting}` : `${block}\n`;
   }
 
   function removeManagedBlock(cssText, key) {

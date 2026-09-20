@@ -20,6 +20,7 @@
   --mk-paper-sheet-border: rgba(75, 54, 39, 0.62);
   --mk-paper-sheet-shadow: inset 0 0 20px rgba(73, 43, 24, 0.14);
   --mk-paper-sheet-font: inherit;
+  --mk-character-sheet-surface: var(--mk-paper-sheet-background);
 }
 
 .shadowdark.sheet.player.mk-paper-chat-sheet .SD-content-body {
@@ -33,7 +34,6 @@
 
 .shadowdark.sheet.player.mk-paper-chat-sheet .SD-nav a.active {
   border-color: var(--mk-paper-sheet-border) !important;
-  background: var(--mk-paper-sheet-background) !important;
   box-shadow: none;
   color: var(--mk-paper-chat-ink) !important;
   text-shadow: none;

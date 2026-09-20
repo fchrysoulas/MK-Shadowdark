@@ -61,7 +61,7 @@
       height: 720,
       settings: [
         "characterSheetTweaksEnabled", "attackWeaponPropertiesEnabled", "sheetStyleEditorEnabled", "sheetStyleEditorCss",
-        "characterSheetTweaksHideLogo", "characterSheetTweaksHeaderBackgroundImage", "characterSheetTweaksDebug"
+        "characterSheetTweaksHeaderBackgroundImage", "characterSheetTweaksDebug"
       ],
       sections: [
         {
@@ -70,7 +70,7 @@
         },
         {
           title: "Appearance",
-          settings: ["characterSheetTweaksHideLogo", "characterSheetTweaksHeaderBackgroundImage"]
+          settings: ["characterSheetTweaksHeaderBackgroundImage"]
         },
         {
           title: "Advanced",
@@ -1069,7 +1069,7 @@
 
     registerSetting("sheetStyleEditorCss", {
       name: "Character Sheet | Global Style CSS",
-      hint: "Editable world-level CSS for Character Sheet Tweaks, Quickdraw, managed visual settings, and Edit Style rules. Saving synchronizes it to all connected clients.",
+      hint: "Editable world-level CSS for custom sheet overrides, managed visual settings, and Edit Style rules. Saving synchronizes it to all connected clients.",
       scope: "world",
       config: true,
       type: String,
@@ -1097,72 +1097,9 @@
       default: false
     });
 
-    registerSetting("sheetStyleEditorDefaultsSeeded", {
-      name: "Character Sheet | Editable Defaults Seeded",
-      hint: "Internal migration state for the editable character-sheet default CSS.",
-      scope: "world",
-      config: false,
-      type: Boolean,
-      default: false
-    });
-
-    registerSetting("sheetStyleEditorSummaryCssSplit", {
-      name: "Character Sheet | Summary Bar CSS Split Complete",
-      hint: "Internal migration state for separating Summary Bar CSS from Character Sheet CSS.",
-      scope: "world",
-      config: false,
-      type: Boolean,
-      default: false
-    });
-
-    registerSetting("sheetStyleEditorQuickdrawStylesExtracted", {
-      name: "Character Sheet | Quickdraw Styles Extraction Complete",
-      hint: "Internal migration state for moving all Quickdraw styling out of editable Global Style CSS.",
-      scope: "world",
-      config: false,
-      type: Boolean,
-      default: false
-    });
-
-    registerSetting("sheetStyleEditorExpandedControls", {
-      name: "Character Sheet | Expanded Style Controls Migration Complete",
-      hint: "Internal migration state for the color, background image, margin, and style-source controls.",
-      scope: "world",
-      config: false,
-      type: Boolean,
-      default: false
-    });
-
-    registerSetting("sheetStyleEditorSolidNavigationBackground", {
-      name: "Character Sheet | Solid Navigation Background Migration Complete",
-      hint: "Internal migration state for replacing the navigation gradient with a solid background.",
-      scope: "world",
-      config: false,
-      type: Boolean,
-      default: false
-    });
-
-    registerSetting("sheetStyleEditorUiStylesExtracted", {
-      name: "Character Sheet | Fixed Style Editor CSS Migration Complete",
-      hint: "Internal migration state for moving the Style Editor interface out of editable character-sheet CSS.",
-      scope: "world",
-      config: false,
-      type: Boolean,
-      default: false
-    });
-
-    registerSetting("sheetStyleEditorContextMenuStylesExtracted", {
-      name: "Character Sheet | Fixed Context Menu CSS Migration Complete",
-      hint: "Internal migration state for replacing the editable context-menu override with the fixed Quickdraw fallback.",
-      scope: "world",
-      config: false,
-      type: Boolean,
-      default: false
-    });
-
-    registerSetting("sheetStyleEditorAttackPropertiesStylesExtracted", {
-      name: "Character Sheet | Fixed Attack Properties CSS Migration Complete",
-      hint: "Internal migration state for moving weapon attack property styles out of editable character-sheet CSS.",
+    registerSetting("sheetStyleEditorCharacterSheetCssFixed", {
+      name: "Character Sheet | Fixed Base CSS Migration Complete",
+      hint: "Internal migration state for moving base character-sheet styling out of Global Style CSS.",
       scope: "world",
       config: false,
       type: Boolean,
@@ -1266,19 +1203,6 @@
       config: true,
       type: Boolean,
       default: false
-    });
-
-    registerSetting("characterSheetTweaksHideLogo", {
-      name: "Character Sheet | Hide Shadowdark Logo",
-      hint: "Removes the Shadowdark logo from player sheets through a managed rule in Global Style CSS.",
-      scope: "world",
-      config: true,
-      type: Boolean,
-      default: true,
-      onChange: () => {
-        globalThis.MKShadowdarkSheetStyleEditor?.syncCharacterSheetSettings?.();
-        refreshOpenActorSheets();
-      }
     });
 
     registerSetting("characterSheetTweaksHeaderBackgroundImage", {

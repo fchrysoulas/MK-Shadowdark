@@ -1,33 +1,42 @@
-/* MK-Shadowdark editable character-sheet CSS defaults.
- * This file is not loaded as a fixed module stylesheet. Its text is copied once
- * into the world-level Global Style CSS setting, where GMs can edit it.
+/* MK-Shadowdark fixed character-sheet styling.
+ * This file is loaded by module.json and applies when Character Sheet Tweaks
+ * adds the mk-character-sheet-tweaks class.
  */
 
 /* -------------------------------------------- */
 /* Basic Sheet Styling                          */
 /* -------------------------------------------- */
 
-.shadowdark.sheet.mk-character-sheet-tweaks .SD-title input {
-  color: #ffffff;
-  line-height: 1;
-  min-height: 80px;
-  text-shadow: 2px 2px #000000;
+.shadowdark.sheet.mk-character-sheet-tweaks {
+  --mk-character-sheet-surface: url("/ui/parchment.jpg") repeat;
 }
 
 .shadowdark.sheet.mk-character-sheet-tweaks .SD-nav {
+  position: relative;
   display: flex;
   align-items: baseline;
   justify-content: space-evenly;
-  margin: 0px;
-  padding: 0px;
+  margin: 0 0 8px;
+  padding: 0;
   border-bottom: none;
   background: #000000 !important;
   background-image: none !important;
 }
 
+.shadowdark.sheet.mk-character-sheet-tweaks .SD-nav::after {
+  content: "";
+  position: absolute;
+  top: 100%;
+  right: 0;
+  left: 0;
+  height: 8px;
+  background: var(--mk-character-sheet-surface);
+  pointer-events: none;
+}
+
 .shadowdark.sheet.mk-character-sheet-tweaks .SD-nav a {
-  margin: 0px;
-  padding: 0px;
+  margin: 0;
+  padding: 7px;
   background: #000000 !important;
   background-image: none !important;
   color: #999999;
@@ -38,7 +47,7 @@
   color: #000000;
   text-decoration: none;
   border-top: 2px solid #848484;
-  background: #e8e3cc !important;
+  background: var(--mk-character-sheet-surface) !important;
   font-size: 20px;
 }
 
@@ -46,10 +55,10 @@
   border: 0;
 }
 
-.shadowdark.sheet.mk-character-sheet-tweaks .SD-content-body {
-  padding: 15px 15px;
-}
-
 .shadowdark.sheet.mk-character-sheet-tweaks .SD-header {
   margin: 0;
+}
+
+.shadowdark.sheet.mk-character-sheet-tweaks .SD-header .shadowdark-logo {
+  display: none !important;
 }

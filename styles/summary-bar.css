@@ -92,19 +92,27 @@
 }
 
 .mk-character-sheet-bar__shortcuts {
-  display: grid;
-  grid-template-columns: repeat(var(--mk-bar-shortcut-count, 10), minmax(0, 1fr));
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-wrap: wrap;
   gap: 0.22rem;
   width: 100%;
+  padding: 0.22rem;
 }
 
 .mk-summary-shortcut {
   display: grid;
   place-items: center;
+  box-sizing: border-box;
+  flex: 0 0 1.85rem;
+  width: 1.85rem;
+  height: 1.85rem;
+  aspect-ratio: 1 / 1;
   min-width: 1.85rem;
   min-height: 1.85rem;
   margin: 0;
-  padding: 0.16rem 0.24rem;
+  padding: 0.16rem;
   overflow: hidden;
   border: 1px solid rgba(255, 255, 255, 0.25);
   border-radius: var(--mk-bar-button-radius, 8px);

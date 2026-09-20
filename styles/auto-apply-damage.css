@@ -201,6 +201,12 @@
   background: rgba(62, 123, 77, 0.14);
 }
 
+.chat-message .apply-damage.mk-auto-damage-locked {
+  opacity: 0.32;
+  pointer-events: none;
+  cursor: default;
+}
+
 /* -------------------------------------------- */
 /* Damage reduction and adjustment rows         */
 /* -------------------------------------------- */

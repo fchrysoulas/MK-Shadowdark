@@ -73,6 +73,89 @@ import {
     return isTerminalProcessingState(readProcessingState(message, MODULE_ID));
   }
 
+  const AUTO_DAMAGE_LOCK_CLASS = "mk-auto-damage-locked";
+
+  function isAutoDamageEnabled() {
+    try {
+      return game.settings.get(MODULE_ID, "autoDamageEnabled") === true;
+    } catch (_error) {
+      return false;
+    }
+  }
+
+  function shouldLockNativeApplyControls(message) {
+    if (!isAutoDamageEnabled()) return false;
+    if (hasLegacyProcessed(message)) return true;
+
+    const state = readProcessingState(message, MODULE_ID);
+    return state?.status === "pending" || state?.status === "complete";
+  }
+
+  function renderRoot(html) {
+    return html?.[0] ?? html;
+  }
+
+  function syncNativeApplyControls(message, html) {
+    const root = renderRoot(html);
+    if (!root?.querySelectorAll) return;
+
+    const locked = shouldLockNativeApplyControls(message);
+    for (const button of root.querySelectorAll('[data-action="apply-damage"], .apply-damage')) {
+      if (!locked) {
+        button.classList.remove(AUTO_DAMAGE_LOCK_CLASS);
+        button.removeAttribute("aria-disabled");
+        button.removeAttribute("disabled");
+        if ("disabled" in button) button.disabled = false;
+        if (button.dataset.mkAutoDamageOriginalTooltip !== undefined) {
+          const originalTooltip = button.dataset.mkAutoDamageOriginalTooltip;
+          if (originalTooltip) button.dataset.tooltip = originalTooltip;
+          else button.removeAttribute("data-tooltip");
+          delete button.dataset.mkAutoDamageOriginalTooltip;
+        }
+        if (button.dataset.mkAutoDamageOriginalTitle !== undefined) {
+          const originalTitle = button.dataset.mkAutoDamageOriginalTitle;
+          if (originalTitle) button.title = originalTitle;
+          else button.removeAttribute("title");
+          delete button.dataset.mkAutoDamageOriginalTitle;
+        }
+        if (button.dataset.mkAutoDamageOriginalTabIndex !== undefined) {
+          const originalTabIndex = button.dataset.mkAutoDamageOriginalTabIndex;
+          if (originalTabIndex) button.setAttribute("tabindex", originalTabIndex);
+          else button.removeAttribute("tabindex");
+          delete button.dataset.mkAutoDamageOriginalTabIndex;
+        }
+        delete button.dataset.mkAutoDamageLocked;
+        continue;
+      }
+
+      if (button.dataset.mkAutoDamageOriginalTooltip === undefined) {
+        button.dataset.mkAutoDamageOriginalTooltip = button.dataset.tooltip ?? "";
+      }
+      if (button.dataset.mkAutoDamageOriginalTitle === undefined) {
+        button.dataset.mkAutoDamageOriginalTitle = button.getAttribute("title") ?? "";
+      }
+      if (button.dataset.mkAutoDamageOriginalTabIndex === undefined) {
+        button.dataset.mkAutoDamageOriginalTabIndex = button.getAttribute("tabindex") ?? "";
+      }
+
+      button.classList.add(AUTO_DAMAGE_LOCK_CLASS);
+      button.dataset.mkAutoDamageLocked = "true";
+      button.setAttribute("aria-disabled", "true");
+      button.dataset.tooltip = "Auto Damage has already handled this roll.";
+      button.title = "Auto Damage has already handled this roll.";
+      button.setAttribute("tabindex", "-1");
+      if ("disabled" in button) button.disabled = true;
+
+      if (button.dataset.mkAutoDamageGuard === "true") continue;
+      button.dataset.mkAutoDamageGuard = "true";
+      button.addEventListener("click", event => {
+        if (button.dataset.mkAutoDamageLocked !== "true") return;
+        event.preventDefault();
+        event.stopImmediatePropagation();
+      }, { capture: true });
+    }
+  }
+
   const PROCESSING_MESSAGES = new Set();
   const TARGET_SNAPSHOTS = new WeakMap();
 
@@ -696,6 +779,10 @@ import {
     installTokenShakeSocket();
     adLog("ready; hooks active; primary active GM applies damage");
     void resumePendingProcessing();
+  });
+
+  Hooks.on("renderChatMessage", (message, html) => {
+    syncNativeApplyControls(message, html);
   });
 
   Hooks.on("createChatMessage", (message, options, userId) => {

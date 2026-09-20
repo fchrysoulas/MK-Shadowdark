@@ -1,7 +1,9 @@
 import {
   applyTargetsToRollConfig,
   collectValidTargets,
-  isAttackOrSpellRoll
+  findSelfTarget,
+  isAttackOrSpellRoll,
+  isSelfRangeSpell
 } from "./targeting-state.js";
 
 (() => {
@@ -40,16 +42,64 @@ import {
     return collectValidTargets(game.user?.targets ?? []);
   }
 
+  function actorIdFromUuid(uuid) {
+    const parts = String(uuid ?? "").trim().split(".");
+    return parts.length ? parts[parts.length - 1] : "";
+  }
+
+  function selfTarget(config) {
+    const actorUuid = String(config?.actorUuid ?? "").trim();
+    const actorId = actorIdFromUuid(actorUuid);
+    const configuredActor = game.actors?.get?.(actorId);
+    const character = game.user?.character;
+    const actor = configuredActor
+      ?? (character && (!actorUuid || character.uuid === actorUuid || character.id === actorId)
+        ? character
+        : null);
+    const activeTokens = actor?.getActiveTokens?.(true, true)
+      ?? actor?.getActiveTokens?.()
+      ?? [];
+    const placeableTokens = globalThis.canvas?.tokens?.placeables ?? [];
+    const tokens = [];
+    const seen = new Set();
+
+    for (const token of [...activeTokens, ...Array.from(placeableTokens)]) {
+      if (!token || seen.has(token)) continue;
+      seen.add(token);
+      tokens.push(token);
+    }
+
+    return findSelfTarget(tokens, actorUuid || character?.uuid, actor?.id || actorId);
+  }
+
   function canAssist(config) {
     return isAttackOrSpellRoll(config)
       && Boolean(globalThis.canvas?.ready)
       && Boolean(game.user);
   }
 
-  function targetPanelHtml(targets) {
-    const title = localize("MK_SHADOWDARK.targeting.targets", "Targets");
+  function targetPanelHtml(targets, { self = false } = {}) {
+    const title = self
+      ? localize("MK_SHADOWDARK.targeting.self", "Self")
+      : localize("MK_SHADOWDARK.targeting.targets", "Targets");
 
     if (!targets.length) {
+      if (self) {
+        const prompt = localize(
+          "MK_SHADOWDARK.targeting.selfDescription",
+          "This spell targets the caster automatically."
+        );
+        return `
+          <section class="mk-targeting-assistant is-ready is-self" aria-live="polite">
+            <div class="mk-targeting-assistant-heading">
+              <i class="fa-solid fa-user" aria-hidden="true"></i>
+              <strong>${escapeHtml(title)}</strong>
+            </div>
+            <p>${escapeHtml(prompt)}</p>
+          </section>
+        `;
+      }
+
       const prompt = localize(
         "MK_SHADOWDARK.targeting.choose",
         "Choose at least one target on the canvas with the Target tool (T)."
@@ -65,7 +115,9 @@ import {
       `;
     }
 
-    const primaryLabel = localize("MK_SHADOWDARK.targeting.primary", "Primary");
+    const primaryLabel = self
+      ? localize("MK_SHADOWDARK.targeting.caster", "Caster")
+      : localize("MK_SHADOWDARK.targeting.primary", "Primary");
     const targetCards = targets.map((target, index) => `
       <div class="mk-targeting-assistant-target" title="${escapeHtml(target.name)}">
         <img src="${escapeHtml(target.img)}" alt="">
@@ -74,11 +126,13 @@ import {
       </div>
     `).join("");
 
+    const headingText = self ? title : `${title} (${targets.length})`;
+
     return `
       <section class="mk-targeting-assistant is-ready" aria-live="polite">
         <div class="mk-targeting-assistant-heading">
           <i class="fa-solid fa-crosshairs" aria-hidden="true"></i>
-          <strong>${escapeHtml(title)} (${targets.length})</strong>
+          <strong>${escapeHtml(headingText)}</strong>
         </div>
         <div class="mk-targeting-assistant-list">${targetCards}</div>
       </section>
@@ -88,13 +142,15 @@ import {
   function updateDialogTargets(dialog, { prompt = false } = {}) {
     if (!canAssist(dialog?.config) || !dialog?.element) return [];
 
-    const targets = selectedTargets();
+    const self = isSelfRangeSpell(dialog.config);
+    const casterTarget = self ? selfTarget(dialog.config) : null;
+    const targets = self ? (casterTarget ? [casterTarget] : []) : selectedTargets();
     applyTargetsToRollConfig(dialog.config, targets);
     Hooks.callAll(TARGETS_CHANGED_HOOK, dialog.config, targets);
 
     let panel = dialog.element.querySelector(".mk-targeting-assistant");
     const panelWrapper = document.createElement("div");
-    panelWrapper.innerHTML = targetPanelHtml(targets).trim();
+    panelWrapper.innerHTML = targetPanelHtml(targets, { self }).trim();
     const replacement = panelWrapper.firstElementChild;
 
     if (panel) panel.replaceWith(replacement);
@@ -106,14 +162,15 @@ import {
 
     const submit = dialog.element.querySelector('button[type="submit"]');
     if (submit) {
-      submit.disabled = targets.length === 0;
-      submit.setAttribute("aria-disabled", String(targets.length === 0));
+      const requiresTarget = !self;
+      submit.disabled = requiresTarget && targets.length === 0;
+      submit.setAttribute("aria-disabled", String(requiresTarget && targets.length === 0));
     }
 
     const heading = dialog.element.querySelector("h2");
     if (heading && dialog.config.heading) heading.textContent = dialog.config.heading;
 
-    if (prompt && !targets.length && !PROMPTED_DIALOGS.has(dialog)) {
+    if (prompt && !self && !targets.length && !PROMPTED_DIALOGS.has(dialog)) {
       PROMPTED_DIALOGS.add(dialog);
       ui.notifications?.warn?.(localize(
         "MK_SHADOWDARK.targeting.warning",
@@ -156,7 +213,7 @@ import {
       const wrappedSubmit = function(event) {
         if (canAssist(this.config)) {
           const targets = updateDialogTargets(this);
-          if (!targets.length) {
+          if (!targets.length && !isSelfRangeSpell(this.config)) {
             event.preventDefault();
             ui.notifications?.warn?.(localize(
               "MK_SHADOWDARK.targeting.warning",

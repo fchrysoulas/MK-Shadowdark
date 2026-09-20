@@ -41,6 +41,19 @@ test("persisted Shadowdark roll flags are supported", () => {
   );
 });
 
+test("native Shadowdark roll config getter is preferred when available", () => {
+  const message = {
+    getFlag: (_scope, key) => key === "rollConfig"
+      ? { targetUuids: ["Scene.scene.Token.a", "Scene.scene.Token.b"] }
+      : undefined
+  };
+
+  assert.deepEqual(
+    extractShadowdarkTargetUuids(message),
+    ["Scene.scene.Token.a", "Scene.scene.Token.b"]
+  );
+});
+
 test("live targets are snapshotted as UUIDs for multi-target fallback", () => {
   const targetA = { document: { uuid: "Scene.scene.Token.a" } };
   const targetB = { document: { uuid: "Scene.scene.Token.b" } };

@@ -2,14 +2,6 @@ import {
   DEFAULT_PROFILE_ID,
   DEFAULT_PROFILES
 } from "../encounter-engine/constants.js";
-import {
-  PROFILE_MENU_DEFINITION,
-  PROFILE_SETTING,
-  PROFILE_SETTING_DEFINITION,
-  TABLE_SETTING,
-  TABLE_SETTING_DEFINITION,
-  getSurvivalWoundProfileSettingsClass
-} from "../detailed-wounds/survival-profile-settings.js";
 
 const MODULE_ID = "mk-shadowdark";
 const FEATURE_SETTINGS_TEMPLATE = `modules/${MODULE_ID}/templates/feature-settings.hbs`;
@@ -20,7 +12,7 @@ const FEATURE_MENUS = Object.freeze([
     title: "Detailed Wounds",
     hint: "Configure body-location wound tracking on Shadowdark player sheets.",
     icon: "fas fa-heart-crack",
-    settings: ["detailedWoundsEnabled", "detailedWoundsSurvivalTrigger"]
+    settings: ["detailedWoundsEnabled"]
   },
   {
     key: "initiative",
@@ -136,14 +128,6 @@ function registerMenus() {
       restricted: true
     });
   }
-
-  const SurvivalWoundProfileSettings = getSurvivalWoundProfileSettingsClass();
-  if (SurvivalWoundProfileSettings) {
-    game.settings.registerMenu(MODULE_ID, "survivalWoundProfileSettings", {
-      ...PROFILE_MENU_DEFINITION,
-      type: SurvivalWoundProfileSettings
-    });
-  }
 }
 
 Hooks.once("init", () => {
@@ -160,21 +144,6 @@ Hooks.once("init", () => {
       }
     }
   });
-  registerSetting("detailedWoundsSurvivalTrigger", {
-    name: "Detailed Wounds | Surviving 0 HP Trigger",
-    hint: "Choose whether surviving the Death Timer does nothing, prompts the GM, or automatically rolls a DC 12 CON check. A failed check uses the configured survival wound profile.",
-    scope: "world",
-    config: true,
-    type: String,
-    default: "prompt",
-    choices: {
-      off: "Off",
-      prompt: "GM Prompt",
-      automatic: "Automatic"
-    }
-  });
-  registerSetting(PROFILE_SETTING, PROFILE_SETTING_DEFINITION);
-  registerSetting(TABLE_SETTING, TABLE_SETTING_DEFINITION);
   registerSetting("detailedWoundsMigrationVersion", {
     name: "Detailed Wounds Migration Version",
     scope: "world",
@@ -348,7 +317,15 @@ Hooks.once("init", () => {
   });
   registerSetting("corpseTokenAutoRestoreWhenHealed", {
     name: "Corpse Token: Auto Restore When Healed",
-    hint: "When enabled, a corpse token is restored if its NPC HP rises above 0. Disabled by default.",
+    hint: "When enabled, a corpse token is restored if its NPC HP rises above 0.",
+    scope: "world",
+    config: true,
+    type: Boolean,
+    default: true
+  });
+  registerSetting("corpseTokenDebug", {
+    name: "Corpse Token: Debug Mode",
+    hint: "Logs detailed Corpse Token processing information to the browser console.",
     scope: "world",
     config: true,
     type: Boolean,

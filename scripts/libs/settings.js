@@ -22,7 +22,7 @@
       title: "Auto Damage",
       hint: "Configure automatic damage and healing application, timing, dice, and token feedback.",
       icon: "fas fa-heart-crack",
-      settings: ["autoDamageEnabled", "damageTraitsEnabled", "autoDamageGMOnly", "autoDamageShowDice3D", "autoDamageShakeTokens", "autoDamageDelayMs"]
+      settings: ["autoDamageEnabled", "damageTraitsEnabled", "autoDamageGMOnly", "autoDamageShakeTokens", "autoDamageDelayMs", "autoDamageDebug"]
     },
     {
       key: "tokenShadows",
@@ -36,7 +36,7 @@
       title: "Death Timer",
       hint: "Configure the character-sheet death timer button and its effect.",
       icon: "fas fa-hourglass-half",
-      settings: ["deathTimerEnabled", "deathTimerMinTurns", "deathTimerTooltip", "deathTimerIcon"]
+      settings: ["deathTimerEnabled", "deathTimerIcon", "deathTimerDebug"]
     },
     {
       key: "editableQuantity",
@@ -285,7 +285,7 @@
       settings: [
         "corpseTokenEnabled", "corpseTokenImage", "corpseTokenOnlyNpcs", "corpseTokenWidth", "corpseTokenHeight",
         "corpseTokenScale", "corpseTokenAlignVisualBottom", "corpseTokenYOffset", "corpseTokenApplyDelayMs",
-        "corpseTokenPostChatMessage", "corpseTokenScanOnCanvasReady", "corpseTokenAutoRestoreWhenHealed"
+        "corpseTokenPostChatMessage", "corpseTokenScanOnCanvasReady", "corpseTokenAutoRestoreWhenHealed", "corpseTokenDebug"
       ]
     }
   ];
@@ -661,15 +661,6 @@
       default: true
     });
 
-    registerSetting("autoDamageShowDice3D", {
-      name: "Auto Damage | Show 3D Dice",
-      hint: "If Dice So Nice is installed, show a 3D roll for auto-generated damage dice.",
-      scope: "world",
-      config: true,
-      type: Boolean,
-      default: true
-    });
-
     registerSetting("autoDamageShakeTokens", {
       name: "Auto Damage | Shake Damaged Tokens",
       hint: "When a token takes auto-applied damage, briefly shake it on the canvas.",
@@ -691,6 +682,15 @@
         max: 5000,
         step: 50
       }
+    });
+
+    registerSetting("autoDamageDebug", {
+      name: "Auto Damage | Debug Mode",
+      hint: "Logs detailed Auto Damage processing information to the browser console.",
+      scope: "world",
+      config: true,
+      type: Boolean,
+      default: false
     });
 
     /* -------------------- */
@@ -811,30 +811,6 @@
       onChange: refreshOpenActorSheets
     });
 
-    registerSetting("deathTimerMinTurns", {
-      name: "Death Timer | Minimum Turns",
-      hint: "Minimum number of turns a new Death Timer can start with.",
-      scope: "world",
-      config: true,
-      type: Number,
-      default: 1,
-      range: {
-        min: 1,
-        max: 10,
-        step: 1
-      }
-    });
-
-    registerSetting("deathTimerTooltip", {
-      name: "Death Timer | Tooltip Text",
-      hint: "Tooltip shown when hovering the DT Summary Bar control.",
-      scope: "world",
-      config: true,
-      type: String,
-      default: "Death Timer",
-      onChange: refreshOpenActorSheets
-    });
-
     registerSetting("deathTimerIcon", {
       name: "Death Timer | Icon Class",
       hint: "Font Awesome icon class for the DT Summary Bar control. Example: fa-solid fa-skull.",
@@ -843,6 +819,15 @@
       type: String,
       default: "fa-solid fa-skull",
       onChange: refreshOpenActorSheets
+    });
+
+    registerSetting("deathTimerDebug", {
+      name: "Death Timer | Debug Mode",
+      hint: "Writes detailed Death Timer damage, authority, and state diagnostics to the browser console.",
+      scope: "world",
+      config: true,
+      type: Boolean,
+      default: false
     });
 
     /* -------------------- */
@@ -936,7 +921,7 @@
 
     registerSetting("focusTrackerSummaryBar", {
       name: "Focus Tracker | Actor Sheet Display",
-      hint: "Show active Focus spells in the MK-Shadowdark summary bar, with a sheet-header fallback.",
+      hint: "Show active Focus spells at the start of the actor's Spells tab, before Spells Known.",
       scope: "client",
       config: true,
       type: Boolean,

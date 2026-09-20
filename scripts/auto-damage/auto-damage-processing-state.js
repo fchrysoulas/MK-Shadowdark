@@ -14,6 +14,19 @@ function normalizeTarget(target) {
   const state = ["planned", "applied", "conflict"].includes(target?.state)
     ? target.state
     : "planned";
+  const operation = target?.operation === "healing" ? "healing" : "damage";
+  const amount = Math.max(0, finiteNumber(target?.amount, 0));
+  const reduction = Math.max(0, finiteNumber(target?.reduction, 0));
+  const damageIncrease = Math.max(0, finiteNumber(target?.damageIncrease, 0));
+  const effectiveAmount = Math.max(
+    0,
+    finiteNumber(
+      target?.effectiveAmount,
+      operation === "damage"
+        ? amount - reduction + damageIncrease
+        : amount
+    )
+  );
 
   return {
     uuid: String(target?.uuid ?? ""),
@@ -22,12 +35,13 @@ function normalizeTarget(target) {
     beforeHp: finiteNumber(target?.beforeHp, 0),
     afterHp: finiteNumber(target?.afterHp, 0),
     appliedAmount: Math.max(0, finiteNumber(target?.appliedAmount, 0)),
-    operation: target?.operation === "healing" ? "healing" : "damage",
+    operation,
     actorName: String(target?.actorName ?? ""),
     tokenId: String(target?.tokenId ?? ""),
-    amount: Math.max(0, finiteNumber(target?.amount, 0)),
-    reduction: Math.max(0, finiteNumber(target?.reduction, 0)),
-    damageIncrease: Math.max(0, finiteNumber(target?.damageIncrease, 0)),
+    amount,
+    effectiveAmount,
+    reduction,
+    damageIncrease,
     traitMode: target?.traitMode ?? null,
     propertyNames: Array.from(target?.propertyNames ?? []).map(value => String(value)),
     conflictReason: target?.conflictReason ? String(target.conflictReason) : null,
@@ -120,6 +134,7 @@ async function runProcessingState(state, {
   applyTarget,
   persistState,
   onApplied = null,
+  onPromoted = null,
   onConflict = null
 } = {}) {
   let working = normalizeProcessingState(state);
@@ -160,6 +175,10 @@ async function runProcessingState(state, {
 
     if (action === "apply") {
       await applyTarget(target);
+    }
+
+    if (action === "promote") {
+      await onPromoted?.(target);
     }
 
     const appliedTarget = {

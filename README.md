@@ -61,10 +61,11 @@ The old **MK-Shadowdark GM Screen Mock** prototype is not a dependency and is no
 
 - **Character Dashboard spell casting** -- self-range spells selected from the paper-doll Spells popup automatically target the caster's active token.
 
-- **Auto Damage** — applies targeted attack/spell damage or healing with Shadowdark damage properties and optional token shake feedback.
+- **Auto Damage** — applies targeted attack/spell damage or healing from Shadowdark's native main and damage rolls, routes HP changes through the native `Actor.applyDamage` API, and supports Shadowdark damage properties with optional token shake feedback. Custom chat text without a native damage roll is ignored. Enable Auto Damage Debug Mode when detailed browser-console processing logs are needed.
 - **Damage Traits** — Resistance, Immunity, and Vulnerability through Shadowdark Properties and transferring effects.
-- **Targeting Assistant** — validates and preserves selected targets for attack/spell automation.
-- **Death Timer** — manages Shadowdark death timers while death itself uses Foundry's native Dead status.
+- **Targeting Assistant** — validates and preserves selected targets for attack/spell automation. Self-range spells automatically use the casting character's active token and do not require a manual target.
+- **Spell Effects** — successful targeted spells apply linked Shadowdark Spell Effect items to every selected target, including their duration and embedded Active Effects. Focus sessions retain their cast targets and remove the linked effect when Focus ends or breaks.
+- **Death Timer** — manages Shadowdark death timers while death itself uses Foundry's native Dead status. Death checks use Shadowdark's normal/advantage/disadvantage prompt. Damage reduces an active timer by 1, or by 2 for a critical hit, with the reduction posted to chat. Auto Damage retry recovery also handles HP changes that completed before a pending transaction resumed. Enable Death Timer Debug Mode for detailed browser-console diagnostics.
 - Player characters are marked Dead when their effective CON reaches 0, including reductions from wound penalties.
 - **Detailed Wounds** — shows active injuries below character Stats and opens a GM-managed six-zone wound board. A `2d10` roll selects one of Head, Right/Left Arm, Body, or Right/Left Leg and then resolves a location-specific severity result, including stored rest durations, CON saves, native Dead status, automatic ability penalties, and named consequences in Group status summaries. The collapsed Wound History panel records optional informational timestamps, session markers, source notes, and outcome transitions; GMs can add, edit, or remove history without changing the mechanical wound record.
 - **Character Dashboard** — an alternative player sheet selected through **Sheet Configuration → This Sheet → MK-Shadowdark: Character Dashboard**. Its themeable Midnight Cyan or Ashen OSR overview shows the character portrait, core stats, a paper-doll Armor Class badge, a side Luck toggle, clickable ability checks, live Detailed Wounds markers, hand equipment, body armor, three paper-doll Quick Slots, a Backpack with empty boxes for available gear slots, and the editable character details. Drag existing gear onto the hand or torso slots to assign it; drag any Item type into a Quick Slot for one-click access, including items from native inventory lists, other actors, world items, or compendiums. Other body locations appear only when wounded. Native Shadowdark combat, inventory, spells, talents, effects and notes remain available in the top tabs. No launch button is added to the standard sheet.
@@ -544,6 +545,8 @@ Token Equipment Display uses the same equipped/stashed/handedness rules as Equip
 # Focus Tracker
 
 Focus Tracker integrates with Shadowdark 4.x spellcasting. Successful Focus spells start tracked sessions; failed maintenance checks end Focus, and critical failures can also mark the spell lost for the day.
+
+Active Focus spells appear at the start of the actor sheet's Spells tab, before Spells Known, with the current Focus capacity, spell name, maintenance status, pending-check count, and direct Check, Open, and End controls. Focus maintenance checks do not require a canvas target; the initial Focus spell cast still uses normal spell targeting, except Self spells that automatically target the caster. Chat reminders use the same explicit actions; hold Shift while choosing Check to skip the native prompt when appropriate.
 
 The public API is available at:
 

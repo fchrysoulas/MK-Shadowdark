@@ -9,6 +9,8 @@ import {
 } from "./token-shake.js";
 import {
   calculateHpChange,
+  extractNativeDamage,
+  hasShadowdarkDamageApplied,
   resolveAutoDamageOperation
 } from "./auto-damage-operation.js";
 import {
@@ -28,23 +30,17 @@ import {
     return mod?.version ?? mod?.data?.version ?? "unknown";
   }
 
-  function adLog(...args) {
-    console.log(`${MODULE_ID} | ${SUBMODULE} v${getModuleVersion()} |`, ...args);
+  function isDebugEnabled() {
+    try {
+      return Boolean(game.settings.get(MODULE_ID, "autoDamageDebug"));
+    } catch (_error) {
+      return false;
+    }
   }
 
-  function htmlToText(html) {
-    if (!html) return "";
-    html = html
-      .replace(/<br\s*\/?>/gi, "\n")
-      .replace(/<\/p>/gi, "\n</p>");
-
-    const div = document.createElement("div");
-    div.innerHTML = html;
-
-    let text = div.textContent || div.innerText || "";
-    text = text.replace(/[ \t]+/g, " ");
-    text = text.replace(/\n+/g, "\n");
-    return text.trim();
+  function adLog(...args) {
+    if (!isDebugEnabled()) return;
+    console.log(`${MODULE_ID} | ${SUBMODULE} v${getModuleVersion()} |`, ...args);
   }
 
   function escapeHtml(value) {
@@ -73,6 +69,7 @@ import {
 
   function hasAutoDamageProcessed(message) {
     if (hasLegacyProcessed(message, MODULE_ID)) return true;
+    if (hasShadowdarkDamageApplied(message)) return true;
     return isTerminalProcessingState(readProcessingState(message, MODULE_ID));
   }
 
@@ -148,247 +145,14 @@ import {
     }
   }
 
-  function detectOutcomeFromFlags(message) {
-    const flags = message?.flags?.shadowdark;
-    if (!flags || typeof flags !== "object") return null;
-
-    let outcome = null;
-
-    function walk(obj) {
-      if (!obj || typeof obj !== "object" || outcome) return;
-
-      for (const [key, value] of Object.entries(obj)) {
-        if (outcome) break;
-
-        if (typeof value === "string") {
-          const lower = value.toLowerCase();
-          if (lower.includes("critical failure")) {
-            outcome = "failure";
-            break;
-          }
-          if (lower.includes("critical success")) {
-            outcome = "success";
-            break;
-          }
-          if (/\bsuccess\b/.test(lower)) outcome ??= "success";
-          if (/\bfailure\b/.test(lower) || lower.includes("spell lost")) {
-            outcome ??= "failure";
-          }
-        } else if (typeof value === "boolean" && key.toLowerCase().includes("success")) {
-          outcome = value ? "success" : "failure";
-        } else if (typeof value === "object") {
-          walk(value);
-        }
-      }
-    }
-
-    walk(flags);
-    return outcome;
-  }
-
-  function extractDamageAndOutcome(message) {
-    const raw = `${message.flavor ?? ""} ${message.content ?? ""}`;
-    const text = htmlToText(raw);
-    const lower = text.toLowerCase();
-
-    const debug = { text };
-    let damageTotal = null;
-    let damageSource = null;
-
-    const messageRolls = Array.from(message?.rolls ?? []);
-    const mainRoll = messageRolls.find(roll => roll?.options?.type === "main");
-    const damageRoll = messageRolls.find(roll => roll?.options?.type === "damage");
-
-    if (damageRoll) {
-      const total = Number(damageRoll.total);
-      if (Number.isFinite(total) && total > 0) {
-        damageTotal = total;
-        damageSource = "shadowdark-v4-damage-roll";
-      }
-    }
-
-    const isWeaponCard = /Type:\s*(Melee|Ranged|Missile|Thrown)/i.test(text);
-    debug.isWeaponCard = isWeaponCard;
-
-    if (damageTotal == null && isWeaponCard) {
-      const dmgIdx = text.indexOf("Damage");
-      if (dmgIdx !== -1) {
-        const segment = text.slice(dmgIdx);
-        const nums = segment.match(/\b\d+\b/g);
-
-        if (nums && nums.length) {
-          const last = Number(nums[nums.length - 1]);
-          if (Number.isFinite(last) && last > 0) {
-            damageTotal = last;
-            damageSource = "weapon-text-after-Damage";
-            debug.damageSegment = segment;
-            debug.parsedNumbers = nums;
-          } else {
-            debug.reason = "weapon damage segment numbers were non-positive/NaN";
-            debug.damageSegment = segment;
-            debug.parsedNumbers = nums;
-          }
-        } else {
-          debug.reason = "weapon damage segment had no numbers";
-          debug.damageSegment = segment;
-        }
-      } else {
-        debug.reason = "weapon card had no 'Damage' label";
-      }
-    }
-
-    let outcome = detectOutcomeFromFlags(message);
-
-    if (!outcome && mainRoll) {
-      if (mainRoll.success === true) outcome = "success";
-      else if (mainRoll.success === false) outcome = "failure";
-    }
-
-    if (!outcome) {
-      const hasSuccessWord =
-        /\bsuccess\b/.test(lower) || lower.includes("critical success");
-      const hasFailureWord =
-        /\bfailure\b/.test(lower) ||
-        lower.includes("critical failure") ||
-        lower.includes("spell lost");
-
-      if (hasSuccessWord && !hasFailureWord) outcome = "success";
-      else if (hasFailureWord && !hasSuccessWord) outcome = "failure";
-      else outcome = null;
-
-      debug.hasSuccessWord = hasSuccessWord;
-      debug.hasFailureWord = hasFailureWord;
-    }
-
-    if (damageTotal == null && !debug.reason) {
-      debug.reason = "no weapon-style damage detected";
-    }
-
-    debug.damage = damageTotal;
-    debug.outcome = outcome;
-    debug.damageSource = damageSource;
-
-    return { damage: damageTotal, outcome, debug };
-  }
-
-  async function rollFormulaForDamage(formula) {
-    const cleanFormula = formula.trim();
-    const roll = new Roll(cleanFormula);
-
-    await roll.evaluate();
-
-    if (!Number.isFinite(roll.total) || roll.total <= 0) return null;
-
-    try {
-      if (
-        game.dice3d &&
-        game.settings?.get(MODULE_ID, "autoDamageShowDice3D")
-      ) {
-        await game.dice3d.showForRoll(roll, game.user, true);
-      }
-    } catch (err) {
-      console.error(
-        `${MODULE_ID} | ${SUBMODULE} v${getModuleVersion()} | Error showing 3D dice`,
-        err
-      );
-    }
-
-    const html = await roll.render();
-    return {
-      total: roll.total,
-      formula: cleanFormula,
-      html,
-      roll
-    };
-  }
-
-  async function rollDamageFromDealXdX(message) {
-    const raw = `${message.flavor ?? ""} ${message.content ?? ""}`;
-    const text = htmlToText(raw);
-
-    let re = /\b(?:deal(?:s)?|dealing)\s+(\[\[(?:\/r\s*)?([^\]]+)\]\])\s+damage\b/i;
-    let m = text.match(re);
-    if (m) {
-      let inner = m[2].trim();
-      if (inner.startsWith("/r")) inner = inner.slice(2).trim();
-
-      try {
-        const rolled = await rollFormulaForDamage(inner);
-        if (!rolled) return null;
-        return {
-          ...rolled,
-          matchText: m[0],
-          text
-        };
-      } catch (err) {
-        console.error(
-          `${MODULE_ID} | ${SUBMODULE} v${getModuleVersion()} | Error rolling formula "${inner}"`,
-          err
-        );
-        return null;
-      }
-    }
-
-    re = /\b(?:deal(?:s)?|dealing)\s+(\d+d\d+(?:\s*[+-]\s*\d+)*)\s+damage\b/i;
-    m = text.match(re);
-    if (m) {
-      const inner = m[1].replace(/\s+/g, "");
-      try {
-        const rolled = await rollFormulaForDamage(inner);
-        if (!rolled) return null;
-        return {
-          ...rolled,
-          matchText: m[0],
-          text
-        };
-      } catch (err) {
-        console.error(
-          `${MODULE_ID} | ${SUBMODULE} v${getModuleVersion()} | Error rolling formula "${inner}"`,
-          err
-        );
-        return null;
-      }
-    }
-
-    return null;
-  }
-
-  async function rollDamageFromInlineDamage(message) {
-    const raw = `${message.flavor ?? ""} ${message.content ?? ""}`;
-    const text = htmlToText(raw);
-
-    const re = /\[\[(?:\/r\s*)?([^\]]+)\]\]\s+damage\b/i;
-    const m = text.match(re);
-    if (!m) return null;
-
-    let inner = m[1].trim();
-    if (inner.startsWith("/r")) inner = inner.slice(2).trim();
-
-    try {
-      const rolled = await rollFormulaForDamage(inner);
-      if (!rolled) return null;
-      return {
-        ...rolled,
-        matchText: m[0],
-        text
-      };
-    } catch (err) {
-      console.error(
-        `${MODULE_ID} | ${SUBMODULE} v${getModuleVersion()} | Error rolling inline formula "${inner}"`,
-        err
-      );
-      return null;
-    }
-  }
-
   function resolveHpField(actor) {
     const paths = [
-      ["system.hp.value", "system.hp.max"],
-      ["system.hp.current", "system.hp.max"],
-      ["system.hp", null],
       ["system.attributes.hp.value", "system.attributes.hp.max"],
       ["system.attributes.hp.hp", "system.attributes.hp.max"],
-      ["system.attributes.hp", null]
+      ["system.attributes.hp", null],
+      ["system.hp.value", "system.hp.max"],
+      ["system.hp.current", "system.hp.max"],
+      ["system.hp", null]
     ];
 
     for (const [path, maxPath] of paths) {
@@ -478,10 +242,11 @@ import {
       const adjustedAmount = operation === "damage"
         ? reducedDamage ?? Math.max(0, amount - reduction)
         : amount;
+      const effectiveAmount = Math.max(0, Math.floor(Number(adjustedAmount) || 0));
       const { newHP, appliedAmount } = calculateHpChange(
         currentHP,
         maxHP,
-        adjustedAmount,
+        effectiveAmount,
         operation
       );
 
@@ -496,6 +261,7 @@ import {
         actorName: actor.name,
         tokenId,
         amount,
+        effectiveAmount,
         reduction,
         damageIncrease,
         traitMode,
@@ -521,18 +287,84 @@ import {
     return value;
   }
 
-  async function applyPlannedTarget(target) {
+  async function waitForPlannedHp(actor, target, attempts = 40, delayMs = 25) {
+    // Shadowdark's Actor.applyDamage starts Actor.update without awaiting it.
+    for (let attempt = 0; attempt < attempts; attempt += 1) {
+      let value = foundry.utils.getProperty(actor, target.hpPath);
+      if (typeof value === "string") value = Number(value);
+      if (value === target.afterHp) return true;
+      await sleep(delayMs);
+    }
+    return false;
+  }
+
+  function getDeathTimerApi() {
+    return game.modules.get(MODULE_ID)?.api?.deathTimer
+      ?? globalThis.MKShadowdarkDeathTimer;
+  }
+
+  function getDeathTimerDamageContext(message, target, critical) {
+    return {
+      critical,
+      sourceId: message.id,
+      deduplicate: true,
+      dedupeKey: `${message.id}:${target.uuid}`
+    };
+  }
+
+  async function recoverPromotedDeathTimerDamage(message, target, critical) {
+    if (target.operation !== "damage" || target.effectiveAmount <= 0) return;
+
+    const { actor } = await resolvePlannedTarget(target);
+    const deathTimerApi = getDeathTimerApi();
+    if (typeof deathTimerApi?.recordDamage !== "function") {
+      adLog(`Message ${message.id}: Death Timer recovery API unavailable for promoted target ${target.uuid}.`);
+      return;
+    }
+
+    adLog(`Message ${message.id}: recovering Death Timer damage for promoted target ${target.uuid}.`);
+    await deathTimerApi.recordDamage(actor, getDeathTimerDamageContext(message, target, critical));
+  }
+
+  async function applyPlannedTarget(target, damageContext = {}) {
     const { token, actor } = await resolvePlannedTarget(target);
 
     adLog(
       `Token ${target.tokenId} (${target.actorName}): HP via "${target.hpPath}" ${target.beforeHp} -> ${target.afterHp} ` +
       (target.operation === "healing"
-        ? `(healing ${target.amount}, applied ${target.appliedAmount})`
-        : `(damage ${target.amount}, trait ${target.traitMode ?? "none"}, applied ${target.appliedAmount})`)
+        ? `(healing ${target.amount}, native ${target.effectiveAmount}, applied ${target.appliedAmount})`
+        : `(damage ${target.amount}, native ${target.effectiveAmount}, trait ${target.traitMode ?? "none"}, applied ${target.appliedAmount})`)
     );
 
-    if (target.afterHp !== target.beforeHp) {
-      await actor.update({ [target.hpPath]: target.afterHp });
+    if (target.effectiveAmount > 0) {
+      if (typeof actor.applyDamage !== "function") {
+        throw new Error(`Target ${target.uuid} does not expose Shadowdark applyDamage.`);
+      }
+
+      const nativeAmount = target.operation === "healing"
+        ? -target.effectiveAmount
+        : target.effectiveAmount;
+      const applyDamage = () => actor.applyDamage(nativeAmount);
+
+      if (target.operation === "damage") {
+        const deathTimerApi = getDeathTimerApi();
+        if (typeof deathTimerApi?.withDamageContext === "function") {
+          await deathTimerApi.withDamageContext(actor, damageContext, applyDamage);
+        } else {
+          adLog(
+            `Death Timer API unavailable while applying damage to ${target.uuid} ` +
+            `(source ${damageContext.sourceId ?? "unknown"}).`
+          );
+          await applyDamage();
+        }
+      } else {
+        await applyDamage();
+      }
+
+      // Do not promote the retry record until the native document update is visible.
+      if (!(await waitForPlannedHp(actor, target))) {
+        throw new Error(`Target ${target.uuid} did not reach planned HP ${target.afterHp}.`);
+      }
     }
 
     if (game.settings.get(MODULE_ID, "autoDamageShakeTokens") && target.afterHp < target.beforeHp) {
@@ -560,10 +392,13 @@ import {
       }));
   }
 
-  async function applyProcessingPlan(message, state) {
+  async function applyProcessingPlan(message, state, { critical = false } = {}) {
     const finalState = await runProcessingState(state, {
       readCurrentHp: readPlannedHp,
-      applyTarget: applyPlannedTarget,
+      applyTarget: target => applyPlannedTarget(target, {
+        ...getDeathTimerDamageContext(message, target, critical)
+      }),
+      onPromoted: target => recoverPromotedDeathTimerDamage(message, target, critical),
       persistState: nextState => persistProcessingState(message, nextState),
       onConflict: async target => {
         const hpDetail = Number.isFinite(target.observedHp) ? ` Current HP is ${target.observedHp}.` : "";
@@ -578,13 +413,26 @@ import {
     });
 
     if (finalState.status === "complete") {
+      let moduleFlagWritten = false;
       try {
         await message.setFlag(MODULE_ID, "autoDamageProcessed", true);
+        moduleFlagWritten = true;
       } catch (err) {
         console.error(
           `${MODULE_ID} | ${SUBMODULE} v${getModuleVersion()} | Could not set legacy processed flag on message ${message.id}`,
           err
         );
+      }
+
+      if (moduleFlagWritten) {
+        try {
+          await message.setFlag("shadowdark", "damageApplied", true);
+        } catch (err) {
+          console.error(
+            `${MODULE_ID} | ${SUBMODULE} v${getModuleVersion()} | Could not set Shadowdark damage-applied flag on message ${message.id}`,
+            err
+          );
+        }
       }
     }
 
@@ -712,9 +560,12 @@ import {
       await persistTargetSnapshot(message, targetUuids);
 
       let processingState = readProcessingState(message, MODULE_ID);
+      const nativeDamage = extractNativeDamage(message);
       if (processingState) {
         adLog(`Message ${message.id}: resuming pending auto-damage processing state.`);
-        processingState = await applyProcessingPlan(message, processingState);
+        processingState = await applyProcessingPlan(message, processingState, {
+          critical: nativeDamage.critical
+        });
 
         if (processingState.display) {
           await appendDamageDisplayToMessage(message, processingState.display, processingState.operation);
@@ -728,7 +579,6 @@ import {
         return;
       }
 
-      let damageDisplay = null;
       const operation = await resolveAutoDamageOperation(message);
 
       if (!operation) {
@@ -736,52 +586,11 @@ import {
         return;
       }
 
-      let { damage, outcome, debug } = extractDamageAndOutcome(message);
-
-      if (damage == null) {
-        const dealResult = await rollDamageFromDealXdX(message);
-        if (dealResult) {
-          damage = dealResult.total;
-          damageDisplay = {
-            total: dealResult.total,
-            formula: dealResult.formula,
-            html: dealResult.html
-          };
-          debug = {
-            ...(debug || {}),
-            text: dealResult.text,
-            damage,
-            damageSource: "deal-xdx",
-            formula: dealResult.formula,
-            matchText: dealResult.matchText
-          };
-        }
-      }
-
-      if (damage == null) {
-        const inlineResult = await rollDamageFromInlineDamage(message);
-        if (inlineResult) {
-          damage = inlineResult.total;
-          damageDisplay = {
-            total: inlineResult.total,
-            formula: inlineResult.formula,
-            html: inlineResult.html
-          };
-          debug = {
-            ...(debug || {}),
-            text: inlineResult.text,
-            damage,
-            damageSource: "inline-damage",
-            formula: inlineResult.formula,
-            matchText: inlineResult.matchText
-          };
-        }
-      }
+      const { damage, outcome, critical, debug } = nativeDamage;
 
       if (damage == null) {
         adLog(
-          `Message ${message.id}: no ${operation} amount detected (${context.source ?? "unknown"});`,
-          debug?.reason ?? "no reason",
+          `Message ${message.id}: no native Shadowdark ${operation} roll detected (${context.source ?? "unknown"});`,
           debug
         );
         return;
@@ -839,13 +648,12 @@ import {
         damage,
         operation,
         sourceContext,
-        targetUuids,
-        damageDisplay
+        targetUuids
       );
 
       // Persist the complete target plan before the first Actor HP update.
       await persistProcessingState(message, processingState);
-      processingState = await applyProcessingPlan(message, processingState);
+      processingState = await applyProcessingPlan(message, processingState, { critical });
 
       if (processingState.display) {
         await appendDamageDisplayToMessage(message, processingState.display, operation);
@@ -873,6 +681,7 @@ import {
 
     for (const message of messages) {
       if (hasLegacyProcessed(message, MODULE_ID)) continue;
+      if (hasShadowdarkDamageApplied(message)) continue;
       const state = readProcessingState(message, MODULE_ID);
       if (state?.status !== "pending") continue;
       await handleChatMessage(message, { source: "ready-resume" });

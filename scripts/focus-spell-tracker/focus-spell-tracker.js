@@ -1,5 +1,9 @@
 import { onCharacterSheetRender } from "../libs/sheet-render-adapter.js";
 import { planLegacyFocusMigration } from "./focus-migration.js";
+import {
+  captureSpellEffectLink,
+  spellTargetUuids
+} from "../spell-effects/spell-effects-logic.js";
 
 // Tracks Shadowdark 4.x Focus spells, checks, chat actions, and token status effects.
 (() => {
@@ -111,6 +115,10 @@ import { planLegacyFocusMigration } from "./focus-migration.js";
         sourceItemData: session.sourceItemData && typeof session.sourceItemData === "object"
           ? clone(session.sourceItemData)
           : null,
+        effectCastId: session.effectCastId || null,
+        effectTargetUuids: Array.isArray(session.effectTargetUuids)
+          ? spellTargetUuids({ targetUuids: session.effectTargetUuids })
+          : [],
         tier: Number.isFinite(Number(session.tier)) ? Number(session.tier) : null,
         pendingChecks: Array.isArray(session.pendingChecks)
           ? session.pendingChecks.filter(Boolean).map(check => ({
@@ -500,6 +508,8 @@ import { planLegacyFocusMigration } from "./focus-migration.js";
       sourceItemUuid: sourceItem?.uuid ?? displayDocument?.uuid ?? null,
       sourceItemId: sourceItem?.id ?? displayDocument?.id ?? null,
       sourceItemData: itemSnapshot(sourceItem ?? displayDocument),
+      effectCastId: null,
+      effectTargetUuids: [],
       tier: Number.isFinite(tier) ? tier : null,
       pendingChecks: [],
       lastTurnKey: null,
@@ -543,6 +553,10 @@ import { planLegacyFocusMigration } from "./focus-migration.js";
       sourceItem,
       criticalSuccess: options.criticalSuccess
     });
+    session.effectCastId = options.effectCastId ?? null;
+    session.effectTargetUuids = spellTargetUuids({
+      targetUuids: options.effectTargetUuids ?? []
+    });
 
     state.sessions.push(session);
     if (!await setState(actor, state)) return null;
@@ -556,7 +570,7 @@ import { planLegacyFocusMigration } from "./focus-migration.js";
     return session;
   }
 
-  async function startFocusFromContext(context, criticalSuccess = false) {
+  async function startFocusFromContext(context, criticalSuccess = false, effectLink = {}) {
     const actor = context?.actor;
     if (!actor) return null;
 
@@ -567,8 +581,30 @@ import { planLegacyFocusMigration } from "./focus-migration.js";
     return startFocus(actor, context.spell ?? context.sourceItem, {
       spell: context.spell,
       sourceItem: context.sourceItem,
-      criticalSuccess
+      criticalSuccess,
+      effectCastId: effectLink.effectCastId ?? null,
+      effectTargetUuids: effectLink.effectTargetUuids ?? []
     });
+  }
+
+  async function removeTrackedSpellEffect(session) {
+    if (!session?.effectCastId || !session.effectTargetUuids?.length) return null;
+
+    const spellEffectsApi = game.modules.get(MODULE_ID)?.api?.spellEffects;
+    if (typeof spellEffectsApi?.removeForFocus !== "function") {
+      warn(`Could not remove the tracked Spell Effect for ${session.name}: Spell Effects API unavailable.`);
+      return null;
+    }
+
+    try {
+      return await spellEffectsApi.removeForFocus({
+        castId: session.effectCastId,
+        targetUuids: session.effectTargetUuids
+      });
+    } catch (error) {
+      warn(`Could not remove the tracked Spell Effect for ${session.name}`, error);
+      return null;
+    }
   }
 
   async function endFocus(actor, sessionId = null, options = {}) {
@@ -581,6 +617,7 @@ import { planLegacyFocusMigration } from "./focus-migration.js";
 
     state.sessions = state.sessions.filter(entry => entry.id !== session.id);
     if (!await setState(actor, state)) return false;
+    await removeTrackedSpellEffect(session);
 
     const reason = options.reason ?? "manual";
     const reasonText = {
@@ -737,8 +774,8 @@ import { planLegacyFocusMigration } from "./focus-migration.js";
     const content = renderChatCard(actor, session, {
       heading: kind === "started" ? "Focus Begun" : "Focus Ended",
       text,
-      meta: null,
-      showHeader: kind !== "started",
+      meta: kind === "started" ? "Active Focus" : "Focus session ended",
+      showHeader: true,
       actions: kind === "started"
         ? [
           { action: "check", label: "Focus Check", icon: "fa-solid fa-dice-d20" },
@@ -764,10 +801,13 @@ import { planLegacyFocusMigration } from "./focus-migration.js";
     const buttons = actions.map(action => `
       <button
         type="button"
+        class="mk-focus-chat-card__action mk-focus-chat-card__action--${escapeHtml(action.action)}"
         data-mk-focus-action="${escapeHtml(action.action)}"
         data-actor-uuid="${escapeHtml(actor.uuid)}"
         data-session-id="${escapeHtml(session.id)}"
         ${action.checkId ? `data-check-id="${escapeHtml(action.checkId)}"` : ""}
+        aria-label="${escapeHtml(action.label)} ${escapeHtml(session.name)}"
+        title="${escapeHtml(action.label)}"
       >
         <i class="${escapeHtml(action.icon)}" aria-hidden="true"></i>
         <span>${escapeHtml(action.label)}</span>
@@ -775,19 +815,20 @@ import { planLegacyFocusMigration } from "./focus-migration.js";
     `).join("");
 
     return `
-      <section class="mk-focus-chat-card" data-mk-focus-session="${escapeHtml(session.id)}">
+      <section class="mk-focus-chat-card" data-mk-focus-session="${escapeHtml(session.id)}" aria-label="${escapeHtml(heading)} for ${escapeHtml(session.name)}">
         ${showHeader ? `
           <header class="mk-focus-chat-card__header">
             <img src="${escapeHtml(session.img)}" alt="" />
-            <div>
+            <div class="mk-focus-chat-card__header-copy">
+              <span class="mk-focus-chat-card__eyebrow">Focus Tracker</span>
               <h3>${escapeHtml(heading)}</h3>
-              <strong>${escapeHtml(session.name)}</strong>
+              <strong class="mk-focus-chat-card__spell">${escapeHtml(session.name)}</strong>
             </div>
           </header>
         ` : ""}
         <div class="mk-focus-chat-card__body">
           ${text ? `<p>${escapeHtml(text)}</p>` : ""}
-          ${meta ? `<p class="mk-focus-chat-card__meta">${escapeHtml(meta)}</p>` : ""}
+          ${meta ? `<p class="mk-focus-chat-card__meta"><i class="fa-solid fa-circle-info" aria-hidden="true"></i><span>${escapeHtml(meta)}</span></p>` : ""}
           ${buttons ? `<div class="mk-focus-chat-card__actions">${buttons}</div>` : ""}
         </div>
       </section>
@@ -962,38 +1003,151 @@ import { planLegacyFocusMigration } from "./focus-migration.js";
     });
   }
 
-  function summaryTooltip(session) {
+  function summaryStatus(session) {
     const pending = session.pendingChecks.length;
-    const due = pending
+    return pending
       ? `${pending} check${pending === 1 ? "" : "s"} due`
-      : "No check currently due";
-    return `${session.name} - ${due}. Left-click to check, Shift-click to open, right-click to end.`;
+      : "Maintaining";
   }
 
-  function createSummaryChip(actor, session) {
+  function createSummaryAction(actor, session, action, label, icon) {
     const button = document.createElement("button");
     button.type = "button";
-    button.className = "mk-focus-summary-chip";
-    if (session.pendingChecks.length) button.classList.add("mk-focus-check-due");
-    button.dataset.sessionId = session.id;
-    button.title = summaryTooltip(session);
-    button.setAttribute("aria-label", summaryTooltip(session));
-    button.innerHTML = `<img class="mk-focus-summary-chip__icon" src="${FOCUS_ICON}" alt="" />`;
+    button.className = `mk-focus-summary-action mk-focus-summary-action--${action}`;
+    button.dataset.mkFocusAction = action;
+    button.title = action === "check"
+      ? `${label} ${session.name} (hold Shift to skip the prompt)`
+      : `${label} ${session.name}`;
+    button.setAttribute("aria-label", `${label} ${session.name}`);
+    button.innerHTML = `<i class="${escapeHtml(icon)}" aria-hidden="true"></i><span class="mk-focus-summary-action__label">${escapeHtml(label)}</span>`;
 
     button.addEventListener("click", event => {
       event.preventDefault();
       event.stopPropagation();
-      if (event.shiftKey) void openSessionSource(actor, session.id);
-      else void rollFocusCheck(actor, session.id, { fastForward: false });
-    });
-
-    button.addEventListener("contextmenu", event => {
-      event.preventDefault();
-      event.stopPropagation();
-      void endFocus(actor, session.id, { reason: "manual" });
+      if (action === "check") {
+        void rollFocusCheck(actor, session.id, { fastForward: Boolean(event.shiftKey) });
+      } else if (action === "open") {
+        void openSessionSource(actor, session.id);
+      } else if (action === "end") {
+        void endFocus(actor, session.id, { reason: "manual" });
+      }
     });
 
     return button;
+  }
+
+  function createSummaryHeading(sessions, capacity) {
+    const heading = document.createElement("div");
+    heading.className = "mk-focus-summary-heading";
+    heading.setAttribute("aria-label", `Focus capacity: ${sessions.length} of ${capacity}`);
+    heading.innerHTML = `
+      <img class="mk-focus-summary-heading__icon" src="${escapeHtml(FOCUS_ICON)}" alt="" />
+      <span class="mk-focus-summary-heading__copy">
+        <strong class="mk-focus-summary-heading__label">Focus</strong>
+        <span class="mk-focus-summary-heading__count">${sessions.length}/${capacity}</span>
+      </span>
+    `;
+    return heading;
+  }
+
+  function createSummarySession(actor, session) {
+    const pending = session.pendingChecks.length;
+    const card = document.createElement("div");
+    card.className = "mk-focus-summary-session";
+    if (pending) card.classList.add("mk-focus-check-due");
+    card.dataset.sessionId = session.id;
+    card.setAttribute(
+      "aria-label",
+      `${session.name}: ${summaryStatus(session)}. Use the visible actions to check, open, or end Focus.`
+    );
+
+    const image = document.createElement("img");
+    image.className = "mk-focus-summary-session__icon";
+    image.src = session.img || FOCUS_ICON;
+    image.alt = "";
+
+    const content = document.createElement("span");
+    content.className = "mk-focus-summary-session__content";
+
+    const name = document.createElement("strong");
+    name.className = "mk-focus-summary-session__name";
+    name.textContent = session.name;
+    name.title = session.name;
+
+    const status = document.createElement("span");
+    status.className = "mk-focus-summary-session__status";
+    status.textContent = summaryStatus(session);
+
+    content.append(name, status);
+
+    if (pending) {
+      const due = document.createElement("span");
+      due.className = "mk-focus-summary-session__due";
+      due.textContent = String(pending);
+      due.title = `${pending} Focus check${pending === 1 ? "" : "s"} due`;
+      due.setAttribute("aria-label", `${pending} Focus check${pending === 1 ? "s" : ""} due`);
+      content.append(due);
+    }
+
+    const actions = document.createElement("span");
+    actions.className = "mk-focus-summary-session__actions";
+    actions.append(
+      createSummaryAction(actor, session, "check", "Check", "fa-solid fa-dice-d20"),
+      createSummaryAction(actor, session, "open", "Open", "fa-solid fa-book-open"),
+      createSummaryAction(actor, session, "end", "End", "fa-solid fa-xmark")
+    );
+
+    card.append(image, content, actions);
+    return card;
+  }
+
+  function findSpellsTab(root) {
+    if (root?.matches?.(".tab.tab-spells, .tab.spells, section[data-tab='tab-spells'], section[data-tab='spells']")) {
+      return root;
+    }
+
+    const selectors = [
+      "section.tab.tab-spells[data-tab='tab-spells']",
+      ".tab.tab-spells[data-tab='tab-spells']",
+      ".tab.tab-spells",
+      "section.tab.spells[data-tab='spells']",
+      ".tab.spells[data-tab='spells']",
+      "section[data-tab='tab-spells']",
+      "section[data-tab='spells']",
+      "[data-tab='tab-spells']",
+      "[data-tab='spells']"
+    ];
+
+    for (const selector of selectors) {
+      const candidate = root?.querySelector?.(selector);
+      if (candidate && !candidate.matches("a, button")) return candidate;
+    }
+
+    return null;
+  }
+
+  function findSpellsKnownMarker(spellsTab) {
+    const selectors = [
+      ".SD-banner",
+      "h1, h2, h3, h4, h5, h6",
+      "header",
+      ".header",
+      ".section-header"
+    ];
+
+    const markers = Array.from(spellsTab?.querySelectorAll?.(selectors.join(", ")) ?? []);
+    return markers.find(marker => /spells\s+known/i.test(marker.textContent?.replace(/\s+/g, " ").trim() ?? "")) ?? null;
+  }
+
+  function insertFocusBar(spellsTab, group) {
+    const spellsKnown = findSpellsKnownMarker(spellsTab);
+    if (spellsKnown) {
+      spellsKnown.before(group);
+      return true;
+    }
+
+    spellsTab?.prepend?.(group);
+    return Boolean(spellsTab);
   }
 
   function renderActorFocus(app, html) {
@@ -1007,25 +1161,29 @@ import { planLegacyFocusMigration } from "./focus-migration.js";
     const sessions = getSessions(actor);
     if (!sessions.length) return;
 
-    const group = document.createElement("div");
-    group.className = "mk-focus-summary-group";
-    for (const session of sessions) group.append(createSummaryChip(actor, session));
-
-    const existingBar = root.querySelector(".mk-character-sheet-bar__chips, .sdx-character-sheet-bar__chips");
-    if (existingBar) {
-      existingBar.append(group);
+    const spellsTab = findSpellsTab(root);
+    if (!spellsTab) {
+      log("Could not find the actor Spells tab for Focus UI", actor.name);
       return;
     }
 
-    const fallback = document.createElement("div");
-    fallback.className = "mk-focus-summary-fallback";
-    fallback.append(group);
+    const group = document.createElement("div");
+    group.className = "mk-focus-summary-group";
+    const capacity = getActorCapacity(actor);
+    group.setAttribute("role", "group");
+    group.setAttribute("aria-label", `Active Focus spells: ${sessions.length} of ${capacity}`);
+    group.append(createSummaryHeading(sessions, capacity));
 
-    const header = root.querySelector("header.SD-header");
-    const nav = root.querySelector("nav.SD-nav");
-    if (header) header.after(fallback);
-    else if (nav) nav.before(fallback);
-    else root.prepend(fallback);
+    const sessionList = document.createElement("div");
+    sessionList.className = "mk-focus-summary-sessions";
+    sessionList.setAttribute("role", "list");
+    for (const session of sessions) {
+      const card = createSummarySession(actor, session);
+      card.setAttribute("role", "listitem");
+      sessionList.append(card);
+    }
+    group.append(sessionList);
+    insertFocusBar(spellsTab, group);
   }
 
   function refreshActorUi(actor) {
@@ -1174,6 +1332,7 @@ import { planLegacyFocusMigration } from "./focus-migration.js";
       isFocusSpell: focusDuration(spell) || focusDuration(sourceItem),
       isFocusCheck: isFocusCheckOptions(config),
       checkId: config?.[CONTEXT_KEY] ?? null,
+      rollConfig: config,
       startedAt: Date.now(),
       messageIdsBefore: new Set(game.messages?.contents?.map(message => message.id) ?? [])
     };
@@ -1199,7 +1358,7 @@ import { planLegacyFocusMigration } from "./focus-migration.js";
 
   function digestV4Result(result, context) {
     const message = matchingNewRollMessage(context);
-    if (result === true) return { completed: true, success: true, critical: null };
+    if (result === true) return { completed: true, success: true, critical: null, message };
     if (result === false && message) {
       const flagSuccess = getProperty(message, "flags.shadowdark.success");
       const mainRoll = message.rolls?.find?.(roll => roll?.options?.type === "main") ?? message.rolls?.[0];
@@ -1218,9 +1377,41 @@ import { planLegacyFocusMigration } from "./focus-migration.js";
           : mainRoll?.criticalSuccess === true
             ? "success"
             : null);
-      return { completed: true, success, critical };
+      return { completed: true, success, critical, message };
     }
-    return { completed: false, success: null, critical: null };
+    return { completed: false, success: null, critical: null, message };
+  }
+
+  function rollConfigFromMessage(message) {
+    if (message?.rollConfig && typeof message.rollConfig === "object") {
+      return message.rollConfig;
+    }
+
+    try {
+      const flagged = message?.getFlag?.("shadowdark", "rollConfig");
+      if (flagged && typeof flagged === "object") return flagged;
+    } catch (_error) {
+      // Fall through to raw source flags.
+    }
+
+    return message?.flags?.shadowdark?.rollConfig
+      ?? message?._source?.flags?.shadowdark?.rollConfig
+      ?? null;
+  }
+
+  function focusEffectLink(context, message) {
+    const messageConfig = rollConfigFromMessage(message);
+    const config = spellTargetUuids(messageConfig).length
+      ? messageConfig
+      : context?.rollConfig;
+    const link = captureSpellEffectLink(
+      message,
+      config
+    );
+    return {
+      effectCastId: link.castId,
+      effectTargetUuids: link.targetUuids
+    };
   }
 
   function isSpellDocument(document) {
@@ -1275,11 +1466,22 @@ import { planLegacyFocusMigration } from "./focus-migration.js";
       await new Promise(resolve => window.setTimeout(resolve, 75));
       digest = digestV4Result(result, context);
     }
+    if (digest.completed && !digest.message) {
+      await new Promise(resolve => window.setTimeout(resolve, 75));
+      const refreshed = digestV4Result(result, context);
+      if (refreshed.message) digest = refreshed;
+    }
 
     if (!digest.completed || digest.success === null) return;
 
     if (!context.isFocusCheck) {
-      if (digest.success) await startFocusFromContext(context, digest.critical === "success");
+      if (digest.success) {
+        await startFocusFromContext(
+          context,
+          digest.critical === "success",
+          focusEffectLink(context, digest.message)
+        );
+      }
       return;
     }
 

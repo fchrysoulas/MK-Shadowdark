@@ -1,6 +1,12 @@
 const MODULE_ID = "mk-shadowdark";
 const RETIRED_SETTINGS = Object.freeze([
-  "autoDamageGMOnly"
+  "autoDamageGMOnly",
+  "autoDamageShowDice3D",
+  "detailedWoundsSurvivalTrigger",
+  "detailedWoundsSurvivalProfile",
+  "enduringWoundsTableUuid",
+  "deathTimerMinTurns",
+  "deathTimerTooltip"
 ]);
 
 function retireSetting(moduleId, key) {

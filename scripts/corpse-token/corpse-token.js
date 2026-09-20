@@ -30,6 +30,7 @@ const SETTINGS = {
   postChatMessage: "corpseTokenPostChatMessage",
   scanOnCanvasReady: "corpseTokenScanOnCanvasReady",
   autoRestoreWhenHealed: "corpseTokenAutoRestoreWhenHealed",
+  debug: "corpseTokenDebug",
   alignVisualBottom: "corpseTokenAlignVisualBottom",
   yOffset: "corpseTokenYOffset",
   applyDelayMs: "corpseTokenApplyDelayMs",
@@ -45,7 +46,8 @@ const DEFAULTS = {
   [SETTINGS.scale]: 0.7,
   [SETTINGS.postChatMessage]: false,
   [SETTINGS.scanOnCanvasReady]: false,
-  [SETTINGS.autoRestoreWhenHealed]: false,
+  [SETTINGS.autoRestoreWhenHealed]: true,
+  [SETTINGS.debug]: false,
   [SETTINGS.alignVisualBottom]: true,
   [SETTINGS.yOffset]: 0,
   [SETTINGS.applyDelayMs]: 750,
@@ -69,6 +71,7 @@ function getModuleVersion() {
 }
 
 function log(...args) {
+  if (!getSetting(SETTINGS.debug)) return;
   console.log(`${MODULE_ID} v${getModuleVersion()} | ${SUBMODULE} |`, ...args);
 }
 
@@ -776,6 +779,10 @@ function tokenCoordinateReport(tokenOrDocument) {
 async function debugSelectedTokenCoordinates() {
   if (!game.user?.isGM) {
     ui.notifications.warn("Only the GM can debug corpse token coordinates.");
+    return [];
+  }
+  if (!getSetting(SETTINGS.debug)) {
+    ui.notifications.warn("Enable Corpse Token Debug Mode before writing coordinate reports.");
     return [];
   }
   if (!canvas?.ready) {

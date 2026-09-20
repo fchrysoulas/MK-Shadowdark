@@ -27,3 +27,12 @@ test("Focus native cast wrappers are installed only from ready", async () => {
   assert.doesNotMatch(source, /renderActorSheet[\s\S]{0,1200}installV4WrappersOnce\(\)/);
   assert.doesNotMatch(source, /canvasReady[\s\S]{0,400}installV4WrappersOnce\(\)/);
 });
+
+test("Focus sessions retain spell-effect linkage and clean it up when ending", async () => {
+  const source = await focusSource();
+
+  assert.match(source, /effectCastId/);
+  assert.match(source, /effectTargetUuids/);
+  assert.match(source, /removeTrackedSpellEffect\(session\)/);
+  assert.match(source, /spellEffectsApi\.removeForFocus/);
+});

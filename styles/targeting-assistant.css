@@ -22,6 +22,12 @@
   font-size: 0.85rem;
 }
 
+.mk-targeting-assistant.is-self p {
+  margin: 0;
+  font-size: 0.85rem;
+  opacity: 0.85;
+}
+
 .mk-targeting-assistant-list {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));

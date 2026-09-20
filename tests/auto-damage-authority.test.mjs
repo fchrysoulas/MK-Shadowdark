@@ -10,11 +10,20 @@ import {
 const manifestUrl = new URL("../module.json", import.meta.url);
 const runtimeUrl = new URL("../scripts/auto-damage/auto-apply-damage.js", import.meta.url);
 
-test("the obsolete Auto Damage GM-only setting is explicitly retired", () => {
-  assert.deepEqual(RETIRED_SETTINGS, ["autoDamageGMOnly"]);
+test("obsolete Auto Damage settings are explicitly retired", () => {
+  assert.deepEqual(RETIRED_SETTINGS, [
+    "autoDamageGMOnly",
+    "autoDamageShowDice3D",
+    "detailedWoundsSurvivalTrigger",
+    "detailedWoundsSurvivalProfile",
+    "enduringWoundsTableUuid",
+    "deathTimerMinTurns",
+    "deathTimerTooltip"
+  ]);
 
   const registrations = new Map([
     ["mk-shadowdark.autoDamageGMOnly", { scope: "world" }],
+    ["mk-shadowdark.autoDamageShowDice3D", { scope: "world" }],
     ["mk-shadowdark.autoDamageEnabled", { scope: "world" }]
   ]);
 
@@ -23,7 +32,9 @@ test("the obsolete Auto Damage GM-only setting is explicitly retired", () => {
 
   try {
     assert.equal(retireSetting("mk-shadowdark", "autoDamageGMOnly"), true);
+    assert.equal(retireSetting("mk-shadowdark", "autoDamageShowDice3D"), true);
     assert.equal(registrations.has("mk-shadowdark.autoDamageGMOnly"), false);
+    assert.equal(registrations.has("mk-shadowdark.autoDamageShowDice3D"), false);
     assert.equal(registrations.has("mk-shadowdark.autoDamageEnabled"), true);
   } finally {
     if (previousGame === undefined) delete globalThis.game;

@@ -32,6 +32,15 @@ import {
     console.warn(`${MODULE_ID} v${getModuleVersion()} | ${SUBMODULE} |`, ...args);
   }
 
+  function debug(...args) {
+    try {
+      if (!game.settings.get(MODULE_ID, "autoDamageDebug")) return;
+    } catch (_error) {
+      return;
+    }
+    console.log(`${MODULE_ID} v${getModuleVersion()} | ${SUBMODULE} |`, ...args);
+  }
+
   function getRootElement(html) {
     return html?.[0] ?? html;
   }
@@ -572,7 +581,7 @@ import {
 
     await game.settings.set(MODULE_ID, DAMAGE_TRAITS_MIGRATION_SETTING, DAMAGE_TRAITS_MIGRATION_VERSION);
     if (migratedActors > 0) {
-      console.log(`${MODULE_ID} v${getModuleVersion()} | ${SUBMODULE} | Migrated legacy damage traits on ${migratedActors} NPC actor(s).`);
+      debug(`Migrated legacy damage traits on ${migratedActors} NPC actor(s).`);
     }
     return true;
   }
@@ -650,8 +659,10 @@ import {
   }
 
   async function getSourceContext(message) {
-    const rollConfig = message?.getFlag?.("shadowdark", "rollConfig")
-      ?? message?.flags?.shadowdark?.rollConfig;
+    const rollConfig = message?.rollConfig
+      ?? message?.getFlag?.("shadowdark", "rollConfig")
+      ?? message?.flags?.shadowdark?.rollConfig
+      ?? message?._source?.flags?.shadowdark?.rollConfig;
     const itemUuid = rollConfig?.itemUuid ?? rollConfig?.cast?.spellUuid;
     const spellRoll = rollConfig?.type === "spell" || Boolean(rollConfig?.cast?.spellUuid);
     if (!itemUuid) {

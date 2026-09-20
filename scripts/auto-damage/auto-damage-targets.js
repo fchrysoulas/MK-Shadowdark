@@ -13,8 +13,18 @@ function uniqueUuids(values) {
 }
 
 function shadowdarkRollConfig(message) {
-  return message?.rollConfig
-    ?? message?.flags?.shadowdark?.rollConfig
+  if (message?.rollConfig && typeof message.rollConfig === "object") {
+    return message.rollConfig;
+  }
+
+  try {
+    const flagged = message?.getFlag?.("shadowdark", "rollConfig");
+    if (flagged && typeof flagged === "object") return flagged;
+  } catch (_error) {
+    // Fall through to the raw source flags used while a ChatMessage is being created.
+  }
+
+  return message?.flags?.shadowdark?.rollConfig
     ?? message?._source?.flags?.shadowdark?.rollConfig
     ?? null;
 }

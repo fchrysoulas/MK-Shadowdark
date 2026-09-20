@@ -482,7 +482,7 @@ import { getRestMode, onRest } from "../libs/resting.js";
         const hasTurns = turns !== null && turns !== undefined && turns !== "" && Number.isFinite(Number(turns));
         const display = state.dead ? "Dead" : (hasTurns ? String(turns) : "-");
         const icon = escapeHtml(getSetting("deathTimerIcon", "fa-solid fa-skull") || "fa-solid fa-skull");
-        const tooltip = getSetting("deathTimerTooltip", "Death Timer") || "Death Timer";
+        const tooltip = "Death Timer";
         return {
           label: "DT",
           value: hasTurns ? String(turns) : "-",

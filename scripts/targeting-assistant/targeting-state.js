@@ -1,6 +1,20 @@
+const FOCUS_CHECK_CONTEXT_KEY = "mkShadowdarkFocusCheckId";
+
+export function isFocusCheckRoll(config) {
+  return config?.isFocusRoll === true
+    || Object.prototype.hasOwnProperty.call(config ?? {}, FOCUS_CHECK_CONTEXT_KEY);
+}
+
 export function isAttackOrSpellRoll(config) {
+  if (isFocusCheckRoll(config)) return false;
+
   const type = String(config?.type ?? "").trim().toLowerCase();
   return type === "attack" || type === "spell";
+}
+
+export function isSelfRangeSpell(config) {
+  const range = config?.cast?.range ?? config?.range;
+  return String(range ?? "").trim().toLowerCase() === "self";
 }
 
 export function targetData(token) {
@@ -16,6 +30,39 @@ export function targetData(token) {
     img: document?.texture?.src ?? actor.img ?? "icons/svg/mystery-man.svg",
     ac: Number.isFinite(ac) ? ac : null
   };
+}
+
+export function findSelfTarget(tokens, actorUuid, actorId) {
+  const expected = new Set(
+    [actorUuid, actorId]
+      .map(value => String(value ?? "").trim())
+      .filter(Boolean)
+  );
+
+  if (!expected.size) return null;
+
+  for (const token of tokens ?? []) {
+    const target = targetData(token);
+    if (!target) continue;
+
+    const document = token?.document ?? token;
+    const actor = token?.actor ?? document?.actor;
+    const baseActor = actor?.baseActor;
+    const candidates = [
+      actor?.uuid,
+      actor?.id,
+      baseActor?.uuid,
+      baseActor?.id,
+      document?.actorUuid,
+      document?.actorId
+    ]
+      .map(value => String(value ?? "").trim())
+      .filter(Boolean);
+
+    if (candidates.some(candidate => expected.has(candidate))) return target;
+  }
+
+  return null;
 }
 
 export function collectValidTargets(targets) {

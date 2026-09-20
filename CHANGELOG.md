@@ -1,6 +1,23 @@
 # Changelog
 
 ## 1.9.17
+- Removed the Survival Wound Profile feature and its post-dying CON check, external Enduring Wounds RollTable integration, settings menu, and legacy setting registrations.
+- Auto Damage now reads Shadowdark's native main and damage rolls and routes HP changes through the system's `Actor.applyDamage` API instead of parsing chat text.
+- Added an Auto Damage Debug Mode setting so detailed processing logs stay hidden unless explicitly enabled; warnings and errors remain visible.
+- Removed the obsolete Auto Damage Show 3D Dice setting now that native Shadowdark rolls provide their own dice visuals.
+- Corpse Token Auto Restore When Healed now defaults to enabled, and Corpse Token has a Debug Mode for detailed browser-console diagnostics.
+- Fixed Death Timer chat cards to use Shadowdark's native roll renderer so the evaluated result is visible alongside the formula.
+- Damage to a character on a Death Timer now reduces the timer by 1, or by 2 for a critical hit, and posts the result to chat.
+- Added a Death Timer Debug Mode setting for detailed damage-context, authority, and timer-state diagnostics.
+- Auto Damage retry recovery now updates the Death Timer when HP was already applied before a pending transaction resumed, without double-counting the same target.
+- Removed the configurable Death Timer minimum-turns and tooltip-text settings; the feature now uses fixed defaults.
+- Death Timer d20 checks now use Shadowdark's native Normal / Advantage / Disadvantage roll prompt.
+- Redesigned the Focus Tracker actor-sheet and chat UI with visible Focus capacity, spell names, pending-check badges, and explicit Check, Open, and End controls.
+- Moved the Focus Tracker bar from the sheet summary/header area to the top of the Spells tab, immediately before Spells Known.
+- Focus maintenance checks no longer trigger the Targeting Assistant's required-target validation; initial Focus spell casts still require a target normally, except Self spells that automatically target the caster.
+- Self-range spells now target the casting character automatically and no longer require a manually selected target.
+- Successful targeted spells now copy linked Shadowdark Spell Effect items onto every selected target, preserving their duration and embedded Active Effects.
+- Focus sessions now retain the linked Spell Effect cast and target UUIDs, and remove that effect from all tracked targets when Focus ends or breaks.
 - Added a Character Dashboard theme setting with the original Midnight Cyan look and a darker, grittier Ashen OSR theme.
 - Redesigned the Backpack extension as a fixed-square slot grid where items span their required number of slots.
 - Reduced the Character Dashboard navigation tab text size to better balance the new icons.

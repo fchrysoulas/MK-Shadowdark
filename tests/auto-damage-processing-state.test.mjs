@@ -29,6 +29,36 @@ test("planned target reconciliation is idempotent across retries", () => {
   assert.equal(reconcilePlannedTarget(target, 9), "conflict");
 });
 
+test("processing state preserves the native amount after damage-trait adjustment", () => {
+  const state = createProcessingState({
+    operation: "damage",
+    amount: 9,
+    targets: [{
+      ...plan("A", 12, 8),
+      amount: 9,
+      reduction: 4,
+      effectiveAmount: 5
+    }]
+  });
+
+  assert.equal(state.targets[0].effectiveAmount, 5);
+  assert.equal(state.targets[0].reduction, 4);
+});
+
+test("legacy processing state derives a native amount when it has no effective amount", () => {
+  const state = createProcessingState({
+    operation: "damage",
+    amount: 9,
+    targets: [{
+      ...plan("A", 12, 8),
+      amount: 9,
+      reduction: 4
+    }]
+  });
+
+  assert.equal(state.targets[0].effectiveAmount, 5);
+});
+
 test("partial failure retries only unfinished targets", async () => {
   const hp = new Map([["A", 12], ["B", 10]]);
   const applications = [];
@@ -100,6 +130,32 @@ test("crash-window recovery promotes an already-applied target without changing 
   assert.equal(applyCount, 0);
   assert.equal(hp.get("A"), 7);
   assert.equal(persisted.targets[0].state, "applied");
+  assert.equal(persisted.status, "complete");
+});
+
+test("crash-window promotion runs recovery side effects before completion", async () => {
+  const hp = new Map([["A", 7]]);
+  const promoted = [];
+  let persisted = createProcessingState({
+    operation: "damage",
+    amount: 5,
+    targets: [plan("A", 12, 7)]
+  });
+
+  persisted = await runProcessingState(persisted, {
+    readCurrentHp: async target => hp.get(target.uuid),
+    applyTarget: async () => {
+      throw new Error("promoted targets must not apply damage again");
+    },
+    onPromoted: async target => {
+      promoted.push(target.uuid);
+    },
+    persistState: async state => {
+      persisted = normalizeProcessingState(state);
+    }
+  });
+
+  assert.deepEqual(promoted, ["A"]);
   assert.equal(persisted.status, "complete");
 });
 

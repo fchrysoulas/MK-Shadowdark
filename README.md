@@ -53,7 +53,7 @@ The old **MK-Shadowdark GM Screen Mock** prototype is not a dependency and is no
 - The Spells, Notes, and Effects tabs use the same dark cyan dashboard styling while retaining native controls and editors.
 - Choose the Character Dashboard theme from the module's Character Dashboard settings menu: Midnight Cyan preserves the current look, while Ashen OSR adds a darker soot-and-brass treatment for gritty OSR tables.
 
-- **Dashboard Item Sheet** -- Shadowdark Items open in the same dark cyan visual language as the Character Dashboard while retaining native item editing and tabs.
+- **Dashboard Item Sheet** -- when Character Dashboard is enabled, Shadowdark Items open in the same dashboard visual language while retaining native item editing and tabs; disabling Character Dashboard restores the default item sheets.
 
 - **Character Dashboard talents** -- the Talents tab uses the dashboard theme and includes Boons alongside ancestry, class, and level talents.
 

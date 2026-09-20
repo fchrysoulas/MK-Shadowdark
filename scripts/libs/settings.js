@@ -529,7 +529,10 @@
       config: false,
       type: Boolean,
       default: true,
-      onChange: refreshOpenActorSheets
+      onChange: value => {
+        refreshOpenActorSheets();
+        globalThis.MKShadowdarkItemDashboard?.setEnabled?.(value);
+      }
     });
 
     registerSetting("characterDashboardTheme", {

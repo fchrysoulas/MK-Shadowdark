@@ -1,6 +1,7 @@
 # Changelog
 
 ## 1.9.17
+- Character Dashboard enablement now controls the Dashboard Item Sheet: enabled uses the MK-Shadowdark style, while disabled restores Shadowdark's default item sheets.
 - Removed the Survival Wound Profile feature and its post-dying CON check, external Enduring Wounds RollTable integration, settings menu, and legacy setting registrations.
 - Auto Damage now reads Shadowdark's native main and damage rolls and routes HP changes through the system's `Actor.applyDamage` API instead of parsing chat text.
 - Added an Auto Damage Debug Mode setting so detailed processing logs stay hidden unless explicitly enabled; warnings and errors remain visible.

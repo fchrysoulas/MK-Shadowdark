@@ -6,20 +6,11 @@
   background: color-mix(in srgb, var(--color-bg-option, #222) 88%, transparent);
 }
 
-.mk-targeting-assistant.is-empty {
-  border-color: var(--color-level-warning, #d99a24);
-}
-
 .mk-targeting-assistant-heading {
   display: flex;
   align-items: center;
   gap: 0.4rem;
   margin-bottom: 0.4rem;
-}
-
-.mk-targeting-assistant.is-empty p {
-  margin: 0;
-  font-size: 0.85rem;
 }
 
 .mk-targeting-assistant.is-self p {

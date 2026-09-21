@@ -6,7 +6,8 @@ const RETIRED_SETTINGS = Object.freeze([
   "detailedWoundsSurvivalProfile",
   "enduringWoundsTableUuid",
   "deathTimerMinTurns",
-  "deathTimerTooltip"
+  "deathTimerTooltip",
+  "encounterEngineAutoTimePasses"
 ]);
 
 function retireSetting(moduleId, key) {

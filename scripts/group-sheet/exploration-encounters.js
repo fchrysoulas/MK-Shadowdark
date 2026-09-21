@@ -9,9 +9,9 @@ import {
 import {
   checkAndResolveEncounterService,
   ENCOUNTER_FAILURE,
-} from "../encounter-engine/service.js";
-import { createEncounterMessage } from "../encounter-engine/chat.js";
-import { resolveUuid } from "../encounter-engine/helpers.js";
+} from "./encounters/service.js";
+import { createEncounterMessage } from "./encounters/chat.js";
+import { resolveUuid } from "./encounters/helpers.js";
 
 const DEFAULT_EXPLORATION_TURN_SECONDS = 360;
 const GROUP_EXPLORATION_ENCOUNTER_HOOK = "mkShadowdarkGroupExplorationEncounter";

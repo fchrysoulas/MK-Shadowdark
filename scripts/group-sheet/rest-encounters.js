@@ -15,9 +15,9 @@ import { resolveSceneEnvironmentContext } from "../libs/environment-context.js";
 import {
   checkAndResolveEncounterService,
   ENCOUNTER_FAILURE,
-} from "../encounter-engine/service.js";
-import { createEncounterMessage } from "../encounter-engine/chat.js";
-import { resolveUuid } from "../encounter-engine/helpers.js";
+} from "./encounters/service.js";
+import { createEncounterMessage } from "./encounters/chat.js";
+import { resolveUuid } from "./encounters/helpers.js";
 import {
   consumePartyFoodRations,
   getPartyFoodTotal,

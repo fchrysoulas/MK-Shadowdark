@@ -5,7 +5,7 @@ import {
   readDialogForm,
   resolveUuid,
 } from "./helpers.js";
-import { waitForGmDialog } from "../libs/dialog-v2.js";
+import { waitForGmDialog } from "../../libs/dialog-v2.js";
 
 const STAGING_SOURCE_FLAG = "encounterStagingSourceUuid";
 const STAGING_TOKEN_FLAG = "encounterStaging";

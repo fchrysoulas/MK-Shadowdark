@@ -7,6 +7,7 @@ import { onCharacterSheetRender } from "../libs/sheet-render-adapter.js";
   const SETTINGS = Object.freeze({
     ENABLED: "characterSheetTweaksEnabled",
     ATTACK_PROPERTIES: "attackWeaponPropertiesEnabled",
+    BUST_PORTRAIT: "characterSheetTweaksBustPortrait",
     DEBUG: "characterSheetTweaksDebug"
   });
 
@@ -98,12 +99,15 @@ import { onCharacterSheetRender } from "../libs/sheet-render-adapter.js";
   function cleanupSheet(windowEl, form) {
     for (const el of uniqueElements([windowEl, form])) {
       el.classList.remove("mk-character-sheet-tweaks");
+      el.classList.remove("mk-character-sheet-tweaks-bust-portrait");
     }
   }
 
   function applySheetClasses(windowEl, form) {
+    const bustPortrait = getSetting(SETTINGS.BUST_PORTRAIT, false);
     for (const el of uniqueElements([windowEl, form])) {
       el.classList.add("mk-character-sheet-tweaks");
+      el.classList.toggle("mk-character-sheet-tweaks-bust-portrait", bustPortrait);
     }
   }
 

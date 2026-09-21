@@ -4,11 +4,12 @@ import {
   ENVIRONMENT_PROFILE_SCHEMA,
   ENVIRONMENT_SCENE_FLAG,
   ENVIRONMENT_SETTINGS,
-} from "../libs/environment-context.js";
+} from "../../libs/environment-context.js";
 
 export const MODULE_ID = "mk-shadowdark";
-export const SUBMODULE = "EncounterEngine";
-export const CHAT_FLAG = "encounterEngine";
+export const SUBMODULE = "Group Encounters";
+export const CHAT_FLAG = "groupEncounter";
+export const LEGACY_CHAT_FLAG = "encounterEngine";
 export const SCENE_FLAG = ENVIRONMENT_SCENE_FLAG;
 export const CARD_SELECTOR = ".mk-sd-encounter-card";
 

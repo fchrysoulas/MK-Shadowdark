@@ -13,7 +13,7 @@ export {
   setSceneEnvironmentContext as setSceneEncounterContext,
   terrainNames,
   tableUuidForEnvironmentContext as tableUuidForContext,
-} from "../libs/environment-context.js";
+} from "../../libs/environment-context.js";
 
 export function moduleVersion() {
   const module = game.modules?.get(MODULE_ID);

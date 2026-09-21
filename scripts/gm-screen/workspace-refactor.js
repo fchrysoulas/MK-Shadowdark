@@ -9,7 +9,7 @@ function rootElement(value) {
 
 function hideLegacyProfileControl(application, element) {
   const id = String(application?.id ?? application?.options?.id ?? "");
-  if (!id.includes("mk-shadowdark-encounterEngine-settings")) return false;
+  if (!id.includes("mk-shadowdark-groupEncounters-settings")) return false;
   const root = rootElement(element);
   const input = root?.querySelector?.('[name="encounterEngineDefaultProfile"]');
   if (!input) return false;

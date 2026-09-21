@@ -338,9 +338,9 @@ Camp-watch assignments remain Group Management procedure context but do not auto
 
 ---
 
-# Internal Encounter Resolution
+# Group Encounter Resolution
 
-The **old standalone Encounter Engine UI is retired**.
+Encounter timing and resolution belong to Group Management. The former standalone encounter feature and its separate entry points have been removed.
 
 There is no separate:
 
@@ -348,9 +348,9 @@ There is no separate:
 - standalone Encounter dialog
 - RollTable directory Resolve Encounter action
 - independent encounter clock
-- Time Passes → Encounter Engine auto-resolution path
+- Time Passes → encounter auto-resolution path
 
-Encounter rules remain centralized as an internal service consumed by Group Exploration, Group Resting, GM Screen actions, and encounter chat-card workflows.
+Encounter rules remain centralized as Group-owned internal services consumed by Group Exploration, Group Resting, and encounter chat-card workflows.
 
 A resolved encounter can include:
 
@@ -388,7 +388,7 @@ Direct world/Compendium Actor results are preferred for reliable staging Actor r
 
 ---
 
-# Encounter Staging
+# Group Encounter Staging
 
 A resolved GM encounter card includes **Stage Encounter**, and the production GM Screen can route encounter history into the same staging service.
 
@@ -585,9 +585,7 @@ mk.groupAssignments
 mk.groupExplorationEncounters
 mk.groupRest
 mk.groupMemberStatus
-mk.encounterService
-mk.encounterStaging
-mk.encounters
+mk.groupEncounters
 mk.timePasses
 mk.focus
 mk.morale
@@ -595,15 +593,15 @@ mk.tokenEquipment
 mk.characterDashboard
 ```
 
-The compatibility `mk.encounters` surface is headless. It exposes encounter services, not the retired standalone Encounter dialog.
+`mk.groupEncounters` exposes the Group-owned encounter service and staging helpers.
 
 Examples:
 
 ```js
-const check = await mk.encounterService.check();
-const resolved = await mk.encounterService.resolve({ tableUuid: "RollTable.YOUR_TABLE_ID" });
+const check = await mk.groupEncounters.check();
+const resolved = await mk.groupEncounters.resolve({ tableUuid: "RollTable.YOUR_TABLE_ID" });
 
-const preview = await mk.encounterStaging.preview(encounterData, {
+const preview = await mk.groupEncounters.staging.preview(encounterData, {
   formation: "cluster",
   visibility: "hidden",
   addToCombat: false
@@ -679,7 +677,7 @@ Verify the item is actually held/equipped according to Shadowdark data and Token
 
 - Settings are grouped in Foundry's module settings menu.
 - Base Management was removed from MK-Shadowdark; old compatibility API calls warn instead of creating the removed actor type.
-- The standalone Encounter Engine UI and the old GM Screen Mock prototype are retired.
+- The standalone encounter UI and the old GM Screen Mock prototype are retired.
 - **Group Management and the production GM Screen are both supported and coexist.**
 - Bundled Camping activity icons are from [Game-icons.net](https://game-icons.net/) under CC BY 3.0.
 

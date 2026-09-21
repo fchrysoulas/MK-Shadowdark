@@ -11,7 +11,7 @@ import {
 } from "../group-sheet/procedure.js";
 import { REST_TURN_SECONDS } from "../group-sheet/rest-encounters.js";
 import { advanceGroupTime } from "../group-sheet/time.js";
-import { openEncounterStagingDialog } from "../encounter-engine/staging.js";
+import { openEncounterStagingDialog } from "../group-sheet/encounters/staging.js";
 import {
   buildGmScreenViewModel,
   findLatestEncounterMessage,

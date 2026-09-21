@@ -15,7 +15,5 @@
   "MK_SHADOWDARK.targeting.self": "Self",
   "MK_SHADOWDARK.targeting.selfDescription": "This spell targets the caster automatically.",
   "MK_SHADOWDARK.targeting.caster": "Caster",
-  "MK_SHADOWDARK.targeting.choose": "Choose at least one target on the canvas with the Target tool (T).",
-  "MK_SHADOWDARK.targeting.primary": "Primary",
-  "MK_SHADOWDARK.targeting.warning": "Choose a valid target before rolling. Your selected targets will appear in the roll window."
+  "MK_SHADOWDARK.targeting.primary": "Primary"
 }

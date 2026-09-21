@@ -664,21 +664,7 @@ import { onCharacterSheetRender } from "../libs/sheet-render-adapter.js";
 
   function buildHeaderBackgroundCss(imagePath) {
     return `.shadowdark.sheet.player.mk-character-sheet-tweaks .SD-header {
-  background-image:
-    linear-gradient(
-      180deg,
-      transparent 65%,
-      rgba(0, 0, 0, 0.35) 70%,
-      rgba(0, 0, 0, 0.75) 88%,
-      #000 100%
-    ),
-    linear-gradient(
-      90deg,
-      rgba(0, 0, 0, 0.42),
-      rgba(0, 0, 0, 0.12) 38%,
-      rgba(0, 0, 0, 0.48)
-    ),
-    url("${cssUrlEscape(imagePath)}") !important;
+  background-image: url("${cssUrlEscape(imagePath)}") !important;
   background-position: center center !important;
   background-repeat: no-repeat !important;
   background-size: cover !important;

@@ -1,4 +1,4 @@
-import { availableRollTables } from "../encounter-engine/helpers.js";
+import { availableRollTables } from "../group-sheet/encounters/helpers.js";
 import {
   getSceneEnvironmentContext,
   normalizeDangerDefinition,

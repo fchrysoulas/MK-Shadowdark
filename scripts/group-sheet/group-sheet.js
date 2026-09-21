@@ -6,6 +6,7 @@ import { registerGroupRestEncounterService } from "./rest-encounters.js";
 import { registerGroupSheet } from "./registration.js";
 import { registerGroupProcedureService } from "./procedure.js";
 import { registerGroupTimeService } from "./time.js";
+import "./encounters/registration.js";
 import "./dashboard-layout.js";
 
 export { createGroupActor, MKGroupSheet } from "./sheet.js";

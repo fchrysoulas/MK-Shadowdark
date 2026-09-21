@@ -10,7 +10,8 @@ import { getGroupProcedureState } from "../group-sheet/procedure.js";
 import { getGroupRestState } from "../group-sheet/rest-encounters.js";
 import { getGroupElapsedTime } from "../group-sheet/time.js";
 import { resolveSceneEnvironmentContext } from "../libs/environment-context.js";
-import { CHAT_FLAG, MODULE_ID } from "../encounter-engine/constants.js";
+import { MODULE_ID } from "../group-sheet/encounters/constants.js";
+import { encounterMessageData as readEncounterMessageData } from "../group-sheet/encounters/chat.js";
 
 const GM_SCREEN_WORKSPACES = Object.freeze([
   "overview",
@@ -247,16 +248,7 @@ function buildCombatView(combat = globalThis.game?.combat) {
 }
 
 function messageEncounterData(message) {
-  if (!message) return null;
-
-  try {
-    const data = message.getFlag?.(MODULE_ID, CHAT_FLAG);
-    if (data) return data;
-  } catch (_error) {
-    // Fall through to raw flag data.
-  }
-
-  return message.flags?.[MODULE_ID]?.[CHAT_FLAG] ?? null;
+  return readEncounterMessageData(message);
 }
 
 function findLatestEncounterMessage(groupActor, messages = globalThis.game?.messages) {

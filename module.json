@@ -91,7 +91,6 @@
     "scripts/token-shadows/token-shadows.js",
     "scripts/initiative/initiative.js",
     "scripts/morale/morale.js",
-    "scripts/encounter-engine/encounter-engine.js",
     "scripts/source-tables/source-table-importer.js",
     "scripts/journal-sheet/journal-sheet.js",
     "scripts/mk-shadowdark.js"
@@ -115,7 +114,7 @@
     "styles/group-member-status.css",
     "styles/group-sheet-dashboard.css",
     "styles/quickdraw-icons.css",
-    "styles/encounter-engine.css",
+    "styles/group-encounters.css",
     "styles/summary-bar.css",
     "styles/focus-spell-tracker.css",
     "styles/targeting-assistant.css",

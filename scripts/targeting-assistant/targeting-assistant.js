@@ -15,7 +15,6 @@ import {
   const WRAPPED_RENDER = Symbol.for(`${MODULE_ID}.targetingAssistant.wrappedRender`);
   const WRAPPED_SUBMIT = Symbol.for(`${MODULE_ID}.targetingAssistant.wrappedSubmit`);
   const ACTIVE_DIALOGS = new Set();
-  const PROMPTED_DIALOGS = new WeakSet();
   const CLOSE_LISTENER_INSTALLED = new WeakSet();
 
   function log(...args) {
@@ -100,17 +99,12 @@ import {
         `;
       }
 
-      const prompt = localize(
-        "MK_SHADOWDARK.targeting.choose",
-        "Choose at least one target on the canvas with the Target tool (T)."
-      );
       return `
         <section class="mk-targeting-assistant is-empty" aria-live="polite">
           <div class="mk-targeting-assistant-heading">
             <i class="fa-solid fa-crosshairs" aria-hidden="true"></i>
             <strong>${escapeHtml(title)}</strong>
           </div>
-          <p>${escapeHtml(prompt)}</p>
         </section>
       `;
     }
@@ -139,7 +133,16 @@ import {
     `;
   }
 
-  function updateDialogTargets(dialog, { prompt = false } = {}) {
+  function syncSubmitState(dialog, targets, self) {
+    const submit = dialog.element.querySelector('button[type="submit"]');
+    if (!submit) return;
+
+    const allowed = self || targets.length > 0;
+    submit.disabled = !allowed;
+    submit.setAttribute("aria-disabled", String(!allowed));
+  }
+
+  function updateDialogTargets(dialog) {
     if (!canAssist(dialog?.config) || !dialog?.element) return [];
 
     const self = isSelfRangeSpell(dialog.config);
@@ -160,23 +163,10 @@ import {
       else dialog.element.append(replacement);
     }
 
-    const submit = dialog.element.querySelector('button[type="submit"]');
-    if (submit) {
-      const requiresTarget = !self;
-      submit.disabled = requiresTarget && targets.length === 0;
-      submit.setAttribute("aria-disabled", String(requiresTarget && targets.length === 0));
-    }
+    syncSubmitState(dialog, targets, self);
 
     const heading = dialog.element.querySelector("h2");
     if (heading && dialog.config.heading) heading.textContent = dialog.config.heading;
-
-    if (prompt && !self && !targets.length && !PROMPTED_DIALOGS.has(dialog)) {
-      PROMPTED_DIALOGS.add(dialog);
-      ui.notifications?.warn?.(localize(
-        "MK_SHADOWDARK.targeting.warning",
-        "Choose a valid target before rolling. Your selected targets will appear in the roll window."
-      ));
-    }
 
     return targets;
   }
@@ -199,7 +189,7 @@ import {
           CLOSE_LISTENER_INSTALLED.add(this);
           this.addEventListener("close", () => ACTIVE_DIALOGS.delete(this), { once: true });
         }
-        updateDialogTargets(this, { prompt: true });
+        updateDialogTargets(this);
         return result;
       };
 
@@ -215,10 +205,6 @@ import {
           const targets = updateDialogTargets(this);
           if (!targets.length && !isSelfRangeSpell(this.config)) {
             event.preventDefault();
-            ui.notifications?.warn?.(localize(
-              "MK_SHADOWDARK.targeting.warning",
-              "Choose a valid target before rolling. Your selected targets will appear in the roll window."
-            ));
             return;
           }
         }

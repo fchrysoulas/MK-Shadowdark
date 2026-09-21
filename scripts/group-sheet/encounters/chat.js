@@ -1,4 +1,10 @@
-import { CARD_SELECTOR, CHAT_FLAG, MODULE_ID, SETTINGS } from "./constants.js";
+import {
+  CARD_SELECTOR,
+  CHAT_FLAG,
+  LEGACY_CHAT_FLAG,
+  MODULE_ID,
+  SETTINGS,
+} from "./constants.js";
 import { activeGmIds, deepClone, error, escapeHtml, getProfile, getRootElement, setting } from "./helpers.js";
 import {
   buildEncounterData,
@@ -60,6 +66,25 @@ function encounterFooter(data) {
   return sceneName
     ? `<footer class="mk-sd-encounter-footer">${escapeHtml(sceneName)}</footer>`
     : "";
+}
+
+export function encounterMessageData(message) {
+  if (!message) return null;
+
+  try {
+    const current = message.getFlag?.(MODULE_ID, CHAT_FLAG);
+    if (current) return current;
+    const legacy = message.getFlag?.(MODULE_ID, LEGACY_CHAT_FLAG);
+    if (legacy) return legacy;
+  } catch (_error) {
+    // Fall through to raw flag data for partial/deleted messages.
+  }
+
+  return message.flags?.[MODULE_ID]?.[CHAT_FLAG]
+    ?? message.flags?.[MODULE_ID]?.[LEGACY_CHAT_FLAG]
+    ?? message._source?.flags?.[MODULE_ID]?.[CHAT_FLAG]
+    ?? message._source?.flags?.[MODULE_ID]?.[LEGACY_CHAT_FLAG]
+    ?? null;
 }
 
 export function renderEncounterCard(data, { publicCard = false } = {}) {
@@ -147,7 +172,7 @@ export async function updateEncounterMessage(message, data) {
 
 export async function revealEncounterMessage(message, data = undefined) {
   if (!message) return null;
-  const encounterData = data ?? message.getFlag?.(MODULE_ID, CHAT_FLAG);
+  const encounterData = data ?? encounterMessageData(message);
   if (!encounterData) return null;
 
   return ChatMessage.create({
@@ -157,7 +182,7 @@ export async function revealEncounterMessage(message, data = undefined) {
     whisper: [],
     flags: {
       [MODULE_ID]: {
-        encounterEnginePublic: { sourceMessageId: message.id, schema: encounterData.schema ?? 2 },
+        groupEncounterPublic: { sourceMessageId: message.id, schema: encounterData.schema ?? 2 },
       },
     },
   });
@@ -165,7 +190,7 @@ export async function revealEncounterMessage(message, data = undefined) {
 
 export async function stageEncounterMessage(message) {
   if (!message) return null;
-  const data = message.getFlag?.(MODULE_ID, CHAT_FLAG);
+  const data = encounterMessageData(message);
   if (!data) return null;
 
   const deployment = await openEncounterStagingDialog(data, {
@@ -182,7 +207,7 @@ export async function stageEncounterMessage(message) {
 }
 
 export async function rerollEncounterField(message, field) {
-  const data = deepClone(message.getFlag(MODULE_ID, CHAT_FLAG));
+  const data = deepClone(encounterMessageData(message));
   if (!data) return null;
 
   const profileRef = getProfile(data.profileId);
@@ -242,7 +267,7 @@ export async function rerollEncounterField(message, field) {
 }
 
 export async function rerollEntireEncounter(message) {
-  const oldData = message.getFlag(MODULE_ID, CHAT_FLAG);
+  const oldData = encounterMessageData(message);
   if (!oldData) return null;
 
   const profileRef = getProfile(oldData.profileId);
@@ -272,7 +297,7 @@ function messageFromApp(app) {
 
 export function bindEncounterCard(app, html) {
   const message = messageFromApp(app);
-  if (!message || !message.getFlag(MODULE_ID, CHAT_FLAG)) return;
+  if (!message || !encounterMessageData(message)) return;
 
   const root = getRootElement(html);
   const card = root?.querySelector(CARD_SELECTOR);

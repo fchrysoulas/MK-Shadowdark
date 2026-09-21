@@ -3,7 +3,7 @@ import {
   rerollEntireEncounter,
   revealEncounterMessage,
   stageEncounterMessage,
-} from "../encounter-engine/chat.js";
+} from "../group-sheet/encounters/chat.js";
 import { APP_ID } from "./gm-screen.js";
 
 function gmScreenApplication(application) {

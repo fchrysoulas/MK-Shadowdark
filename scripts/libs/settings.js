@@ -61,6 +61,7 @@
       height: 720,
       settings: [
         "characterSheetTweaksEnabled", "attackWeaponPropertiesEnabled", "sheetStyleEditorEnabled", "sheetStyleEditorCss",
+        "characterSheetTweaksBustPortrait",
         "characterSheetTweaksHeaderBackgroundImage", "characterSheetTweaksDebug"
       ],
       sections: [
@@ -70,7 +71,7 @@
         },
         {
           title: "Appearance",
-          settings: ["characterSheetTweaksHeaderBackgroundImage"]
+          settings: ["characterSheetTweaksBustPortrait", "characterSheetTweaksHeaderBackgroundImage"]
         },
         {
           title: "Advanced",
@@ -221,12 +222,12 @@
       ]
     },
     {
-      key: "encounterEngine",
-      title: "Encounter Engine",
-      hint: "Configure the Group Exploration and Resting encounter service, table selection, and GM presentation.",
+      key: "groupEncounters",
+      title: "Group Encounters",
+      hint: "Configure Group exploration and resting encounter checks, table selection, and GM presentation.",
       icon: "fas fa-dice-d20",
       settings: [
-        "encounterEngineEnabled", "encounterEngineDefaultProfile",
+        "encounterEngineEnabled",
         "encounterEngineDefaultTableUuid", "encounterEngineWhisperToGm", "encounterEngineShowDice3d"
       ],
       sections: [
@@ -236,7 +237,7 @@
         },
         {
           title: "Table Selection",
-          settings: ["encounterEngineDefaultProfile", "encounterEngineDefaultTableUuid"]
+          settings: ["encounterEngineDefaultTableUuid"]
         },
         {
           title: "Presentation",
@@ -1217,6 +1218,16 @@
         globalThis.MKShadowdarkSheetStyleEditor?.syncCharacterSheetSettings?.();
         refreshOpenActorSheets();
       }
+    });
+
+    registerSetting("characterSheetTweaksBustPortrait", {
+      name: "Character Sheet | Bust Portrait",
+      hint: "Zooms the left player portrait and crops it toward the upper body.",
+      scope: "world",
+      config: true,
+      type: Boolean,
+      default: false,
+      onChange: refreshOpenActorSheets
     });
 
     registerSetting("characterSheetTweaksDebug", {

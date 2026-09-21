@@ -7,7 +7,7 @@ import {
 import {
   getSceneEnvironmentContext,
   resolveEnvironmentContext,
-} from "../libs/environment-context.js";
+} from "../../libs/environment-context.js";
 import {
   buildEncounterData,
   drawEncounterResult,

@@ -1,4 +1,5 @@
-import { CHAT_FLAG, MODULE_ID } from "../encounter-engine/constants.js";
+import { MODULE_ID } from "../group-sheet/encounters/constants.js";
+import { encounterMessageData as readEncounterMessageData } from "../group-sheet/encounters/chat.js";
 import {
   getGmScreen,
   refreshGmScreen,
@@ -41,18 +42,7 @@ function activeMemberUuidSet(groupActor) {
 }
 
 function encounterMessageData(message) {
-  if (!message) return null;
-
-  try {
-    const value = message.getFlag?.(MODULE_ID, CHAT_FLAG);
-    if (value) return value;
-  } catch (_error) {
-    // Fall through to raw flag data for deleted/partial documents and tests.
-  }
-
-  return message.flags?.[MODULE_ID]?.[CHAT_FLAG]
-    ?? message._source?.flags?.[MODULE_ID]?.[CHAT_FLAG]
-    ?? null;
+  return readEncounterMessageData(message);
 }
 
 function encounterMessageBelongsToGroup(message, groupActor) {

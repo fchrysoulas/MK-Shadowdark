@@ -1,7 +1,7 @@
 import {
   DEFAULT_PROFILE_ID,
   DEFAULT_PROFILES
-} from "../encounter-engine/constants.js";
+} from "../group-sheet/encounters/constants.js";
 
 const MODULE_ID = "mk-shadowdark";
 const FEATURE_SETTINGS_TEMPLATE = `modules/${MODULE_ID}/templates/feature-settings.hbs`;
@@ -340,56 +340,48 @@ Hooks.once("init", () => {
   });
 
   registerSetting("encounterEngineEnabled", {
-    name: "Encounter Engine | Enabled",
-    hint: "Enables the Shadowdark encounter resolver, chat card, scene control, and API.",
-    scope: "world",
-    config: true,
-    type: Boolean,
-    default: true
-  });
-  registerSetting("encounterEngineAutoTimePasses", {
-    name: "Encounter Engine | Resolve Time Passes Encounters",
-    hint: "When Time Passes produces an encounter, immediately run the Encounter Engine using the current scene profile.",
+    name: "Group Encounters | Enabled",
+    hint: "Enables Group exploration and resting encounter checks and resolution.",
     scope: "world",
     config: true,
     type: Boolean,
     default: true
   });
   registerSetting("encounterEngineDefaultTableUuid", {
-    name: "Encounter Engine | Default Encounter Table UUID",
-    hint: "Fallback world or compendium RollTable UUID used when the active profile has no matching terrain and time table.",
+    name: "Group Encounters | Default Encounter Table UUID",
+    hint: "Fallback encounter RollTable UUID used when Scene Context does not specify a table.",
     scope: "world",
     config: true,
     type: String,
     default: ""
   });
   registerSetting("encounterEngineDefaultProfile", {
-    name: "Encounter Engine | Default Profile ID",
-    hint: "Profile ID used by scenes that do not have their own encounter context.",
+    name: "Legacy Group Encounter Rules ID",
+    hint: "Deprecated internal compatibility storage for older encounter records.",
     scope: "world",
-    config: true,
+    config: false,
     type: String,
     default: DEFAULT_PROFILE_ID
   });
   registerSetting("encounterEngineWhisperToGm", {
-    name: "Encounter Engine | GM-only Chat Card",
-    hint: "Whispers the full encounter card to active GMs. The card can then be revealed to players without morale information.",
+    name: "Group Encounters | GM-only Chat Card",
+    hint: "Whispers full Group encounter cards to active GMs until they are intentionally revealed.",
     scope: "world",
     config: true,
     type: Boolean,
     default: true
   });
   registerSetting("encounterEngineShowDice3d", {
-    name: "Encounter Engine | Show 3D Procedure Dice",
-    hint: "Shows encounter procedure dice to GMs when Dice So Nice is active.",
+    name: "Group Encounters | Show 3D Procedure Dice",
+    hint: "Shows Group encounter procedure dice to GMs when Dice So Nice is active.",
     scope: "world",
     config: true,
     type: Boolean,
     default: false
   });
   registerSetting("encounterEngineProfiles", {
-    name: "Encounter Engine Profiles",
-    hint: "JSON storage for Encounter Profiles. Use the Edit Profiles button in the Encounter Engine dialog.",
+    name: "Legacy Group Encounter Rules Storage",
+    hint: "Deprecated internal compatibility storage for older encounter records.",
     scope: "world",
     config: false,
     type: String,

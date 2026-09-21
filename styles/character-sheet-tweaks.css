@@ -62,3 +62,68 @@
 .shadowdark.sheet.mk-character-sheet-tweaks .SD-header .shadowdark-logo {
   display: none !important;
 }
+
+/* Keep the native title column, but use one explicit row when Summary Bar is absent. */
+.shadowdark.sheet.player.mk-character-sheet-tweaks:not(.mk-summary-bar-in-header) .SD-header {
+  min-height: 110px;
+  grid-template-rows: minmax(0, 1fr);
+}
+
+.shadowdark.sheet.player.mk-character-sheet-tweaks:not(.mk-summary-bar-in-header) .SD-header img.portrait {
+  grid-column: 1;
+  grid-row: 1;
+}
+
+.shadowdark.sheet.player.mk-character-sheet-tweaks:not(.mk-summary-bar-in-header) .SD-header .SD-title {
+  grid-column: 2;
+  grid-row: 1;
+  align-self: stretch;
+  display: flex;
+  align-items: center;
+}
+
+.shadowdark.sheet.player.mk-character-sheet-tweaks:not(.mk-summary-bar-in-header) .SD-header .SD-title input {
+  width: 100%;
+  height: auto;
+  text-align: center;
+}
+
+.shadowdark.sheet.player.mk-character-sheet-tweaks.mk-character-sheet-tweaks-bust-portrait .SD-header {
+  position: relative;
+  overflow: hidden;
+}
+
+.shadowdark.sheet.player.mk-character-sheet-tweaks.mk-character-sheet-tweaks-bust-portrait .SD-header img.portrait {
+  object-fit: cover;
+  object-position: center top;
+  transform: scale(3);
+  margin-top: -50px;
+  transform-origin: center top;
+}
+
+.shadowdark.sheet.player.mk-character-sheet-tweaks.mk-character-sheet-tweaks-bust-portrait .SD-header .SD-title {
+  position: relative;
+  z-index: 2;
+}
+
+.shadowdark.sheet.player.mk-character-sheet-tweaks .SD-nav {
+  z-index: 1;
+}
+
+.shadowdark.sheet.player.mk-character-sheet-tweaks .SD-nav::before {
+  content: "";
+  position: absolute;
+  top: -36px;
+  right: 0;
+  left: 0;
+  z-index: 0;
+  height: 36px;
+  background: linear-gradient(
+    to bottom,
+    rgba(0, 0, 0, 0),
+    rgba(0, 0, 0, 0.2) 30%,
+    rgba(0, 0, 0, 0.78) 82%,
+    #000 100%
+  );
+  pointer-events: none;
+}

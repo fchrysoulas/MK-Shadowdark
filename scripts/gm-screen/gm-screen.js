@@ -1,8 +1,5 @@
 import { resolveActorFromUuid } from "../group-sheet/actors.js";
-import {
-  getExplorationEncounterState,
-  processDueExplorationEncounters,
-} from "../group-sheet/exploration-encounters.js";
+import { getExplorationEncounterState } from "../group-sheet/exploration-encounters.js";
 import { openGroupMemberStatus } from "../group-sheet/member-status.js";
 import {
   GROUP_PROCEDURE_STATES,
@@ -137,14 +134,6 @@ async function actionAdvanceOneTurn() {
   return result;
 }
 
-async function actionProcessDueEncounters() {
-  const group = await selectedGroup(this);
-  if (!group) return null;
-  const result = await processDueExplorationEncounters(group);
-  await this.render({ force: true });
-  return result;
-}
-
 async function actionStageLatestEncounter() {
   const group = await selectedGroup(this);
   if (!group) return null;
@@ -160,14 +149,6 @@ async function actionStageLatestEncounter() {
   });
   await this.render({ force: true });
   return result;
-}
-
-async function actionOpenCombat() {
-  const sidebar = globalThis.ui?.sidebar;
-  if (typeof sidebar?.activateTab === "function") {
-    await sidebar.activateTab("combat");
-  }
-  return globalThis.game?.combat ?? null;
 }
 
 async function actionTimePasses(_event, target) {
@@ -370,9 +351,7 @@ class MKGMscreen extends ApplicationBase {
       openGroup: actionOpenGroup,
       openMember: actionOpenMember,
       inspectMember: actionInspectMember,
-      processDueEncounters: actionProcessDueEncounters,
       stageLatestEncounter: actionStageLatestEncounter,
-      openCombat: actionOpenCombat,
       timePasses: actionTimePasses,
     },
   };

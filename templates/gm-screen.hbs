@@ -125,55 +125,9 @@
         <section class="mk-gm-workspace" data-workspace-panel="exploration">
           <article class="mk-gm-panel is-wide">
             <header><i class="fas fa-map"></i><span>Exploration</span></header>
-            {{#if exploration}}
-            <div class="mk-gm-big-stats three-col">
-              <div><span>Turns</span><strong>{{exploration.completedTurns}}</strong></div>
-              <div><span>Next Check</span><strong>{{exploration.nextCheckLabel}}</strong></div>
-              <div><span>Due</span><strong>{{exploration.dueChecks}}</strong></div>
+            <div data-mk-exploration-zone-grid>
+              <div class="mk-gm-empty">Loading Encounter Zone…</div>
             </div>
-            {{#if exploration.encountersDisabled}}
-            <p class="mk-gm-secondary"><i class="fas fa-shield"></i> Safe: encounter checks are disabled.</p>
-            {{/if}}
-            <dl class="mk-gm-data-list">
-              <div><dt>Encounter Table</dt><dd>{{exploration.tableName}}</dd></div>
-              {{#if exploration.latest}}<div><dt>Latest Check</dt><dd>{{exploration.latest.label}}</dd></div>{{/if}}
-            </dl>
-            <div class="mk-gm-panel-actions">
-              <button type="button" data-action="processDueEncounters" {{#unless exploration.canCheck}}disabled{{/unless}}><i class="fas fa-dice"></i> Process Due Checks</button>
-            </div>
-            {{else}}
-            <div class="mk-gm-empty">No Group selected.</div>
-            {{/if}}
-          </article>
-        </section>
-
-        <section class="mk-gm-workspace" data-workspace-panel="combat">
-          <article class="mk-gm-panel is-wide">
-            <header><i class="fas fa-swords"></i><span>Combat / Morale</span></header>
-            {{#if combat.active}}
-            <div class="mk-gm-big-stats four-col">
-              <div><span>Round</span><strong>{{combat.round}}</strong></div>
-              <div><span>Turn</span><strong>{{#if combat.currentCombatant}}{{combat.turn}}{{else}}—{{/if}}</strong></div>
-              <div><span>Current</span><strong>{{#if combat.currentCombatant}}{{combat.currentCombatant.name}}{{else}}—{{/if}}</strong></div>
-              {{#if combat.morale}}<div><span>Enemy Force</span><strong>{{combat.morale.livingCount}}/{{combat.morale.initialCount}}</strong></div>{{/if}}
-            </div>
-            <div class="mk-gm-combat-list">
-              {{#each combat.combatants}}
-              <div class="{{#if current}}is-current{{/if}} {{#if defeated}}is-defeated{{/if}}">
-                <img src="{{img}}" alt="{{name}}"><span>{{name}}</span><strong>{{initiative}}</strong>
-              </div>
-              {{/each}}
-            </div>
-            {{#if combat.morale}}
-            <div class="mk-gm-morale-summary">
-              <span>Morale threshold: <strong>{{combat.morale.threshold}}</strong></span>
-              <span>Status: <strong>{{#if combat.morale.checked}}Resolved{{else}}Watching{{/if}}</strong></span>
-            </div>
-            {{/if}}
-            <div class="mk-gm-panel-actions"><button type="button" data-action="openCombat"><i class="fas fa-list-ol"></i> Open Combat Tracker</button></div>
-            {{else}}
-            <div class="mk-gm-empty">No active Foundry Combat.</div>
-            {{/if}}
           </article>
         </section>
 

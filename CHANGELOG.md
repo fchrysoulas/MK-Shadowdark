@@ -9,7 +9,10 @@
 - Refined Character Sheet Tweaks, Summary Bar, and Targeting Assistant presentation and targeting behavior, including optional bust portraits, navigation/layout cleanup, square shortcut controls, and removal of the missing-target warning.
 - Added optional informational history for Detailed Wounds so GMs can record timestamps, sessions, sources, and outcomes without changing wound mechanics.
 - Removed the Survival Wound Profile feature and its legacy settings and integrations.
-- Removed the standalone Encounter Engine surface; encounter timing, resolution, chat cards, and staging now belong to Group Management.
+- Removed the standalone Encounter Engine surface and centralized encounter timing, resolution, chat cards, and staging in Group Management.
+- Re-enabled the production GM Screen alongside Group Management, with the authoritative Foundry Combat workflow retained outside the screen.
+- Reworked GM Screen Exploration around a Scene-owned Encounter Zone grid with draggable RollTable assignments, while removing duplicate encounter-processing controls and counters.
+- Added Session Log GM Tools for directly opening or testing the module's major GM-facing workflows.
 
 ## 1.9.16
 
@@ -40,7 +43,7 @@
 - Moved session controls into Session Log with a free-text starting date/time label, **Start Session**, and **Reset Timer**. Starting a session records its boundary and Session Log now shows only encounter history from that session onward before applying the existing recent-history cap.
 - Bound the GM Screen Resting procedure to the canonical Group rest workflow. Resting can no longer be manually entered or exited from the Procedure selector, while Elapsed remains available during a real active rest.
 - Removed the GM Screen presentation-only Hide/Show Active Party and Reset Presentation controls, widened the Time Passes dice selector, and kept Time Passes presentation-only and separate from canonical encounter scheduling.
-- Simplified Exploration to actionable pressure only: Turns, Next Check, Due, Encounter Table, latest check, and Process Due Checks. Terrain, Danger, Period, Turn Length, and Cadence are no longer duplicated inside the workspace.
+- Simplified Exploration to actionable pressure only: Turns, Next Check, Due, Encounter Table, and latest check. Terrain, Danger, Period, Turn Length, and Cadence are no longer duplicated inside the workspace.
 - Renamed the visible Downtime workspace to **Settlement** while preserving the internal `downtime` compatibility id; the workspace now focuses on Tavern and Shop generation and no longer displays Resting/Camp status.
 - Compacted the permanent Active Party rail without restoring collapse controls, keeping HP, AC, status, wounds, Focus, light, effects, Death Timer, and sheet access visible in a denser layout.
 - Upgraded Overview into a true home dashboard with compact Procedure/Elapsed, Light, Encounter pressure, and Session summary above the existing per-GM pinned Foundry document shortcuts; pin/unpin remains local and does not force a full GM Screen rerender.

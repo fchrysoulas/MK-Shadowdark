@@ -4,7 +4,7 @@ Modular quality-of-life tools, gameplay automation, party management, GM tools, 
 
 MK-Shadowdark uses a **Group-first procedure architecture** with Group Management as its active GM-facing party/procedure workspace.
 
-The Group Sheet remains the gameplay owner for party/procedure state. The GM Screen is temporarily disabled.
+The Group Sheet remains the gameplay owner for party/procedure state. The GM Screen is available alongside it as a GM-facing control surface.
 
 ## Compatibility
 
@@ -93,11 +93,11 @@ The old **MK-Shadowdark GM Screen Mock** prototype is not a dependency and is no
 - **GM Member Status** — compact GM-only status affordance for HP/AC/death/wounds/Focus/light/effects.
 - **Time Passes** — a standalone GM 1d6/2d6/3d6 public roll with synchronized v1.6 visual cues and no encounter automation.
 
-## GM Screen (Paused)
+## GM Screen
 
-The GM Screen is **temporarily disabled**. Its Token Scene Controls button and `mk.gmScreen` API are not loaded while work on the feature is paused. Group Management, encounter services, source-table import, and standalone Time Passes remain available.
+The GM Screen is available to GMs through its shield button in the Token Scene Controls. The `mk.gmScreen` API is also loaded for macros and integrations. Group Management remains the authoritative owner of party and procedure state; encounter services, source-table import, and standalone Time Passes remain available alongside it.
 
-The paused GM Screen implementation is a native Foundry ApplicationV2 surface. It is not a replacement for the Group Sheet and it does not own duplicate gameplay state. The design notes below apply when it is re-enabled.
+The GM Screen implementation is a native Foundry ApplicationV2 surface. It is not a replacement for the Group Sheet and it does not own duplicate gameplay state.
 
 The GM Screen is intentionally a **manual-update surface** for outside changes. It does not subscribe to ambient Actor, Scene, Combat, or MK workflow changes in order to force background rerenders, and it does not expose a generic Refresh button. Direct GM Screen actions rerender when they complete. Group/workspace selection is kept only in the currently open application and is not silently persisted as a presentation preference. The former Hide/Show Active Party rail and Reset GM Screen Presentation controls are retired.
 
@@ -123,17 +123,18 @@ The Elapsed readout uses hours and minutes only. Combat's 6-second turns are the
 Available workspaces, in order, are:
 
 - **Overview** — a per-GM shortcut dashboard. Drag normal Foundry documents such as Journal entries/pages, Actors, Items, RollTables, and other UUID-backed documents onto Overview to pin them. Clicking a pinned shortcut opens the original document; removing a shortcut deletes only the pin.
-- **Exploration** — exploration turns, encounter cadence, due checks, and encounter processing. Marching order and exploration-role editing remain in Group Management rather than the GM Screen.
-- **Combat** — current Foundry Combat round/turn/combatants and MK Morale overview.
+- **Exploration** — a View/Edit Encounter Zone grid with eight default rows. In Edit mode, drag RollTables from Foundry onto cells; in View mode, click an assigned cell to roll it. Encounter checks remain owned by Group Management, while marching order, exploration timing, and role editing remain there as well.
 - **Downtime** — settlement-facing generators only, including **Create Tavern** and **Create Shop**. Resting/Camp status and controls are intentionally absent from this workspace.
 - **Tables** — imported Shadowdark source RollTables with search, filtering, rolling, and source metadata.
 - **Session Log** — session metadata/timer controls plus recent canonical Group encounter records with inspection, staging, reveal, and reroll actions.
 
 Session Log includes a free-text **Starting date and time** field, **Start Session**, and **Reset Timer**. Start Session stores the entered label as Group session metadata and resets the currently selected procedure timer to zero. It also records the current Foundry world-time value as metadata, but it does **not** rewrite the world's calendar/time. Reset Timer resets only the current Group procedure timer after confirmation.
 
+The GM-only **GM Tools** panel in Session Log provides direct open/test buttons for Scene Context and encounter setup, Group Management, the Exploration/Tables/Settlement workspaces, source-driven NPC generation, Time Passes dice, and latest encounter staging.
+
 Overview pins are presentation-only state stored on the current GM user as document UUIDs. They do not copy Journal/Actor/Item content and do not become Scene, Group, encounter, combat, morale, wound, or Focus state. Pinning or removing a shortcut updates the Overview canvas directly and does not force a full GM Screen rerender.
 
-The **Exploration**, **Combat**, and **Downtime** active tabs use distinct tints. The former dedicated Encounter, Environment, Resting, Rules, and Tools workspaces are not part of the production navigation. Encounter history lives in Session Log, while Terrain, Danger, and Period are edited from the persistent top strip.
+The **Exploration** and **Downtime** active tabs use distinct tints. The former dedicated Encounter, Environment, Resting, Rules, Tools, and Combat workspaces are not part of the production navigation. Encounter history lives in Session Log, while Terrain, Danger, and Period are edited from the persistent top strip.
 
 The GM Screen reads canonical state from Group, Scene Context, internal encounter services, Encounter Staging, Foundry Combat, Morale, and the prepared GM member-status model. It does not store a second party, procedure clock, encounter, combat, morale, wound, or Focus model.
 
@@ -145,9 +146,9 @@ The **Journal Sheet | Use as Default** world setting is enabled by default. When
 
 # Source Table Import
 
-The source-table importer can import native Foundry RollTables from Markdown transcriptions supplied by the GM. MK-Shadowdark parses the selected files locally and does not bundle the sourcebook table content. While the GM Screen is disabled, open it through `game.modules.get("mk-shadowdark").api.sourceTables.openImporter()`.
+The source-table importer can import native Foundry RollTables from Markdown transcriptions supplied by the GM. MK-Shadowdark parses the selected files locally and does not bundle the sourcebook table content. Open it from the GM Screen Tables workspace or through `game.modules.get("mk-shadowdark").api.sourceTables.openImporter()`.
 
-The paused **Tables** workspace contains only the imported source-table browser. It does not configure encounter state; the persistent top strip continues to display and save the current Scene context when the GM Screen is re-enabled.
+The **Tables** workspace contains only the imported source-table browser. It does not configure encounter state; the persistent top strip displays and saves the current Scene context.
 
 
 Supported source detection includes:
@@ -270,7 +271,7 @@ With the default 6-minute Exploration turn:
 
 If a time advance crosses multiple check boundaries, MK-Shadowdark preserves the exact number of due checks rather than collapsing them into one.
 
-The GM can inspect/process the same due state from Group Traveling or the production GM Screen. Both route to the same Group encounter service. Group Traveling retains encounter-pressure/check-due information; the GM Screen Exploration workspace exposes the same due-check processing without duplicating Marching Order, role, or Group Traveling navigation controls.
+Group Traveling remains the Group-facing surface for exploration encounter state and processing through the canonical Group encounter service. The GM Screen Exploration workspace is limited to the editable Encounter Zone grid and does not duplicate Group timing, encounter-check, Marching Order, role, or Traveling controls.
 
 ## Scene encounter context
 
@@ -477,7 +478,7 @@ Use the predefined effect:
 
 It sets the canonical MK morale-immunity state and excludes that actor from morale rolls/Fleeing application.
 
-The GM Screen displays current Foundry Combat and MK Morale context without replacing the Combat Tracker or creating another morale model. Morale state remains available in the Combat workspace alongside the combat overview.
+Foundry Combat and MK Morale remain authoritative outside the GM Screen. The GM Screen keeps only the compact active-combat round indicator in its pressure strip; combat tracking and morale controls remain in Foundry's native Combat Tracker and the core automation surfaces.
 
 ---
 
@@ -617,7 +618,7 @@ Prefer canonical service APIs over private flags or rendered DOM state.
 
 ## The GM Screen button is missing
 
-This is expected while the GM Screen is temporarily disabled. Its shield button and `game.modules.get("mk-shadowdark").api.gmScreen` surface are not loaded.
+The shield button is available to GMs in the Token Scene Controls. If it is missing, verify that the module is enabled, the current user is a GM, and the world is serving the current `module.json` rather than a cached module installation.
 
 ## A Group encounter check is due but cannot run
 

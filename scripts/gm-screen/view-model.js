@@ -1,22 +1,16 @@
 import { getGroupData } from "../group-sheet/activities.js";
 import { isGroupActor, resolveActorFromUuid } from "../group-sheet/actors.js";
 import { getGroupAssignments } from "../group-sheet/assignments.js";
-import {
-  buildExplorationEncounterViewData,
-  getExplorationEncounterState,
-} from "../group-sheet/exploration-encounters.js";
 import { buildGroupMemberStatus } from "../group-sheet/member-status.js";
 import { getGroupProcedureState } from "../group-sheet/procedure.js";
 import { getGroupRestState } from "../group-sheet/rest-encounters.js";
 import { getGroupElapsedTime } from "../group-sheet/time.js";
 import { resolveSceneEnvironmentContext } from "../libs/environment-context.js";
-import { MODULE_ID } from "../group-sheet/encounters/constants.js";
 import { encounterMessageData as readEncounterMessageData } from "../group-sheet/encounters/chat.js";
 
 const GM_SCREEN_WORKSPACES = Object.freeze([
   "overview",
   "exploration",
-  "combat",
   "downtime",
   "tables",
   "session-log",
@@ -25,7 +19,6 @@ const GM_SCREEN_WORKSPACES = Object.freeze([
 const GM_SCREEN_WORKSPACE_LABELS = Object.freeze({
   overview: "Overview",
   exploration: "Exploration",
-  combat: "Combat",
   downtime: "Downtime",
   tables: "Tables",
   "session-log": "Session Log",
@@ -34,7 +27,6 @@ const GM_SCREEN_WORKSPACE_LABELS = Object.freeze({
 const GM_SCREEN_WORKSPACE_ICONS = Object.freeze({
   overview: "fa-compass",
   exploration: "fa-map",
-  combat: "fa-swords",
   downtime: "fa-coins",
   tables: "fa-table-list",
   "session-log": "fa-book-open",
@@ -182,57 +174,13 @@ function buildAssignmentsView(groupActor) {
   };
 }
 
-function combatantView(combatant, currentCombatant) {
-  return {
-    id: String(combatant?.id ?? ""),
-    name: String(combatant?.name ?? combatant?.actor?.name ?? "Combatant"),
-    img: String(combatant?.img ?? combatant?.token?.texture?.src ?? combatant?.actor?.img ?? "icons/svg/mystery-man.svg"),
-    initiative: Number.isFinite(Number(combatant?.initiative)) ? Number(combatant.initiative) : null,
-    defeated: Boolean(combatant?.defeated ?? combatant?.isDefeated),
-    current: Boolean(currentCombatant && combatant?.id === currentCombatant?.id),
-  };
-}
-
 function buildCombatView(combat = globalThis.game?.combat) {
   if (!combat) {
     return {
       active: false,
       name: "No active combat",
       round: 0,
-      turn: null,
-      currentCombatant: null,
-      combatants: [],
-      morale: null,
     };
-  }
-
-  const turns = Array.isArray(combat.turns) ? combat.turns : [];
-  const turnIndex = Number(combat.turn);
-  const hasCurrentTurn = Number.isInteger(turnIndex) && turnIndex >= 0 && turnIndex < turns.length;
-  const currentCombatant = hasCurrentTurn ? turns[turnIndex] ?? null : null;
-  const moraleApi = globalThis.game?.modules?.get?.(MODULE_ID)?.api?.morale;
-  let morale = null;
-
-  if (typeof moraleApi?.getState === "function") {
-    try {
-      const state = moraleApi.getState(combat);
-      const force = state?.force ?? null;
-      morale = force ? {
-        initialCount: Number(force.initialCount ?? 0),
-        checked: Boolean(force.checked),
-        threshold: force.threshold ?? null,
-        result: force.result ?? null,
-        livingCount: Array.isArray(force.members)
-          ? force.members.filter(member => {
-            const combatant = combat.combatants?.get?.(member.combatantId)
-              ?? turns.find(entry => entry.id === member.combatantId);
-            return combatant && !combatant.defeated && !combatant.isDefeated;
-          }).length
-          : 0,
-      } : null;
-    } catch (_error) {
-      morale = null;
-    }
   }
 
   return {
@@ -240,10 +188,6 @@ function buildCombatView(combat = globalThis.game?.combat) {
     id: String(combat.id ?? ""),
     name: String(combat.name ?? "Combat"),
     round: Math.max(0, Number(combat.round ?? 0) || 0),
-    turn: hasCurrentTurn ? turnIndex + 1 : null,
-    currentCombatant: currentCombatant ? combatantView(currentCombatant, currentCombatant) : null,
-    combatants: turns.map(combatant => combatantView(combatant, currentCombatant)),
-    morale,
   };
 }
 
@@ -341,7 +285,6 @@ async function buildGmScreenViewModel({
     procedure: "downtime",
     elapsedSeconds: 0,
     elapsedLabel: "0m",
-    exploration: null,
     resting: null,
     latestEncounter: null,
   };
@@ -350,16 +293,6 @@ async function buildGmScreenViewModel({
 
   const procedure = getGroupProcedureState(groupActor);
   const elapsedSeconds = getGroupElapsedTime(groupActor, procedure);
-  const explorationView = await buildExplorationEncounterViewData(groupActor, { isGm: true });
-  const explorationState = getExplorationEncounterState(groupActor);
-  const exploration = {
-    ...explorationView,
-    nextCheckTurn: explorationState.nextCheckTurn,
-    turnsUntilNextCheck: explorationState.turnsUntilNextCheck,
-    nextCheckDue: explorationState.dueChecks > 0,
-    nextCheckLabel: formatExplorationNextCheck(explorationState),
-    intervalUnit: explorationState.intervalTurns === 1 ? "turn" : "turns",
-  };
   const rest = getGroupRestState(groupActor, { context: environment });
   const latestEncounter = buildLatestEncounterView(groupActor, messages);
 
@@ -369,7 +302,6 @@ async function buildGmScreenViewModel({
     procedure,
     elapsedSeconds,
     elapsedLabel: formatDuration(elapsedSeconds),
-    exploration,
     resting: {
       status: rest.workflow.status,
       mode: rest.workflow.mode,

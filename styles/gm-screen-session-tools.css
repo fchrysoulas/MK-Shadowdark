@@ -1,0 +1,85 @@
+.mk-gm-session-tools {
+  margin-bottom: 10px;
+}
+
+.mk-gm-session-tools > header {
+  margin-bottom: 8px;
+}
+
+.mk-gm-session-tools > .mk-gm-secondary {
+  margin: 0 0 9px;
+}
+
+.mk-gm-session-tools-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 6px;
+}
+
+.mk-gm-session-tools-grid > button,
+.mk-gm-session-tool-roll {
+  min-height: 32px;
+}
+
+.mk-gm-session-tools-grid > button {
+  padding: 5px 8px;
+  text-align: left;
+}
+
+.mk-gm-session-tools-grid > button i {
+  width: 16px;
+  color: #cbbb80;
+  text-align: center;
+}
+
+.mk-gm-session-tool-roll {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 58px auto;
+  gap: 5px;
+  align-items: center;
+  padding: 3px 5px 3px 8px;
+  border: 1px solid var(--mk-gm-border);
+  border-radius: 4px;
+  background: rgba(255, 255, 255, 0.035);
+}
+
+.mk-gm-session-tool-roll label {
+  overflow: hidden;
+  color: var(--mk-gm-muted);
+  font-size: 10px;
+  font-weight: 800;
+  text-overflow: ellipsis;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.mk-gm-session-tool-roll select {
+  width: 58px;
+  min-height: 26px;
+  border: 1px solid var(--mk-gm-border);
+  border-radius: 3px;
+  background: #101214;
+  color: var(--mk-gm-text);
+}
+
+.mk-gm-session-tool-roll button {
+  min-height: 26px;
+  padding: 3px 7px;
+  white-space: nowrap;
+}
+
+.mk-gm-session-context-dialog {
+  display: grid;
+  gap: 10px;
+}
+
+.mk-gm-session-context-dialog .mk-gm-secondary {
+  margin: 0;
+  line-height: 1.35;
+}
+
+@media (max-width: 720px) {
+  .mk-gm-session-tools-grid {
+    grid-template-columns: 1fr;
+  }
+}

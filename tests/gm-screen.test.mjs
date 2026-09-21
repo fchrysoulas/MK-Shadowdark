@@ -7,14 +7,15 @@ const viewModel = fs.readFileSync(new URL("../scripts/gm-screen/view-model.js", 
 const template = fs.readFileSync(new URL("../templates/gm-screen.hbs", import.meta.url), "utf8");
 const topContext = fs.readFileSync(new URL("../scripts/gm-screen/top-context-controls.js", import.meta.url), "utf8");
 const overviewLinks = fs.readFileSync(new URL("../scripts/gm-screen/overview-links.js", import.meta.url), "utf8");
+const sessionTools = fs.readFileSync(new URL("../scripts/gm-screen/session-tools.js", import.meta.url), "utf8");
 const stylesheet = fs.readFileSync(new URL("../styles/gm-screen.css", import.meta.url), "utf8");
+const sessionToolsStylesheet = fs.readFileSync(new URL("../styles/gm-screen-session-tools.css", import.meta.url), "utf8");
 const refactorStylesheet = fs.readFileSync(new URL("../styles/gm-screen-workspace-refactor.css", import.meta.url), "utf8");
 const manifest = JSON.parse(fs.readFileSync(new URL("../module.json", import.meta.url), "utf8"));
 
 const WORKSPACES = [
   "overview",
   "exploration",
-  "combat",
   "downtime",
   "tables",
   "session-log",
@@ -36,18 +37,15 @@ test("GM Screen is GM-gated and has a supported toggle entry point", () => {
   assert.match(runtime, /visible: true/);
 });
 
-test("GM Screen consumes canonical Group, Scene, encounter, and morale services", () => {
+test("GM Screen consumes canonical Group, Scene, and rest services", () => {
   assert.match(viewModel, /getGroupData/);
   assert.match(viewModel, /getGroupProcedureState/);
   assert.match(viewModel, /getGroupElapsedTime/);
   assert.match(viewModel, /getGroupAssignments/);
-  assert.match(viewModel, /buildExplorationEncounterViewData/);
   assert.match(viewModel, /getGroupRestState/);
   assert.match(viewModel, /buildGroupMemberStatus/);
   assert.match(viewModel, /resolveSceneEnvironmentContext/);
-  assert.match(viewModel, /api\?\.morale/);
-
-  assert.match(runtime, /processDueExplorationEncounters\(group\)/);
+  assert.doesNotMatch(runtime, /processDueExplorationEncounters/);
   assert.match(runtime, /openEncounterStagingDialog\(latest\.data/);
   assert.doesNotMatch(runtime, /continueGroupRest\(group\)/);
   assert.doesNotMatch(runtime, /startGroupRest\(group/);
@@ -88,7 +86,7 @@ test("one-turn advancement is 6m Exploration, 1h actual Resting, and 6s Combat",
   assert.doesNotMatch(viewModel, /return `\$\{total\}s`/);
 });
 
-test("GM Screen owns the exact six workspaces in order", () => {
+test("GM Screen owns the exact five workspaces in order", () => {
   assert.match(template, /mk-gm-party-rail/);
   assert.match(template, /mk-gm-pressure-strip/);
 
@@ -111,7 +109,7 @@ test("GM Screen owns the exact six workspaces in order", () => {
   assert.doesNotMatch(template, /Group Camping/);
   assert.doesNotMatch(template, /data-workspace-panel="tools"/);
   assert.doesNotMatch(viewModel, /\"tools\"/);
-  assert.match(template, /Process Due Checks/);
+  assert.doesNotMatch(template, /Process Due Checks|Process Encounter Checks/);
 });
 
 test("Overview combines canonical home summary, document shortcuts, and top Scene Context autosave", () => {
@@ -126,16 +124,17 @@ test("Overview combines canonical home summary, document shortcuts, and top Scen
   assert.doesNotMatch(topContext, /Save Context|data-mk-context-save/);
 });
 
-test("Exploration focuses on actionable procedure pressure instead of repeating top context", () => {
+test("Exploration is an editable Encounter Zone grid without encounter processing controls", () => {
   const start = template.indexOf('data-workspace-panel="exploration"');
-  const end = template.indexOf('data-workspace-panel="combat"');
+  const end = template.indexOf('data-workspace-panel="downtime"');
   const exploration = template.slice(start, end);
-  assert.match(exploration, />Turns</);
-  assert.match(exploration, />Next Check</);
-  assert.match(exploration, />Due</);
-  assert.match(exploration, />Encounter Table</);
-  assert.match(exploration, /Process Due Checks/);
-  assert.match(exploration, /Safe: encounter checks are disabled/);
+  assert.match(exploration, /data-mk-exploration-zone-grid/);
+  assert.doesNotMatch(exploration, />Turns</);
+  assert.doesNotMatch(exploration, />Next Check</);
+  assert.doesNotMatch(exploration, />Due</);
+  assert.doesNotMatch(exploration, /Encounter Table|Latest Check/);
+  assert.doesNotMatch(exploration, /Process Due Checks|Process Encounter Checks/);
+  assert.doesNotMatch(exploration, /Safe: encounter checks are disabled/);
   assert.doesNotMatch(exploration, />Terrain</);
   assert.doesNotMatch(exploration, />Danger</);
   assert.doesNotMatch(exploration, />Period</);
@@ -168,7 +167,6 @@ test("view model workspace contract keeps downtime as the compatibility id", () 
 
 test("requested workspace active tints remain defined", () => {
   assert.match(refactorStylesheet, /data-workspace="exploration"/);
-  assert.match(refactorStylesheet, /data-workspace="combat"/);
   assert.match(refactorStylesheet, /data-workspace="downtime"/);
 });
 
@@ -183,9 +181,10 @@ test("GM Screen exposes a wider standalone Time Passes dice selector", () => {
   assert.match(refactorStylesheet, /\.mk-gm-time-passes select[\s\S]*width: 82px/);
 });
 
-test("Combat display converts Foundry's zero-based turn index to a human-facing number", () => {
-  assert.match(viewModel, /hasCurrentTurn \? turnIndex \+ 1 : null/);
-  assert.match(template, /\{\{#if combat\.currentCombatant\}\}\{\{combat\.turn\}\}\{\{else\}\}—\{\{\/if\}\}/);
+test("Combat remains outside the GM Screen workspace navigation", () => {
+  assert.doesNotMatch(template, /data-workspace-panel="combat"/);
+  assert.doesNotMatch(template, /data-action="openCombat"/);
+  assert.match(viewModel, /function buildCombatView/);
 });
 
 test("GM Screen core does not persist duplicate gameplay state", () => {
@@ -201,10 +200,23 @@ test("retired presentation buttons are not loaded", () => {
   assert.ok(!manifest.styles.includes("styles/gm-screen-presentation.css"));
 });
 
-test("GM Screen runtime assets are excluded while the feature is disabled", () => {
+test("GM Screen runtime assets are loaded for the production surface", () => {
   const gmScreenEntries = manifest.esmodules.filter(entry => entry.startsWith("scripts/gm-screen/"));
   const gmScreenStyles = manifest.styles.filter(entry => entry.startsWith("styles/gm-screen"));
-  assert.deepEqual(gmScreenEntries, []);
-  assert.deepEqual(gmScreenStyles, []);
+  assert.ok(gmScreenEntries.includes("scripts/gm-screen/gm-screen.js"));
+  assert.ok(gmScreenEntries.includes("scripts/gm-screen/exploration-zone-grid.js"));
+  assert.ok(gmScreenStyles.includes("styles/gm-screen-exploration.css"));
   assert.ok(!manifest.esmodules.includes("scripts/gm-screen-mock/gm-screen-mock.js"));
+});
+
+test("Session Log exposes direct buttons for GM Screen tools", () => {
+  for (const action of ["group", "scene-context", "overview", "exploration", "tables", "settlement", "npc", "time-passes", "stage-latest"]) {
+    assert.match(sessionTools, new RegExp(`data-mk-session-tool="${action}"`));
+  }
+  assert.match(sessionTools, /openSceneContextDialog/);
+  assert.match(sessionTools, /createSourceDrivenNpc/);
+  assert.match(sessionTools, /openEncounterStagingDialog/);
+  assert.match(sessionToolsStylesheet, /\.mk-gm-session-tools/);
+  assert.ok(manifest.esmodules.includes("scripts/gm-screen/session-tools.js"));
+  assert.ok(manifest.styles.includes("styles/gm-screen-session-tools.css"));
 });

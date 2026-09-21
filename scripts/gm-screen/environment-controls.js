@@ -6,6 +6,10 @@ import {
   setSceneEnvironmentContext,
 } from "../libs/environment-context.js";
 import { sourceTableFlag } from "../source-tables/source-table-importer.js";
+import {
+  getSceneEncounterZoneGrid,
+  gridColumnLabels,
+} from "./exploration-zone-grid.js";
 import { APP_ID } from "./gm-screen.js";
 
 const MODULE_ID = "mk-shadowdark";
@@ -200,7 +204,8 @@ function buildEnvironmentEditorView({
   zoneTable = findWorldTable(zoneTableUuid),
 } = {}) {
   const rules = resolved?.profile ?? {};
-  const terrains = encounterZoneTerrainNames(zoneTable);
+  const gridTerrains = gridColumnLabels(getSceneEncounterZoneGrid(scene));
+  const terrains = gridTerrains.length ? gridTerrains : encounterZoneTerrainNames(zoneTable);
   const persistedTerrain = String(stored.terrain ?? resolved.terrain ?? rules.defaultTerrain ?? "Default");
   const terrain = terrains.length && !terrains.includes(persistedTerrain) ? terrains[0] : persistedTerrain;
   const dangerLevel = String(stored.dangerLevel ?? resolved.dangerLevel ?? rules.defaultDangerLevel ?? "unsafe");

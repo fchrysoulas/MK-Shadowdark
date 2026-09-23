@@ -53,15 +53,17 @@ test("RollTable result metadata is safe when Foundry result sources are unavaila
   });
 });
 
-test("Encounter detail slots expose four Scene-owned RollTable assignments", () => {
+test("Encounter detail slots expose five Scene-owned RollTable assignments", () => {
   assert.deepEqual(normalizeAuxiliaryTables({ distance: "RollTable.distance", trap: " RollTable.trap " }), {
     distance: "RollTable.distance",
     activity: "",
+    danger: "",
     trap: ["RollTable.trap"],
     hazard: [],
   });
   const html = renderEncounterAuxiliaryTableSetup([
     { key: "distance", label: "Starting Distance", uuid: "RollTable.distance", table: { name: "Distance" } },
+    { key: "danger", label: "Danger Level", uuid: "RollTable.danger", table: { name: "Danger Level" } },
     {
       key: "trap",
       label: "Trap",
@@ -237,7 +239,7 @@ test("Encounter Zone rolls the selected cell's RollTable after the zone die", as
     assert.match(calls[1].data.pages[0].text.content, /A patrol approaches/);
     assert.equal(calls[1].data.flags["mk-shadowdark"].encounterZoneRoll.tableUuid, table.uuid);
     assert.equal(result.journal.id, "JournalEntry.zone");
-    assert.equal(result.auxiliaryRolls.length, 4);
+    assert.equal(result.auxiliaryRolls.length, 5);
     assert.ok(result.auxiliaryRolls.every(entry => entry.configured === false));
     assert.match(calls[1].data.pages[0].text.content, /No supporting encounter tables were configured/);
     assert.doesNotMatch(calls[1].data.pages[0].text.content, /Starting Distance|Not configured; skipped/);
@@ -324,9 +326,10 @@ test("Encounter Zone rolls every configured encounter detail table into a Journa
     assert.deepEqual(result.auxiliaryRolls.map(entry => entry.key), [...AUXILIARY_TABLE_KEYS]);
     assert.ok(result.auxiliaryRolls.every(entry => entry.configured && !entry.error));
     assert.deepEqual(calls.map(call => call.type), ["main", ...AUXILIARY_TABLE_KEYS, "journal"]);
-    assert.ok(calls.slice(0, 5).every(call => call.options.displayChat === false));
+    assert.ok(calls.slice(0, AUXILIARY_TABLE_KEYS.length + 1).every(call => call.options.displayChat === false));
     assert.match(calls.at(-1).data.pages[0].text.content, /Starting Distance/);
     assert.match(calls.at(-1).data.pages[0].text.content, /Activity/);
+    assert.match(calls.at(-1).data.pages[0].text.content, /Danger Level/);
     assert.match(calls.at(-1).data.pages[0].text.content, /Trap/);
     assert.match(calls.at(-1).data.pages[0].text.content, /Hazard/);
   } finally {
@@ -412,6 +415,7 @@ test("Encounter Zone rolls every assigned Trap and Hazard table", async () => {
     assert.deepEqual(result.auxiliaryRolls.map(entry => entry.tableUuid), [
       "RollTable.distance",
       "RollTable.activity",
+      "",
       "RollTable.trap-one",
       "RollTable.trap-two",
       "RollTable.hazard-one",

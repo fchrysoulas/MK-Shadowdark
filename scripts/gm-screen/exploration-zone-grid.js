@@ -13,6 +13,7 @@ const DEFAULT_ROW_COUNT = 8;
 const AUXILIARY_TABLE_KEYS = Object.freeze([
   "distance",
   "activity",
+  "danger",
   "trap",
   "hazard",
 ]);
@@ -25,6 +26,7 @@ const AUXILIARY_MULTI_TABLE_KEYS = Object.freeze([
 const AUXILIARY_TABLE_LABELS = Object.freeze({
   distance: "Starting Distance",
   activity: "Activity",
+  danger: "Danger Level",
   trap: "Trap",
   hazard: "Hazard",
 });

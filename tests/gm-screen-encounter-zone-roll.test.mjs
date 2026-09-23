@@ -113,7 +113,8 @@ test("Encounter Zone rolls the selected cell's RollTable after the zone die", as
   const previousCanvas = globalThis.canvas;
   const previousGame = globalThis.game;
   const previousUi = globalThis.ui;
-  const previousChatMessage = globalThis.ChatMessage;
+  const previousJournalEntry = globalThis.JournalEntry;
+  const previousConst = globalThis.CONST;
   const calls = [];
 
   class MockRoll {
@@ -153,13 +154,11 @@ test("Encounter Zone rolls the selected cell's RollTable after the zone die", as
     users: [{ id: "User.gm", isGM: true, active: true }],
   };
   globalThis.ui = { notifications: { warn: () => {}, error: () => {} } };
-  globalThis.ChatMessage = {
-    getSpeaker() {
-      return {};
-    },
+  globalThis.CONST = { JOURNAL_ENTRY_PAGE_FORMATS: { HTML: 1 }, DOCUMENT_OWNERSHIP_LEVELS: { NONE: 0 } };
+  globalThis.JournalEntry = {
     async create(data) {
-      calls.push({ type: "gm-chat", data });
-      return { id: "ChatMessage.zone" };
+      calls.push({ type: "journal", data });
+      return { id: "JournalEntry.zone" };
     },
   };
 
@@ -167,34 +166,39 @@ test("Encounter Zone rolls the selected cell's RollTable after the zone die", as
     const result = await rollEncounterZone("Forest", globalThis.canvas.scene);
     assert.equal(result.total, 7);
     assert.equal(result.cell.uuid, table.uuid);
-    assert.deepEqual(calls.map(call => call.type), ["table-roll", "gm-chat"]);
+    assert.deepEqual(calls.map(call => call.type), ["table-roll", "journal"]);
     assert.equal(calls[0].options.displayChat, false);
-    assert.deepEqual(calls[1].data.whisper, ["User.gm"]);
-    assert.match(calls[1].data.content, /1d8 → 7/);
-    assert.match(calls[1].data.content, /1d20 → 14/);
-    assert.match(calls[1].data.content, /A patrol approaches/);
+    assert.equal(calls[1].data.name, "Encounter — Forest — 6-8");
+    assert.equal(calls[1].data.ownership.default, 0);
+    assert.equal(calls[1].data.pages[0].name, "Encounter Result");
+    assert.equal(calls[1].data.pages[0].text.format, 1);
+    assert.match(calls[1].data.pages[0].text.content, /1d8 → 7/);
+    assert.match(calls[1].data.pages[0].text.content, /1d20 → 14/);
+    assert.match(calls[1].data.pages[0].text.content, /A patrol approaches/);
     assert.equal(calls[1].data.flags["mk-shadowdark"].encounterZoneRoll.tableUuid, table.uuid);
+    assert.equal(result.journal.id, "JournalEntry.zone");
     assert.equal(result.auxiliaryRolls.length, 4);
     assert.ok(result.auxiliaryRolls.every(entry => entry.configured === false));
-    assert.match(calls[1].data.content, /Starting Distance/);
-    assert.match(calls[1].data.content, /Not configured; skipped/);
+    assert.match(calls[1].data.pages[0].text.content, /Starting Distance/);
+    assert.match(calls[1].data.pages[0].text.content, /Not configured; skipped/);
   } finally {
     globalThis.Roll = previousRoll;
     globalThis.fromUuid = previousFromUuid;
     globalThis.canvas = previousCanvas;
     globalThis.game = previousGame;
     globalThis.ui = previousUi;
-    globalThis.ChatMessage = previousChatMessage;
+    globalThis.JournalEntry = previousJournalEntry;
+    globalThis.CONST = previousConst;
   }
 });
 
-test("Encounter Zone rolls every configured encounter detail table privately", async () => {
+test("Encounter Zone rolls every configured encounter detail table into a Journal page", async () => {
   const previousRoll = globalThis.Roll;
   const previousFromUuid = globalThis.fromUuid;
   const previousCanvas = globalThis.canvas;
   const previousGame = globalThis.game;
   const previousUi = globalThis.ui;
-  const previousChatMessage = globalThis.ChatMessage;
+  const previousJournalEntry = globalThis.JournalEntry;
   const calls = [];
   const auxiliaryTables = Object.fromEntries(AUXILIARY_TABLE_KEYS.map((key, index) => {
     const uuid = `RollTable.${key}`;
@@ -247,11 +251,10 @@ test("Encounter Zone rolls every configured encounter detail table privately", a
     users: [{ id: "User.gm", isGM: true, active: true }],
   };
   globalThis.ui = { notifications: { warn: () => {}, error: () => {} } };
-  globalThis.ChatMessage = {
-    getSpeaker: () => ({}),
+  globalThis.JournalEntry = {
     async create(data) {
-      calls.push({ type: "gm-chat", data });
-      return { id: "ChatMessage.zone-details" };
+      calls.push({ type: "journal", data });
+      return { id: "JournalEntry.zone-details" };
     },
   };
 
@@ -259,19 +262,19 @@ test("Encounter Zone rolls every configured encounter detail table privately", a
     const result = await rollEncounterZone("Forest", scene);
     assert.deepEqual(result.auxiliaryRolls.map(entry => entry.key), [...AUXILIARY_TABLE_KEYS]);
     assert.ok(result.auxiliaryRolls.every(entry => entry.configured && !entry.error));
-    assert.deepEqual(calls.map(call => call.type), ["main", ...AUXILIARY_TABLE_KEYS, "gm-chat"]);
+    assert.deepEqual(calls.map(call => call.type), ["main", ...AUXILIARY_TABLE_KEYS, "journal"]);
     assert.ok(calls.slice(0, 5).every(call => call.options.displayChat === false));
-    assert.match(calls.at(-1).data.content, /Starting Distance/);
-    assert.match(calls.at(-1).data.content, /Activity/);
-    assert.match(calls.at(-1).data.content, /Trap/);
-    assert.match(calls.at(-1).data.content, /Hazard/);
+    assert.match(calls.at(-1).data.pages[0].text.content, /Starting Distance/);
+    assert.match(calls.at(-1).data.pages[0].text.content, /Activity/);
+    assert.match(calls.at(-1).data.pages[0].text.content, /Trap/);
+    assert.match(calls.at(-1).data.pages[0].text.content, /Hazard/);
   } finally {
     globalThis.Roll = previousRoll;
     globalThis.fromUuid = previousFromUuid;
     globalThis.canvas = previousCanvas;
     globalThis.game = previousGame;
     globalThis.ui = previousUi;
-    globalThis.ChatMessage = previousChatMessage;
+    globalThis.JournalEntry = previousJournalEntry;
   }
 });
 
@@ -281,7 +284,7 @@ test("Encounter Zone rolls every assigned Trap and Hazard table", async () => {
   const previousCanvas = globalThis.canvas;
   const previousGame = globalThis.game;
   const previousUi = globalThis.ui;
-  const previousChatMessage = globalThis.ChatMessage;
+  const previousJournalEntry = globalThis.JournalEntry;
   const calls = [];
   const assignments = {
     distance: ["RollTable.distance"],
@@ -335,11 +338,10 @@ test("Encounter Zone rolls every assigned Trap and Hazard table", async () => {
     users: [{ id: "User.gm", isGM: true, active: true }],
   };
   globalThis.ui = { notifications: { warn: () => {}, error: () => {} } };
-  globalThis.ChatMessage = {
-    getSpeaker: () => ({}),
+  globalThis.JournalEntry = {
     async create(data) {
-      calls.push({ type: "gm-chat", data });
-      return { id: "ChatMessage.zone-details" };
+      calls.push({ type: "journal", data });
+      return { id: "JournalEntry.zone-details" };
     },
   };
 
@@ -359,21 +361,21 @@ test("Encounter Zone rolls every assigned Trap and Hazard table", async () => {
       ...assignments.activity,
       ...assignments.trap,
       ...assignments.hazard,
-      "gm-chat",
+      "journal",
     ]);
     assert.ok(calls.slice(0, -1).every(call => call.options.displayChat === false));
-    assert.match(calls.at(-1).data.content, /Trap 1/);
-    assert.match(calls.at(-1).data.content, /Trap 2/);
-    assert.match(calls.at(-1).data.content, /Hazard 1/);
-    assert.match(calls.at(-1).data.content, /Hazard 2/);
-    assert.match(calls.at(-1).data.content, /RollTable\.trap-one result/);
-    assert.match(calls.at(-1).data.content, /RollTable\.hazard-two result/);
+    assert.match(calls.at(-1).data.pages[0].text.content, /Trap 1/);
+    assert.match(calls.at(-1).data.pages[0].text.content, /Trap 2/);
+    assert.match(calls.at(-1).data.pages[0].text.content, /Hazard 1/);
+    assert.match(calls.at(-1).data.pages[0].text.content, /Hazard 2/);
+    assert.match(calls.at(-1).data.pages[0].text.content, /RollTable\.trap-one result/);
+    assert.match(calls.at(-1).data.pages[0].text.content, /RollTable\.hazard-two result/);
   } finally {
     globalThis.Roll = previousRoll;
     globalThis.fromUuid = previousFromUuid;
     globalThis.canvas = previousCanvas;
     globalThis.game = previousGame;
     globalThis.ui = previousUi;
-    globalThis.ChatMessage = previousChatMessage;
+    globalThis.JournalEntry = previousJournalEntry;
   }
 });

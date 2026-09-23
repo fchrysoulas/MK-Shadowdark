@@ -123,7 +123,7 @@ The Elapsed readout uses hours and minutes only. Combat's 6-second turns are the
 Available workspaces, in order, are:
 
 - **Overview** — a per-GM shortcut dashboard. Drag normal Foundry documents such as Journal entries/pages, Actors, Items, RollTables, and other UUID-backed documents onto Overview to pin them. Clicking a pinned shortcut opens the original document; removing a shortcut deletes only the pin.
-- **Encounters** — a View/Edit Encounter Zone grid with eight default rows plus four optional RollTable drop areas for Starting Distance, Activity, Trap, and Hazard. In Edit mode, drag RollTables from Foundry onto zone cells or these encounter detail boxes; Trap and Hazard accept multiple tables and roll each assigned table. In View mode, click an assigned cell to roll it. Roll Zone uses the selected terrain and rolls every configured encounter detail table into the GM-only result chat. Encounter checks remain owned by Group Management, while marching order, exploration timing, and role editing remain there as well.
+- **Encounters** — a View/Edit Encounter Zone grid with eight default rows plus four optional RollTable drop areas for Starting Distance, Activity, Trap, and Hazard. In Edit mode, drag RollTables from Foundry onto zone cells or these encounter detail boxes; Trap and Hazard accept multiple tables and roll each assigned table. In View mode, click an assigned cell to roll it. Roll Zone uses the selected terrain and records every configured encounter detail table in a GM-only Journal Entry page. Encounter checks remain owned by Group Management, while marching order, exploration timing, and role editing remain there as well.
 - **Downtime** — settlement-facing generators only, including **Create Tavern** and **Create Shop**. Resting/Camp status and controls are intentionally absent from this workspace.
 - **Tables** — imported Shadowdark source RollTables with search, filtering, rolling, and source metadata.
 - **Session Log** — session metadata/timer controls plus recent canonical Group encounter records with inspection, staging, reveal, and reroll actions.
@@ -134,7 +134,7 @@ The GM-only **GM Tools** panel in Session Log provides direct open/test buttons 
 
 Overview pins are presentation-only state stored on the current GM user as document UUIDs. They do not copy Journal/Actor/Item content and do not become Scene, Group, encounter, combat, morale, wound, or Focus state. Pinning or removing a shortcut updates the Overview canvas directly and does not force a full GM Screen rerender.
 
-The **Encounters** and **Downtime** active tabs use distinct tints. The former dedicated Encounter, Environment, Resting, Rules, Tools, and Combat workspaces are not part of the production navigation. Encounter history lives in Session Log, while Terrain, Danger, and Period are edited from the persistent top strip. **Roll Zone** rolls the selected terrain's Encounter Zone die, the assigned terrain cell's RollTable, and each configured Starting Distance, Activity, Trap, and Hazard RollTable; every assigned Trap or Hazard table is rolled.
+The **Encounters** and **Downtime** active tabs use distinct tints. The former dedicated Encounter, Environment, Resting, Rules, Tools, and Combat workspaces are not part of the production navigation. Encounter history lives in Session Log, while Terrain, Danger, and Period are edited from the persistent top strip. **Roll Zone** rolls the selected terrain's Encounter Zone die, the assigned terrain cell's RollTable, and each configured Starting Distance, Activity, Trap, and Hazard RollTable; every assigned Trap or Hazard table is rolled into a new GM-only Journal Entry page.
 
 The GM Screen reads canonical state from Group, Scene Context, internal encounter services, Encounter Staging, Foundry Combat, Morale, and the prepared GM member-status model. It does not store a second party, procedure clock, encounter, combat, morale, wound, or Focus model.
 
@@ -271,7 +271,7 @@ With the default 6-minute Exploration turn:
 
 If a time advance crosses multiple check boundaries, MK-Shadowdark preserves the exact number of due checks rather than collapsing them into one.
 
-Group Traveling remains the Group-facing surface for exploration encounter state and processing through the canonical Group encounter service. The GM Screen Encounters workspace owns only the editable Encounter Zone grid, encounter detail RollTable assignments, and the explicit GM-only Roll Zone result; it does not duplicate Group timing, encounter-check, Marching Order, role, or Traveling controls.
+Group Traveling remains the Group-facing surface for exploration encounter state and processing through the canonical Group encounter service. The GM Screen Encounters workspace owns only the editable Encounter Zone grid, encounter detail RollTable assignments, and the explicit GM-only Roll Zone Journal Entry page; it does not duplicate Group timing, encounter-check, Marching Order, role, or Traveling controls.
 
 ## Scene encounter context
 

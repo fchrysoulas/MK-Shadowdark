@@ -61,6 +61,10 @@ function escapeHtml(value) {
   })[character]);
 }
 
+function configuredDocumentClass(baseClass) {
+  return baseClass?.implementation ?? baseClass ?? null;
+}
+
 function currentScene() {
   return globalThis.canvas?.scene ?? globalThis.game?.scenes?.current ?? null;
 }
@@ -701,15 +705,6 @@ async function rollEncounterAuxiliaryTables(scene = currentScene()) {
   return rolls;
 }
 
-function activeGmIds() {
-  const ids = collectionValues(globalThis.game?.users)
-    .filter(user => user?.isGM && user?.active !== false && user?.id)
-    .map(user => String(user.id));
-  const currentId = String(globalThis.game?.user?.id ?? "");
-  if (globalThis.game?.user?.isGM && currentId && !ids.includes(currentId)) ids.push(currentId);
-  return [...new Set(ids)];
-}
-
 function renderTableResultDetails(results = []) {
   if (!results.length) return "<div class=\"mk-gm-encounter-zone-result\">No table result details returned.</div>";
   return results.map(result => `
@@ -769,25 +764,43 @@ function renderEncounterZoneRollCard(data = {}) {
   `;
 }
 
-async function createEncounterZoneRollMessage(data = {}) {
-  const ChatMessageClass = globalThis.ChatMessage;
-  const whisper = activeGmIds();
-  if (!ChatMessageClass?.create || !whisper.length) {
-    globalThis.ui?.notifications?.warn?.("No active GM is available for the Encounter Zone result.");
+function encounterZoneJournalName(data = {}) {
+  const terrain = String(data.terrain ?? "Unknown").trim() || "Unknown";
+  const rowLabel = String(data.rowLabel ?? "Encounter").trim() || "Encounter";
+  return `Encounter — ${terrain} — ${rowLabel}`;
+}
+
+async function createEncounterZoneRollJournal(data = {}) {
+  const JournalEntryClass = configuredDocumentClass(globalThis.JournalEntry);
+  if (!JournalEntryClass?.create) {
+    globalThis.ui?.notifications?.error?.("Foundry Journal creation is unavailable.");
     return null;
   }
 
-  return ChatMessageClass.create({
-    speaker: ChatMessageClass.getSpeaker?.() ?? {},
-    style: globalThis.CONST?.CHAT_MESSAGE_STYLES?.OTHER ?? globalThis.CONST?.CHAT_MESSAGE_TYPES?.OTHER ?? 0,
-    content: renderEncounterZoneRollCard(data),
-    whisper,
+  const htmlFormat = globalThis.CONST?.JOURNAL_ENTRY_PAGE_FORMATS?.HTML ?? 1;
+  const journal = await JournalEntryClass.create({
+    name: encounterZoneJournalName(data),
+    ownership: {
+      default: globalThis.CONST?.DOCUMENT_OWNERSHIP_LEVELS?.NONE ?? 0,
+    },
+    pages: [
+      {
+        name: "Encounter Result",
+        type: "text",
+        text: {
+          content: renderEncounterZoneRollCard(data),
+          format: Number(htmlFormat) || 1,
+        },
+      },
+    ],
     flags: {
       [MODULE_ID]: {
         encounterZoneRoll: data,
       },
     },
   });
+  journal?.sheet?.render?.(true);
+  return journal ?? null;
 }
 
 async function rollEncounterZone(terrain, scene = currentScene(), {
@@ -843,7 +856,7 @@ async function rollEncounterZone(terrain, scene = currentScene(), {
     tableRoll: tableRollSummary(tableRoll),
     auxiliaryRolls,
   };
-  const message = await createEncounterZoneRollMessage(detail);
+  const journal = await createEncounterZoneRollJournal(detail);
   return {
     formula,
     total,
@@ -853,7 +866,7 @@ async function rollEncounterZone(terrain, scene = currentScene(), {
     cell: selection.cell,
     tableRoll,
     auxiliaryRolls,
-    message,
+    journal,
     detail,
   };
 }
@@ -1267,7 +1280,7 @@ export {
   bindEncounterAuxiliaryTables,
   rollEncounterAuxiliaryTables,
   renderEncounterZoneRollCard,
-  createEncounterZoneRollMessage,
+  createEncounterZoneRollJournal,
   saveSceneEncounterZoneGrid,
   renderGridView,
   renderGridEditor,

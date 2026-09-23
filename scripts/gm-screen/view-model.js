@@ -18,7 +18,7 @@ const GM_SCREEN_WORKSPACES = Object.freeze([
 
 const GM_SCREEN_WORKSPACE_LABELS = Object.freeze({
   overview: "Overview",
-  exploration: "Exploration",
+  exploration: "Encounters",
   downtime: "Downtime",
   tables: "Tables",
   "session-log": "Session Log",

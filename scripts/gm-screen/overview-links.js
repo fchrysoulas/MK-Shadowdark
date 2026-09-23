@@ -1,17 +1,7 @@
-import { getExplorationEncounterState } from "../group-sheet/exploration-encounters.js";
-import { getGroupProcedureState } from "../group-sheet/procedure.js";
-import { getGroupElapsedTime } from "../group-sheet/time.js";
 import { APP_ID } from "./gm-screen.js";
-import {
-  buildPartyView,
-  formatDuration,
-  formatExplorationNextCheck,
-  resolveGmScreenGroup,
-} from "./view-model.js";
 
 const MODULE_ID = "mk-shadowdark";
 const OVERVIEW_LINKS_FLAG = "gmScreenOverviewLinks";
-const SESSION_FLAG = "gmScreenSession";
 const MAX_OVERVIEW_LINKS = 100;
 
 function gmScreenApplication(application) {
@@ -174,71 +164,8 @@ function overviewLinkHtml({ uuid, document }) {
   `;
 }
 
-function procedureLabel(value) {
-  const text = String(value ?? "downtime");
-  return text.charAt(0).toUpperCase() + text.slice(1);
-}
-
-function groupSessionLabel(group) {
-  if (!group) return "Not started";
-  let value;
-  try {
-    value = group.getFlag?.(MODULE_ID, SESSION_FLAG);
-  } catch (_error) {
-    value = undefined;
-  }
-  if (value === undefined) value = group?.flags?.[MODULE_ID]?.[SESSION_FLAG];
-  const label = String(value?.startLabel ?? "").trim();
-  return label || "Not started";
-}
-
-async function buildOverviewSummary(application) {
-  const group = await resolveGmScreenGroup(application?.groupActorUuid ?? "");
-  if (!group) {
-    return {
-      procedure: "No Group",
-      elapsed: "—",
-      light: "—",
-      encounter: "—",
-      session: "Not started",
-    };
-  }
-
-  const procedure = getGroupProcedureState(group);
-  const elapsed = formatDuration(getGroupElapsedTime(group, procedure));
-  const party = await buildPartyView(group);
-  const lightTotal = party.reduce((total, member) => total + Math.max(0, Number(member?.light?.total ?? 0) || 0), 0);
-  const lightCarriers = party.filter(member => Math.max(0, Number(member?.light?.total ?? 0) || 0) > 0).length;
-  const exploration = getExplorationEncounterState(group);
-  const encounter = exploration.encountersDisabled
-    ? "No checks"
-    : exploration.dueChecks > 0
-      ? `${exploration.dueChecks} due`
-      : formatExplorationNextCheck(exploration);
-
-  return {
-    procedure: procedureLabel(procedure),
-    elapsed,
-    light: lightTotal > 0 ? `${lightTotal} source${lightTotal === 1 ? "" : "s"} · ${lightCarriers} carrier${lightCarriers === 1 ? "" : "s"}` : "NO LIGHT",
-    encounter,
-    session: groupSessionLabel(group),
-  };
-}
-
-function overviewSummaryHtml(summary = {}) {
+function overviewShellHtml() {
   return `
-    <div class="mk-gm-overview-summary" data-mk-overview-summary>
-      <div><span>Procedure</span><strong>${escapeHtml(summary.procedure ?? "—")}</strong><small>${escapeHtml(summary.elapsed ?? "—")}</small></div>
-      <div class="${summary.light === "NO LIGHT" ? "is-warning" : ""}"><span>Light</span><strong>${escapeHtml(summary.light ?? "—")}</strong></div>
-      <div><span>Encounter</span><strong>${escapeHtml(summary.encounter ?? "—")}</strong></div>
-      <div><span>Session</span><strong>${escapeHtml(summary.session ?? "Not started")}</strong></div>
-    </div>
-  `;
-}
-
-function overviewShellHtml(summary = {}) {
-  return `
-    ${overviewSummaryHtml(summary)}
     <div class="mk-gm-overview-shortcuts" data-mk-overview-shortcuts>
       <div class="mk-gm-overview-shortcuts-head">
         <div>
@@ -384,8 +311,7 @@ async function decorateOverviewLinks(application, element) {
   const overview = root?.querySelector?.('[data-workspace-panel="overview"]');
   if (!overview) return false;
 
-  const summary = await buildOverviewSummary(application);
-  overview.innerHTML = overviewShellHtml(summary);
+  overview.innerHTML = overviewShellHtml();
   const surface = overview.querySelector("[data-mk-overview-shortcuts]");
   if (!surface) return false;
 
@@ -405,7 +331,6 @@ registerOverviewLinks();
 export {
   MODULE_ID,
   OVERVIEW_LINKS_FLAG,
-  SESSION_FLAG,
   MAX_OVERVIEW_LINKS,
   gmScreenApplication,
   rootElement,
@@ -419,10 +344,6 @@ export {
   documentIcon,
   documentImage,
   overviewLinkHtml,
-  procedureLabel,
-  groupSessionLabel,
-  buildOverviewSummary,
-  overviewSummaryHtml,
   overviewShellHtml,
   renderOverviewLinks,
   openOverviewDocument,

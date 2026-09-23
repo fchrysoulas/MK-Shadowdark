@@ -1,0 +1,236 @@
+import assert from "node:assert/strict";
+import test from "node:test";
+
+import {
+  AUXILIARY_TABLE_KEYS,
+  encounterZoneDieFormula,
+  findEncounterZoneCell,
+  normalizeAuxiliaryTables,
+  renderEncounterAuxiliaryTableSetup,
+  rollEncounterZone,
+  tableResultSummary,
+} from "../scripts/gm-screen/exploration-zone-grid.js";
+
+function grid() {
+  return {
+    rowHeader: "d8",
+    columns: [
+      { id: "forest", label: "Forest" },
+      { id: "ruins", label: "Ruins" },
+    ],
+    rows: [
+      { label: "1-2", cells: [{ uuid: "RollTable.forest-low", name: "Forest Low" }, null] },
+      { label: "3-5", cells: [null, { uuid: "RollTable.ruins-mid", name: "Ruins Mid" }] },
+      { label: "6-8", cells: [{ uuid: "RollTable.forest-high", name: "Forest High" }, null] },
+    ],
+  };
+}
+
+test("Encounter Zone rolls use the grid die and selected terrain column", () => {
+  assert.equal(encounterZoneDieFormula(grid()), "1d8");
+  assert.equal(findEncounterZoneCell(grid(), "forest", 7).cell.uuid, "RollTable.forest-high");
+  assert.equal(findEncounterZoneCell(grid(), "RUINS", 4).cell.uuid, "RollTable.ruins-mid");
+  assert.equal(findEncounterZoneCell(grid(), "Forest", 9), null);
+});
+
+test("RollTable result metadata is safe when Foundry result sources are unavailable", () => {
+  const result = { range: [1, 1], text: "A guarded bridge." };
+  Object.defineProperty(result, "_source", {
+    get() {
+      throw new TypeError("source is unavailable");
+    },
+  });
+  assert.deepEqual(tableResultSummary(result), {
+    index: 1,
+    range: "1–1",
+    text: "A guarded bridge.",
+    documentCollection: "",
+    documentId: "",
+    uuid: "",
+  });
+});
+
+test("Encounter detail slots expose four Scene-owned RollTable assignments", () => {
+  assert.deepEqual(normalizeAuxiliaryTables({ distance: "RollTable.distance", trap: " RollTable.trap " }), {
+    distance: "RollTable.distance",
+    activity: "",
+    trap: "RollTable.trap",
+    hazard: "",
+  });
+  const html = renderEncounterAuxiliaryTableSetup([
+    { key: "distance", label: "Starting Distance", uuid: "RollTable.distance", table: { name: "Distance" } },
+  ]);
+  for (const key of AUXILIARY_TABLE_KEYS) assert.match(html, new RegExp(`data-mk-encounter-auxiliary-slot="${key}"`));
+  assert.match(html, /Starting Distance/);
+  assert.match(html, /Activity/);
+  assert.match(html, /Trap/);
+  assert.match(html, /Hazard/);
+});
+
+test("Encounter Zone rolls the selected cell's RollTable after the zone die", async () => {
+  const previousRoll = globalThis.Roll;
+  const previousFromUuid = globalThis.fromUuid;
+  const previousCanvas = globalThis.canvas;
+  const previousGame = globalThis.game;
+  const previousUi = globalThis.ui;
+  const previousChatMessage = globalThis.ChatMessage;
+  const calls = [];
+
+  class MockRoll {
+    constructor(formula) {
+      this.formula = formula;
+      this.total = null;
+    }
+
+    async evaluate() {
+      this.total = 7;
+      return this;
+    }
+
+    async toMessage(options) {
+      calls.push({ type: "unexpected-public-roll", formula: this.formula, options });
+    }
+  }
+
+  const table = {
+    documentName: "RollTable",
+    uuid: "RollTable.forest-high",
+    name: "Forest High",
+    async draw(options) {
+      calls.push({ type: "table-roll", options });
+      return {
+        roll: { formula: "1d20", total: 14 },
+        results: [{ range: [14, 14], text: "A patrol approaches." }],
+      };
+    },
+  };
+
+  globalThis.Roll = MockRoll;
+  globalThis.fromUuid = async uuid => uuid === table.uuid ? table : null;
+  globalThis.canvas = { scene: { getFlag: (_moduleId, key) => key === "encounterZoneGrid" ? grid() : null } };
+  globalThis.game = {
+    user: { id: "User.gm", isGM: true },
+    users: [{ id: "User.gm", isGM: true, active: true }],
+  };
+  globalThis.ui = { notifications: { warn: () => {}, error: () => {} } };
+  globalThis.ChatMessage = {
+    getSpeaker() {
+      return {};
+    },
+    async create(data) {
+      calls.push({ type: "gm-chat", data });
+      return { id: "ChatMessage.zone" };
+    },
+  };
+
+  try {
+    const result = await rollEncounterZone("Forest", globalThis.canvas.scene);
+    assert.equal(result.total, 7);
+    assert.equal(result.cell.uuid, table.uuid);
+    assert.deepEqual(calls.map(call => call.type), ["table-roll", "gm-chat"]);
+    assert.equal(calls[0].options.displayChat, false);
+    assert.deepEqual(calls[1].data.whisper, ["User.gm"]);
+    assert.match(calls[1].data.content, /1d8 → 7/);
+    assert.match(calls[1].data.content, /1d20 → 14/);
+    assert.match(calls[1].data.content, /A patrol approaches/);
+    assert.equal(calls[1].data.flags["mk-shadowdark"].encounterZoneRoll.tableUuid, table.uuid);
+    assert.equal(result.auxiliaryRolls.length, 4);
+    assert.ok(result.auxiliaryRolls.every(entry => entry.configured === false));
+    assert.match(calls[1].data.content, /Starting Distance/);
+    assert.match(calls[1].data.content, /Not configured; skipped/);
+  } finally {
+    globalThis.Roll = previousRoll;
+    globalThis.fromUuid = previousFromUuid;
+    globalThis.canvas = previousCanvas;
+    globalThis.game = previousGame;
+    globalThis.ui = previousUi;
+    globalThis.ChatMessage = previousChatMessage;
+  }
+});
+
+test("Encounter Zone rolls every configured encounter detail table privately", async () => {
+  const previousRoll = globalThis.Roll;
+  const previousFromUuid = globalThis.fromUuid;
+  const previousCanvas = globalThis.canvas;
+  const previousGame = globalThis.game;
+  const previousUi = globalThis.ui;
+  const previousChatMessage = globalThis.ChatMessage;
+  const calls = [];
+  const auxiliaryTables = Object.fromEntries(AUXILIARY_TABLE_KEYS.map((key, index) => {
+    const uuid = `RollTable.${key}`;
+    return [uuid, {
+      documentName: "RollTable",
+      uuid,
+      name: key,
+      async draw(options) {
+        calls.push({ type: key, options });
+        return { roll: { formula: `1d${index + 4}`, total: index + 1 }, results: [{ text: `${key} result.` }] };
+      },
+    }];
+  }));
+  const mainTable = {
+    documentName: "RollTable",
+    uuid: "RollTable.forest-high",
+    name: "Forest High",
+    async draw(options) {
+      calls.push({ type: "main", options });
+      return { roll: { formula: "1d20", total: 14 }, results: [{ text: "A patrol approaches." }] };
+    },
+  };
+
+  class MockRoll {
+    constructor(formula) {
+      this.formula = formula;
+      this.total = 7;
+    }
+
+    async evaluate() {
+      return this;
+    }
+  }
+
+  const scene = {
+    getFlag(_moduleId, key) {
+      if (key === "encounterZoneGrid") return grid();
+      if (key === "encounterZoneAuxiliaryTables") {
+        return Object.fromEntries(AUXILIARY_TABLE_KEYS.map(key => [key, `RollTable.${key}`]));
+      }
+      return null;
+    },
+  };
+
+  globalThis.Roll = MockRoll;
+  globalThis.fromUuid = async uuid => uuid === mainTable.uuid ? mainTable : auxiliaryTables[uuid] ?? null;
+  globalThis.canvas = { scene };
+  globalThis.game = {
+    user: { id: "User.gm", isGM: true },
+    users: [{ id: "User.gm", isGM: true, active: true }],
+  };
+  globalThis.ui = { notifications: { warn: () => {}, error: () => {} } };
+  globalThis.ChatMessage = {
+    getSpeaker: () => ({}),
+    async create(data) {
+      calls.push({ type: "gm-chat", data });
+      return { id: "ChatMessage.zone-details" };
+    },
+  };
+
+  try {
+    const result = await rollEncounterZone("Forest", scene);
+    assert.deepEqual(result.auxiliaryRolls.map(entry => entry.key), [...AUXILIARY_TABLE_KEYS]);
+    assert.ok(result.auxiliaryRolls.every(entry => entry.configured && !entry.error));
+    assert.deepEqual(calls.map(call => call.type), ["main", ...AUXILIARY_TABLE_KEYS, "gm-chat"]);
+    assert.ok(calls.slice(0, 5).every(call => call.options.displayChat === false));
+    assert.match(calls.at(-1).data.content, /Starting Distance/);
+    assert.match(calls.at(-1).data.content, /Activity/);
+    assert.match(calls.at(-1).data.content, /Trap/);
+    assert.match(calls.at(-1).data.content, /Hazard/);
+  } finally {
+    globalThis.Roll = previousRoll;
+    globalThis.fromUuid = previousFromUuid;
+    globalThis.canvas = previousCanvas;
+    globalThis.game = previousGame;
+    globalThis.ui = previousUi;
+    globalThis.ChatMessage = previousChatMessage;
+  }
+});

@@ -104,8 +104,8 @@ test("visible Scene Context editing is owned by the top strip rather than Overvi
   assert.match(topRuntime, /pressureCell\(root, "Danger"\)/);
   assert.match(topRuntime, /pressureCell\(root, "Period"\)/);
   assert.doesNotMatch(topRuntime, /Save Context|data-mk-context-save/);
-  assert.match(overviewRuntime, /const summary = await buildOverviewSummary\(application\)/);
-  assert.match(overviewRuntime, /overview\.innerHTML = overviewShellHtml\(summary\)/);
+  assert.match(overviewRuntime, /overview\.innerHTML = overviewShellHtml\(\)/);
+  assert.doesNotMatch(overviewRuntime, /mk-gm-overview-summary|buildOverviewSummary|overviewSummaryHtml/);
   assert.doesNotMatch(overviewRuntime, /Scene Context/);
   assert.doesNotMatch(overviewRuntime, /Encounter Pressure/);
   assert.doesNotMatch(overviewRuntime, /Combat \/ Morale/);
@@ -185,10 +185,10 @@ test("Encounter Setup form reader stages both selectors without persisting them"
   assert.deepEqual(readEncounterSetupForm(root), values);
 });
 
-test("GM Screen context and overview controllers are excluded while the GM Screen is disabled", () => {
-  assert.equal(manifest.esmodules.includes("scripts/gm-screen/environment-controls.js"), false);
-  assert.equal(manifest.esmodules.includes("scripts/gm-screen/top-context-controls.js"), false);
-  assert.equal(manifest.esmodules.includes("scripts/gm-screen/overview-links.js"), false);
-  assert.equal(manifest.esmodules.includes("scripts/gm-screen/source-table-browser.js"), false);
+test("GM Screen context and overview controllers are loaded for the production surface", () => {
+  assert.equal(manifest.esmodules.includes("scripts/gm-screen/environment-controls.js"), true);
+  assert.equal(manifest.esmodules.includes("scripts/gm-screen/top-context-controls.js"), true);
+  assert.equal(manifest.esmodules.includes("scripts/gm-screen/overview-links.js"), true);
+  assert.equal(manifest.esmodules.includes("scripts/gm-screen/source-table-browser.js"), true);
   assert.match(environmentRuntime, /bindEncounterSetupManualSave/);
 });

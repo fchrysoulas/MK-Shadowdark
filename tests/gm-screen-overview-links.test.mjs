@@ -9,7 +9,6 @@ import {
   normalizeOverviewLinkUuids,
   overviewLinkHtml,
   overviewShellHtml,
-  overviewSummaryHtml,
   setOverviewLinkUuids,
 } from "../scripts/gm-screen/overview-links.js";
 
@@ -58,35 +57,13 @@ test("Foundry document drop data resolves by UUID", () => {
   assert.equal(dragDataUuid({ type: "Actor" }), "");
 });
 
-test("Overview is a compact home dashboard above the document pin canvas", () => {
-  const html = overviewShellHtml({
-    procedure: "Exploration",
-    elapsed: "18m",
-    light: "2 sources · 1 carrier",
-    encounter: "1 due",
-    session: "14 Frostwane, 10 PM",
-  });
-  assert.match(html, /data-mk-overview-summary/);
-  assert.match(html, />Procedure</);
-  assert.match(html, />Light</);
-  assert.match(html, />Encounter</);
-  assert.match(html, />Session</);
+test("Overview is a document pin canvas without summary info panels", () => {
+  const html = overviewShellHtml();
+  assert.doesNotMatch(html, /data-mk-overview-summary|>Procedure<|>Light<|>Encounter<|>Session</);
   assert.match(html, /Pinned Documents/);
   assert.match(html, /data-mk-overview-shortcuts/);
   assert.match(html, /Drop Journals, Actors, Items, RollTables/);
   assert.doesNotMatch(html, /Scene Context|Combat \/ Morale|Resting/);
-});
-
-test("Overview summary exposes a visible no-light warning state", () => {
-  const html = overviewSummaryHtml({
-    procedure: "Exploration",
-    elapsed: "6m",
-    light: "NO LIGHT",
-    encounter: "Turn 3",
-    session: "Not started",
-  });
-  assert.match(html, /class="is-warning"/);
-  assert.match(html, /NO LIGHT/);
 });
 
 test("Overview shortcut cards open the source document and expose a separate remove control", () => {
@@ -102,16 +79,6 @@ test("Overview shortcut cards open the source document and expose a separate rem
   assert.match(html, /data-mk-overview-remove="Actor\.hero"/);
   assert.match(html, /Hero/);
   assert.match(html, /hero\.webp/);
-});
-
-test("Overview derives home metrics from canonical Group state rather than persisted duplicates", () => {
-  assert.match(runtime, /getGroupProcedureState/);
-  assert.match(runtime, /getGroupElapsedTime/);
-  assert.match(runtime, /getExplorationEncounterState/);
-  assert.match(runtime, /buildPartyView/);
-  assert.match(runtime, /gmScreenSession/);
-  assert.match(runtime, /formatExplorationNextCheck/);
-  assert.doesNotMatch(runtime, /setFlag\(MODULE_ID, SESSION_FLAG/);
 });
 
 test("Overview uses Foundry drag-data and UUID document APIs without full GM Screen rerenders", () => {
@@ -131,14 +98,14 @@ test("Overview does not own NPC creation controls", () => {
   assert.doesNotMatch(stylesheet, /mk-gm-overview-create-npc|mk-gm-overview-action-tooltip/);
 });
 
-test("Overview shortcut runtime and styling are excluded while the GM Screen is disabled", () => {
+test("Overview shortcut runtime and styling are loaded for the production surface", () => {
   assert.match(stylesheet, /\.mk-gm-overview-shortcuts/);
   assert.match(stylesheet, /\.mk-gm-overview-link-list/);
   assert.match(stylesheet, /\.mk-gm-overview-link-open/);
   assert.match(stylesheet, /\.mk-gm-overview-link-remove/);
-  assert.match(refactorStylesheet, /\.mk-gm-overview-summary/);
-  assert.equal(manifest.esmodules.includes("scripts/gm-screen/overview-links.js"), false);
-  assert.equal(manifest.esmodules.includes("scripts/gm-screen/npc-source-tables.js"), false);
-  assert.equal(manifest.esmodules.includes("scripts/gm-screen/npc-generator.js"), false);
-  assert.equal(manifest.styles.includes("styles/gm-screen-overview.css"), false);
+  assert.doesNotMatch(refactorStylesheet, /\.mk-gm-overview-summary/);
+  assert.equal(manifest.esmodules.includes("scripts/gm-screen/overview-links.js"), true);
+  assert.equal(manifest.esmodules.includes("scripts/gm-screen/npc-source-tables.js"), true);
+  assert.equal(manifest.esmodules.includes("scripts/gm-screen/npc-generator.js"), true);
+  assert.equal(manifest.styles.includes("styles/gm-screen-overview.css"), true);
 });

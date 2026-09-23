@@ -1,6 +1,5 @@
 import { setSceneEnvironmentContext, getSceneEnvironmentContext } from "../libs/environment-context.js";
 import { waitForGmDialog } from "../libs/dialog-v2.js";
-import { openEncounterStagingDialog } from "../group-sheet/encounters/staging.js";
 import { createSourceDrivenNpc } from "./npc-generator.js";
 import {
   availableEncounterZoneTables,
@@ -12,10 +11,6 @@ import {
   buildEnvironmentEditorView,
 } from "./environment-controls.js";
 import { APP_ID } from "./gm-screen.js";
-import {
-  buildEncounterHistory,
-  getSessionState,
-} from "./encounter-history.js";
 import { resolveGmScreenGroup } from "./view-model.js";
 
 const MODULE_ID = "mk-shadowdark";
@@ -171,7 +166,6 @@ async function openSceneContextDialog(application = null) {
 
 function renderSessionTools({
   hasGroup = false,
-  hasLatestEncounter = false,
 } = {}) {
   return `
     <article class="mk-gm-panel is-wide mk-gm-session-tools" data-mk-gm-session-tools>
@@ -208,9 +202,6 @@ function renderSessionTools({
           </select>
           <button type="button" data-mk-session-tool="time-passes"><i class="fas fa-hourglass-half"></i> Test Roll</button>
         </div>
-        <button type="button" data-mk-session-tool="stage-latest" ${hasLatestEncounter ? "" : "disabled"}>
-          <i class="fas fa-location-dot"></i> Test Latest Encounter Staging
-        </button>
       </div>
     </article>
   `;
@@ -243,21 +234,6 @@ async function testTimePasses(root) {
   return roll({ diceCount });
 }
 
-async function stageLatestEncounter(application) {
-  const group = await resolveGmScreenGroup(application?.groupActorUuid ?? "");
-  const history = buildEncounterHistory(group, {
-    session: getSessionState(group),
-  });
-  const latest = history.entries[0];
-  if (!latest?.data) {
-    globalThis.ui?.notifications?.warn?.("No resolved Group encounter is available to stage.");
-    return null;
-  }
-  return openEncounterStagingDialog(latest.data, {
-    sourceMessageId: latest.messageId,
-  });
-}
-
 async function bindSessionTools(application, workspace) {
   const root = workspace?.querySelector?.("[data-mk-gm-session-tools]");
   if (!root || root.dataset.mkSessionToolsBound === "true") return false;
@@ -278,7 +254,6 @@ async function bindSessionTools(application, workspace) {
         if (action === "scene-context") await openSceneContextDialog(application);
         if (action === "npc") await createSourceDrivenNpc();
         if (action === "time-passes") await testTimePasses(root);
-        if (action === "stage-latest") await stageLatestEncounter(application);
       } catch (error) {
         console.error("mk-shadowdark | GM Screen Session Tools | Action failed", error);
         globalThis.ui?.notifications?.error?.(`GM tool failed: ${error.message}`);
@@ -297,11 +272,9 @@ async function decorateSessionTools(application, element) {
   if (!workspace) return false;
 
   const group = await resolveGmScreenGroup(application.groupActorUuid ?? "");
-  const history = buildEncounterHistory(group, { session: getSessionState(group) });
   workspace.querySelector?.("[data-mk-gm-session-tools]")?.remove?.();
   workspace.insertAdjacentHTML?.("afterbegin", renderSessionTools({
     hasGroup: Boolean(group),
-    hasLatestEncounter: Boolean(history.entries[0]?.data),
   }));
   await bindSessionTools(application, workspace);
   return true;
@@ -325,7 +298,6 @@ export {
   openWorkspace,
   openGroupManagement,
   testTimePasses,
-  stageLatestEncounter,
   bindSessionTools,
   decorateSessionTools,
   registerSessionTools,

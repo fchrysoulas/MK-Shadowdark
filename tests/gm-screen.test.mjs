@@ -46,7 +46,6 @@ test("GM Screen consumes canonical Group, Scene, and rest services", () => {
   assert.match(viewModel, /buildGroupMemberStatus/);
   assert.match(viewModel, /resolveSceneEnvironmentContext/);
   assert.doesNotMatch(runtime, /processDueExplorationEncounters/);
-  assert.match(runtime, /openEncounterStagingDialog\(latest\.data/);
   assert.doesNotMatch(runtime, /continueGroupRest\(group\)/);
   assert.doesNotMatch(runtime, /startGroupRest\(group/);
 });
@@ -112,9 +111,9 @@ test("GM Screen owns the exact five workspaces in order", () => {
   assert.doesNotMatch(template, /Process Due Checks|Process Encounter Checks/);
 });
 
-test("Overview combines canonical home summary, document shortcuts, and top Scene Context autosave", () => {
-  assert.match(overviewLinks, /const summary = await buildOverviewSummary\(application\)/);
-  assert.match(overviewLinks, /overview\.innerHTML = overviewShellHtml\(summary\)/);
+test("Overview provides document shortcuts and top Scene Context autosave", () => {
+  assert.match(overviewLinks, /overview\.innerHTML = overviewShellHtml\(\)/);
+  assert.doesNotMatch(overviewLinks, /mk-gm-overview-summary|buildOverviewSummary|overviewSummaryHtml/);
   assert.match(overviewLinks, /data-mk-overview-shortcuts/);
   assert.doesNotMatch(overviewLinks, /Encounter Pressure|Combat \/ Morale|Resting/);
   assert.match(topContext, /pressureCell\(root, "Terrain"\)/);
@@ -124,11 +123,13 @@ test("Overview combines canonical home summary, document shortcuts, and top Scen
   assert.doesNotMatch(topContext, /Save Context|data-mk-context-save/);
 });
 
-test("Exploration is an editable Encounter Zone grid without encounter processing controls", () => {
+test("Encounters is an editable Encounter Zone workspace with detail RollTable slots", () => {
   const start = template.indexOf('data-workspace-panel="exploration"');
   const end = template.indexOf('data-workspace-panel="downtime"');
   const exploration = template.slice(start, end);
   assert.match(exploration, /data-mk-exploration-zone-grid/);
+  assert.match(exploration, /<span>Encounters<\/span>/);
+  assert.match(exploration, /data-mk-encounter-auxiliary-tables/);
   assert.doesNotMatch(exploration, />Turns</);
   assert.doesNotMatch(exploration, />Next Check</);
   assert.doesNotMatch(exploration, />Due</);
@@ -209,13 +210,21 @@ test("GM Screen runtime assets are loaded for the production surface", () => {
   assert.ok(!manifest.esmodules.includes("scripts/gm-screen-mock/gm-screen-mock.js"));
 });
 
+test("Encounter bar control replaces the Light pressure cell", () => {
+  assert.match(topContext, /installEncounterRollControl/);
+  assert.match(topContext, /data-mk-gm-roll-encounter-zone/);
+  assert.match(topContext, /rollEncounterZone\(terrain, scene\)/);
+  assert.doesNotMatch(manifest.esmodules.join("\n"), /light-pressure\.js/);
+  assert.doesNotMatch(manifest.styles.join("\n"), /gm-screen-light-pressure\.css/);
+});
+
 test("Session Log exposes direct buttons for GM Screen tools", () => {
-  for (const action of ["group", "scene-context", "overview", "exploration", "tables", "settlement", "npc", "time-passes", "stage-latest"]) {
+  for (const action of ["group", "scene-context", "overview", "exploration", "tables", "settlement", "npc", "time-passes"]) {
     assert.match(sessionTools, new RegExp(`data-mk-session-tool="${action}"`));
   }
   assert.match(sessionTools, /openSceneContextDialog/);
   assert.match(sessionTools, /createSourceDrivenNpc/);
-  assert.match(sessionTools, /openEncounterStagingDialog/);
+  assert.doesNotMatch(sessionTools, /stage-latest|Latest Encounter Staging|openEncounterStagingDialog/);
   assert.match(sessionToolsStylesheet, /\.mk-gm-session-tools/);
   assert.ok(manifest.esmodules.includes("scripts/gm-screen/session-tools.js"));
   assert.ok(manifest.styles.includes("styles/gm-screen-session-tools.css"));

@@ -8,6 +8,7 @@ import {
   dangerOptions,
   terrainOptions,
 } from "./environment-controls.js";
+import { rollEncounterZone } from "./exploration-zone-grid.js";
 import { APP_ID } from "./gm-screen.js";
 import { resolveGmScreenGroup } from "./view-model.js";
 
@@ -61,6 +62,21 @@ function installSelect(cell, {
   return cell.querySelector(`select[name="${name}"]`);
 }
 
+function installEncounterRollControl(cell, { disabled = false, title = "" } = {}) {
+  if (!cell) return null;
+  const label = String(cell.querySelector?.("span")?.textContent ?? "Encounter").trim() || "Encounter";
+  const detail = String(cell.querySelector?.("strong")?.textContent ?? "").trim() || "Zone Roll";
+  cell.dataset.mkEncounterRollControl = "true";
+  cell.innerHTML = `
+    <span>${label}</span>
+    <strong>${detail}</strong>
+    <button type="button" class="mk-gm-encounter-roll" data-mk-gm-roll-encounter-zone ${disabled ? "disabled" : ""} ${title ? `title="${title}"` : ""}>
+      <i class="fas fa-dice-d20"></i> Roll Zone
+    </button>
+  `;
+  return cell.querySelector("[data-mk-gm-roll-encounter-zone]");
+}
+
 function readTopContext(root) {
   const strip = root?.matches?.(".mk-gm-pressure-strip")
     ? root
@@ -111,6 +127,25 @@ function bindTopContextAutosave(application, strip, scene, controls = []) {
   return true;
 }
 
+function bindEncounterRollButton(button, strip, scene) {
+  if (!button) return false;
+  button.addEventListener?.("click", async event => {
+    event.preventDefault();
+    event.stopPropagation();
+    button.disabled = true;
+    try {
+      const terrain = readTopContext(strip)?.terrain ?? "";
+      await rollEncounterZone(terrain, scene);
+    } catch (error) {
+      console.error("mk-shadowdark | GM Screen Encounter Zone | Roll failed", error);
+      globalThis.ui?.notifications?.error?.(`Encounter Zone roll failed: ${error.message}`);
+    } finally {
+      button.disabled = false;
+    }
+  });
+  return true;
+}
+
 function activeRestRetainsChecks(restState, dangerLevel) {
   const active = ["checking", "interrupted"].includes(String(restState?.workflow?.status ?? ""));
   return dangerLevel === "safe"
@@ -145,7 +180,8 @@ async function decorateTopContext(application, element) {
   const terrainCell = pressureCell(root, "Terrain");
   const dangerCell = pressureCell(root, "Danger");
   const periodCell = pressureCell(root, "Period");
-  if (!terrainCell || !dangerCell || !periodCell) return false;
+  const encounterCell = pressureCell(root, "Encounter");
+  if (!terrainCell || !dangerCell || !periodCell || !encounterCell) return false;
 
   const terrainSelect = installSelect(terrainCell, {
     label: "Terrain",
@@ -168,6 +204,12 @@ async function decorateTopContext(application, element) {
     options: periodOptions(view.stored.period),
     title: "Scene day/night period",
   });
+  const encounterButton = installEncounterRollControl(encounterCell, {
+    disabled: view.terrains.length === 0,
+    title: view.terrains.length
+      ? "Roll the selected Encounter Zone terrain"
+      : "No Encounter Zone terrain is configured for this scene",
+  });
 
   const group = await resolveGmScreenGroup(application.groupActorUuid ?? "");
   const restState = group ? getGroupRestState(group) : null;
@@ -177,6 +219,7 @@ async function decorateTopContext(application, element) {
   );
 
   bindTopContextAutosave(application, strip, view.scene, [terrainSelect, dangerSelect, periodSelect]);
+  bindEncounterRollButton(encounterButton, strip, view.scene);
   return true;
 }
 
@@ -194,9 +237,11 @@ export {
   pressureCell,
   periodOptions,
   installSelect,
+  installEncounterRollControl,
   readTopContext,
   saveTopContext,
   bindTopContextAutosave,
+  bindEncounterRollButton,
   activeRestRetainsChecks,
   renderRestSnapshotWarning,
   decorateTopContext,

@@ -5,8 +5,23 @@ import { APP_ID } from "./gm-screen.js";
 const MODULE_ID = "mk-shadowdark";
 const GRID_FLAG = "encounterZoneGrid";
 const ENCOUNTER_ZONE_FLAG = "encounterZoneTableUuid";
+const AUXILIARY_TABLE_FLAG = "encounterZoneAuxiliaryTables";
 const GRID_SCHEMA = 1;
 const DEFAULT_ROW_COUNT = 8;
+
+const AUXILIARY_TABLE_KEYS = Object.freeze([
+  "distance",
+  "activity",
+  "trap",
+  "hazard",
+]);
+
+const AUXILIARY_TABLE_LABELS = Object.freeze({
+  distance: "Starting Distance",
+  activity: "Activity",
+  trap: "Trap",
+  hazard: "Hazard",
+});
 
 const DEFAULT_COLUMNS = Object.freeze([
   { id: "column-sea", label: "Sea" },
@@ -199,8 +214,87 @@ function getSceneEncounterZoneGrid(scene = currentScene()) {
   return gridFromZoneTable(sourceTableForScene(scene)) ?? createDefaultGrid();
 }
 
+function normalizeAuxiliaryTables(value) {
+  const source = value && typeof value === "object" && !Array.isArray(value) ? value : {};
+  return Object.fromEntries(AUXILIARY_TABLE_KEYS.map(key => [
+    key,
+    String(source[key] ?? "").trim(),
+  ]));
+}
+
+function getSceneEncounterZoneAuxiliaryTables(scene = currentScene()) {
+  return normalizeAuxiliaryTables(getSceneFlag(scene, AUXILIARY_TABLE_FLAG, null));
+}
+
+async function setSceneEncounterZoneAuxiliaryTable(key, tableUuid, scene = currentScene(), {
+  user = globalThis.game?.user,
+} = {}) {
+  const normalizedKey = String(key ?? "").trim();
+  if (!AUXILIARY_TABLE_KEYS.includes(normalizedKey)) return null;
+  if (!scene?.setFlag) return null;
+  if (!user?.isGM) {
+    globalThis.ui?.notifications?.warn?.("Only the GM can change Encounter RollTables.");
+    return null;
+  }
+
+  const next = getSceneEncounterZoneAuxiliaryTables(scene);
+  next[normalizedKey] = String(tableUuid ?? "").trim();
+  await scene.setFlag(MODULE_ID, AUXILIARY_TABLE_FLAG, next);
+  return next;
+}
+
 function gridColumnLabels(grid) {
   return normalizeGrid(grid).columns.map(column => column.label).filter(Boolean);
+}
+
+function encounterZoneDieFormula(grid) {
+  const normalized = normalizeGrid(grid);
+  const match = String(normalized.rowHeader ?? "").match(/(\d*)d(\d+)/i);
+  if (match) {
+    const count = Math.max(1, Number(match[1] || 1));
+    const sides = Math.max(1, Number(match[2] || 1));
+    return `${count}d${sides}`;
+  }
+
+  const highestRow = normalized.rows.reduce((highest, row, index) => {
+    const values = String(row?.label ?? "").match(/\d+/g)?.map(Number) ?? [];
+    return Math.max(highest, ...(values.length ? values : [index + 1]));
+  }, 1);
+  return `1d${highestRow}`;
+}
+
+function encounterZoneRowRange(row, index) {
+  const values = String(row?.label ?? "").match(/\d+/g)?.map(Number).filter(Number.isFinite) ?? [];
+  const low = values[0] ?? index + 1;
+  const high = values[1] ?? low;
+  return {
+    min: Math.min(low, high),
+    max: Math.max(low, high),
+  };
+}
+
+function findEncounterZoneCell(grid, terrain, total) {
+  const normalized = normalizeGrid(grid);
+  const requestedTerrain = String(terrain ?? "").trim().toLowerCase();
+  const columnIndex = normalized.columns.findIndex(column => String(column.label).trim().toLowerCase() === requestedTerrain);
+  if (columnIndex < 0) return null;
+
+  const numericTotal = Number(total);
+  const rowIndex = normalized.rows.findIndex((row, index) => {
+    const range = encounterZoneRowRange(row, index);
+    return Number.isFinite(numericTotal) && numericTotal >= range.min && numericTotal <= range.max;
+  });
+  if (rowIndex < 0) return null;
+
+  const row = normalized.rows[rowIndex];
+  return {
+    terrain: normalized.columns[columnIndex].label,
+    columnIndex,
+    rowIndex,
+    row,
+    range: encounterZoneRowRange(row, rowIndex),
+    cell: row.cells[columnIndex] ?? null,
+  };
 }
 
 async function saveSceneEncounterZoneGrid(grid, scene = currentScene(), {
@@ -296,18 +390,380 @@ async function resolveRollTable(uuid) {
   return table;
 }
 
-async function rollGridTable(uuid) {
+async function resolveAuxiliaryTableEntries(scene = currentScene()) {
+  const assignments = getSceneEncounterZoneAuxiliaryTables(scene);
+  return Promise.all(AUXILIARY_TABLE_KEYS.map(async key => {
+    const uuid = assignments[key];
+    return {
+      key,
+      label: AUXILIARY_TABLE_LABELS[key],
+      uuid,
+      table: uuid ? await resolveRollTable(uuid) : null,
+    };
+  }));
+}
+
+function renderEncounterAuxiliaryTableSetup(entries = []) {
+  const byKey = new Map((entries ?? []).map(entry => [entry.key, entry]));
+  return `
+    <section class="mk-gm-encounter-auxiliary-tables" data-mk-encounter-auxiliary-tables>
+      <header class="mk-gm-encounter-auxiliary-heading">
+        <div>
+          <strong>Encounter RollTables</strong>
+          <span>Optional tables rolled with each Roll Zone encounter.</span>
+        </div>
+        <i class="fas fa-table-list" aria-hidden="true"></i>
+      </header>
+      <div class="mk-gm-encounter-auxiliary-grid">
+        ${AUXILIARY_TABLE_KEYS.map(key => {
+          const entry = byKey.get(key) ?? { key, label: AUXILIARY_TABLE_LABELS[key], uuid: "", table: null };
+          const tableName = entry.uuid
+            ? String(entry.table?.name ?? "Unavailable RollTable")
+            : "Drop RollTable here";
+          const assigned = Boolean(entry.uuid && entry.table);
+          return `
+            <article class="mk-gm-encounter-auxiliary-slot ${assigned ? "is-assigned" : "is-empty"}" data-mk-encounter-auxiliary-slot="${key}">
+              <span class="mk-gm-encounter-auxiliary-label">${escapeHtml(entry.label)}</span>
+              <div class="mk-gm-encounter-auxiliary-drop" data-mk-encounter-auxiliary-drop>
+                <i class="fas ${assigned ? "fa-table-list" : "fa-arrow-down"}" aria-hidden="true"></i>
+                <strong>${escapeHtml(tableName)}</strong>
+                ${entry.uuid && !assigned ? `<small>${escapeHtml(entry.uuid)}</small>` : ""}
+                ${entry.uuid ? `<button type="button" data-mk-encounter-auxiliary-clear title="Clear ${escapeHtml(entry.label)} RollTable" aria-label="Clear ${escapeHtml(entry.label)} RollTable"><i class="fas fa-xmark"></i></button>` : ""}
+              </div>
+            </article>
+          `;
+        }).join("")}
+      </div>
+      <small class="mk-gm-encounter-auxiliary-status">Drag a RollTable from the sidebar onto a box. Empty boxes are skipped.</small>
+    </section>
+  `;
+}
+
+function bindEncounterAuxiliaryTables(application, root, scene) {
+  root?.querySelectorAll?.("[data-mk-encounter-auxiliary-slot]")?.forEach(slot => {
+    const drop = slot.querySelector?.("[data-mk-encounter-auxiliary-drop]");
+    if (!drop) return;
+
+    drop.addEventListener("dragenter", event => {
+      event.preventDefault();
+      slot.classList.add("is-dragover");
+    });
+    drop.addEventListener("dragover", event => {
+      event.preventDefault();
+      if (event.dataTransfer) event.dataTransfer.dropEffect = "copy";
+      slot.classList.add("is-dragover");
+    });
+    drop.addEventListener("dragleave", event => {
+      if (event.relatedTarget && drop.contains?.(event.relatedTarget)) return;
+      slot.classList.remove("is-dragover");
+    });
+    drop.addEventListener("drop", async event => {
+      event.preventDefault();
+      event.stopPropagation();
+      slot.classList.remove("is-dragover");
+      const uuid = dragDataUuid(dragEventData(event));
+      const table = await resolveRollTable(uuid);
+      if (!table) {
+        globalThis.ui?.notifications?.warn?.("Drop a RollTable onto the encounter table box.");
+        return;
+      }
+
+      try {
+        await setSceneEncounterZoneAuxiliaryTable(slot.dataset.mkEncounterAuxiliarySlot, table.uuid ?? uuid, scene);
+        await application?.render?.({ force: true });
+      } catch (error) {
+        console.error("mk-shadowdark | GM Screen Encounter RollTables | Assignment failed", error);
+        globalThis.ui?.notifications?.error?.(`Encounter RollTable assignment failed: ${error.message}`);
+      }
+    });
+
+    drop.querySelector?.("[data-mk-encounter-auxiliary-clear]")?.addEventListener("click", async event => {
+      event.preventDefault();
+      event.stopPropagation();
+      const button = event.currentTarget;
+      button.disabled = true;
+      try {
+        await setSceneEncounterZoneAuxiliaryTable(slot.dataset.mkEncounterAuxiliarySlot, "", scene);
+        await application?.render?.({ force: true });
+      } catch (error) {
+        console.error("mk-shadowdark | GM Screen Encounter RollTables | Clear failed", error);
+        globalThis.ui?.notifications?.error?.(`Encounter RollTable clear failed: ${error.message}`);
+        button.disabled = false;
+      }
+    });
+  });
+  return true;
+}
+
+async function drawRollTable(table, { displayChat = true } = {}) {
+  if (!table) return null;
+
+  if (typeof table.draw === "function") return table.draw({ displayChat });
+  if (typeof table.roll === "function") return table.roll({ recursive: true });
+
+  globalThis.ui?.notifications?.warn?.("The assigned document cannot be rolled as a RollTable.");
+  return null;
+}
+
+async function rollGridTable(uuid, options = {}) {
   const table = await resolveRollTable(uuid);
   if (!table) {
     globalThis.ui?.notifications?.warn?.("The assigned RollTable is unavailable.");
     return null;
   }
 
-  if (typeof table.draw === "function") return table.draw({ displayChat: true });
-  if (typeof table.roll === "function") return table.roll({ recursive: true });
+  return drawRollTable(table, options);
+}
 
-  globalThis.ui?.notifications?.warn?.("The assigned document cannot be rolled as a RollTable.");
-  return null;
+function rollSummary(roll) {
+  const total = Number(roll?.total);
+  return {
+    formula: String(roll?.formula ?? roll?._formula ?? "").trim(),
+    total: Number.isFinite(total) ? total : null,
+  };
+}
+
+function plainTableText(value) {
+  return String(value ?? "")
+    .replace(/<[^>]*>/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+function safeDocumentField(document, field, fallback = "") {
+  try {
+    return document?.[field] ?? fallback;
+  } catch (_error) {
+    return fallback;
+  }
+}
+
+function tableResultSummary(result, index = 0) {
+  const rangeValue = safeDocumentField(result, "range", []);
+  const range = Array.isArray(rangeValue) ? rangeValue : [];
+  const text = plainTableText(
+    safeDocumentField(result, "text")
+      || safeDocumentField(result, "name")
+      || safeDocumentField(result, "description"),
+  );
+  return {
+    index: index + 1,
+    range: range.length ? range.join("–") : "",
+    text: text || "(No result text)",
+    documentCollection: String(safeDocumentField(result, "documentCollection")).trim(),
+    documentId: String(safeDocumentField(result, "documentId")).trim(),
+    uuid: String(safeDocumentField(result, "uuid")).trim(),
+  };
+}
+
+function tableRollSummary(draw) {
+  const results = collectionValues(draw?.results);
+  const singleResult = safeDocumentField(draw, "result", null);
+  if (!results.length && singleResult) results.push(singleResult);
+  return {
+    roll: rollSummary(draw?.roll),
+    results: results.map((result, index) => tableResultSummary(result, index)),
+  };
+}
+
+async function rollEncounterAuxiliaryTables(scene = currentScene()) {
+  const assignments = getSceneEncounterZoneAuxiliaryTables(scene);
+  const rolls = [];
+
+  for (const key of AUXILIARY_TABLE_KEYS) {
+    const tableUuid = assignments[key];
+    const base = {
+      key,
+      label: AUXILIARY_TABLE_LABELS[key],
+      tableUuid,
+      tableName: tableUuid ? "Unavailable RollTable" : "Not configured",
+      configured: Boolean(tableUuid),
+      roll: { formula: "", total: null },
+      results: [],
+    };
+    if (!tableUuid) {
+      rolls.push(base);
+      continue;
+    }
+
+    const table = await resolveRollTable(tableUuid);
+    if (!table) {
+      rolls.push({ ...base, error: "Assigned RollTable is unavailable." });
+      continue;
+    }
+
+    try {
+      const draw = await drawRollTable(table, { displayChat: false });
+      const summary = tableRollSummary(draw);
+      rolls.push({
+        ...base,
+        tableName: String(safeDocumentField(table, "name", tableUuid)),
+        ...summary,
+      });
+    } catch (error) {
+      rolls.push({
+        ...base,
+        tableName: String(safeDocumentField(table, "name", tableUuid)),
+        error: String(error?.message ?? error),
+      });
+    }
+  }
+
+  return rolls;
+}
+
+function activeGmIds() {
+  const ids = collectionValues(globalThis.game?.users)
+    .filter(user => user?.isGM && user?.active !== false && user?.id)
+    .map(user => String(user.id));
+  const currentId = String(globalThis.game?.user?.id ?? "");
+  if (globalThis.game?.user?.isGM && currentId && !ids.includes(currentId)) ids.push(currentId);
+  return [...new Set(ids)];
+}
+
+function renderTableResultDetails(results = []) {
+  if (!results.length) return "<div class=\"mk-gm-encounter-zone-result\">No table result details returned.</div>";
+  return results.map(result => `
+    <div class="mk-gm-encounter-zone-result">
+      <strong>${result.range ? `Result ${escapeHtml(result.range)}` : `Result ${result.index}`}</strong>
+      <div>${escapeHtml(result.text ?? "(No result text)")}</div>
+      ${result.documentCollection || result.documentId
+        ? `<small>Document: ${escapeHtml([result.documentCollection, result.documentId].filter(Boolean).join(" · "))}</small>`
+        : ""}
+    </div>
+  `).join("");
+}
+
+function renderRollTableDetail(label, detail = {}) {
+  const tableRoll = detail.tableRoll ?? detail;
+  const results = Array.isArray(tableRoll.results) ? tableRoll.results : [];
+  const configured = detail.configured !== false;
+  const status = detail.error
+    ? `<div class="mk-gm-encounter-zone-result is-warning">${escapeHtml(detail.error)}</div>`
+    : !configured
+      ? "<div class=\"mk-gm-encounter-zone-result\">Not configured; skipped.</div>"
+      : renderTableResultDetails(results);
+
+  return `
+    <div class="mk-gm-encounter-zone-auxiliary-result">
+      <header><strong>${escapeHtml(label)}</strong><span>${escapeHtml(detail.tableName ?? detail.tableUuid ?? "Not configured")}</span></header>
+      <div><span>Roll</span><strong>${escapeHtml(tableRoll.roll?.formula || "—")} → ${escapeHtml(tableRoll.roll?.total ?? "—")}</strong></div>
+      ${status}
+    </div>
+  `;
+}
+
+function renderEncounterZoneRollCard(data = {}) {
+  const zoneRoll = data.zoneRoll ?? {};
+  const tableRoll = data.tableRoll ?? {};
+  const results = Array.isArray(tableRoll.results) ? tableRoll.results : [];
+  const auxiliaryRolls = Array.isArray(data.auxiliaryRolls) ? data.auxiliaryRolls : [];
+
+  return `
+    <section class="mk-gm-encounter-zone-roll-card">
+      <header><strong>Encounter Zone Roll</strong><span>GM Only</span></header>
+      <dl>
+        <div><dt>Terrain</dt><dd>${escapeHtml(data.terrain ?? "Unknown")}</dd></div>
+        <div><dt>Zone Roll</dt><dd>${escapeHtml(zoneRoll.formula || "—")} → ${escapeHtml(zoneRoll.total ?? "—")}</dd></div>
+        <div><dt>Selected Row</dt><dd>${escapeHtml(data.rowLabel ?? "Unknown")}</dd></div>
+        <div><dt>RollTable</dt><dd>${escapeHtml(data.tableName ?? data.tableUuid ?? "Unknown")}</dd></div>
+        <div><dt>Table Roll</dt><dd>${escapeHtml(tableRoll.roll?.formula || "—")} → ${escapeHtml(tableRoll.roll?.total ?? "—")}</dd></div>
+      </dl>
+      <div class="mk-gm-encounter-zone-results"><strong>Encounter Result</strong>${renderTableResultDetails(results)}</div>
+      ${auxiliaryRolls.length
+        ? `<div class="mk-gm-encounter-zone-auxiliary-results"><strong>Additional Encounter Rolls</strong>${auxiliaryRolls.map(roll => renderRollTableDetail(roll.label, roll)).join("")}</div>`
+        : ""}
+    </section>
+  `;
+}
+
+async function createEncounterZoneRollMessage(data = {}) {
+  const ChatMessageClass = globalThis.ChatMessage;
+  const whisper = activeGmIds();
+  if (!ChatMessageClass?.create || !whisper.length) {
+    globalThis.ui?.notifications?.warn?.("No active GM is available for the Encounter Zone result.");
+    return null;
+  }
+
+  return ChatMessageClass.create({
+    speaker: ChatMessageClass.getSpeaker?.() ?? {},
+    style: globalThis.CONST?.CHAT_MESSAGE_STYLES?.OTHER ?? globalThis.CONST?.CHAT_MESSAGE_TYPES?.OTHER ?? 0,
+    content: renderEncounterZoneRollCard(data),
+    whisper,
+    flags: {
+      [MODULE_ID]: {
+        encounterZoneRoll: data,
+      },
+    },
+  });
+}
+
+async function rollEncounterZone(terrain, scene = currentScene(), {
+  user = globalThis.game?.user,
+} = {}) {
+  if (!user?.isGM) {
+    globalThis.ui?.notifications?.warn?.("Only the GM can roll an Encounter Zone.");
+    return null;
+  }
+
+  const selectedTerrain = String(terrain ?? "").trim();
+  if (!selectedTerrain) {
+    globalThis.ui?.notifications?.warn?.("Select a Terrain before rolling an Encounter Zone.");
+    return null;
+  }
+
+  const grid = getSceneEncounterZoneGrid(scene);
+  const formula = encounterZoneDieFormula(grid);
+  const RollClass = globalThis.Roll ?? globalThis.foundry?.dice?.Roll;
+  if (!RollClass) {
+    globalThis.ui?.notifications?.error?.("Foundry's Roll API is unavailable.");
+    return null;
+  }
+
+  const roll = new RollClass(formula);
+  const evaluated = typeof roll.evaluate === "function" ? await roll.evaluate() : roll;
+  const total = Number(evaluated?.total ?? roll?.total);
+  const selection = findEncounterZoneCell(grid, selectedTerrain, total);
+  if (!selection) {
+    globalThis.ui?.notifications?.warn?.(`No Encounter Zone row matches ${total} for ${selectedTerrain}.`);
+    return null;
+  }
+  if (!selection.cell?.uuid) {
+    globalThis.ui?.notifications?.warn?.(`No RollTable is assigned to ${selectedTerrain} at ${selection.row.label}.`);
+    return null;
+  }
+
+  const table = await resolveRollTable(selection.cell.uuid);
+  if (!table) {
+    globalThis.ui?.notifications?.warn?.("The assigned RollTable is unavailable.");
+    return null;
+  }
+
+  const tableRoll = await drawRollTable(table, { displayChat: false });
+  const auxiliaryRolls = await rollEncounterAuxiliaryTables(scene);
+  const detail = {
+    terrain: selection.terrain,
+    rowLabel: selection.row.label,
+    rowRange: selection.range,
+    tableUuid: String(table.uuid ?? selection.cell.uuid),
+    tableName: String(safeDocumentField(table, "name", selection.cell.name ?? "RollTable")),
+    zoneRoll: rollSummary(evaluated),
+    tableRoll: tableRollSummary(tableRoll),
+    auxiliaryRolls,
+  };
+  const message = await createEncounterZoneRollMessage(detail);
+  return {
+    formula,
+    total,
+    terrain: selection.terrain,
+    row: selection.row,
+    range: selection.range,
+    cell: selection.cell,
+    tableRoll,
+    auxiliaryRolls,
+    message,
+    detail,
+  };
 }
 
 function renderGridView(grid, { sourceTable = null } = {}) {
@@ -661,15 +1117,25 @@ function decorateExplorationZoneGrid(application, element) {
   if (!gmScreenApplication(application) || !globalThis.game?.user?.isGM) return false;
   const root = element?.querySelector ? element : null;
   const target = root?.querySelector?.("[data-mk-exploration-zone-grid]");
+  const auxiliaryTarget = root?.querySelector?.("[data-mk-encounter-auxiliary-tables]");
   const scene = currentScene();
-  if (!target || !scene) return false;
+  if ((!target && !auxiliaryTarget) || !scene) return false;
 
-  const grid = getSceneEncounterZoneGrid(scene);
-  const sourceTable = getSceneFlag(scene, GRID_FLAG, null) ? null : sourceTableForScene(scene);
-  const mode = application.encounterZoneGridEditMode === true ? "edit" : "view";
-  target.innerHTML = renderGridEditor(grid, { sourceTable, mode });
-  bindGridModeToggle(application, target, mode);
-  if (mode === "edit") bindGridEditor(application, target, scene, grid);
+  if (target) {
+    const grid = getSceneEncounterZoneGrid(scene);
+    const sourceTable = getSceneFlag(scene, GRID_FLAG, null) ? null : sourceTableForScene(scene);
+    const mode = application.encounterZoneGridEditMode === true ? "edit" : "view";
+    target.innerHTML = renderGridEditor(grid, { sourceTable, mode });
+    bindGridModeToggle(application, target, mode);
+    if (mode === "edit") bindGridEditor(application, target, scene, grid);
+  }
+
+  if (auxiliaryTarget) {
+    void resolveAuxiliaryTableEntries(scene).then(entries => {
+      auxiliaryTarget.innerHTML = renderEncounterAuxiliaryTableSetup(entries);
+      bindEncounterAuxiliaryTables(application, auxiliaryTarget, scene);
+    });
+  }
   return true;
 }
 
@@ -684,6 +1150,9 @@ registerExplorationZoneGrid();
 export {
   MODULE_ID,
   GRID_FLAG,
+  AUXILIARY_TABLE_FLAG,
+  AUXILIARY_TABLE_KEYS,
+  AUXILIARY_TABLE_LABELS,
   DEFAULT_ROW_COUNT,
   DEFAULT_COLUMNS,
   createDefaultGrid,
@@ -691,7 +1160,21 @@ export {
   sourceTableForScene,
   gridFromZoneTable,
   getSceneEncounterZoneGrid,
+  normalizeAuxiliaryTables,
+  getSceneEncounterZoneAuxiliaryTables,
+  setSceneEncounterZoneAuxiliaryTable,
   gridColumnLabels,
+  encounterZoneDieFormula,
+  encounterZoneRowRange,
+  findEncounterZoneCell,
+  rollSummary,
+  tableResultSummary,
+  tableRollSummary,
+  renderEncounterAuxiliaryTableSetup,
+  bindEncounterAuxiliaryTables,
+  rollEncounterAuxiliaryTables,
+  renderEncounterZoneRollCard,
+  createEncounterZoneRollMessage,
   saveSceneEncounterZoneGrid,
   renderGridView,
   renderGridEditor,
@@ -700,6 +1183,7 @@ export {
   bindGridEditor,
   bindGridModeToggle,
   bindGridRollControls,
+  rollEncounterZone,
   bindGridDropTargets,
   decorateExplorationZoneGrid,
   registerExplorationZoneGrid,

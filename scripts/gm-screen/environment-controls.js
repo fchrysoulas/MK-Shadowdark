@@ -7,6 +7,7 @@ import {
 } from "../libs/environment-context.js";
 import { sourceTableFlag } from "../source-tables/source-table-importer.js";
 import {
+  GRID_FLAG,
   getSceneEncounterZoneGrid,
   gridColumnLabels,
 } from "./exploration-zone-grid.js";
@@ -204,7 +205,10 @@ function buildEnvironmentEditorView({
   zoneTable = findWorldTable(zoneTableUuid),
 } = {}) {
   const rules = resolved?.profile ?? {};
-  const gridTerrains = gridColumnLabels(getSceneEncounterZoneGrid(scene));
+  const storedGrid = scene?.getFlag?.(MODULE_ID, GRID_FLAG)
+    ?? scene?._source?.flags?.[MODULE_ID]?.[GRID_FLAG]
+    ?? null;
+  const gridTerrains = storedGrid ? gridColumnLabels(getSceneEncounterZoneGrid(scene)) : [];
   const terrains = gridTerrains.length ? gridTerrains : encounterZoneTerrainNames(zoneTable);
   const persistedTerrain = String(stored.terrain ?? resolved.terrain ?? rules.defaultTerrain ?? "Default");
   const terrain = terrains.length && !terrains.includes(persistedTerrain) ? terrains[0] : persistedTerrain;

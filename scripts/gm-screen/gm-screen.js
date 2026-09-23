@@ -8,10 +8,8 @@ import {
 } from "../group-sheet/procedure.js";
 import { REST_TURN_SECONDS } from "../group-sheet/rest-encounters.js";
 import { advanceGroupTime } from "../group-sheet/time.js";
-import { openEncounterStagingDialog } from "../group-sheet/encounters/staging.js";
 import {
   buildGmScreenViewModel,
-  findLatestEncounterMessage,
   normalizeWorkspace,
   resolveGmScreenGroup,
 } from "./view-model.js";
@@ -129,23 +127,6 @@ async function actionAdvanceOneTurn() {
   const result = await advanceGroupTime(group, seconds, {
     procedure,
     reason: "gm-screen-one-turn",
-  });
-  await this.render({ force: true });
-  return result;
-}
-
-async function actionStageLatestEncounter() {
-  const group = await selectedGroup(this);
-  if (!group) return null;
-
-  const latest = findLatestEncounterMessage(group);
-  if (!latest?.data) {
-    globalThis.ui?.notifications?.warn?.("No resolved Group encounter is available to stage.");
-    return null;
-  }
-
-  const result = await openEncounterStagingDialog(latest.data, {
-    sourceMessageId: String(latest.message?.id ?? ""),
   });
   await this.render({ force: true });
   return result;
@@ -351,7 +332,6 @@ class MKGMscreen extends ApplicationBase {
       openGroup: actionOpenGroup,
       openMember: actionOpenMember,
       inspectMember: actionInspectMember,
-      stageLatestEncounter: actionStageLatestEncounter,
       timePasses: actionTimePasses,
     },
   };

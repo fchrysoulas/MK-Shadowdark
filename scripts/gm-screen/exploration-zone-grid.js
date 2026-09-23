@@ -715,18 +715,38 @@ async function rollEncounterAuxiliaryTables(scene = currentScene()) {
 }
 
 function renderTableResultDetails(results = [], { showResultNumber = true } = {}) {
-  if (!results.length) return "<div class=\"mk-gm-encounter-zone-result\">No table result details returned.</div>";
-  return results.map(result => `
-    <div class="mk-gm-encounter-zone-result">
-      ${showResultNumber
-        ? `<strong>${result.range ? `Result ${escapeHtml(result.range)}` : result.index !== undefined && result.index !== null ? `Result ${escapeHtml(result.index)}` : "Result"}</strong>`
-        : ""}
-      <p>${escapeHtml(result.text ?? "(No result text)")}</p>
-      ${result.documentCollection || result.documentId
-        ? `<small>Document: ${escapeHtml([result.documentCollection, result.documentId].filter(Boolean).join(" · "))}</small>`
-        : ""}
+  if (!results.length) return "<p class=\"mk-gm-encounter-zone-result-empty\">No result text was returned.</p>";
+  return results.map(result => {
+    const resultNumber = result.range
+      ? `Result ${result.range}`
+      : result.index !== undefined && result.index !== null
+        ? `Result ${result.index}`
+        : "Result";
+    const source = [result.documentCollection, result.documentId].filter(Boolean).join(" · ");
+
+    return `
+      <div class="mk-gm-encounter-zone-result">
+        <p>${escapeHtml(result.text ?? "(No result text)")}</p>
+        ${showResultNumber
+          ? `<small class="mk-gm-encounter-zone-result-number"><i class="fas fa-hashtag" aria-hidden="true"></i>${escapeHtml(resultNumber)}</small>`
+          : ""}
+        ${source
+          ? `<small class="mk-gm-encounter-zone-result-source"><i class="fas fa-link" aria-hidden="true"></i>${escapeHtml(source)}</small>`
+          : ""}
+      </div>
+    `;
+  }).join("");
+}
+
+function renderEncounterRollDetails(label, roll = {}) {
+  const formula = String(roll?.formula || "—");
+  const total = String(roll?.total ?? "—");
+  return `
+    <div class="mk-gm-encounter-zone-roll">
+      <span>${escapeHtml(label)}</span>
+      <strong>${escapeHtml(`${formula} → ${total}`)}</strong>
     </div>
-  `).join("");
+  `;
 }
 
 function renderRollTableDetail(label, detail = {}, { showRollDetails = true } = {}) {
@@ -734,62 +754,112 @@ function renderRollTableDetail(label, detail = {}, { showRollDetails = true } = 
   const results = Array.isArray(tableRoll.results) ? tableRoll.results : [];
   const configured = detail.configured !== false;
   const displayLabel = detail.tableCount > 1 && detail.tableIndex
-    ? `${label} ${detail.tableIndex}`
+    ? `${label} ${detail.tableIndex} of ${detail.tableCount}`
     : label;
   const status = detail.error
-    ? `<div class="mk-gm-encounter-zone-result is-warning">${escapeHtml(detail.error)}</div>`
+    ? `<p class="mk-gm-encounter-zone-result is-warning">${escapeHtml(detail.error)}</p>`
     : !configured
-      ? "<div class=\"mk-gm-encounter-zone-result\">Not configured; skipped.</div>"
-      : renderTableResultDetails(results, { showResultNumber: showRollDetails });
+      ? "<p class=\"mk-gm-encounter-zone-result-empty\">Not configured; skipped.</p>"
+      : `<div class="mk-gm-encounter-zone-results-list">${renderTableResultDetails(results, { showResultNumber: showRollDetails })}</div>`;
   const tableName = String(detail.tableName ?? detail.tableUuid ?? "Not configured");
-  const heading = configured ? tableName : displayLabel;
-  const tableLabel = configured && displayLabel !== tableName
-    ? `<small>${escapeHtml(displayLabel)}</small>`
-    : "";
 
   return `
-    <div class="mk-gm-encounter-zone-auxiliary-result">
-      ${tableLabel}
-      <h2>${escapeHtml(heading)}</h2>
-      ${showRollDetails ? `<div><span>Roll</span><strong>${escapeHtml(tableRoll.roll?.formula || "—")} → ${escapeHtml(tableRoll.roll?.total ?? "—")}</strong></div>` : ""}
+    <article class="mk-gm-encounter-zone-auxiliary-result">
+      <div class="mk-gm-encounter-zone-table-heading">
+        <div>
+          <span class="mk-gm-encounter-zone-table-label">${escapeHtml(displayLabel)}</span>
+          <h2>${escapeHtml(tableName)}</h2>
+        </div>
+        ${showRollDetails ? renderEncounterRollDetails("Table roll", tableRoll.roll) : ""}
+      </div>
       ${status}
-    </div>
+    </article>
   `;
 }
 
 function renderEncounterZoneRollCard(data = {}, { showRollDetails = encounterDebugEnabled() } = {}) {
   const zoneRoll = data.zoneRoll ?? {};
   const tableRoll = data.tableRoll ?? {};
-  const results = Array.isArray(tableRoll.results) ? tableRoll.results : [];
   const auxiliaryRolls = Array.isArray(data.auxiliaryRolls) ? data.auxiliaryRolls : [];
+  const configuredAuxiliaryRolls = auxiliaryRolls.filter(roll => roll && (roll.configured !== false || roll.error));
   const tableName = String(data.tableName ?? data.tableUuid ?? "Unknown");
-  const rollDetails = showRollDetails
+  const terrain = String(data.terrain ?? "Unknown");
+  const rowLabel = String(data.rowLabel ?? "Unknown");
+  const debugDetails = showRollDetails
     ? `
-        <div><dt>Zone Roll</dt><dd>${escapeHtml(zoneRoll.formula || "—")} → ${escapeHtml(zoneRoll.total ?? "—")}</dd></div>
-        <div><dt>Table Roll</dt><dd>${escapeHtml(tableRoll.roll?.formula || "—")} → ${escapeHtml(tableRoll.roll?.total ?? "—")}</dd></div>
+        <section class="mk-gm-encounter-zone-debug" aria-label="Encounter roll debug details">
+          <div class="mk-gm-encounter-zone-debug-heading">
+            <i class="fas fa-bug" aria-hidden="true"></i>
+            <span>Debug roll details</span>
+          </div>
+          <div class="mk-gm-encounter-zone-debug-grid">
+            ${renderEncounterRollDetails("Zone die", zoneRoll)}
+            ${renderEncounterRollDetails("Encounter table", tableRoll.roll)}
+          </div>
+        </section>
       `
     : "";
-  const encounterResults = `
-    <div class="mk-gm-encounter-zone-results">
-      <h2>${escapeHtml(tableName)}</h2>
-      ${renderTableResultDetails(results, { showResultNumber: showRollDetails })}
-    </div>
-    ${auxiliaryRolls.length
-      ? `<div class="mk-gm-encounter-zone-auxiliary-results"><strong>Additional Encounter Results</strong>${auxiliaryRolls.map(roll => renderRollTableDetail(roll.label, roll, { showRollDetails })).join("")}</div>`
-      : ""}
-    ${showRollDetails ? "" : `<div class="mk-gm-encounter-zone-result"><small>Dice and roll details are hidden. Enable GM Screen | Encounter Roll Debug Mode to display them.</small></div>`}
-  `;
+  const auxiliaryResults = configuredAuxiliaryRolls.length
+    ? `
+        <section class="mk-gm-encounter-zone-auxiliary-results">
+          <div class="mk-gm-encounter-zone-section-heading">
+            <div>
+              <span>Supporting tables</span>
+              <h3>Additional encounter details</h3>
+            </div>
+            <small>${configuredAuxiliaryRolls.length} table${configuredAuxiliaryRolls.length === 1 ? "" : "s"}</small>
+          </div>
+          <div class="mk-gm-encounter-zone-auxiliary-grid">
+            ${configuredAuxiliaryRolls.map(roll => renderRollTableDetail(roll.label, roll, { showRollDetails })).join("")}
+          </div>
+        </section>
+      `
+    : `
+        <p class="mk-gm-encounter-zone-no-auxiliary">
+          <i class="fas fa-circle-info" aria-hidden="true"></i>
+          No supporting encounter tables were configured for this roll.
+        </p>
+      `;
+  const hiddenDetails = showRollDetails
+    ? ""
+    : `
+        <p class="mk-gm-encounter-zone-hidden-details">
+          <i class="fas fa-eye-slash" aria-hidden="true"></i>
+          Dice, roll totals, and result numbers are hidden. Enable Encounter Roll Debug Mode to display them.
+        </p>
+      `;
 
   return `
-    <section class="mk-gm-encounter-zone-roll-card">
-      <header><strong>Encounter Zone Roll</strong><span>GM Only</span></header>
-      <dl>
-        <div><dt>Terrain</dt><dd>${escapeHtml(data.terrain ?? "Unknown")}</dd></div>
-        <div><dt>Selected Row</dt><dd>${escapeHtml(data.rowLabel ?? "Unknown")}</dd></div>
-        ${rollDetails}
-      </dl>
-      ${encounterResults}
-    </section>
+    <article class="mk-gm-encounter-zone-roll-card">
+      <header class="mk-gm-encounter-zone-report-header">
+        <div class="mk-gm-encounter-zone-report-topline">
+          <span><i class="fas fa-dice-d20" aria-hidden="true"></i> Encounter zone report</span>
+          <span class="mk-gm-encounter-zone-gm-badge"><i class="fas fa-shield-halved" aria-hidden="true"></i> GM only</span>
+        </div>
+        <div>
+          <h1>Encounter result</h1>
+          <p>${escapeHtml(terrain)} <span aria-hidden="true">·</span> Zone ${escapeHtml(rowLabel)}</p>
+        </div>
+      </header>
+      <div class="mk-gm-encounter-zone-context">
+        <div><span>Terrain</span><strong>${escapeHtml(terrain)}</strong></div>
+        <div><span>Zone result</span><strong>${escapeHtml(rowLabel)}</strong></div>
+      </div>
+      ${debugDetails}
+      <section class="mk-gm-encounter-zone-table-section mk-gm-encounter-zone-primary-result">
+        <div class="mk-gm-encounter-zone-table-heading">
+          <div>
+            <span class="mk-gm-encounter-zone-table-label">Primary encounter</span>
+            <h2>${escapeHtml(tableName)}</h2>
+          </div>
+        </div>
+        <div class="mk-gm-encounter-zone-results-list">
+          ${renderTableResultDetails(Array.isArray(tableRoll.results) ? tableRoll.results : [], { showResultNumber: showRollDetails })}
+        </div>
+      </section>
+      ${auxiliaryResults}
+      ${hiddenDetails}
+    </article>
   `;
 }
 

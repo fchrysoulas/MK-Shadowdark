@@ -99,18 +99,18 @@ test("Encounter Journal pages hide dice and roll details while keeping results v
   const hidden = renderEncounterZoneRollCard(data, { showRollDetails: false });
   assert.match(hidden, /Forest High/);
   assert.match(hidden, /<h2>Forest High<\/h2>/);
-  assert.match(hidden, /A patrol approaches/);
+  assert.match(hidden, /<h2>Forest High<\/h2>[\s\S]*<p>A patrol approaches/);
   assert.match(hidden, /<h2>Spike Trap<\/h2>/);
-  assert.match(hidden, /A concealed snare/);
-  assert.match(hidden, /Dice and roll details are hidden/);
+  assert.match(hidden, /<h2>Spike Trap<\/h2>[\s\S]*<p>A concealed snare/);
+  assert.match(hidden, /Dice, roll totals, and result numbers are hidden/);
   assert.doesNotMatch(hidden, /1d8|1d20|1d6|→ 7|→ 14|→ 3|Result 14|Result 3/);
 
   const debug = renderEncounterZoneRollCard(data, { showRollDetails: true });
   assert.match(debug, /1d8 → 7/);
   assert.match(debug, /1d20 → 14/);
-  assert.match(debug, /A patrol approaches/);
+  assert.match(debug, /<h2>Forest High<\/h2>[\s\S]*<p>A patrol approaches/);
   assert.match(debug, /<h2>Spike Trap<\/h2>/);
-  assert.match(debug, /A concealed snare/);
+  assert.match(debug, /<h2>Spike Trap<\/h2>[\s\S]*<p>A concealed snare/);
   assert.match(debug, /Result 14–14/);
   assert.match(debug, /Result 3–3/);
 });
@@ -215,8 +215,8 @@ test("Encounter Zone rolls the selected cell's RollTable after the zone die", as
     assert.equal(result.journal.id, "JournalEntry.zone");
     assert.equal(result.auxiliaryRolls.length, 4);
     assert.ok(result.auxiliaryRolls.every(entry => entry.configured === false));
-    assert.match(calls[1].data.pages[0].text.content, /Starting Distance/);
-    assert.match(calls[1].data.pages[0].text.content, /Not configured; skipped/);
+    assert.match(calls[1].data.pages[0].text.content, /No supporting encounter tables were configured/);
+    assert.doesNotMatch(calls[1].data.pages[0].text.content, /Starting Distance|Not configured; skipped/);
   } finally {
     globalThis.Roll = previousRoll;
     globalThis.fromUuid = previousFromUuid;

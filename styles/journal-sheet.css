@@ -281,6 +281,325 @@
   background: rgba(255, 255, 255, 0.55);
 }
 
+.mk-journal-sheet-page-body .mk-gm-encounter-zone-roll-card {
+  --mk-encounter-ink: #292724;
+  --mk-encounter-muted: #776f63;
+  --mk-encounter-border: #ded8cc;
+  --mk-encounter-accent: #9a762e;
+  --mk-encounter-accent-soft: #f3ead5;
+  max-width: 900px;
+  margin: 0 auto;
+  overflow: hidden;
+  border: 1px solid var(--mk-encounter-border);
+  border-radius: 14px;
+  background: #f8f6f1;
+  color: var(--mk-encounter-ink);
+  box-shadow: 0 10px 28px rgba(48, 42, 32, 0.09);
+}
+
+.mk-gm-encounter-zone-report-header {
+  display: grid;
+  gap: 18px;
+  padding: 22px 26px 24px;
+  background: linear-gradient(135deg, #35322d 0%, #242321 100%);
+  color: #fff;
+}
+
+.mk-gm-encounter-zone-report-topline {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  color: #d7c9a8;
+  font-size: 0.68rem;
+  font-weight: 800;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+
+.mk-gm-encounter-zone-report-topline > span:first-child i {
+  margin-right: 6px;
+  color: #cbbb80;
+}
+
+.mk-gm-encounter-zone-gm-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 9px;
+  border: 1px solid rgba(215, 201, 168, 0.35);
+  border-radius: 999px;
+  color: #f3ead5;
+  font-size: 0.58rem;
+  letter-spacing: 0.09em;
+}
+
+.mk-gm-encounter-zone-report-header h1 {
+  margin: 0;
+  border: 0;
+  color: #fff !important;
+  font-size: 1.8rem;
+  letter-spacing: 0.025em;
+  line-height: 1.08;
+}
+
+.mk-gm-encounter-zone-report-header p {
+  margin: 7px 0 0;
+  color: #c9c3b8;
+  font-size: 0.9rem;
+}
+
+.mk-gm-encounter-zone-context {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 1px;
+  border-bottom: 1px solid var(--mk-encounter-border);
+  background: var(--mk-encounter-border);
+}
+
+.mk-gm-encounter-zone-context > div {
+  display: grid;
+  gap: 4px;
+  padding: 13px 20px 14px;
+  background: #efebe2;
+}
+
+.mk-gm-encounter-zone-context span,
+.mk-gm-encounter-zone-table-label,
+.mk-gm-encounter-zone-section-heading > div > span {
+  color: var(--mk-encounter-accent);
+  font-size: 0.62rem;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.mk-gm-encounter-zone-context strong {
+  color: var(--mk-encounter-ink);
+  font-size: 1rem;
+}
+
+.mk-gm-encounter-zone-debug {
+  margin: 18px 18px 0;
+  padding: 12px;
+  border: 1px solid #d9c99f;
+  border-radius: 10px;
+  background: #fbf7eb;
+}
+
+.mk-gm-encounter-zone-debug-heading {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  margin-bottom: 9px;
+  color: #705b2d;
+  font-size: 0.65rem;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.mk-gm-encounter-zone-debug-heading i {
+  color: var(--mk-encounter-accent);
+}
+
+.mk-gm-encounter-zone-debug-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.mk-gm-encounter-zone-roll {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  min-width: 0;
+  padding: 9px 10px;
+  border: 1px solid #e4dccb;
+  border-radius: 7px;
+  background: rgba(255, 255, 255, 0.68);
+}
+
+.mk-gm-encounter-zone-roll span {
+  color: var(--mk-encounter-muted);
+  font-size: 0.67rem;
+  font-weight: 700;
+}
+
+.mk-gm-encounter-zone-roll strong {
+  color: var(--mk-encounter-ink);
+  font-family: var(--font-monospace, monospace);
+  font-size: 0.72rem;
+  white-space: nowrap;
+}
+
+.mk-gm-encounter-zone-table-section {
+  margin: 18px;
+  border: 1px solid var(--mk-encounter-border);
+  border-radius: 10px;
+  background: #fff;
+  box-shadow: 0 3px 12px rgba(48, 42, 32, 0.04);
+}
+
+.mk-gm-encounter-zone-table-heading {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 17px 20px 15px;
+  border-bottom: 1px solid #ebe6dc;
+}
+
+.mk-gm-encounter-zone-table-heading h2 {
+  margin: 4px 0 0;
+  border: 0;
+  color: var(--mk-encounter-ink) !important;
+  font-size: 1.3rem;
+  line-height: 1.15;
+}
+
+.mk-gm-encounter-zone-results-list {
+  padding: 0 20px 7px;
+}
+
+.mk-gm-encounter-zone-result {
+  padding: 15px 0;
+  border-bottom: 1px solid #eeeae2;
+}
+
+.mk-gm-encounter-zone-result:last-child {
+  border-bottom: 0;
+}
+
+.mk-gm-encounter-zone-result p {
+  margin: 0;
+  color: var(--mk-encounter-ink);
+  font-size: 1rem;
+  line-height: 1.55;
+}
+
+.mk-gm-encounter-zone-result-number,
+.mk-gm-encounter-zone-result-source {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  margin-top: 9px;
+  color: var(--mk-encounter-muted);
+  font-size: 0.66rem;
+}
+
+.mk-gm-encounter-zone-result-number {
+  margin-right: 12px;
+  color: #80682f;
+  font-weight: 700;
+}
+
+.mk-gm-encounter-zone-result-empty,
+.mk-gm-encounter-zone-no-auxiliary,
+.mk-gm-encounter-zone-hidden-details {
+  color: var(--mk-encounter-muted);
+  font-size: 0.78rem;
+}
+
+.mk-gm-encounter-zone-result-empty {
+  margin: 0;
+  padding: 15px 0;
+}
+
+.mk-gm-encounter-zone-result.is-warning {
+  margin: 0;
+  padding: 15px 20px;
+  color: #8f3d3d;
+  background: #fff3f0;
+}
+
+.mk-gm-encounter-zone-auxiliary-results {
+  margin: 26px 18px 0;
+}
+
+.mk-gm-encounter-zone-section-heading {
+  display: flex;
+  align-items: end;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 12px;
+  padding: 0 2px 9px;
+  border-bottom: 1px solid var(--mk-encounter-border);
+}
+
+.mk-gm-encounter-zone-section-heading h3 {
+  margin: 4px 0 0;
+  border: 0;
+  color: var(--mk-encounter-ink) !important;
+  font-size: 1.05rem;
+}
+
+.mk-gm-encounter-zone-section-heading > small {
+  color: var(--mk-encounter-muted);
+  font-size: 0.7rem;
+}
+
+.mk-gm-encounter-zone-auxiliary-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+  gap: 12px;
+}
+
+.mk-gm-encounter-zone-auxiliary-result {
+  min-width: 0;
+  overflow: hidden;
+  border: 1px solid var(--mk-encounter-border);
+  border-radius: 10px;
+  background: #fff;
+}
+
+.mk-gm-encounter-zone-auxiliary-result .mk-gm-encounter-zone-table-heading {
+  padding: 14px 16px 13px;
+}
+
+.mk-gm-encounter-zone-auxiliary-result .mk-gm-encounter-zone-table-heading h2 {
+  font-size: 1.05rem;
+}
+
+.mk-gm-encounter-zone-auxiliary-result .mk-gm-encounter-zone-roll {
+  display: grid;
+  justify-items: end;
+  gap: 3px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+}
+
+.mk-gm-encounter-zone-auxiliary-result .mk-gm-encounter-zone-results-list {
+  padding: 0 16px 5px;
+}
+
+.mk-gm-encounter-zone-no-auxiliary {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  margin: 22px 20px 0;
+  padding: 11px 13px;
+  border: 1px dashed #d4ccbe;
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.55);
+}
+
+.mk-gm-encounter-zone-no-auxiliary i,
+.mk-gm-encounter-zone-hidden-details i {
+  color: var(--mk-encounter-accent);
+}
+
+.mk-gm-encounter-zone-hidden-details {
+  display: flex;
+  align-items: flex-start;
+  gap: 7px;
+  margin: 17px 20px 20px;
+  padding-top: 13px;
+  border-top: 1px solid var(--mk-encounter-border);
+}
+
 @media (max-width: 760px) {
   .mk-journal-sheet-shell {
     grid-template-columns: 210px minmax(0, 1fr);
@@ -298,5 +617,50 @@
   .mk-journal-sheet-tabs {
     margin-left: -12px;
     margin-right: -12px;
+  }
+
+  .mk-gm-encounter-zone-report-header {
+    padding: 19px 18px 21px;
+  }
+
+  .mk-gm-encounter-zone-report-topline {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .mk-gm-encounter-zone-context {
+    grid-template-columns: 1fr;
+  }
+
+  .mk-gm-encounter-zone-debug,
+  .mk-gm-encounter-zone-table-section {
+    margin-right: 12px;
+    margin-left: 12px;
+  }
+
+  .mk-gm-encounter-zone-debug-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .mk-gm-encounter-zone-table-heading {
+    flex-direction: column;
+    gap: 11px;
+  }
+
+  .mk-gm-encounter-zone-table-heading .mk-gm-encounter-zone-roll,
+  .mk-gm-encounter-zone-auxiliary-result .mk-gm-encounter-zone-roll {
+    width: 100%;
+    justify-items: start;
+  }
+
+  .mk-gm-encounter-zone-auxiliary-results {
+    margin-right: 12px;
+    margin-left: 12px;
+  }
+
+  .mk-gm-encounter-zone-no-auxiliary,
+  .mk-gm-encounter-zone-hidden-details {
+    margin-right: 14px;
+    margin-left: 14px;
   }
 }

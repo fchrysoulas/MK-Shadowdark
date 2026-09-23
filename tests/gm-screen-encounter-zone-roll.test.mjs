@@ -5,9 +5,11 @@ import {
   AUXILIARY_TABLE_KEYS,
   encounterZoneDieFormula,
   findEncounterZoneCell,
+  getSceneEncounterZoneAuxiliaryTables,
   normalizeAuxiliaryTables,
   renderEncounterAuxiliaryTableSetup,
   rollEncounterZone,
+  setSceneEncounterZoneAuxiliaryTable,
   tableResultSummary,
 } from "../scripts/gm-screen/exploration-zone-grid.js";
 
@@ -54,17 +56,55 @@ test("Encounter detail slots expose four Scene-owned RollTable assignments", () 
   assert.deepEqual(normalizeAuxiliaryTables({ distance: "RollTable.distance", trap: " RollTable.trap " }), {
     distance: "RollTable.distance",
     activity: "",
-    trap: "RollTable.trap",
-    hazard: "",
+    trap: ["RollTable.trap"],
+    hazard: [],
   });
   const html = renderEncounterAuxiliaryTableSetup([
     { key: "distance", label: "Starting Distance", uuid: "RollTable.distance", table: { name: "Distance" } },
+    {
+      key: "trap",
+      label: "Trap",
+      multiple: true,
+      uuids: ["RollTable.spike", "RollTable.pit"],
+      tables: [{ name: "Spike Trap" }, { name: "Pit Trap" }],
+    },
   ]);
   for (const key of AUXILIARY_TABLE_KEYS) assert.match(html, new RegExp(`data-mk-encounter-auxiliary-slot="${key}"`));
   assert.match(html, /Starting Distance/);
   assert.match(html, /Activity/);
   assert.match(html, /Trap/);
   assert.match(html, /Hazard/);
+  assert.match(html, /Spike Trap/);
+  assert.match(html, /Pit Trap/);
+  assert.match(html, /data-mk-encounter-auxiliary-index="0"/);
+  assert.match(html, /data-mk-encounter-auxiliary-index="1"/);
+});
+
+test("Trap and Hazard assignments append and remove individual RollTables", async () => {
+  const previousGame = globalThis.game;
+  let stored = {
+    distance: "",
+    activity: "",
+    trap: "RollTable.old-trap",
+    hazard: ["RollTable.old-hazard"],
+  };
+  const scene = {
+    getFlag: () => stored,
+    async setFlag(_moduleId, _key, value) {
+      stored = value;
+    },
+  };
+  globalThis.game = { user: { isGM: true } };
+
+  try {
+    assert.deepEqual(getSceneEncounterZoneAuxiliaryTables(scene).trap, ["RollTable.old-trap"]);
+    const appended = await setSceneEncounterZoneAuxiliaryTable("trap", "RollTable.new-trap", scene);
+    assert.deepEqual(appended.trap, ["RollTable.old-trap", "RollTable.new-trap"]);
+    const removed = await setSceneEncounterZoneAuxiliaryTable("trap", "", scene, { index: 0 });
+    assert.deepEqual(removed.trap, ["RollTable.new-trap"]);
+  } finally {
+    globalThis.game = previousGame;
+  }
 });
 
 test("Encounter Zone rolls the selected cell's RollTable after the zone die", async () => {
@@ -225,6 +265,109 @@ test("Encounter Zone rolls every configured encounter detail table privately", a
     assert.match(calls.at(-1).data.content, /Activity/);
     assert.match(calls.at(-1).data.content, /Trap/);
     assert.match(calls.at(-1).data.content, /Hazard/);
+  } finally {
+    globalThis.Roll = previousRoll;
+    globalThis.fromUuid = previousFromUuid;
+    globalThis.canvas = previousCanvas;
+    globalThis.game = previousGame;
+    globalThis.ui = previousUi;
+    globalThis.ChatMessage = previousChatMessage;
+  }
+});
+
+test("Encounter Zone rolls every assigned Trap and Hazard table", async () => {
+  const previousRoll = globalThis.Roll;
+  const previousFromUuid = globalThis.fromUuid;
+  const previousCanvas = globalThis.canvas;
+  const previousGame = globalThis.game;
+  const previousUi = globalThis.ui;
+  const previousChatMessage = globalThis.ChatMessage;
+  const calls = [];
+  const assignments = {
+    distance: ["RollTable.distance"],
+    activity: ["RollTable.activity"],
+    trap: ["RollTable.trap-one", "RollTable.trap-two"],
+    hazard: ["RollTable.hazard-one", "RollTable.hazard-two"],
+  };
+  const auxiliaryTables = Object.fromEntries(Object.entries(assignments).flatMap(([key, uuids]) => uuids.map((uuid, index) => [uuid, {
+    documentName: "RollTable",
+    uuid,
+    name: `${key} ${index + 1}`,
+    async draw(options) {
+      calls.push({ type: uuid, options });
+      return { roll: { formula: "1d6", total: index + 1 }, results: [{ text: `${uuid} result.` }] };
+    },
+  }])));
+  const mainTable = {
+    documentName: "RollTable",
+    uuid: "RollTable.forest-high",
+    name: "Forest High",
+    async draw(options) {
+      calls.push({ type: "main", options });
+      return { roll: { formula: "1d20", total: 14 }, results: [{ text: "A patrol approaches." }] };
+    },
+  };
+
+  class MockRoll {
+    constructor(formula) {
+      this.formula = formula;
+      this.total = 7;
+    }
+
+    async evaluate() {
+      return this;
+    }
+  }
+
+  const scene = {
+    getFlag(_moduleId, key) {
+      if (key === "encounterZoneGrid") return grid();
+      if (key === "encounterZoneAuxiliaryTables") return assignments;
+      return null;
+    },
+  };
+
+  globalThis.Roll = MockRoll;
+  globalThis.fromUuid = async uuid => uuid === mainTable.uuid ? mainTable : auxiliaryTables[uuid] ?? null;
+  globalThis.canvas = { scene };
+  globalThis.game = {
+    user: { id: "User.gm", isGM: true },
+    users: [{ id: "User.gm", isGM: true, active: true }],
+  };
+  globalThis.ui = { notifications: { warn: () => {}, error: () => {} } };
+  globalThis.ChatMessage = {
+    getSpeaker: () => ({}),
+    async create(data) {
+      calls.push({ type: "gm-chat", data });
+      return { id: "ChatMessage.zone-details" };
+    },
+  };
+
+  try {
+    const result = await rollEncounterZone("Forest", scene);
+    assert.deepEqual(result.auxiliaryRolls.map(entry => entry.tableUuid), [
+      "RollTable.distance",
+      "RollTable.activity",
+      "RollTable.trap-one",
+      "RollTable.trap-two",
+      "RollTable.hazard-one",
+      "RollTable.hazard-two",
+    ]);
+    assert.deepEqual(calls.map(call => call.type), [
+      "main",
+      ...assignments.distance,
+      ...assignments.activity,
+      ...assignments.trap,
+      ...assignments.hazard,
+      "gm-chat",
+    ]);
+    assert.ok(calls.slice(0, -1).every(call => call.options.displayChat === false));
+    assert.match(calls.at(-1).data.content, /Trap 1/);
+    assert.match(calls.at(-1).data.content, /Trap 2/);
+    assert.match(calls.at(-1).data.content, /Hazard 1/);
+    assert.match(calls.at(-1).data.content, /Hazard 2/);
+    assert.match(calls.at(-1).data.content, /RollTable\.trap-one result/);
+    assert.match(calls.at(-1).data.content, /RollTable\.hazard-two result/);
   } finally {
     globalThis.Roll = previousRoll;
     globalThis.fromUuid = previousFromUuid;

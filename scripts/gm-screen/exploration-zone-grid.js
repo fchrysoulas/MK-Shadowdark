@@ -16,6 +16,11 @@ const AUXILIARY_TABLE_KEYS = Object.freeze([
   "hazard",
 ]);
 
+const AUXILIARY_MULTI_TABLE_KEYS = Object.freeze([
+  "trap",
+  "hazard",
+]);
+
 const AUXILIARY_TABLE_LABELS = Object.freeze({
   distance: "Starting Distance",
   activity: "Activity",
@@ -214,12 +219,19 @@ function getSceneEncounterZoneGrid(scene = currentScene()) {
   return gridFromZoneTable(sourceTableForScene(scene)) ?? createDefaultGrid();
 }
 
+function normalizeAuxiliaryTableList(value) {
+  const values = Array.isArray(value) ? value : [value];
+  return values
+    .map(tableUuid => String(tableUuid ?? "").trim())
+    .filter(Boolean);
+}
+
 function normalizeAuxiliaryTables(value) {
   const source = value && typeof value === "object" && !Array.isArray(value) ? value : {};
-  return Object.fromEntries(AUXILIARY_TABLE_KEYS.map(key => [
-    key,
-    String(source[key] ?? "").trim(),
-  ]));
+  return Object.fromEntries(AUXILIARY_TABLE_KEYS.map(key => {
+    const tableUuids = normalizeAuxiliaryTableList(source[key]);
+    return [key, AUXILIARY_MULTI_TABLE_KEYS.includes(key) ? tableUuids : (tableUuids[0] ?? "")];
+  }));
 }
 
 function getSceneEncounterZoneAuxiliaryTables(scene = currentScene()) {
@@ -228,6 +240,8 @@ function getSceneEncounterZoneAuxiliaryTables(scene = currentScene()) {
 
 async function setSceneEncounterZoneAuxiliaryTable(key, tableUuid, scene = currentScene(), {
   user = globalThis.game?.user,
+  append = AUXILIARY_MULTI_TABLE_KEYS.includes(String(key ?? "").trim()),
+  index = null,
 } = {}) {
   const normalizedKey = String(key ?? "").trim();
   if (!AUXILIARY_TABLE_KEYS.includes(normalizedKey)) return null;
@@ -238,7 +252,20 @@ async function setSceneEncounterZoneAuxiliaryTable(key, tableUuid, scene = curre
   }
 
   const next = getSceneEncounterZoneAuxiliaryTables(scene);
-  next[normalizedKey] = String(tableUuid ?? "").trim();
+  const normalizedUuid = String(tableUuid ?? "").trim();
+  if (AUXILIARY_MULTI_TABLE_KEYS.includes(normalizedKey)) {
+    const tableUuids = normalizeAuxiliaryTableList(next[normalizedKey]);
+    if (Number.isInteger(index) && index >= 0 && index < tableUuids.length) {
+      tableUuids.splice(index, 1);
+      next[normalizedKey] = tableUuids;
+    } else if (normalizedUuid) {
+      next[normalizedKey] = append ? [...tableUuids, normalizedUuid] : [normalizedUuid];
+    } else {
+      next[normalizedKey] = [];
+    }
+  } else {
+    next[normalizedKey] = normalizedUuid;
+  }
   await scene.setFlag(MODULE_ID, AUXILIARY_TABLE_FLAG, next);
   return next;
 }
@@ -393,6 +420,17 @@ async function resolveRollTable(uuid) {
 async function resolveAuxiliaryTableEntries(scene = currentScene()) {
   const assignments = getSceneEncounterZoneAuxiliaryTables(scene);
   return Promise.all(AUXILIARY_TABLE_KEYS.map(async key => {
+    if (AUXILIARY_MULTI_TABLE_KEYS.includes(key)) {
+      const uuids = normalizeAuxiliaryTableList(assignments[key]);
+      return {
+        key,
+        label: AUXILIARY_TABLE_LABELS[key],
+        multiple: true,
+        uuids,
+        tables: await Promise.all(uuids.map(uuid => resolveRollTable(uuid))),
+      };
+    }
+
     const uuid = assignments[key];
     return {
       key,
@@ -416,31 +454,63 @@ function renderEncounterAuxiliaryTableSetup(entries = []) {
       </header>
       <div class="mk-gm-encounter-auxiliary-grid">
         ${AUXILIARY_TABLE_KEYS.map(key => {
-          const entry = byKey.get(key) ?? { key, label: AUXILIARY_TABLE_LABELS[key], uuid: "", table: null };
-          const tableName = entry.uuid
-            ? String(entry.table?.name ?? "Unavailable RollTable")
+          const multiple = AUXILIARY_MULTI_TABLE_KEYS.includes(key);
+          const entry = byKey.get(key) ?? {
+            key,
+            label: AUXILIARY_TABLE_LABELS[key],
+            uuid: "",
+            table: null,
+            uuids: [],
+            tables: [],
+          };
+          const tableUuids = normalizeAuxiliaryTableList(multiple ? (entry.uuids ?? entry.uuid) : entry.uuid);
+          const tables = multiple
+            ? (Array.isArray(entry.tables) ? entry.tables : (entry.table ? [entry.table] : []))
+            : [entry.table];
+          const assigned = tableUuids.length > 0;
+          const tableName = tableUuids[0]
+            ? String(safeDocumentField(tables[0], "name", "Unavailable RollTable"))
             : "Drop RollTable here";
-          const assigned = Boolean(entry.uuid && entry.table);
+          const tableItems = multiple
+            ? tableUuids.map((uuid, index) => {
+              const table = tables[index];
+              const name = table
+                ? String(safeDocumentField(table, "name", uuid))
+                : "Unavailable RollTable";
+              return `
+                <div class="mk-gm-encounter-auxiliary-entry">
+                  <i class="fas fa-table-list" aria-hidden="true"></i>
+                  <strong>${escapeHtml(name)}</strong>
+                  ${table ? "" : `<small>${escapeHtml(uuid)}</small>`}
+                  <button type="button" data-mk-encounter-auxiliary-clear data-mk-encounter-auxiliary-index="${index}" title="Clear ${escapeHtml(entry.label)} table ${index + 1}" aria-label="Clear ${escapeHtml(entry.label)} table ${index + 1}"><i class="fas fa-xmark"></i></button>
+                </div>
+              `;
+            }).join("")
+            : "";
           return `
-            <article class="mk-gm-encounter-auxiliary-slot ${assigned ? "is-assigned" : "is-empty"}" data-mk-encounter-auxiliary-slot="${key}">
+            <article class="mk-gm-encounter-auxiliary-slot ${assigned ? "is-assigned" : "is-empty"}" data-mk-encounter-auxiliary-slot="${key}"${multiple ? " data-mk-encounter-auxiliary-multiple" : ""}>
               <span class="mk-gm-encounter-auxiliary-label">${escapeHtml(entry.label)}</span>
-              <div class="mk-gm-encounter-auxiliary-drop" data-mk-encounter-auxiliary-drop>
-                <i class="fas ${assigned ? "fa-table-list" : "fa-arrow-down"}" aria-hidden="true"></i>
-                <strong>${escapeHtml(tableName)}</strong>
-                ${entry.uuid && !assigned ? `<small>${escapeHtml(entry.uuid)}</small>` : ""}
-                ${entry.uuid ? `<button type="button" data-mk-encounter-auxiliary-clear title="Clear ${escapeHtml(entry.label)} RollTable" aria-label="Clear ${escapeHtml(entry.label)} RollTable"><i class="fas fa-xmark"></i></button>` : ""}
+              <div class="mk-gm-encounter-auxiliary-drop${multiple ? " is-multiple" : ""}" data-mk-encounter-auxiliary-drop>
+                ${multiple
+                  ? `${tableItems ? `<div class="mk-gm-encounter-auxiliary-list">${tableItems}</div>` : `<div class="mk-gm-encounter-auxiliary-empty"><i class="fas fa-arrow-down" aria-hidden="true"></i><strong>Drop RollTable here</strong></div>`}<div class="mk-gm-encounter-auxiliary-add"><i class="fas fa-plus" aria-hidden="true"></i><span>Drop ${assigned ? "another " : "a "}RollTable</span></div>`
+                  : `<i class="fas ${assigned ? "fa-table-list" : "fa-arrow-down"}" aria-hidden="true"></i>
+                     <strong>${escapeHtml(tableName)}</strong>
+                     ${tableUuids[0] && !tables[0] ? `<small>${escapeHtml(tableUuids[0])}</small>` : ""}
+                     ${tableUuids[0] ? `<button type="button" data-mk-encounter-auxiliary-clear title="Clear ${escapeHtml(entry.label)} RollTable" aria-label="Clear ${escapeHtml(entry.label)} RollTable"><i class="fas fa-xmark"></i></button>` : ""}`}
               </div>
             </article>
           `;
         }).join("")}
       </div>
-      <small class="mk-gm-encounter-auxiliary-status">Drag a RollTable from the sidebar onto a box. Empty boxes are skipped.</small>
+      <small class="mk-gm-encounter-auxiliary-status">Drag a RollTable from the sidebar onto a box. Trap and Hazard accept multiple tables; empty boxes are skipped.</small>
     </section>
   `;
 }
 
 function bindEncounterAuxiliaryTables(application, root, scene) {
   root?.querySelectorAll?.("[data-mk-encounter-auxiliary-slot]")?.forEach(slot => {
+    const key = String(slot.dataset.mkEncounterAuxiliarySlot ?? "");
+    const multiple = AUXILIARY_MULTI_TABLE_KEYS.includes(key);
     const drop = slot.querySelector?.("[data-mk-encounter-auxiliary-drop]");
     if (!drop) return;
 
@@ -469,7 +539,7 @@ function bindEncounterAuxiliaryTables(application, root, scene) {
       }
 
       try {
-        await setSceneEncounterZoneAuxiliaryTable(slot.dataset.mkEncounterAuxiliarySlot, table.uuid ?? uuid, scene);
+        await setSceneEncounterZoneAuxiliaryTable(key, table.uuid ?? uuid, scene, { append: multiple });
         await application?.render?.({ force: true });
       } catch (error) {
         console.error("mk-shadowdark | GM Screen Encounter RollTables | Assignment failed", error);
@@ -477,19 +547,24 @@ function bindEncounterAuxiliaryTables(application, root, scene) {
       }
     });
 
-    drop.querySelector?.("[data-mk-encounter-auxiliary-clear]")?.addEventListener("click", async event => {
-      event.preventDefault();
-      event.stopPropagation();
-      const button = event.currentTarget;
-      button.disabled = true;
-      try {
-        await setSceneEncounterZoneAuxiliaryTable(slot.dataset.mkEncounterAuxiliarySlot, "", scene);
-        await application?.render?.({ force: true });
-      } catch (error) {
-        console.error("mk-shadowdark | GM Screen Encounter RollTables | Clear failed", error);
-        globalThis.ui?.notifications?.error?.(`Encounter RollTable clear failed: ${error.message}`);
-        button.disabled = false;
-      }
+    drop.querySelectorAll?.("[data-mk-encounter-auxiliary-clear]")?.forEach(button => {
+      button.addEventListener("click", async event => {
+        event.preventDefault();
+        event.stopPropagation();
+        button.disabled = true;
+        const rawIndex = button.dataset.mkEncounterAuxiliaryIndex;
+        const index = multiple && rawIndex !== undefined ? Number(rawIndex) : null;
+        try {
+          await setSceneEncounterZoneAuxiliaryTable(key, "", scene, {
+            index: Number.isInteger(index) ? index : null,
+          });
+          await application?.render?.({ force: true });
+        } catch (error) {
+          console.error("mk-shadowdark | GM Screen Encounter RollTables | Clear failed", error);
+          globalThis.ui?.notifications?.error?.(`Encounter RollTable clear failed: ${error.message}`);
+          button.disabled = false;
+        }
+      });
     });
   });
   return true;
@@ -571,41 +646,55 @@ async function rollEncounterAuxiliaryTables(scene = currentScene()) {
   const rolls = [];
 
   for (const key of AUXILIARY_TABLE_KEYS) {
-    const tableUuid = assignments[key];
-    const base = {
-      key,
-      label: AUXILIARY_TABLE_LABELS[key],
-      tableUuid,
-      tableName: tableUuid ? "Unavailable RollTable" : "Not configured",
-      configured: Boolean(tableUuid),
-      roll: { formula: "", total: null },
-      results: [],
-    };
-    if (!tableUuid) {
-      rolls.push(base);
+    const tableUuids = normalizeAuxiliaryTableList(assignments[key]);
+    if (!tableUuids.length) {
+      rolls.push({
+        key,
+        label: AUXILIARY_TABLE_LABELS[key],
+        tableUuid: "",
+        tableName: "Not configured",
+        configured: false,
+        tableIndex: null,
+        tableCount: 0,
+        roll: { formula: "", total: null },
+        results: [],
+      });
       continue;
     }
 
-    const table = await resolveRollTable(tableUuid);
-    if (!table) {
-      rolls.push({ ...base, error: "Assigned RollTable is unavailable." });
-      continue;
-    }
+    for (const [index, tableUuid] of tableUuids.entries()) {
+      const base = {
+        key,
+        label: AUXILIARY_TABLE_LABELS[key],
+        tableUuid,
+        tableName: "Unavailable RollTable",
+        configured: true,
+        tableIndex: index + 1,
+        tableCount: tableUuids.length,
+        roll: { formula: "", total: null },
+        results: [],
+      };
+      const table = await resolveRollTable(tableUuid);
+      if (!table) {
+        rolls.push({ ...base, error: "Assigned RollTable is unavailable." });
+        continue;
+      }
 
-    try {
-      const draw = await drawRollTable(table, { displayChat: false });
-      const summary = tableRollSummary(draw);
-      rolls.push({
-        ...base,
-        tableName: String(safeDocumentField(table, "name", tableUuid)),
-        ...summary,
-      });
-    } catch (error) {
-      rolls.push({
-        ...base,
-        tableName: String(safeDocumentField(table, "name", tableUuid)),
-        error: String(error?.message ?? error),
-      });
+      try {
+        const draw = await drawRollTable(table, { displayChat: false });
+        const summary = tableRollSummary(draw);
+        rolls.push({
+          ...base,
+          tableName: String(safeDocumentField(table, "name", tableUuid)),
+          ...summary,
+        });
+      } catch (error) {
+        rolls.push({
+          ...base,
+          tableName: String(safeDocumentField(table, "name", tableUuid)),
+          error: String(error?.message ?? error),
+        });
+      }
     }
   }
 
@@ -638,6 +727,9 @@ function renderRollTableDetail(label, detail = {}) {
   const tableRoll = detail.tableRoll ?? detail;
   const results = Array.isArray(tableRoll.results) ? tableRoll.results : [];
   const configured = detail.configured !== false;
+  const displayLabel = detail.tableCount > 1 && detail.tableIndex
+    ? `${label} ${detail.tableIndex}`
+    : label;
   const status = detail.error
     ? `<div class="mk-gm-encounter-zone-result is-warning">${escapeHtml(detail.error)}</div>`
     : !configured
@@ -646,7 +738,7 @@ function renderRollTableDetail(label, detail = {}) {
 
   return `
     <div class="mk-gm-encounter-zone-auxiliary-result">
-      <header><strong>${escapeHtml(label)}</strong><span>${escapeHtml(detail.tableName ?? detail.tableUuid ?? "Not configured")}</span></header>
+      <header><strong>${escapeHtml(displayLabel)}</strong><span>${escapeHtml(detail.tableName ?? detail.tableUuid ?? "Not configured")}</span></header>
       <div><span>Roll</span><strong>${escapeHtml(tableRoll.roll?.formula || "—")} → ${escapeHtml(tableRoll.roll?.total ?? "—")}</strong></div>
       ${status}
     </div>
@@ -1152,6 +1244,7 @@ export {
   GRID_FLAG,
   AUXILIARY_TABLE_FLAG,
   AUXILIARY_TABLE_KEYS,
+  AUXILIARY_MULTI_TABLE_KEYS,
   AUXILIARY_TABLE_LABELS,
   DEFAULT_ROW_COUNT,
   DEFAULT_COLUMNS,

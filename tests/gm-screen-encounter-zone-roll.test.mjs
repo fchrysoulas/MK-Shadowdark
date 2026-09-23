@@ -81,7 +81,7 @@ test("Encounter detail slots expose four Scene-owned RollTable assignments", () 
   assert.match(html, /data-mk-encounter-auxiliary-index="1"/);
 });
 
-test("Encounter Journal pages hide dice and results unless debug details are enabled", () => {
+test("Encounter Journal pages hide dice and roll details while keeping results visible", () => {
   const data = {
     terrain: "Forest",
     rowLabel: "6-8",
@@ -96,8 +96,11 @@ test("Encounter Journal pages hide dice and results unless debug details are ena
   };
   const hidden = renderEncounterZoneRollCard(data, { showRollDetails: false });
   assert.match(hidden, /Forest High/);
-  assert.match(hidden, /Dice and table results are hidden/);
-  assert.doesNotMatch(hidden, /1d8|1d20|A patrol approaches|Spike Trap|A concealed snare/);
+  assert.match(hidden, /A patrol approaches/);
+  assert.match(hidden, /Spike Trap/);
+  assert.match(hidden, /A concealed snare/);
+  assert.match(hidden, /Dice and roll details are hidden/);
+  assert.doesNotMatch(hidden, /1d8|1d20|1d6|→ 7|→ 14|→ 3/);
 
   const debug = renderEncounterZoneRollCard(data, { showRollDetails: true });
   assert.match(debug, /1d8 → 7/);

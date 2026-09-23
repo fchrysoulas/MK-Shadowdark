@@ -727,7 +727,7 @@ function renderTableResultDetails(results = []) {
   `).join("");
 }
 
-function renderRollTableDetail(label, detail = {}) {
+function renderRollTableDetail(label, detail = {}, { showRollDetails = true } = {}) {
   const tableRoll = detail.tableRoll ?? detail;
   const results = Array.isArray(tableRoll.results) ? tableRoll.results : [];
   const configured = detail.configured !== false;
@@ -743,7 +743,7 @@ function renderRollTableDetail(label, detail = {}) {
   return `
     <div class="mk-gm-encounter-zone-auxiliary-result">
       <header><strong>${escapeHtml(displayLabel)}</strong><span>${escapeHtml(detail.tableName ?? detail.tableUuid ?? "Not configured")}</span></header>
-      <div><span>Roll</span><strong>${escapeHtml(tableRoll.roll?.formula || "—")} → ${escapeHtml(tableRoll.roll?.total ?? "—")}</strong></div>
+      ${showRollDetails ? `<div><span>Roll</span><strong>${escapeHtml(tableRoll.roll?.formula || "—")} → ${escapeHtml(tableRoll.roll?.total ?? "—")}</strong></div>` : ""}
       ${status}
     </div>
   `;
@@ -760,18 +760,13 @@ function renderEncounterZoneRollCard(data = {}, { showRollDetails = encounterDeb
         <div><dt>Table Roll</dt><dd>${escapeHtml(tableRoll.roll?.formula || "—")} → ${escapeHtml(tableRoll.roll?.total ?? "—")}</dd></div>
       `
     : "";
-  const resultDetails = showRollDetails
-    ? `
-        <div class="mk-gm-encounter-zone-results"><strong>Encounter Result</strong>${renderTableResultDetails(results)}</div>
-        ${auxiliaryRolls.length
-          ? `<div class="mk-gm-encounter-zone-auxiliary-results"><strong>Additional Encounter Rolls</strong>${auxiliaryRolls.map(roll => renderRollTableDetail(roll.label, roll)).join("")}</div>`
-          : ""}
-      `
-    : `
-        <div class="mk-gm-encounter-zone-result is-warning">
-          Dice and table results are hidden. Enable GM Screen | Encounter Roll Debug Mode to display them.
-        </div>
-      `;
+  const encounterResults = `
+    <div class="mk-gm-encounter-zone-results"><strong>Encounter Result</strong>${renderTableResultDetails(results)}</div>
+    ${auxiliaryRolls.length
+      ? `<div class="mk-gm-encounter-zone-auxiliary-results"><strong>Additional Encounter Results</strong>${auxiliaryRolls.map(roll => renderRollTableDetail(roll.label, roll, { showRollDetails })).join("")}</div>`
+      : ""}
+    ${showRollDetails ? "" : `<div class="mk-gm-encounter-zone-result"><small>Dice and roll details are hidden. Enable GM Screen | Encounter Roll Debug Mode to display them.</small></div>`}
+  `;
 
   return `
     <section class="mk-gm-encounter-zone-roll-card">
@@ -782,7 +777,7 @@ function renderEncounterZoneRollCard(data = {}, { showRollDetails = encounterDeb
         <div><dt>RollTable</dt><dd>${escapeHtml(data.tableName ?? data.tableUuid ?? "Unknown")}</dd></div>
         ${rollDetails}
       </dl>
-      ${resultDetails}
+      ${encounterResults}
     </section>
   `;
 }

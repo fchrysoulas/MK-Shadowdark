@@ -147,7 +147,7 @@ test("Encounters is an editable Encounter Zone workspace with detail RollTable s
 test("GM Screen encounter roll details are controlled by a disabled-by-default debug setting", () => {
   assert.match(settings, /registerSetting\("gmScreenEncounterDebug",/);
   assert.match(settings, /name: "GM Screen \| Encounter Roll Debug Mode"/);
-  assert.match(settings, /hint: "When enabled, Roll Zone Journal pages show dice formulas, totals, and table result text\./);
+  assert.match(settings, /hint: "When enabled, Roll Zone Journal pages show dice formulas and roll totals\./);
   const settingStart = settings.indexOf('registerSetting("gmScreenEncounterDebug"');
   const settingBlock = settings.slice(settingStart, settings.indexOf("});", settingStart));
   assert.match(settingBlock, /default: false/);

@@ -246,6 +246,19 @@
       ]
     },
     {
+      key: "gmScreen",
+      title: "GM Screen",
+      hint: "Configure GM Screen encounter result presentation and diagnostics.",
+      icon: "fas fa-shield-halved",
+      settings: ["gmScreenEncounterDebug"],
+      sections: [
+        {
+          title: "Encounter Roll",
+          settings: ["gmScreenEncounterDebug"]
+        }
+      ]
+    },
+    {
       key: "groupSheet",
       title: "Group Sheet",
       hint: "Configure Group actors, member presentation, camping supplies, tab backgrounds, travel progress, and weather tables.",
@@ -1719,6 +1732,19 @@
         max: 128,
         step: 1
       }
+    });
+
+    /* -------------------- */
+    /* GM Screen            */
+    /* -------------------- */
+
+    registerSetting("gmScreenEncounterDebug", {
+      name: "GM Screen | Encounter Roll Debug Mode",
+      hint: "When enabled, Roll Zone Journal pages show dice formulas, totals, and table result text. When disabled, pages keep the encounter context but hide dice and results.",
+      scope: "world",
+      config: true,
+      type: Boolean,
+      default: false
     });
 
     /* -------------------- */

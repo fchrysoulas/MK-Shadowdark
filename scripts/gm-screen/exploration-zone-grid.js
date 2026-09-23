@@ -6,6 +6,7 @@ const MODULE_ID = "mk-shadowdark";
 const GRID_FLAG = "encounterZoneGrid";
 const ENCOUNTER_ZONE_FLAG = "encounterZoneTableUuid";
 const AUXILIARY_TABLE_FLAG = "encounterZoneAuxiliaryTables";
+const ENCOUNTER_DEBUG_SETTING = "gmScreenEncounterDebug";
 const GRID_SCHEMA = 1;
 const DEFAULT_ROW_COUNT = 8;
 
@@ -63,6 +64,14 @@ function escapeHtml(value) {
 
 function configuredDocumentClass(baseClass) {
   return baseClass?.implementation ?? baseClass ?? null;
+}
+
+function encounterDebugEnabled() {
+  try {
+    return globalThis.game?.settings?.get?.(MODULE_ID, ENCOUNTER_DEBUG_SETTING) === true;
+  } catch (_error) {
+    return false;
+  }
 }
 
 function currentScene() {
@@ -740,26 +749,40 @@ function renderRollTableDetail(label, detail = {}) {
   `;
 }
 
-function renderEncounterZoneRollCard(data = {}) {
+function renderEncounterZoneRollCard(data = {}, { showRollDetails = encounterDebugEnabled() } = {}) {
   const zoneRoll = data.zoneRoll ?? {};
   const tableRoll = data.tableRoll ?? {};
   const results = Array.isArray(tableRoll.results) ? tableRoll.results : [];
   const auxiliaryRolls = Array.isArray(data.auxiliaryRolls) ? data.auxiliaryRolls : [];
+  const rollDetails = showRollDetails
+    ? `
+        <div><dt>Zone Roll</dt><dd>${escapeHtml(zoneRoll.formula || "—")} → ${escapeHtml(zoneRoll.total ?? "—")}</dd></div>
+        <div><dt>Table Roll</dt><dd>${escapeHtml(tableRoll.roll?.formula || "—")} → ${escapeHtml(tableRoll.roll?.total ?? "—")}</dd></div>
+      `
+    : "";
+  const resultDetails = showRollDetails
+    ? `
+        <div class="mk-gm-encounter-zone-results"><strong>Encounter Result</strong>${renderTableResultDetails(results)}</div>
+        ${auxiliaryRolls.length
+          ? `<div class="mk-gm-encounter-zone-auxiliary-results"><strong>Additional Encounter Rolls</strong>${auxiliaryRolls.map(roll => renderRollTableDetail(roll.label, roll)).join("")}</div>`
+          : ""}
+      `
+    : `
+        <div class="mk-gm-encounter-zone-result is-warning">
+          Dice and table results are hidden. Enable GM Screen | Encounter Roll Debug Mode to display them.
+        </div>
+      `;
 
   return `
     <section class="mk-gm-encounter-zone-roll-card">
       <header><strong>Encounter Zone Roll</strong><span>GM Only</span></header>
       <dl>
         <div><dt>Terrain</dt><dd>${escapeHtml(data.terrain ?? "Unknown")}</dd></div>
-        <div><dt>Zone Roll</dt><dd>${escapeHtml(zoneRoll.formula || "—")} → ${escapeHtml(zoneRoll.total ?? "—")}</dd></div>
         <div><dt>Selected Row</dt><dd>${escapeHtml(data.rowLabel ?? "Unknown")}</dd></div>
         <div><dt>RollTable</dt><dd>${escapeHtml(data.tableName ?? data.tableUuid ?? "Unknown")}</dd></div>
-        <div><dt>Table Roll</dt><dd>${escapeHtml(tableRoll.roll?.formula || "—")} → ${escapeHtml(tableRoll.roll?.total ?? "—")}</dd></div>
+        ${rollDetails}
       </dl>
-      <div class="mk-gm-encounter-zone-results"><strong>Encounter Result</strong>${renderTableResultDetails(results)}</div>
-      ${auxiliaryRolls.length
-        ? `<div class="mk-gm-encounter-zone-auxiliary-results"><strong>Additional Encounter Rolls</strong>${auxiliaryRolls.map(roll => renderRollTableDetail(roll.label, roll)).join("")}</div>`
-        : ""}
+      ${resultDetails}
     </section>
   `;
 }
@@ -778,6 +801,7 @@ async function createEncounterZoneRollJournal(data = {}) {
   }
 
   const htmlFormat = globalThis.CONST?.JOURNAL_ENTRY_PAGE_FORMATS?.HTML ?? 1;
+  const showRollDetails = encounterDebugEnabled();
   const journal = await JournalEntryClass.create({
     name: encounterZoneJournalName(data),
     ownership: {
@@ -788,7 +812,7 @@ async function createEncounterZoneRollJournal(data = {}) {
         name: "Encounter Result",
         type: "text",
         text: {
-          content: renderEncounterZoneRollCard(data),
+          content: renderEncounterZoneRollCard(data, { showRollDetails }),
           format: Number(htmlFormat) || 1,
         },
       },

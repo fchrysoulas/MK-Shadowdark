@@ -99,6 +99,8 @@ The GM Screen is available to GMs through its shield button in the Token Scene C
 
 The GM Screen implementation is a native Foundry ApplicationV2 surface. It is not a replacement for the Group Sheet and it does not own duplicate gameplay state.
 
+The **GM Screen | Encounter Roll Debug Mode** setting is disabled by default. When enabled, Roll Zone Journal pages include dice formulas, totals, and table result text; otherwise they retain the encounter context while hiding dice and results.
+
 The GM Screen is intentionally a **manual-update surface** for outside changes. It does not subscribe to ambient Actor, Scene, Combat, or MK workflow changes in order to force background rerenders, and it does not expose a generic Refresh button. Direct GM Screen actions rerender when they complete. Group/workspace selection is kept only in the currently open application and is not silently persisted as a presentation preference. The former Hide/Show Active Party rail and Reset GM Screen Presentation controls are retired.
 
 Its production layout contains:

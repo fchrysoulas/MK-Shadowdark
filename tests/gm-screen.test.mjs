@@ -8,6 +8,7 @@ const template = fs.readFileSync(new URL("../templates/gm-screen.hbs", import.me
 const topContext = fs.readFileSync(new URL("../scripts/gm-screen/top-context-controls.js", import.meta.url), "utf8");
 const overviewLinks = fs.readFileSync(new URL("../scripts/gm-screen/overview-links.js", import.meta.url), "utf8");
 const sessionTools = fs.readFileSync(new URL("../scripts/gm-screen/session-tools.js", import.meta.url), "utf8");
+const settings = fs.readFileSync(new URL("../scripts/libs/settings.js", import.meta.url), "utf8");
 const stylesheet = fs.readFileSync(new URL("../styles/gm-screen.css", import.meta.url), "utf8");
 const sessionToolsStylesheet = fs.readFileSync(new URL("../styles/gm-screen-session-tools.css", import.meta.url), "utf8");
 const refactorStylesheet = fs.readFileSync(new URL("../styles/gm-screen-workspace-refactor.css", import.meta.url), "utf8");
@@ -141,6 +142,15 @@ test("Encounters is an editable Encounter Zone workspace with detail RollTable s
   assert.doesNotMatch(exploration, />Period</);
   assert.doesNotMatch(exploration, />Turn Length</);
   assert.doesNotMatch(exploration, />Cadence</);
+});
+
+test("GM Screen encounter roll details are controlled by a disabled-by-default debug setting", () => {
+  assert.match(settings, /registerSetting\("gmScreenEncounterDebug",/);
+  assert.match(settings, /name: "GM Screen \| Encounter Roll Debug Mode"/);
+  assert.match(settings, /hint: "When enabled, Roll Zone Journal pages show dice formulas, totals, and table result text\./);
+  const settingStart = settings.indexOf('registerSetting("gmScreenEncounterDebug"');
+  const settingBlock = settings.slice(settingStart, settings.indexOf("});", settingStart));
+  assert.match(settingBlock, /default: false/);
 });
 
 test("visible Downtime workspace is renamed Settlement without changing the internal workspace id", () => {

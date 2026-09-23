@@ -8,6 +8,7 @@ import {
   getSceneEncounterZoneAuxiliaryTables,
   normalizeAuxiliaryTables,
   renderEncounterAuxiliaryTableSetup,
+  renderEncounterZoneRollCard,
   rollEncounterZone,
   setSceneEncounterZoneAuxiliaryTable,
   tableResultSummary,
@@ -78,6 +79,32 @@ test("Encounter detail slots expose four Scene-owned RollTable assignments", () 
   assert.match(html, /Pit Trap/);
   assert.match(html, /data-mk-encounter-auxiliary-index="0"/);
   assert.match(html, /data-mk-encounter-auxiliary-index="1"/);
+});
+
+test("Encounter Journal pages hide dice and results unless debug details are enabled", () => {
+  const data = {
+    terrain: "Forest",
+    rowLabel: "6-8",
+    tableName: "Forest High",
+    zoneRoll: { formula: "1d8", total: 7 },
+    tableRoll: { roll: { formula: "1d20", total: 14 }, results: [{ text: "A patrol approaches." }] },
+    auxiliaryRolls: [{
+      label: "Trap",
+      tableName: "Spike Trap",
+      tableRoll: { roll: { formula: "1d6", total: 3 }, results: [{ text: "A concealed snare." }] },
+    }],
+  };
+  const hidden = renderEncounterZoneRollCard(data, { showRollDetails: false });
+  assert.match(hidden, /Forest High/);
+  assert.match(hidden, /Dice and table results are hidden/);
+  assert.doesNotMatch(hidden, /1d8|1d20|A patrol approaches|Spike Trap|A concealed snare/);
+
+  const debug = renderEncounterZoneRollCard(data, { showRollDetails: true });
+  assert.match(debug, /1d8 → 7/);
+  assert.match(debug, /1d20 → 14/);
+  assert.match(debug, /A patrol approaches/);
+  assert.match(debug, /Spike Trap/);
+  assert.match(debug, /A concealed snare/);
 });
 
 test("Trap and Hazard assignments append and remove individual RollTables", async () => {
@@ -152,6 +179,7 @@ test("Encounter Zone rolls the selected cell's RollTable after the zone die", as
   globalThis.game = {
     user: { id: "User.gm", isGM: true },
     users: [{ id: "User.gm", isGM: true, active: true }],
+    settings: { get: () => true },
   };
   globalThis.ui = { notifications: { warn: () => {}, error: () => {} } };
   globalThis.CONST = { JOURNAL_ENTRY_PAGE_FORMATS: { HTML: 1 }, DOCUMENT_OWNERSHIP_LEVELS: { NONE: 0 } };
@@ -249,6 +277,7 @@ test("Encounter Zone rolls every configured encounter detail table into a Journa
   globalThis.game = {
     user: { id: "User.gm", isGM: true },
     users: [{ id: "User.gm", isGM: true, active: true }],
+    settings: { get: () => true },
   };
   globalThis.ui = { notifications: { warn: () => {}, error: () => {} } };
   globalThis.JournalEntry = {
@@ -336,6 +365,7 @@ test("Encounter Zone rolls every assigned Trap and Hazard table", async () => {
   globalThis.game = {
     user: { id: "User.gm", isGM: true },
     users: [{ id: "User.gm", isGM: true, active: true }],
+    settings: { get: () => true },
   };
   globalThis.ui = { notifications: { warn: () => {}, error: () => {} } };
   globalThis.JournalEntry = {

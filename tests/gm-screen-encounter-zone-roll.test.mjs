@@ -89,11 +89,26 @@ test("Encounter Journal pages hide dice and roll details while keeping results v
     zoneRoll: { formula: "1d8", total: 7 },
     tableRoll: { roll: { formula: "1d20", total: 14 }, results: [{ index: 1, range: "14–14", text: "A patrol approaches." }] },
     auxiliaryRolls: [{
+      key: "trap",
       label: "Trap",
       tableName: "Spike Trap",
       tableIndex: 1,
-      tableCount: 1,
+      tableCount: 2,
       tableRoll: { roll: { formula: "1d6", total: 3 }, results: [{ index: 1, range: "3–3", text: "A concealed snare." }] },
+    }, {
+      key: "trap",
+      label: "Trap",
+      tableName: "Pit Trap",
+      tableIndex: 2,
+      tableCount: 2,
+      tableRoll: { roll: { formula: "1d4", total: 2 }, results: [{ index: 1, range: "2–2", text: "The floor gives way." }] },
+    }, {
+      key: "hazard",
+      label: "Hazard",
+      tableName: "Falling Rocks",
+      tableIndex: 1,
+      tableCount: 1,
+      tableRoll: { roll: { formula: "1d6", total: 5 }, results: [{ index: 1, range: "5–5", text: "Loose stone crashes down." }] },
     }],
   };
   const hidden = renderEncounterZoneRollCard(data, { showRollDetails: false });
@@ -102,8 +117,13 @@ test("Encounter Journal pages hide dice and roll details while keeping results v
   assert.match(hidden, /<h2>Forest High<\/h2>[\s\S]*<p>A patrol approaches/);
   assert.match(hidden, /<h2>Spike Trap<\/h2>/);
   assert.match(hidden, /<h2>Spike Trap<\/h2>[\s\S]*<p>A concealed snare/);
+  assert.match(hidden, /<h2>Pit Trap<\/h2>[\s\S]*<p>The floor gives way/);
+  assert.match(hidden, /<h2>Falling Rocks<\/h2>[\s\S]*<p>Loose stone crashes down/);
+  assert.match(hidden, /<h4>Trap<\/h4>[\s\S]*Spike Trap[\s\S]*Pit Trap/);
+  assert.match(hidden, /<h4>Hazard<\/h4>[\s\S]*Falling Rocks/);
+  assert.equal((hidden.match(/class="mk-gm-encounter-zone-auxiliary-group"/g) ?? []).length, 2);
   assert.match(hidden, /Dice, roll totals, and result numbers are hidden/);
-  assert.doesNotMatch(hidden, /1d8|1d20|1d6|→ 7|→ 14|→ 3|Result 14|Result 3/);
+  assert.doesNotMatch(hidden, /1d8|1d20|1d6|1d4|→ 7|→ 14|→ 3|→ 2|→ 5|Result 14|Result 3|Result 2|Result 5/);
 
   const debug = renderEncounterZoneRollCard(data, { showRollDetails: true });
   assert.match(debug, /1d8 → 7/);
@@ -111,8 +131,12 @@ test("Encounter Journal pages hide dice and roll details while keeping results v
   assert.match(debug, /<h2>Forest High<\/h2>[\s\S]*<p>A patrol approaches/);
   assert.match(debug, /<h2>Spike Trap<\/h2>/);
   assert.match(debug, /<h2>Spike Trap<\/h2>[\s\S]*<p>A concealed snare/);
+  assert.match(debug, /<h2>Pit Trap<\/h2>[\s\S]*<p>The floor gives way/);
+  assert.match(debug, /<h2>Falling Rocks<\/h2>[\s\S]*<p>Loose stone crashes down/);
   assert.match(debug, /Result 14–14/);
   assert.match(debug, /Result 3–3/);
+  assert.match(debug, /Result 2–2/);
+  assert.match(debug, /Result 5–5/);
 });
 
 test("Trap and Hazard assignments append and remove individual RollTables", async () => {

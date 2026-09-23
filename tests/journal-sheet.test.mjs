@@ -47,5 +47,6 @@ test("journal styling is scoped to the module-owned sheet class", () => {
   assert.match(stylesheet, /\.mk-journal-sheet-tab\s*\{[\s\S]*?justify-content:\s*flex-start\s*!important/);
   assert.match(stylesheet, /\.mk-journal-sheet-page-body :is\(h1, h2, h3\)\s*\{[\s\S]*?color:\s*#292724/);
   assert.match(stylesheet, /\.mk-gm-encounter-zone-report-header\s*\{/);
+  assert.match(stylesheet, /\.mk-gm-encounter-zone-auxiliary-groups\s*\{/);
   assert.match(stylesheet, /\.mk-gm-encounter-zone-auxiliary-grid\s*\{/);
 });

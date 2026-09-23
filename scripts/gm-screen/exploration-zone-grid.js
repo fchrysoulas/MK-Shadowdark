@@ -749,6 +749,28 @@ function renderEncounterRollDetails(label, roll = {}) {
   `;
 }
 
+function encounterAuxiliaryGroupKey(roll = {}) {
+  if (AUXILIARY_TABLE_KEYS.includes(roll.key)) return roll.key;
+  const label = String(roll.label ?? "").trim().toLowerCase();
+  return AUXILIARY_TABLE_KEYS.find(key => AUXILIARY_TABLE_LABELS[key].toLowerCase() === label) ?? "other";
+}
+
+function groupEncounterAuxiliaryRolls(rolls = []) {
+  const groups = new Map();
+  for (const roll of rolls) {
+    const key = encounterAuxiliaryGroupKey(roll);
+    if (!groups.has(key)) {
+      groups.set(key, {
+        key,
+        label: AUXILIARY_TABLE_LABELS[key] ?? String(roll.label ?? "Other"),
+        rolls: [],
+      });
+    }
+    groups.get(key).rolls.push(roll);
+  }
+  return [...groups.values()];
+}
+
 function renderRollTableDetail(label, detail = {}, { showRollDetails = true } = {}) {
   const tableRoll = detail.tableRoll ?? detail;
   const results = Array.isArray(tableRoll.results) ? tableRoll.results : [];
@@ -782,6 +804,7 @@ function renderEncounterZoneRollCard(data = {}, { showRollDetails = encounterDeb
   const tableRoll = data.tableRoll ?? {};
   const auxiliaryRolls = Array.isArray(data.auxiliaryRolls) ? data.auxiliaryRolls : [];
   const configuredAuxiliaryRolls = auxiliaryRolls.filter(roll => roll && (roll.configured !== false || roll.error));
+  const auxiliaryGroups = groupEncounterAuxiliaryRolls(configuredAuxiliaryRolls);
   const tableName = String(data.tableName ?? data.tableUuid ?? "Unknown");
   const terrain = String(data.terrain ?? "Unknown");
   const rowLabel = String(data.rowLabel ?? "Unknown");
@@ -799,7 +822,7 @@ function renderEncounterZoneRollCard(data = {}, { showRollDetails = encounterDeb
         </section>
       `
     : "";
-  const auxiliaryResults = configuredAuxiliaryRolls.length
+  const auxiliaryResults = auxiliaryGroups.length
     ? `
         <section class="mk-gm-encounter-zone-auxiliary-results">
           <div class="mk-gm-encounter-zone-section-heading">
@@ -809,8 +832,21 @@ function renderEncounterZoneRollCard(data = {}, { showRollDetails = encounterDeb
             </div>
             <small>${configuredAuxiliaryRolls.length} table${configuredAuxiliaryRolls.length === 1 ? "" : "s"}</small>
           </div>
-          <div class="mk-gm-encounter-zone-auxiliary-grid">
-            ${configuredAuxiliaryRolls.map(roll => renderRollTableDetail(roll.label, roll, { showRollDetails })).join("")}
+          <div class="mk-gm-encounter-zone-auxiliary-groups">
+            ${auxiliaryGroups.map(group => `
+              <section class="mk-gm-encounter-zone-auxiliary-group">
+                <div class="mk-gm-encounter-zone-auxiliary-group-heading">
+                  <div>
+                    <span>${escapeHtml(group.label)} tables</span>
+                    <h4>${escapeHtml(group.label)}</h4>
+                  </div>
+                  <small>${group.rolls.length} table${group.rolls.length === 1 ? "" : "s"}</small>
+                </div>
+                <div class="mk-gm-encounter-zone-auxiliary-grid">
+                  ${group.rolls.map(roll => renderRollTableDetail(roll.label, roll, { showRollDetails })).join("")}
+                </div>
+              </section>
+            `).join("")}
           </div>
         </section>
       `

@@ -1740,7 +1740,7 @@
 
     registerSetting("gmScreenEncounterDebug", {
       name: "GM Screen | Encounter Roll Debug Mode",
-      hint: "When enabled, Roll Zone Journal pages show dice formulas and roll totals. When disabled, pages keep the encounter context and table results but hide dice and roll details.",
+      hint: "When enabled, Roll Zone Journal pages show dice formulas, roll totals, and result numbers. When disabled, pages keep the encounter context and result text but hide dice, roll details, and result numbers.",
       scope: "world",
       config: true,
       type: Boolean,

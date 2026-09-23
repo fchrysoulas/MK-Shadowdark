@@ -87,27 +87,32 @@ test("Encounter Journal pages hide dice and roll details while keeping results v
     rowLabel: "6-8",
     tableName: "Forest High",
     zoneRoll: { formula: "1d8", total: 7 },
-    tableRoll: { roll: { formula: "1d20", total: 14 }, results: [{ text: "A patrol approaches." }] },
+    tableRoll: { roll: { formula: "1d20", total: 14 }, results: [{ index: 1, range: "14–14", text: "A patrol approaches." }] },
     auxiliaryRolls: [{
       label: "Trap",
       tableName: "Spike Trap",
-      tableRoll: { roll: { formula: "1d6", total: 3 }, results: [{ text: "A concealed snare." }] },
+      tableIndex: 1,
+      tableCount: 1,
+      tableRoll: { roll: { formula: "1d6", total: 3 }, results: [{ index: 1, range: "3–3", text: "A concealed snare." }] },
     }],
   };
   const hidden = renderEncounterZoneRollCard(data, { showRollDetails: false });
   assert.match(hidden, /Forest High/);
+  assert.match(hidden, /<h2>Forest High<\/h2>/);
   assert.match(hidden, /A patrol approaches/);
-  assert.match(hidden, /Spike Trap/);
+  assert.match(hidden, /<h2>Spike Trap<\/h2>/);
   assert.match(hidden, /A concealed snare/);
   assert.match(hidden, /Dice and roll details are hidden/);
-  assert.doesNotMatch(hidden, /1d8|1d20|1d6|→ 7|→ 14|→ 3/);
+  assert.doesNotMatch(hidden, /1d8|1d20|1d6|→ 7|→ 14|→ 3|Result 14|Result 3/);
 
   const debug = renderEncounterZoneRollCard(data, { showRollDetails: true });
   assert.match(debug, /1d8 → 7/);
   assert.match(debug, /1d20 → 14/);
   assert.match(debug, /A patrol approaches/);
-  assert.match(debug, /Spike Trap/);
+  assert.match(debug, /<h2>Spike Trap<\/h2>/);
   assert.match(debug, /A concealed snare/);
+  assert.match(debug, /Result 14–14/);
+  assert.match(debug, /Result 3–3/);
 });
 
 test("Trap and Hazard assignments append and remove individual RollTables", async () => {

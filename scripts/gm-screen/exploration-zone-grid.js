@@ -714,12 +714,14 @@ async function rollEncounterAuxiliaryTables(scene = currentScene()) {
   return rolls;
 }
 
-function renderTableResultDetails(results = []) {
+function renderTableResultDetails(results = [], { showResultNumber = true } = {}) {
   if (!results.length) return "<div class=\"mk-gm-encounter-zone-result\">No table result details returned.</div>";
   return results.map(result => `
     <div class="mk-gm-encounter-zone-result">
-      <strong>${result.range ? `Result ${escapeHtml(result.range)}` : `Result ${result.index}`}</strong>
-      <div>${escapeHtml(result.text ?? "(No result text)")}</div>
+      ${showResultNumber
+        ? `<strong>${result.range ? `Result ${escapeHtml(result.range)}` : result.index !== undefined && result.index !== null ? `Result ${escapeHtml(result.index)}` : "Result"}</strong>`
+        : ""}
+      <p>${escapeHtml(result.text ?? "(No result text)")}</p>
       ${result.documentCollection || result.documentId
         ? `<small>Document: ${escapeHtml([result.documentCollection, result.documentId].filter(Boolean).join(" · "))}</small>`
         : ""}
@@ -738,11 +740,17 @@ function renderRollTableDetail(label, detail = {}, { showRollDetails = true } = 
     ? `<div class="mk-gm-encounter-zone-result is-warning">${escapeHtml(detail.error)}</div>`
     : !configured
       ? "<div class=\"mk-gm-encounter-zone-result\">Not configured; skipped.</div>"
-      : renderTableResultDetails(results);
+      : renderTableResultDetails(results, { showResultNumber: showRollDetails });
+  const tableName = String(detail.tableName ?? detail.tableUuid ?? "Not configured");
+  const heading = configured ? tableName : displayLabel;
+  const tableLabel = configured && displayLabel !== tableName
+    ? `<small>${escapeHtml(displayLabel)}</small>`
+    : "";
 
   return `
     <div class="mk-gm-encounter-zone-auxiliary-result">
-      <header><strong>${escapeHtml(displayLabel)}</strong><span>${escapeHtml(detail.tableName ?? detail.tableUuid ?? "Not configured")}</span></header>
+      ${tableLabel}
+      <h2>${escapeHtml(heading)}</h2>
       ${showRollDetails ? `<div><span>Roll</span><strong>${escapeHtml(tableRoll.roll?.formula || "—")} → ${escapeHtml(tableRoll.roll?.total ?? "—")}</strong></div>` : ""}
       ${status}
     </div>
@@ -754,6 +762,7 @@ function renderEncounterZoneRollCard(data = {}, { showRollDetails = encounterDeb
   const tableRoll = data.tableRoll ?? {};
   const results = Array.isArray(tableRoll.results) ? tableRoll.results : [];
   const auxiliaryRolls = Array.isArray(data.auxiliaryRolls) ? data.auxiliaryRolls : [];
+  const tableName = String(data.tableName ?? data.tableUuid ?? "Unknown");
   const rollDetails = showRollDetails
     ? `
         <div><dt>Zone Roll</dt><dd>${escapeHtml(zoneRoll.formula || "—")} → ${escapeHtml(zoneRoll.total ?? "—")}</dd></div>
@@ -761,7 +770,10 @@ function renderEncounterZoneRollCard(data = {}, { showRollDetails = encounterDeb
       `
     : "";
   const encounterResults = `
-    <div class="mk-gm-encounter-zone-results"><strong>Encounter Result</strong>${renderTableResultDetails(results)}</div>
+    <div class="mk-gm-encounter-zone-results">
+      <h2>${escapeHtml(tableName)}</h2>
+      ${renderTableResultDetails(results, { showResultNumber: showRollDetails })}
+    </div>
     ${auxiliaryRolls.length
       ? `<div class="mk-gm-encounter-zone-auxiliary-results"><strong>Additional Encounter Results</strong>${auxiliaryRolls.map(roll => renderRollTableDetail(roll.label, roll, { showRollDetails })).join("")}</div>`
       : ""}
@@ -774,7 +786,6 @@ function renderEncounterZoneRollCard(data = {}, { showRollDetails = encounterDeb
       <dl>
         <div><dt>Terrain</dt><dd>${escapeHtml(data.terrain ?? "Unknown")}</dd></div>
         <div><dt>Selected Row</dt><dd>${escapeHtml(data.rowLabel ?? "Unknown")}</dd></div>
-        <div><dt>RollTable</dt><dd>${escapeHtml(data.tableName ?? data.tableUuid ?? "Unknown")}</dd></div>
         ${rollDetails}
       </dl>
       ${encounterResults}

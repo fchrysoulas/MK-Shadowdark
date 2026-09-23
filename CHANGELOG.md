@@ -13,7 +13,7 @@
 - Re-enabled the production GM Screen alongside Group Management, with the authoritative Foundry Combat workflow retained outside the screen.
 - Reworked GM Screen Exploration around a Scene-owned Encounter Zone grid with draggable RollTable assignments, while removing duplicate encounter-processing controls and counters.
 - Refined the GM Screen top strip by removing Light Pressure and adding a Roll Zone action that uses the selected terrain's zone die before rolling its assigned RollTable; each encounter is recorded as a GM-only Journal Entry page.
-- Added a GM Screen Encounter Roll Debug Mode setting; when disabled, encounter Journal pages keep all table results, including Trap and Hazard results, while hiding dice and roll details.
+- Added a GM Screen Encounter Roll Debug Mode setting; when disabled, encounter Journal pages keep all table result text, including Trap and Hazard results, while hiding dice, roll details, and result numbers.
 - Renamed the GM Screen Exploration tab to Encounters and added Scene-owned Starting Distance, Activity, Trap, and Hazard RollTable drop areas rolled with Roll Zone; Trap and Hazard accept multiple tables.
 - Added Session Log GM Tools for directly opening or testing the module's major GM-facing workflows.
 

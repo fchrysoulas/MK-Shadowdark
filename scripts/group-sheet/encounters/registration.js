@@ -51,8 +51,9 @@ function exposeApi() {
   return groupEncounters;
 }
 
-// Group Exploration and Resting own encounter initiation. This registration
-// only keeps their shared chat-card behavior and public Group API available.
+// Keep legacy Group encounter chat-card behavior and the headless API available
+// for existing records and integrations. New encounter rolls are initiated
+// manually from the GM Screen Encounter Zone workspace.
 Hooks.on("renderChatMessage", bindEncounterCard);
 
 Hooks.once("ready", () => {

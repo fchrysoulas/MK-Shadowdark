@@ -22,18 +22,14 @@ test("README documents the current supported platform floor from the manifest", 
   assert.match(readme, /Shadowdark RPG system 4\.0\.0\+/);
 });
 
-test("README makes encounter intervals procedure-turn based including Safe", async () => {
+test("README documents manual encounter rolls without a module encounter clock", async () => {
   const readme = await readReadme();
 
-  assert.match(readme, /Every encounter interval means a number of procedure turns/i);
-  assert.match(readme, /Exploration:\*\* 6 minutes \/ 360 seconds per turn/i);
-  assert.match(readme, /Resting:\*\* 1 hour \/ 3600 seconds per turn/i);
-  assert.match(readme, /Combat:\*\* 6 seconds per turn/i);
-  assert.match(readme, /Safe \| No encounter checks/i);
-  assert.match(readme, /Unsafe \| Every 3 turns/i);
-  assert.match(readme, /Risky \| Every 2 turns/i);
-  assert.match(readme, /Deadly \| Every 1 turn/i);
-  assert.match(readme, /Safe performs no encounter roll at all/i);
+  assert.match(readme, /does not maintain a Group elapsed-time clock or a GM Screen turn counter/i);
+  assert.match(readme, /no encounter cadence, due-check queue, or Group turn counter/i);
+  assert.match(readme, /Manual Encounter Zone Rolls/);
+  assert.match(readme, /Danger Level, Starting Distance, Activity, Trap, and Hazard/i);
+  assert.doesNotMatch(readme, /Every encounter interval means/i);
 });
 
 test("README retires standalone Encounter Engine entry points", async () => {
@@ -58,11 +54,12 @@ test("README documents standalone Time Passes dice without encounter automation"
   assert.doesNotMatch(readme, /Automatic Time Passes encounter resolution/i);
 });
 
-test("README documents Group Exploration, Resting, staging, morale, and GM status", async () => {
+test("README documents manual encounter rolls, staging, morale, and GM status", async () => {
   const readme = await readReadme();
 
-  assert.match(readme, /# Group Exploration Encounters/);
-  assert.match(readme, /# Group Resting/);
+  assert.match(readme, /# Manual Encounter Zone Rolls/);
+  assert.doesNotMatch(readme, /# Group Exploration Encounters/);
+  assert.doesNotMatch(readme, /# Group Resting/);
   assert.match(readme, /# Encounter Staging/);
   assert.match(readme, /# GM Member Status/);
   assert.match(readme, /# Morale Automation/);
@@ -70,30 +67,27 @@ test("README documents Group Exploration, Resting, staging, morale, and GM statu
   assert.match(readme, /Encounter card -> Options -> Preview -> Deploy/);
 });
 
-test("README documents the temporarily disabled GM Screen", async () => {
+test("README documents the production GM Screen", async () => {
   const readme = await readReadme();
 
-  assert.match(readme, /GM Screen is \*\*temporarily disabled\*\*/i);
-  assert.match(readme, /Token Scene Controls button and `mk\.gmScreen` API are not loaded/i);
-  assert.match(readme, /Group Management, encounter services, source-table import, and standalone Time Passes remain available/i);
+  assert.match(readme, /GM Screen is available to GMs/i);
+  assert.match(readme, /Token Scene Controls/i);
+  assert.match(readme, /standalone Time Passes remain available/i);
 });
 
-test("README documents direct one-turn Elapsed behavior", async () => {
+test("README documents that elapsed and turn controls are retired", async () => {
   const readme = await readReadme();
 
-  assert.match(readme, /Clicking \*\*Elapsed\*\* advances exactly one canonical turn/i);
-  assert.match(readme, /Exploration:\*\* 6 minutes/i);
-  assert.match(readme, /Resting:\*\* 1 hour/i);
-  assert.match(readme, /Combat:\*\* 6 seconds/i);
-  assert.match(readme, /Downtime:\*\* no generic turn duration/i);
-  assert.match(readme, /Elapsed readout uses hours and minutes only/i);
-  assert.match(readme, /There is no custom-time popup or Advance Custom action/i);
+  assert.match(readme, /does not maintain a Group elapsed-time clock or a GM Screen turn counter/i);
+  assert.doesNotMatch(readme, /Clicking \*\*Elapsed\*\*/i);
+  assert.doesNotMatch(readme, /Reset Timer/i);
 });
 
 test("README documents auto-saving top context and source-only Tables", async () => {
   const readme = await readReadme();
 
-  assert.match(readme, /Terrain, Danger, and Period dropdowns in the top strip/i);
+  assert.match(readme, /Encounter Zone, Terrain, Danger, and Period selectors in the top strip/i);
+  assert.doesNotMatch(readme, /Procedure dropdown changes the canonical Group procedure/i);
   assert.match(readme, /save immediately when their dropdown changes/i);
   assert.match(readme, /There is no Save Context button/i);
   assert.match(readme, /Tables workspace is reserved for browsing imported source RollTables/i);
@@ -106,7 +100,7 @@ test("README documents Overview shortcuts without NPC macros", async () => {
   const readme = await readReadme();
 
   assert.match(readme, /Overview.*per-GM shortcut dashboard/is);
-  assert.doesNotMatch(readme, /Create NPC.*macro|macros\/create-npc\.js|npcGenerator/is);
+  assert.doesNotMatch(readme, /macros\/create-npc\.js|npcGenerator/is);
   assert.match(readme, /Journal entries\/pages, Actors, Items, RollTables/i);
   assert.match(readme, /Clicking a pinned shortcut opens the original document/i);
   assert.match(readme, /presentation-only state stored on the current GM user as document UUIDs/i);
@@ -116,12 +110,12 @@ test("README documents Overview shortcuts without NPC macros", async () => {
 test("README documents Downtime and Session Log responsibilities", async () => {
   const readme = await readReadme();
 
-  assert.match(readme, /Downtime.*Create Tavern.*Create Shop/is);
+  assert.match(readme, /Downtime.*Create Tavern.*Create Shop.*Create NPC.*Create Location/is);
   assert.match(readme, /Resting\/Camp status and controls are intentionally absent/i);
   assert.doesNotMatch(readme, /\*\*Tools\*\*|manual generator|Create Journal/i);
   assert.match(readme, /Starting date and time/i);
   assert.match(readme, /Start Session/);
-  assert.match(readme, /Reset Timer/);
+  assert.doesNotMatch(readme, /Reset Timer/);
   assert.match(readme, /does not.*rewrite the world's calendar\/time/is);
 });
 

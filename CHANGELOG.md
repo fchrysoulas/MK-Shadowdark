@@ -2,22 +2,35 @@
 
 ## 1.9.17
 
-- Added a selectable, themeable Character Dashboard player sheet with a portrait-centered paper-doll layout, editable character data and progression, wound markers, equipment slots, Quick Slots, Backpack, native tabs, and drag-and-drop item assignment.
-- Added dashboard-styled Shadowdark Item sheets with native-sheet fallback when the Character Dashboard is disabled.
-- Improved Focus Tracker presentation and spell-effect handling, including clearer sheet/chat controls, Spells-tab placement, automatic self-targeting, and cleanup of linked effects when Focus ends.
-- Updated Auto Damage, Death Timer, and Corpse Token around Shadowdark's native roll and damage APIs, with duplicate-application protection, timer recovery, and optional diagnostics.
-- Refined Character Sheet Tweaks, Summary Bar, and Targeting Assistant presentation and targeting behavior, including optional bust portraits, navigation/layout cleanup, square shortcut controls, and removal of the missing-target warning.
-- Added optional informational history for Detailed Wounds so GMs can record timestamps, sessions, sources, and outcomes without changing wound mechanics.
-- Removed the Survival Wound Profile feature and its legacy settings and integrations.
-- Removed the standalone Encounter Engine surface and centralized encounter timing, resolution, chat cards, and staging in Group Management.
-- Re-enabled the production GM Screen alongside Group Management, with the authoritative Foundry Combat workflow retained outside the screen.
-- Reworked GM Screen Exploration around a Scene-owned Encounter Zone grid with draggable RollTable assignments, while removing duplicate encounter-processing controls and counters.
-- Refined the GM Screen top strip by removing Light Pressure and adding a Roll Zone action that uses the selected terrain's zone die before rolling its assigned RollTable; each encounter is recorded as a GM-only Journal Entry page.
-- Added a GM Screen Encounter Roll Debug Mode setting; when disabled, encounter Journal pages keep all table result text, including Trap and Hazard results, while hiding dice, roll details, and result numbers.
-- Added a Scene-owned Danger Level RollTable slot that rolls with each GM Screen encounter.
-- Redesigned encounter Journal pages as readable GM-only reports with a clear encounter header, primary result card, and responsive supporting-table groups; Trap and Hazard tables now stay together in their own sections.
-- Renamed the GM Screen Exploration tab to Encounters and added Scene-owned Starting Distance, Activity, Trap, and Hazard RollTable drop areas rolled with Roll Zone; Trap and Hazard accept multiple tables.
-- Added Session Log GM Tools for directly opening or testing the module's major GM-facing workflows.
+- Added the selectable Character Dashboard and dashboard-styled Item sheets.
+- Improved Focus Tracker, Auto Damage, Death Timer, Corpse Token, Character Sheet Tweaks, Summary Bar, Targeting Assistant, and Detailed Wounds presentation and reliability.
+- Removed the Survival Wound Profile feature and the standalone Encounter Engine surface.
+- Added the production GM Screen with a Scene-owned Encounter Zone editor, manual Roll Encounter workflow, Danger Level and supporting RollTable slots, GM-only Journal reports, and optional roll debug details.
+- Added GM Screen Session Log tools and source-table browsing improvements.
+- Added editable named Encounter Zone groups with multiple collapsible Scene-owned grids and group-specific Roll Zone actions.
+- Removed Group elapsed-time/turn tracking and automatic exploration/rest encounter checks; encounter rolls are now explicit GM actions with no pending check queue.
+- Removed the GM Screen Procedure control and replaced it with an Encounter Zone selector plus a separate final Roll Encounter header control.
+- Enabled Settlement creation for the **NPC Generator** and source-driven Point-of-Interest Location Journals; the generator uses the linked Scene RollTables configured in Compositions.
+- Added Scene-owned NPC name and trait compositions with multiple Possible Syllables and NPC Feature tables, a configurable two-syllable chance, an optional NPC Identifier table rolled as the second name part, and linked Ancestry, Age, Alignment, Wealth, and Occupation tables.
+- NPC generation now uses only the linked Scene RollTables; the imported Core NPC table fallback and import/update prompt have been removed. Missing linked tables leave their profile entries blank, and only the NPC name is required.
+- NPC generation now rolls Strength, Dexterity, Constitution, Intelligence, Wisdom, and Charisma in order using 3d6, records each roll and Shadowdark modifier in the NPC description, and writes the calculated native modifiers to the NPC sheet.
+- Simplified generated NPC ability display to show each final score with its modifier in parentheses.
+- Reordered generated NPC profile details so Name and Identifier lead, followed by Features and the remaining traits.
+- Removed the Tables-tab Import / Update control; existing RollTables remain searchable, rollable, and editable without source or grouping assumptions in the browser.
+- RollTable browser entries now retain Foundry folder paths as groups and display each table's document icon.
+- RollTable folder groups in the Tables tab are independently collapsible and start collapsed.
+- Added GM Screen configuration Import and Export controls for Scene-owned Encounter Zones, supporting encounter tables, environment context, NPC Compositions, and Tavern Generator assignments.
+- GM Screen exports now use Foundry's native file-save workflow, matching MK-Compendiums.
+- Moved the GM Screen NPC Generator into a separate gear-button Settings window with left-side navigation.
+- Added draggable Encounters, NPC Generator, and Tavern Generator shortcuts to the end of their GM Screen Settings Home cards for pinning on Overview; removed the separate Open buttons.
+- Added a Tavern Generator Settings tab with Scene-owned drag-and-drop assignments for First Part, Second Part, Known For, Wealth, Poor/Standard/Wealthy Food, and Poor/Standard/Wealthy Drinks RollTables; linked Wealth rolls now choose the matching tier tables and complete food and drink procedure.
+- Tavern food and drink generation now rerolls duplicate results so every generated list contains distinct options, with a clear failure when the assigned tables cannot supply enough unique entries.
+- Tidied Tavern Journal pages with a Tavern Overview, readable Food and Drinks sections, editable GM Notes, and optional Tavern Generator debug details; generated text now preserves ampersands correctly.
+- Hardened Overview shortcut drag-and-drop handling across Foundry drag payload formats and ApplicationV2 identifiers.
+- Pinned GM Screen actions now execute Roll Encounter, NPC Generator, and Tavern Generator directly from Overview.
+- Moved GM Screen Encounters into the Settings window and removed the Encounters tab from the main GM Screen navigation.
+- Removed the Session Log GM Tools button panel and its unused controls.
+- Simplified the Tables workspace by removing its redundant RollTables header, keeping search fixed at the top, and limiting scrolling to the folder/table list.
 
 ## 1.9.16
 

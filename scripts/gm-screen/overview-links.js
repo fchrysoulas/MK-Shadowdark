@@ -1,8 +1,40 @@
 import { APP_ID } from "./gm-screen.js";
+import { getSceneEnvironmentContext } from "../libs/environment-context.js";
+import { rollEncounterZone } from "./exploration-zone-grid.js";
+import { createSourceDrivenNpc } from "./npc-generator.js";
+import { createSourceDrivenTavern } from "./tavern-shop-generator.js";
 
 const MODULE_ID = "mk-shadowdark";
 const OVERVIEW_LINKS_FLAG = "gmScreenOverviewLinks";
 const MAX_OVERVIEW_LINKS = 100;
+const OVERVIEW_TOOL_PREFIX = "mk-shadowdark.gm-screen-tool:";
+const OVERVIEW_TOOL_DEFINITIONS = Object.freeze([
+  Object.freeze({
+    id: "encounters",
+    uuid: `${OVERVIEW_TOOL_PREFIX}encounters`,
+    label: "Encounters",
+    type: "GM Screen",
+    icon: "fa-dice-d20",
+    action: "roll-encounter",
+  }),
+  Object.freeze({
+    id: "npc-generator",
+    uuid: `${OVERVIEW_TOOL_PREFIX}npc-generator`,
+    label: "NPC Generator",
+    type: "GM Screen",
+    icon: "fa-font",
+    action: "generate-npc",
+  }),
+  Object.freeze({
+    id: "tavern-generator",
+    uuid: `${OVERVIEW_TOOL_PREFIX}tavern-generator`,
+    label: "Tavern Generator",
+    type: "GM Screen",
+    icon: "fa-beer-mug-empty",
+    action: "generate-tavern",
+  }),
+]);
+const OVERVIEW_TOOLS_BY_UUID = new Map(OVERVIEW_TOOL_DEFINITIONS.map(tool => [tool.uuid, tool]));
 
 function gmScreenApplication(application) {
   return Boolean(
@@ -27,6 +59,15 @@ function normalizeOverviewLinkUuids(values) {
     .map(value => String(value ?? "").trim())
     .filter(Boolean))]
     .slice(0, MAX_OVERVIEW_LINKS);
+}
+
+function overviewToolUuid(value) {
+  const normalized = String(value ?? "").trim();
+  return OVERVIEW_TOOL_DEFINITIONS.find(tool => tool.id === normalized || tool.uuid === normalized)?.uuid ?? "";
+}
+
+function overviewToolForUuid(value) {
+  return OVERVIEW_TOOLS_BY_UUID.get(String(value ?? "").trim()) ?? null;
 }
 
 function rawUserFlag(user) {
@@ -61,24 +102,40 @@ function dragEventData(event) {
 
   if (typeof getData === "function") {
     try {
-      return getData.call(TextEditorClass, event) ?? {};
+      const data = getData.call(TextEditorClass, event);
+      if (data && typeof data === "object" && dragDataUuid(data)) return data;
+      if (typeof data === "string") {
+        try {
+          const parsed = JSON.parse(data);
+          if (dragDataUuid(parsed)) return parsed;
+        } catch (_error) {
+          if (data.trim()) return { uuid: data.trim() };
+        }
+      }
     } catch (_error) {
       // Fall through to raw DataTransfer JSON.
     }
   }
 
   try {
-    const raw = event?.dataTransfer?.getData?.("text/plain")
-      || event?.dataTransfer?.getData?.("application/json")
+    const raw = event?.dataTransfer?.getData?.("application/json")
+      || event?.dataTransfer?.getData?.("text/plain")
+      || event?.dataTransfer?.getData?.("text/uri-list")
       || "";
-    return raw ? JSON.parse(raw) : {};
+    if (!raw) return {};
+    try {
+      const parsed = JSON.parse(raw);
+      if (dragDataUuid(parsed)) return parsed;
+    } catch (_error) {
+      return { uuid: raw.trim() };
+    }
   } catch (_error) {
     return {};
   }
 }
 
 function dragDataUuid(data) {
-  for (const value of [data?.uuid, data?.documentUuid, data?.data?.uuid]) {
+  for (const value of [data?.uuid, data?.documentUuid, data?.data?.uuid, data?.text]) {
     const uuid = String(value ?? "").trim();
     if (uuid) return uuid;
   }
@@ -140,17 +197,19 @@ function documentImage(document) {
 }
 
 function overviewLinkHtml({ uuid, document }) {
-  const available = Boolean(document);
-  const name = String(document?.name ?? document?.title ?? uuid ?? "Unavailable document");
-  const type = available ? documentType(document) : "Unavailable";
-  const image = available ? documentImage(document) : "";
-  const visual = image
+  const tool = overviewToolForUuid(uuid);
+  const available = Boolean(document || tool);
+  const name = String(tool?.label ?? document?.name ?? document?.title ?? uuid ?? "Unavailable document");
+ const type = tool?.type ?? (available ? documentType(document) : "Unavailable");
+ const image = tool ? "" : (available ? documentImage(document) : "");
+  const openTitle = tool ? `Execute ${escapeHtml(name)}` : `Open ${escapeHtml(name)}`;
+ const visual = image
     ? `<img src="${escapeHtml(image)}" alt="">`
-    : `<i class="fas ${available ? documentIcon(document) : "fa-link-slash"}"></i>`;
+    : `<i class="fas ${tool?.icon ?? (available ? documentIcon(document) : "fa-link-slash")}"></i>`;
 
   return `
     <article class="mk-gm-overview-link ${available ? "" : "is-missing"}" data-mk-overview-link="${escapeHtml(uuid)}">
-      <button type="button" class="mk-gm-overview-link-open" data-mk-overview-open="${escapeHtml(uuid)}" ${available ? "" : "disabled"} title="${available ? `Open ${escapeHtml(name)}` : "This document is no longer available"}">
+      <button type="button" class="mk-gm-overview-link-open" data-mk-overview-open="${escapeHtml(uuid)}" ${available ? "" : "disabled"} title="${available ? openTitle : "This document is no longer available"}">
         <span class="mk-gm-overview-link-visual">${visual}</span>
         <span class="mk-gm-overview-link-copy">
           <strong>${escapeHtml(name)}</strong>
@@ -169,8 +228,8 @@ function overviewShellHtml() {
     <div class="mk-gm-overview-shortcuts" data-mk-overview-shortcuts>
       <div class="mk-gm-overview-shortcuts-head">
         <div>
-          <strong>Pinned Documents</strong>
-          <span>Drop Journals, Actors, Items, RollTables, or other Foundry documents here to keep quick links.</span>
+          <strong>Pinned Documents &amp; Actions</strong>
+          <span>Drop Foundry documents or Settings actions here to keep quick access buttons.</span>
         </div>
         <i class="fas fa-thumbtack"></i>
       </div>
@@ -188,8 +247,8 @@ async function renderOverviewLinks(surface, uuids = getOverviewLinkUuids()) {
     list.innerHTML = `
       <div class="mk-gm-overview-drop-empty">
         <i class="fas fa-arrow-down"></i>
-        <strong>Drop documents here</strong>
-        <span>Drag from a Journal, Actor sheet, sidebar directory, or another Foundry document source.</span>
+        <strong>Drop documents or Settings actions here</strong>
+        <span>Drag from a Foundry document source or the GM Screen Settings Home tab.</span>
       </div>
     `;
     return [];
@@ -197,13 +256,44 @@ async function renderOverviewLinks(surface, uuids = getOverviewLinkUuids()) {
 
   const entries = await Promise.all(normalized.map(async uuid => ({
     uuid,
-    document: await resolveUuid(uuid),
+    document: overviewToolForUuid(uuid) ? null : await resolveUuid(uuid),
   })));
   list.innerHTML = entries.map(overviewLinkHtml).join("");
   return entries;
 }
 
+function currentScene() {
+  return globalThis.canvas?.scene ?? globalThis.game?.scenes?.current ?? null;
+}
+
+async function executeOverviewTool(tool) {
+  if (!tool || !globalThis.game?.user?.isGM) return null;
+
+  if (tool.action === "roll-encounter") {
+    const scene = currentScene();
+    const context = getSceneEnvironmentContext(scene);
+    const application = globalThis.game?.modules?.get?.(MODULE_ID)?.api?.gmScreen?.application;
+    const zoneId = String(application?.encounterZoneId ?? "");
+    return rollEncounterZone(context?.terrain ?? "", scene, { zoneId });
+  }
+
+  if (tool.action === "generate-npc") return createSourceDrivenNpc();
+  if (tool.action === "generate-tavern") return createSourceDrivenTavern();
+  return null;
+}
+
 async function openOverviewDocument(uuid) {
+  const tool = overviewToolForUuid(uuid);
+  if (tool) {
+    try {
+      return await executeOverviewTool(tool);
+    } catch (error) {
+      console.error(`mk-shadowdark | GM Screen Overview | ${tool.label} failed`, error);
+      globalThis.ui?.notifications?.error?.(`${tool.label} failed: ${error.message}`);
+      return null;
+    }
+  }
+
   const document = await resolveUuid(uuid);
   if (!document) {
     globalThis.ui?.notifications?.warn?.("That Overview shortcut no longer resolves to a Foundry document.");
@@ -233,8 +323,9 @@ async function addOverviewLink(uuid, surface, user = globalThis.game?.user) {
   const normalizedUuid = String(uuid ?? "").trim();
   if (!normalizedUuid) return getOverviewLinkUuids(user);
 
-  const document = await resolveUuid(normalizedUuid);
-  if (!document) {
+  const tool = overviewToolForUuid(normalizedUuid);
+  const document = tool ? null : await resolveUuid(normalizedUuid);
+  if (!document && !tool) {
     globalThis.ui?.notifications?.warn?.("The dropped data does not resolve to a Foundry document.");
     return getOverviewLinkUuids(user);
   }
@@ -266,7 +357,7 @@ function bindOverviewLinks(surface, user = globalThis.game?.user) {
   });
   surface.addEventListener?.("dragover", event => {
     event.preventDefault();
-    if (event.dataTransfer) event.dataTransfer.dropEffect = "link";
+    if (event.dataTransfer) event.dataTransfer.dropEffect = "copy";
     surface.classList?.add?.("is-dragover");
   });
   surface.addEventListener?.("dragleave", event => {
@@ -321,9 +412,11 @@ async function decorateOverviewLinks(application, element) {
 }
 
 function registerOverviewLinks() {
-  globalThis.Hooks?.on?.("renderApplicationV2", (application, element) => {
+  const decorateRenderedOverview = (application, element) => {
     void decorateOverviewLinks(application, element);
-  });
+  };
+  globalThis.Hooks?.on?.("renderApplicationV2", decorateRenderedOverview);
+  globalThis.Hooks?.on?.("renderApplication", decorateRenderedOverview);
 }
 
 registerOverviewLinks();
@@ -332,9 +425,15 @@ export {
   MODULE_ID,
   OVERVIEW_LINKS_FLAG,
   MAX_OVERVIEW_LINKS,
+  OVERVIEW_TOOL_PREFIX,
+  OVERVIEW_TOOL_DEFINITIONS,
   gmScreenApplication,
   rootElement,
   normalizeOverviewLinkUuids,
+  overviewToolUuid,
+  overviewToolForUuid,
+  currentScene,
+  executeOverviewTool,
   getOverviewLinkUuids,
   setOverviewLinkUuids,
   dragEventData,

@@ -9,10 +9,6 @@ const runtimeSource = fs.readFileSync(
   path.join(ROOT, "scripts/time-passes/time-passes-splash.js"),
   "utf8"
 );
-const groupTimeSource = fs.readFileSync(
-  path.join(ROOT, "scripts/group-sheet/time.js"),
-  "utf8"
-);
 
 const importGlobals = {
   Hooks: globalThis.Hooks,
@@ -195,7 +191,6 @@ test("Time Passes has no encounter-service bridge or Group Time integration", ()
   assert.doesNotMatch(runtimeSource, /isEncounter|rollHasAnyDieResult/);
   assert.doesNotMatch(runtimeSource, /encounterService|checkAndResolve|processDueExplorationEncounters/);
   assert.match(runtimeSource, /encounterLinked:\s*false/);
-  assert.doesNotMatch(groupTimeSource, /timePasses|Time Passes/);
 });
 
 test("disabled Time Passes performs no splash or roll", async () => {

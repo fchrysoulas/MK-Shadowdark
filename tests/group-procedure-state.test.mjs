@@ -49,7 +49,7 @@ function createMockGroupActor(initialProcedure = undefined) {
 
 test("procedure states normalize to the canonical values", () => {
   assert.equal(parseGroupProcedureState(" Exploration "), GROUP_PROCEDURE.EXPLORATION);
-  assert.equal(parseGroupProcedureState("RESTING"), GROUP_PROCEDURE.RESTING);
+  assert.equal(parseGroupProcedureState("RESTING"), null);
   assert.equal(parseGroupProcedureState("unknown"), null);
 
   assert.deepEqual(normalizeGroupProcedure(undefined), {
@@ -108,16 +108,16 @@ test("GM state changes persist only the procedure field and emit one transition 
 });
 
 test("setting the current state is idempotent", async () => {
-  const { actor, updates } = createMockGroupActor({ state: GROUP_PROCEDURE.RESTING });
+  const { actor, updates } = createMockGroupActor({ state: GROUP_PROCEDURE.EXPLORATION });
 
-  const transition = await setGroupProcedureState(actor, GROUP_PROCEDURE.RESTING, {
+  const transition = await setGroupProcedureState(actor, GROUP_PROCEDURE.EXPLORATION, {
     user: { isGM: true },
     notify: false,
   });
 
   assert.equal(transition.changed, false);
-  assert.equal(transition.previousState, GROUP_PROCEDURE.RESTING);
-  assert.equal(transition.state, GROUP_PROCEDURE.RESTING);
+  assert.equal(transition.previousState, GROUP_PROCEDURE.EXPLORATION);
+  assert.equal(transition.state, GROUP_PROCEDURE.EXPLORATION);
   assert.deepEqual(updates, []);
 });
 

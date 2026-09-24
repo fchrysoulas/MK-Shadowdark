@@ -2,7 +2,6 @@ import { MODULE_ID } from "./constants.js";
 
 const GROUP_PROCEDURE = Object.freeze({
   EXPLORATION: "exploration",
-  RESTING: "resting",
   COMBAT: "combat",
   DOWNTIME: "downtime",
 });

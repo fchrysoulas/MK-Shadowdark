@@ -381,7 +381,8 @@
 }
 
 .mk-gm-screen[data-workspace="overview"] .mk-gm-workspace[data-workspace-panel="overview"],
-.mk-gm-screen[data-workspace="exploration"] .mk-gm-workspace[data-workspace-panel="exploration"] {
+.mk-gm-screen[data-workspace="exploration"] .mk-gm-workspace[data-workspace-panel="exploration"],
+.mk-gm-screen[data-workspace="compositions"] .mk-gm-workspace[data-workspace-panel="compositions"] {
   display: block;
 }
 

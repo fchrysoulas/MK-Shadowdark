@@ -20,7 +20,7 @@ function replaceNpcCreationButton(application, element) {
 
   const button = existing.cloneNode(true);
   button.dataset.mkExplorationCreateBound = "source-npc";
-  button.title = "Roll a Core Shadowdark NPC profile and create a native NPC Actor";
+  button.title = "Roll the linked Scene NPC tables and create a native NPC Actor";
   button.innerHTML = '<i class="fas fa-user-plus"></i> Create NPC';
   button.addEventListener("click", event => {
     event.preventDefault();

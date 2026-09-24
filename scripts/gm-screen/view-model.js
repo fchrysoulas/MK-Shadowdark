@@ -2,15 +2,11 @@ import { getGroupData } from "../group-sheet/activities.js";
 import { isGroupActor, resolveActorFromUuid } from "../group-sheet/actors.js";
 import { getGroupAssignments } from "../group-sheet/assignments.js";
 import { buildGroupMemberStatus } from "../group-sheet/member-status.js";
-import { getGroupProcedureState } from "../group-sheet/procedure.js";
-import { getGroupRestState } from "../group-sheet/rest-encounters.js";
-import { getGroupElapsedTime } from "../group-sheet/time.js";
 import { resolveSceneEnvironmentContext } from "../libs/environment-context.js";
 import { encounterMessageData as readEncounterMessageData } from "../group-sheet/encounters/chat.js";
 
 const GM_SCREEN_WORKSPACES = Object.freeze([
   "overview",
-  "exploration",
   "downtime",
   "tables",
   "session-log",
@@ -18,7 +14,6 @@ const GM_SCREEN_WORKSPACES = Object.freeze([
 
 const GM_SCREEN_WORKSPACE_LABELS = Object.freeze({
   overview: "Overview",
-  exploration: "Encounters",
   downtime: "Downtime",
   tables: "Tables",
   "session-log": "Session Log",
@@ -26,7 +21,6 @@ const GM_SCREEN_WORKSPACE_LABELS = Object.freeze({
 
 const GM_SCREEN_WORKSPACE_ICONS = Object.freeze({
   overview: "fa-compass",
-  exploration: "fa-map",
   downtime: "fa-coins",
   tables: "fa-table-list",
   "session-log": "fa-book-open",
@@ -76,30 +70,6 @@ async function resolveGmScreenGroup(groupActorUuid = "", actors = globalThis.gam
   }
 
   return groups[0] ?? null;
-}
-
-function formatMinuteValue(value) {
-  const rounded = Math.round(Number(value || 0) * 10) / 10;
-  return Number.isInteger(rounded) ? String(rounded) : rounded.toFixed(1);
-}
-
-function formatDuration(seconds) {
-  const total = Math.max(0, Number(seconds) || 0);
-  const hours = Math.floor(total / 3600);
-  const remainingMinutes = (total - (hours * 3600)) / 60;
-  const minuteLabel = formatMinuteValue(remainingMinutes);
-
-  if (hours > 0) return `${hours}h ${minuteLabel}m`;
-  return `${minuteLabel}m`;
-}
-
-function formatExplorationNextCheck(state) {
-  if (state?.encountersDisabled) return "No checks";
-  const dueChecks = Math.max(0, Number(state?.dueChecks ?? 0) || 0);
-  if (dueChecks > 0) return dueChecks === 1 ? "Due now" : `Due now (${dueChecks})`;
-
-  const nextCheckTurn = Math.max(1, Number(state?.nextCheckTurn ?? 1) || 1);
-  return `Turn ${nextCheckTurn}`;
 }
 
 function actorImage(actor) {
@@ -244,8 +214,6 @@ async function buildGmScreenViewModel({
   const resolvedWorkspace = normalizeWorkspace(workspace);
   const environment = resolveSceneEnvironmentContext(scene);
   const combatView = buildCombatView(combat);
-  const encountersDisabled = environment?.encounter?.disabled === true || environment?.dangerLevel === "safe";
-  const intervalTurns = encountersDisabled ? 0 : Math.max(1, Number(environment?.encounter?.interval ?? 1) || 1);
 
   const base = {
     workspace: resolvedWorkspace,
@@ -273,48 +241,20 @@ async function buildGmScreenViewModel({
       dangerLevel: String(environment?.dangerLevel ?? "unsafe"),
       dangerLabel: String(environment?.danger?.label ?? environment?.dangerLevel ?? "Unsafe"),
       period: String(environment?.period ?? "day"),
-      encountersDisabled,
-      intervalTurns,
-      intervalUnit: intervalTurns === 1 ? "turn" : "turns",
-      tableUuid: String(environment?.tableUuid ?? ""),
-      tableConfigured: Boolean(environment?.tableUuid),
     },
     combat: combatView,
     party: [],
     assignments: buildAssignmentsView(groupActor),
-    procedure: "downtime",
-    elapsedSeconds: 0,
-    elapsedLabel: "0m",
-    resting: null,
     latestEncounter: null,
   };
 
   if (!groupActor) return base;
 
-  const procedure = getGroupProcedureState(groupActor);
-  const elapsedSeconds = getGroupElapsedTime(groupActor, procedure);
-  const rest = getGroupRestState(groupActor, { context: environment });
   const latestEncounter = buildLatestEncounterView(groupActor, messages);
 
   return {
     ...base,
     party: await buildPartyView(groupActor),
-    procedure,
-    elapsedSeconds,
-    elapsedLabel: formatDuration(elapsedSeconds),
-    resting: {
-      status: rest.workflow.status,
-      mode: rest.workflow.mode,
-      completedTurns: rest.completedTurns,
-      totalTurns: 8,
-      remainingChecks: rest.remainingChecks,
-      requiredChecks: rest.requiredChecks,
-      nextCheckTurn: rest.nextCheckTurn,
-      interrupted: rest.workflow.status === "interrupted",
-      active: ["checking", "interrupted"].includes(rest.workflow.status),
-      encountersDisabled: rest.encountersDisabled,
-      checkTurns: [...rest.checkTurns],
-    },
     latestEncounter,
   };
 }
@@ -327,9 +267,6 @@ export {
   normalizeWorkspace,
   getGroupActors,
   resolveGmScreenGroup,
-  formatMinuteValue,
-  formatDuration,
-  formatExplorationNextCheck,
   buildPartyView,
   buildAssignmentsView,
   buildCombatView,

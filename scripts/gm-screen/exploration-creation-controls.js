@@ -8,9 +8,9 @@ import {
 import {
   rollShadowdarkPointOfInterestFromSource,
 } from "./location-source-table.js";
+import { createSourceDrivenNpc } from "./npc-generator.js";
 import { waitForGmDialog } from "../libs/dialog-v2.js";
 
-const DEFAULT_NPC_NAME = "New NPC";
 const DEFAULT_LOCATION_NAME = "New Location";
 const LOCATION_PAGE_NAME = "Location";
 
@@ -72,14 +72,17 @@ async function promptForName({ title, label, defaultName }) {
         action: "cancel",
         icon: '<i class="fas fa-xmark"></i>',
         label: "Cancel",
-        callback: () => null,
+        callback: () => ({ action: "cancel" }),
       },
     ],
-    close: () => null,
+    close: () => ({ action: "cancel" }),
   });
 
-  if (result === null || result === undefined) return null;
-  return String(result).trim() || defaultName;
+  if (result === null || result === undefined || result === false) return null;
+  if (typeof result === "string" && result.trim().toLowerCase() === "cancel") return null;
+  if (typeof result === "object" && String(result.action ?? "").trim().toLowerCase() === "cancel") return null;
+  const value = typeof result === "object" ? result.name ?? result.value : result;
+  return String(value ?? "").trim() || defaultName;
 }
 
 function titleCase(value) {
@@ -233,13 +236,6 @@ async function openSourceTableImporter() {
   return api.openImporter();
 }
 
-function buildNpcDocumentData(name = DEFAULT_NPC_NAME) {
-  return {
-    name: String(name || "").trim() || DEFAULT_NPC_NAME,
-    type: "NPC",
-  };
-}
-
 function buildLocationPageContent(pointOfInterest, name = DEFAULT_LOCATION_NAME, settlement = null) {
   if (settlement) return buildSettlementPageContent(settlement, pointOfInterest);
   if (!pointOfInterest) return "";
@@ -292,31 +288,7 @@ function configuredDocumentClass(baseClass) {
 }
 
 function notifyGmOnly() {
-  globalThis.ui?.notifications?.warn?.("Only the GM can create Exploration NPCs or Locations.");
-}
-
-async function createExplorationNpc() {
-  if (!globalThis.game?.user?.isGM) {
-    notifyGmOnly();
-    return null;
-  }
-
-  const name = await promptForName({
-    title: "Create NPC",
-    label: "NPC Name",
-    defaultName: DEFAULT_NPC_NAME,
-  });
-  if (name === null) return null;
-
-  const ActorClass = configuredDocumentClass(globalThis.Actor);
-  if (!ActorClass?.create) {
-    globalThis.ui?.notifications?.error?.("Foundry Actor creation is unavailable.");
-    return null;
-  }
-
-  const actor = await ActorClass.create(buildNpcDocumentData(name));
-  actor?.sheet?.render?.(true);
-  return actor ?? null;
+  globalThis.ui?.notifications?.warn?.("Only the GM can create Settlement Locations.");
 }
 
 async function createBlankLocation() {
@@ -396,7 +368,7 @@ async function createExplorationLocation({
 function createButton({ kind, label, icon, title }) {
   const button = document.createElement("button");
   button.type = "button";
-  button.dataset.mkExplorationCreate = kind;
+  button.dataset.mkSettlementCreate = kind;
   button.title = title;
   button.innerHTML = `<i class="fas ${icon}"></i> ${label}`;
   return button;
@@ -416,38 +388,37 @@ function ensureActionRow(workspace) {
 }
 
 function bindCreationButton(button) {
-  if (!button || button.dataset.mkExplorationCreateBound === "true") return;
-  button.dataset.mkExplorationCreateBound = "true";
+  if (!button || button.dataset.mkSettlementCreateBound === "true") return;
+  button.dataset.mkSettlementCreateBound = "true";
   button.addEventListener("click", event => {
     event.preventDefault();
     event.stopPropagation();
-    const kind = String(button.dataset.mkExplorationCreate ?? "");
-    if (kind === "npc") void createExplorationNpc();
-    if (kind === "location") void createExplorationLocation();
+    if (button.dataset.mkSettlementCreate === "npc") void createSourceDrivenNpc();
+    if (button.dataset.mkSettlementCreate === "location") void createExplorationLocation();
   });
 }
 
 function decorateExplorationCreationControls(application, element) {
   if (!gmScreenApplication(application) || !globalThis.game?.user?.isGM) return false;
   const root = element?.querySelector ? element : null;
-  const workspace = root?.querySelector?.('[data-workspace-panel="exploration"]');
+  const workspace = root?.querySelector?.('[data-workspace-panel="downtime"]');
   if (!workspace) return false;
 
   const actions = ensureActionRow(workspace);
   if (!actions) return false;
 
-  let npcButton = actions.querySelector('[data-mk-exploration-create="npc"]');
+  let npcButton = actions.querySelector('[data-mk-settlement-create="npc"]');
   if (!npcButton) {
     npcButton = createButton({
       kind: "npc",
-      label: "Create NPC",
+      label: "NPC Generator",
       icon: "fa-user-plus",
-      title: "Create a new Shadowdark NPC Actor",
+      title: "Generate a Shadowdark NPC from the linked Scene RollTables",
     });
     actions.append(npcButton);
   }
 
-  let locationButton = actions.querySelector('[data-mk-exploration-create="location"]');
+  let locationButton = actions.querySelector('[data-mk-settlement-create="location"]');
   if (!locationButton) {
     locationButton = createButton({
       kind: "location",
@@ -472,7 +443,6 @@ function registerExplorationCreationControls() {
 registerExplorationCreationControls();
 
 export {
-  DEFAULT_NPC_NAME,
   DEFAULT_LOCATION_NAME,
   LOCATION_PAGE_NAME,
   gmScreenApplication,
@@ -483,11 +453,9 @@ export {
   promptForShadowdarkLocation,
   promptForMissingLocationSource,
   openSourceTableImporter,
-  buildNpcDocumentData,
   buildLocationPageContent,
   buildLocationDocumentData,
   configuredDocumentClass,
-  createExplorationNpc,
   createBlankLocation,
   createExplorationLocation,
   ensureActionRow,

@@ -1,0 +1,421 @@
+.mk-gm-npc-name-composition {
+  display: grid;
+  gap: 9px;
+  margin-top: 12px;
+  padding-top: 10px;
+  border-top: 1px solid var(--mk-gm-border);
+}
+
+.mk-gm-npc-name-composition-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.mk-gm-npc-name-composition-heading > div {
+  display: grid;
+  gap: 3px;
+}
+
+.mk-gm-npc-name-composition-heading strong {
+  color: var(--mk-gm-text);
+  font-size: 12px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.mk-gm-npc-name-composition-heading span,
+.mk-gm-npc-name-composition-status,
+.mk-gm-npc-name-composition-drop small {
+  color: var(--mk-gm-muted);
+  font-size: 10px;
+}
+
+.mk-gm-npc-name-composition-heading > i {
+  color: #cbbb80;
+}
+
+.mk-gm-npc-name-composition-flow {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr) auto minmax(0, 1fr) auto minmax(0, 1fr);
+  align-items: stretch;
+  gap: 7px;
+}
+
+.mk-gm-npc-name-composition-slot {
+  display: grid;
+  gap: 4px;
+  min-width: 0;
+}
+
+.mk-gm-npc-name-composition-label {
+  color: var(--mk-gm-muted);
+  font-size: 9px;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.mk-gm-npc-name-composition-drop {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 6px;
+  min-height: 58px;
+  padding: 7px 8px;
+  border: 1px dashed var(--mk-gm-border);
+  border-radius: 4px;
+  background: rgba(255, 255, 255, 0.018);
+  color: var(--mk-gm-muted);
+  cursor: copy;
+}
+
+.mk-gm-npc-name-composition-drop.is-multiple {
+  grid-template-columns: 1fr;
+  align-items: stretch;
+}
+
+.mk-gm-npc-name-composition-list {
+  display: grid;
+  gap: 4px;
+}
+
+.mk-gm-npc-name-composition-entry {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+}
+
+.mk-gm-npc-name-composition-entry > i {
+  color: #cbbb80;
+  font-size: 11px;
+}
+
+.mk-gm-npc-name-composition-entry strong {
+  overflow: hidden;
+  font-size: 11px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.mk-gm-npc-name-composition-entry small {
+  grid-column: 2 / -1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.mk-gm-npc-name-composition-empty,
+.mk-gm-npc-name-composition-add {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+}
+
+.mk-gm-npc-name-composition-empty {
+  min-height: 38px;
+  justify-content: center;
+}
+
+.mk-gm-npc-name-composition-add {
+  justify-content: center;
+  padding-top: 3px;
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+  color: var(--mk-gm-muted);
+  font-size: 10px;
+}
+
+.mk-gm-npc-name-composition-add i {
+  color: #cbbb80;
+  font-size: 9px;
+}
+
+.mk-gm-npc-name-composition-slot.is-assigned .mk-gm-npc-name-composition-drop {
+  border-style: solid;
+  background: rgba(255, 255, 255, 0.05);
+  color: var(--mk-gm-text);
+}
+
+.mk-gm-npc-name-composition-slot.is-dragover .mk-gm-npc-name-composition-drop {
+  outline: 2px solid rgba(165, 117, 62, 0.8);
+  outline-offset: -2px;
+  background: rgba(165, 117, 62, 0.18);
+}
+
+.mk-gm-npc-name-composition-drop > i {
+  color: #cbbb80;
+  font-size: 11px;
+}
+
+.mk-gm-npc-name-composition-drop strong {
+  overflow: hidden;
+  font-size: 11px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.mk-gm-npc-name-composition-drop small {
+  grid-column: 2 / -1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.mk-gm-npc-name-composition-drop button {
+  display: inline-grid;
+  width: 20px;
+  height: 20px;
+  padding: 0;
+  align-items: center;
+  justify-content: center;
+  border: 0;
+  border-radius: 3px;
+  color: var(--mk-gm-muted);
+  font-size: 10px;
+}
+
+.mk-gm-npc-name-composition-drop button:hover:not(:disabled) {
+  background: rgba(165, 117, 62, 0.18);
+  color: var(--mk-gm-text);
+}
+
+.mk-gm-npc-name-composition-arrow {
+  display: grid;
+  align-content: center;
+  color: #cbbb80;
+  font-size: 11px;
+}
+
+.mk-gm-npc-trait-tables {
+  display: grid;
+  gap: 9px;
+  margin-top: 14px;
+  padding-top: 10px;
+  border-top: 1px solid var(--mk-gm-border);
+}
+
+.mk-gm-npc-trait-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.mk-gm-npc-trait-heading > div {
+  display: grid;
+  gap: 3px;
+}
+
+.mk-gm-npc-trait-heading strong {
+  color: var(--mk-gm-text);
+  font-size: 12px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.mk-gm-npc-trait-heading span,
+.mk-gm-npc-trait-status,
+.mk-gm-npc-trait-drop small {
+  color: var(--mk-gm-muted);
+  font-size: 10px;
+}
+
+.mk-gm-npc-trait-heading > i {
+  color: #cbbb80;
+}
+
+.mk-gm-npc-trait-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 7px;
+}
+
+.mk-gm-npc-trait-slot {
+  display: grid;
+  gap: 4px;
+  min-width: 0;
+}
+
+.mk-gm-npc-trait-label {
+  color: var(--mk-gm-muted);
+  font-size: 9px;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.mk-gm-npc-trait-drop {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 6px;
+  min-height: 52px;
+  padding: 7px 8px;
+  border: 1px dashed var(--mk-gm-border);
+  border-radius: 4px;
+  background: rgba(255, 255, 255, 0.018);
+  color: var(--mk-gm-muted);
+  cursor: copy;
+}
+
+.mk-gm-npc-trait-drop.is-multiple {
+  grid-template-columns: 1fr;
+  align-items: stretch;
+}
+
+.mk-gm-npc-trait-slot.is-assigned .mk-gm-npc-trait-drop {
+  border-style: solid;
+  background: rgba(255, 255, 255, 0.05);
+  color: var(--mk-gm-text);
+}
+
+.mk-gm-npc-trait-slot.is-dragover .mk-gm-npc-trait-drop {
+  outline: 2px solid rgba(165, 117, 62, 0.8);
+  outline-offset: -2px;
+  background: rgba(165, 117, 62, 0.18);
+}
+
+.mk-gm-npc-trait-drop > i,
+.mk-gm-npc-trait-entry > i {
+  color: #cbbb80;
+  font-size: 11px;
+}
+
+.mk-gm-npc-trait-drop strong,
+.mk-gm-npc-trait-entry strong {
+  overflow: hidden;
+  font-size: 11px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.mk-gm-npc-trait-drop small,
+.mk-gm-npc-trait-entry small {
+  grid-column: 2 / -1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.mk-gm-npc-trait-list {
+  display: grid;
+  gap: 4px;
+}
+
+.mk-gm-npc-trait-entry {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+}
+
+.mk-gm-npc-trait-empty,
+.mk-gm-npc-trait-add {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  min-width: 0;
+}
+
+.mk-gm-npc-trait-empty {
+  min-height: 34px;
+}
+
+.mk-gm-npc-trait-add {
+  padding-top: 3px;
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+  color: var(--mk-gm-muted);
+  font-size: 10px;
+}
+
+.mk-gm-npc-trait-add i {
+  color: #cbbb80;
+  font-size: 9px;
+}
+
+.mk-gm-npc-trait-drop button {
+  display: inline-grid;
+  width: 20px;
+  height: 20px;
+  padding: 0;
+  align-items: center;
+  justify-content: center;
+  border: 0;
+  border-radius: 3px;
+  color: var(--mk-gm-muted);
+  font-size: 10px;
+}
+
+.mk-gm-npc-trait-drop button:hover:not(:disabled) {
+  background: rgba(165, 117, 62, 0.18);
+  color: var(--mk-gm-text);
+}
+
+.mk-gm-npc-name-composition-chance {
+  display: grid;
+  grid-template-columns: auto auto minmax(0, 1fr);
+  align-items: center;
+  gap: 6px;
+  padding-top: 2px;
+}
+
+.mk-gm-npc-name-composition-chance label {
+  color: var(--mk-gm-text);
+  font-size: 10px;
+  font-weight: 700;
+}
+
+.mk-gm-npc-name-composition-chance > div {
+  display: flex;
+  align-items: center;
+  gap: 3px;
+}
+
+.mk-gm-npc-name-composition-chance input {
+  width: 52px;
+  padding: 2px 4px;
+  color: var(--mk-gm-text);
+  font-size: 11px;
+  text-align: right;
+}
+
+.mk-gm-npc-name-composition-chance span,
+.mk-gm-npc-name-composition-chance small {
+  color: var(--mk-gm-muted);
+  font-size: 10px;
+}
+
+@media (max-width: 700px) {
+  .mk-gm-npc-name-composition-flow {
+    grid-template-columns: 1fr;
+  }
+
+  .mk-gm-npc-name-composition-arrow {
+    justify-content: center;
+    transform: rotate(90deg);
+  }
+
+  .mk-gm-npc-name-composition-chance {
+    grid-template-columns: auto auto;
+  }
+
+  .mk-gm-npc-name-composition-chance small {
+    grid-column: 1 / -1;
+  }
+
+  .mk-gm-npc-trait-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 480px) {
+  .mk-gm-npc-trait-grid {
+    grid-template-columns: 1fr;
+  }
+}

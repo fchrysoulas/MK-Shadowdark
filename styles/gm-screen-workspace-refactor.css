@@ -4,11 +4,6 @@
   display: block;
 }
 
-.mk-gm-workspace-nav button[data-workspace="exploration"].is-active {
-  border-color: rgba(83, 157, 99, 0.9);
-  background: rgba(83, 157, 99, 0.22);
-}
-
 .mk-gm-workspace-nav button[data-workspace="downtime"].is-active {
   border-color: rgba(55, 84, 145, 0.95);
   background: rgba(55, 84, 145, 0.3);

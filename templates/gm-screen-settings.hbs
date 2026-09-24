@@ -1,0 +1,167 @@
+{{#if denied}}
+<div class="mk-gm-settings-denied">
+  <i class="fas fa-lock" aria-hidden="true"></i>
+  <strong>GM access required.</strong>
+</div>
+{{else}}
+<div class="mk-gm-settings" data-mk-gm-settings data-settings-tab="{{activeTab}}">
+  <aside class="mk-gm-settings-sidebar">
+    <div class="mk-gm-settings-sidebar-heading">
+      <i class="fas fa-shield-halved" aria-hidden="true"></i>
+      <strong>GM Screen</strong>
+    </div>
+
+    <div class="mk-gm-settings-search" aria-hidden="true">
+      <i class="fas fa-search" aria-hidden="true"></i>
+      <span>Settings</span>
+    </div>
+
+    <nav class="mk-gm-settings-nav" aria-label="GM Screen Settings" role="tablist">
+      <div class="mk-gm-settings-nav-group">
+        <h2>GM Screen</h2>
+        {{#each tabs}}
+        <button
+          type="button"
+          class="{{#if active}}is-active{{/if}}"
+          data-action="settingsTab"
+          data-settings-tab="{{id}}"
+          role="tab"
+          aria-selected="{{active}}"
+          title="{{label}}"
+        >
+          <i class="fas {{icon}}" aria-hidden="true"></i>
+          <span>{{label}}</span>
+        </button>
+        {{/each}}
+      </div>
+    </nav>
+
+    <div class="mk-gm-settings-sidebar-footer">MK-Shadowdark</div>
+  </aside>
+
+  <main class="mk-gm-settings-content">
+    {{#if (eq activeTab "home")}}
+    <section class="mk-gm-settings-page" data-settings-page="home" role="tabpanel">
+      <header class="mk-gm-settings-page-heading">
+        <div>
+          <span class="mk-gm-settings-eyebrow">GM Screen Settings</span>
+          <h1>Welcome to the GM Screen</h1>
+        </div>
+        <i class="fas fa-sliders" aria-hidden="true"></i>
+      </header>
+
+      <article class="mk-gm-settings-card">
+        <h2>Configure your GM tools</h2>
+        <p>Use the settings tabs on the left to configure Scene-owned generators and RollTable assignments.</p>
+        <p>The main GM Screen keeps the live session controls in view, while configuration stays here out of the way.</p>
+      </article>
+
+      <article class="mk-gm-settings-card mk-gm-settings-card-accent">
+        <div>
+          <h2>Encounter Zones</h2>
+          <p>Configure named terrain grids and the supporting RollTables used by Roll Encounter.</p>
+        </div>
+        <div class="mk-gm-settings-overview-tools">
+          <button type="button" draggable="true" data-mk-gm-overview-tool="encounters" title="Drag Encounters action to Overview">
+            <i class="fas fa-dice-d20" aria-hidden="true"></i>
+            <span>Drag Encounters to Overview</span>
+            <i class="fas fa-grip-lines" aria-hidden="true"></i>
+          </button>
+        </div>
+      </article>
+
+      <article class="mk-gm-settings-card mk-gm-settings-card-accent">
+        <div>
+          <h2>NPC Generator</h2>
+          <p>Choose the RollTables used to build NPC names, identifiers, and traits for this Scene.</p>
+        </div>
+        <div class="mk-gm-settings-overview-tools">
+          <button type="button" draggable="true" data-mk-gm-overview-tool="npc-generator" title="Drag NPC Generator action to Overview">
+            <i class="fas fa-font" aria-hidden="true"></i>
+            <span>Drag NPC Generator to Overview</span>
+            <i class="fas fa-grip-lines" aria-hidden="true"></i>
+          </button>
+        </div>
+      </article>
+
+      <article class="mk-gm-settings-card mk-gm-settings-card-accent">
+        <div>
+          <h2>Tavern Generator</h2>
+          <p>Choose the RollTables used to build the tavern name, Wealth, Known For result, and the Poor, Standard, and Wealthy food and drink lists for this Scene.</p>
+        </div>
+        <div class="mk-gm-settings-overview-tools">
+          <button type="button" draggable="true" data-mk-gm-overview-tool="tavern-generator" title="Drag Tavern Generator action to Overview">
+            <i class="fas fa-beer-mug-empty" aria-hidden="true"></i>
+            <span>Drag Tavern Generator to Overview</span>
+            <i class="fas fa-grip-lines" aria-hidden="true"></i>
+          </button>
+        </div>
+      </article>
+    </section>
+    {{/if}}
+
+    {{#if (eq activeTab "tavern-generator")}}
+    <section class="mk-gm-settings-page" data-settings-page="tavern-generator" role="tabpanel">
+      <header class="mk-gm-settings-page-heading">
+        <div>
+          <span class="mk-gm-settings-eyebrow">GM Screen / Settings</span>
+          <h1>Tavern Generator</h1>
+          <p>Scene-owned RollTables used to generate tavern names, Wealth, Known For results, and tiered Poor, Standard, and Wealthy food and drink lists.</p>
+        </div>
+        <i class="fas fa-beer-mug-empty" aria-hidden="true"></i>
+      </header>
+
+      <section class="mk-gm-settings-card mk-gm-settings-tavern-generator" data-mk-gm-tavern-generator>
+        <div data-mk-tavern-generator-tables>
+          <div class="mk-gm-empty">Loading Tavern Generator tables…</div>
+        </div>
+      </section>
+    </section>
+    {{/if}}
+
+    {{#if (eq activeTab "encounters")}}
+    <section class="mk-gm-settings-page" data-settings-page="encounters" role="tabpanel">
+      <header class="mk-gm-settings-page-heading">
+        <div>
+          <span class="mk-gm-settings-eyebrow">GM Screen / Settings</span>
+          <h1>Encounters</h1>
+          <p>Configure Encounter Zones and the supporting RollTables used by Roll Encounter.</p>
+        </div>
+        <i class="fas fa-dice-d20" aria-hidden="true"></i>
+      </header>
+
+      <section class="mk-gm-settings-card mk-gm-settings-encounters" data-mk-gm-encounters>
+        <div data-mk-exploration-zone-grid>
+          <div class="mk-gm-empty">Loading Encounter Zones…</div>
+        </div>
+        <div data-mk-encounter-auxiliary-tables>
+          <div class="mk-gm-empty">Loading encounter RollTables…</div>
+        </div>
+      </section>
+    </section>
+    {{/if}}
+
+    {{#if (eq activeTab "compositions")}}
+    <section class="mk-gm-settings-page" data-settings-page="compositions" role="tabpanel">
+      <header class="mk-gm-settings-page-heading">
+        <div>
+          <span class="mk-gm-settings-eyebrow">GM Screen / Settings</span>
+          <h1>NPC Generator</h1>
+          <p>Scene-owned RollTables used to compose generated NPC names and traits.</p>
+        </div>
+        <i class="fas fa-font" aria-hidden="true"></i>
+      </header>
+
+      <section class="mk-gm-settings-card mk-gm-settings-compositions" data-mk-gm-compositions>
+        <div data-mk-npc-name-composition>
+          <div class="mk-gm-empty">Loading name composition tables…</div>
+        </div>
+        <div data-mk-npc-trait-tables>
+          <div class="mk-gm-empty">Loading NPC trait tables…</div>
+        </div>
+      </section>
+    </section>
+    {{/if}}
+  </main>
+</div>
+{{/if}}

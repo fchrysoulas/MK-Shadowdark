@@ -340,18 +340,18 @@ Hooks.once("init", () => {
   });
 
   registerSetting("encounterEngineEnabled", {
-    name: "Group Encounters | Enabled",
-    hint: "Enables Group exploration and resting encounter checks and resolution.",
+    name: "Legacy Group Encounters | Enabled",
+    hint: "Compatibility setting for legacy Group encounter APIs; it does not schedule encounter checks.",
     scope: "world",
-    config: true,
+    config: false,
     type: Boolean,
     default: true
   });
   registerSetting("encounterEngineDefaultTableUuid", {
-    name: "Group Encounters | Default Encounter Table UUID",
-    hint: "Fallback encounter RollTable UUID used when Scene Context does not specify a table.",
+    name: "Legacy Group Encounters | Default Table UUID",
+    hint: "Compatibility fallback for legacy Group encounter APIs.",
     scope: "world",
-    config: true,
+    config: false,
     type: String,
     default: ""
   });
@@ -364,18 +364,18 @@ Hooks.once("init", () => {
     default: DEFAULT_PROFILE_ID
   });
   registerSetting("encounterEngineWhisperToGm", {
-    name: "Group Encounters | GM-only Chat Card",
-    hint: "Whispers full Group encounter cards to active GMs until they are intentionally revealed.",
+    name: "Legacy Group Encounters | GM-only Chat Card",
+    hint: "Compatibility presentation setting for legacy Group encounter cards.",
     scope: "world",
-    config: true,
+    config: false,
     type: Boolean,
     default: true
   });
   registerSetting("encounterEngineShowDice3d", {
-    name: "Group Encounters | Show 3D Procedure Dice",
-    hint: "Shows Group encounter procedure dice to GMs when Dice So Nice is active.",
+    name: "Legacy Group Encounters | Show 3D Dice",
+    hint: "Compatibility presentation setting for legacy Group encounter cards.",
     scope: "world",
-    config: true,
+    config: false,
     type: Boolean,
     default: false
   });

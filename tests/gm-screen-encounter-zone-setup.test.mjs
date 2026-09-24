@@ -13,7 +13,7 @@ const environmentRuntime = fs.readFileSync(
   "utf8",
 );
 
-test("Tables workspace contains only source tables", () => {
+test("Tables workspace contains only RollTables", () => {
   const setup = '<header><span>Encounter Setup</span></header><select name="zoneTableUuid"></select>';
   const html = sourceTablePanelContent([], setup);
 

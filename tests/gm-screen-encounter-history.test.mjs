@@ -162,38 +162,29 @@ test("empty current session clearly says no current-session encounter exists", (
   assert.match(renderEncounterInspector(history), /current session yet/);
 });
 
-test("Session Log exposes a free-text start field, Start Session, and Reset Timer", () => {
+test("Session Log exposes a free-text start field and Start Session without a timer", () => {
   const state = normalizeSessionState({ startLabel: "14 Frostwane, 10 PM", startedAt: 123, worldTime: 456 });
   const html = renderSessionControls(state, {
-    procedure: "exploration",
-    elapsedLabel: "18m",
     hasGroup: true,
   });
   assert.match(html, /Starting date and time/);
   assert.match(html, /14 Frostwane, 10 PM/);
   assert.match(html, /Start Session/);
-  assert.match(html, /Reset Timer/);
-  assert.match(html, /Exploration/);
-  assert.match(html, /18m/);
+  assert.doesNotMatch(html, /Reset Timer|Procedure Timer|Elapsed/);
 });
 
-test("Start Session stores text metadata, establishes a timestamp boundary, clears historical selection, and resets timer", () => {
+test("Start Session stores text metadata, establishes a timestamp boundary, and clears historical selection", () => {
   assert.match(runtime, /SESSION_FLAG = "gmScreenSession"/);
   assert.match(runtime, /group\.setFlag\(MODULE_ID, SESSION_FLAG/);
   assert.match(runtime, /startedAt: Date\.now\(\)/);
   assert.match(runtime, /application\.encounterMessageId = ""/);
-  assert.match(runtime, /getGroupProcedureState\(group\)/);
-  assert.match(runtime, /resetGroupTime\(group, procedure/);
-  assert.match(runtime, /reason: "gm-screen-session-start"/);
   assert.match(runtime, /worldTime: Number\(globalThis\.game\?\.time\?\.worldTime/);
   assert.match(runtime, /sessionHistoryBoundary/);
   assert.match(runtime, /startedAt: sessionStartedAt/);
 });
 
-test("Reset Timer is a Session Log action rather than an Elapsed popup action", () => {
-  assert.match(runtime, /resetSessionTimer/);
-  assert.match(runtime, /Reset .* Timer/);
-  assert.match(runtime, /gm-screen-session-log-reset/);
+test("Session Log has no elapsed timer action", () => {
+  assert.doesNotMatch(runtime, /resetSessionTimer|Reset .* Timer|gm-screen-session-log-reset|getGroupElapsedTime|advanceGroupTime/);
 });
 
 test("Encounter history still reconstructs from ChatMessages while only Session metadata is persisted", () => {
@@ -217,8 +208,8 @@ test("Encounter history binds canonical encounter actions after replacing the wo
   assert.match(runtime, /bindSessionControls\(application, workspace, group\)/);
 });
 
-test("Encounter history runtime and style are excluded while the GM Screen is disabled", () => {
-  assert.equal(manifest.esmodules.includes("scripts/gm-screen/encounter-controls.js"), false);
-  assert.equal(manifest.esmodules.includes("scripts/gm-screen/encounter-history.js"), false);
-  assert.equal(manifest.styles.includes("styles/gm-screen-encounter-history.css"), false);
+test("Encounter history runtime and style are loaded for the production GM Screen", () => {
+  assert.equal(manifest.esmodules.includes("scripts/gm-screen/encounter-controls.js"), true);
+  assert.equal(manifest.esmodules.includes("scripts/gm-screen/encounter-history.js"), true);
+  assert.equal(manifest.styles.includes("styles/gm-screen-encounter-history.css"), true);
 });

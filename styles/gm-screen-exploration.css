@@ -5,6 +5,116 @@
   color-scheme: dark;
 }
 
+.mk-gm-encounter-zone-groups {
+  display: grid;
+  gap: 8px;
+  color-scheme: dark;
+}
+
+.mk-gm-encounter-zone-groups-heading {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.mk-gm-encounter-zone-groups-heading > div {
+  display: grid;
+  gap: 3px;
+  min-width: 0;
+}
+
+.mk-gm-encounter-zone-groups-heading strong {
+  color: var(--mk-gm-text);
+  font-size: 12px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.mk-gm-encounter-zone-groups-heading span {
+  color: var(--mk-gm-muted);
+  font-size: 10px;
+}
+
+.mk-gm-encounter-zone-groups-heading button {
+  min-height: 28px;
+  padding: 4px 8px;
+  white-space: nowrap;
+}
+
+.mk-gm-encounter-zone-group-list {
+  display: grid;
+  gap: 7px;
+}
+
+.mk-gm-encounter-zone-group {
+  overflow: hidden;
+  border: 1px solid var(--mk-gm-border);
+  border-radius: 5px;
+  background: rgba(255, 255, 255, 0.018);
+}
+
+.mk-gm-encounter-zone-group-summary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  min-height: 38px;
+  padding: 7px 10px;
+  color: var(--mk-gm-text);
+  cursor: pointer;
+  list-style: none;
+}
+
+.mk-gm-encounter-zone-group-summary::-webkit-details-marker {
+  display: none;
+}
+
+.mk-gm-encounter-zone-group-summary > span {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  align-items: center;
+  gap: 3px 7px;
+  min-width: 0;
+}
+
+.mk-gm-encounter-zone-group-summary > span > i {
+  grid-row: span 2;
+  color: #cbbb80;
+  font-size: 11px;
+}
+
+.mk-gm-encounter-zone-group-summary strong {
+  overflow: hidden;
+  font-size: 12px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.mk-gm-encounter-zone-group-summary small {
+  color: var(--mk-gm-muted);
+  font-size: 9px;
+}
+
+.mk-gm-encounter-zone-group-summary > i {
+  color: var(--mk-gm-muted);
+  font-size: 10px;
+  transition: transform 120ms ease;
+}
+
+.mk-gm-encounter-zone-group[open] > .mk-gm-encounter-zone-group-summary > i {
+  transform: rotate(180deg);
+}
+
+.mk-gm-encounter-zone-group-summary:hover {
+  background: rgba(184, 47, 69, 0.1);
+}
+
+.mk-gm-encounter-zone-group-body {
+  padding: 0 9px 9px;
+  border-top: 1px solid var(--mk-gm-border);
+}
+
 .mk-gm-encounter-zone-heading {
   display: flex;
   align-items: flex-end;
@@ -16,6 +126,32 @@
   display: grid;
   gap: 3px;
   min-width: 0;
+}
+
+.mk-gm-encounter-zone-title-field label {
+  color: var(--mk-gm-muted);
+  font-size: 9px;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.mk-gm-encounter-zone-title-field input {
+  min-width: 180px;
+  min-height: 27px;
+  padding: 3px 6px;
+  border: 1px solid var(--mk-gm-border);
+  border-radius: 3px;
+  background: rgba(255, 255, 255, 0.04);
+  color: var(--mk-gm-text);
+  font-size: 13px;
+  font-weight: 800;
+}
+
+.mk-gm-encounter-zone-title-field input:focus {
+  outline: 0;
+  border-color: rgba(203, 187, 128, 0.72);
+  box-shadow: 0 0 0 2px rgba(203, 187, 128, 0.2);
 }
 
 .mk-gm-encounter-zone-heading strong {
@@ -416,6 +552,11 @@
 }
 
 @media (max-width: 720px) {
+  .mk-gm-encounter-zone-groups-heading {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
   .mk-gm-encounter-zone-heading {
     align-items: stretch;
     flex-direction: column;

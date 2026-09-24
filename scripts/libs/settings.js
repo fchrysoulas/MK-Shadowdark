@@ -222,30 +222,6 @@
       ]
     },
     {
-      key: "groupEncounters",
-      title: "Group Encounters",
-      hint: "Configure Group exploration and resting encounter checks, table selection, and GM presentation.",
-      icon: "fas fa-dice-d20",
-      settings: [
-        "encounterEngineEnabled",
-        "encounterEngineDefaultTableUuid", "encounterEngineWhisperToGm", "encounterEngineShowDice3d"
-      ],
-      sections: [
-        {
-          title: "General",
-          settings: ["encounterEngineEnabled"]
-        },
-        {
-          title: "Table Selection",
-          settings: ["encounterEngineDefaultTableUuid"]
-        },
-        {
-          title: "Presentation",
-          settings: ["encounterEngineWhisperToGm", "encounterEngineShowDice3d"]
-        }
-      ]
-    },
-    {
       key: "gmScreen",
       title: "GM Screen",
       hint: "Configure GM Screen encounter result presentation and diagnostics.",
@@ -1740,7 +1716,16 @@
 
     registerSetting("gmScreenEncounterDebug", {
       name: "GM Screen | Encounter Roll Debug Mode",
-      hint: "When enabled, Roll Zone Journal pages show dice formulas, roll totals, and result numbers. When disabled, pages keep the encounter context and result text but hide dice, roll details, and result numbers.",
+      hint: "When enabled, Roll Encounter Journal pages show dice formulas, roll totals, and result numbers. When disabled, pages keep the encounter context and result text but hide dice, roll details, and result numbers.",
+      scope: "world",
+      config: true,
+      type: Boolean,
+      default: false
+    });
+
+    registerSetting("gmScreenTavernDebug", {
+      name: "GM Screen | Tavern Generator Debug Mode",
+      hint: "When enabled, Tavern Journal pages show source tables, dice formulas, roll totals, and result numbers. When disabled, pages show the tavern overview and generated food and drinks without roll details.",
       scope: "world",
       config: true,
       type: Boolean,

@@ -3,20 +3,22 @@ import fs from "node:fs";
 import test from "node:test";
 
 const runtime = fs.readFileSync(new URL("../scripts/gm-screen/gm-screen.js", import.meta.url), "utf8");
+const settingsRuntime = fs.readFileSync(new URL("../scripts/gm-screen/gm-screen-settings.js", import.meta.url), "utf8");
+const explorationRuntime = fs.readFileSync(new URL("../scripts/gm-screen/exploration-zone-grid.js", import.meta.url), "utf8");
 const viewModel = fs.readFileSync(new URL("../scripts/gm-screen/view-model.js", import.meta.url), "utf8");
 const template = fs.readFileSync(new URL("../templates/gm-screen.hbs", import.meta.url), "utf8");
+const settingsTemplate = fs.readFileSync(new URL("../templates/gm-screen-settings.hbs", import.meta.url), "utf8");
 const topContext = fs.readFileSync(new URL("../scripts/gm-screen/top-context-controls.js", import.meta.url), "utf8");
 const overviewLinks = fs.readFileSync(new URL("../scripts/gm-screen/overview-links.js", import.meta.url), "utf8");
-const sessionTools = fs.readFileSync(new URL("../scripts/gm-screen/session-tools.js", import.meta.url), "utf8");
 const settings = fs.readFileSync(new URL("../scripts/libs/settings.js", import.meta.url), "utf8");
 const stylesheet = fs.readFileSync(new URL("../styles/gm-screen.css", import.meta.url), "utf8");
-const sessionToolsStylesheet = fs.readFileSync(new URL("../styles/gm-screen-session-tools.css", import.meta.url), "utf8");
+const compositionStylesheet = fs.readFileSync(new URL("../styles/gm-screen-compositions.css", import.meta.url), "utf8");
+const settingsStylesheet = fs.readFileSync(new URL("../styles/gm-screen-settings.css", import.meta.url), "utf8");
 const refactorStylesheet = fs.readFileSync(new URL("../styles/gm-screen-workspace-refactor.css", import.meta.url), "utf8");
 const manifest = JSON.parse(fs.readFileSync(new URL("../module.json", import.meta.url), "utf8"));
 
 const WORKSPACES = [
   "overview",
-  "exploration",
   "downtime",
   "tables",
   "session-log",
@@ -38,55 +40,31 @@ test("GM Screen is GM-gated and has a supported toggle entry point", () => {
   assert.match(runtime, /visible: true/);
 });
 
-test("GM Screen consumes canonical Group, Scene, and rest services", () => {
+test("GM Screen consumes canonical Group and Scene context services", () => {
   assert.match(viewModel, /getGroupData/);
-  assert.match(viewModel, /getGroupProcedureState/);
-  assert.match(viewModel, /getGroupElapsedTime/);
   assert.match(viewModel, /getGroupAssignments/);
-  assert.match(viewModel, /getGroupRestState/);
   assert.match(viewModel, /buildGroupMemberStatus/);
   assert.match(viewModel, /resolveSceneEnvironmentContext/);
-  assert.doesNotMatch(runtime, /processDueExplorationEncounters/);
-  assert.doesNotMatch(runtime, /continueGroupRest\(group\)/);
-  assert.doesNotMatch(runtime, /startGroupRest\(group/);
+  assert.doesNotMatch(runtime, /Group Time|advanceGroupTime|processDueExplorationEncounters/);
 });
 
-test("Procedure and Elapsed are operational direct controls", () => {
-  assert.match(runtime, /GROUP_PROCEDURE_STATES/);
-  assert.match(runtime, /setGroupProcedureState\(group, next/);
-  assert.match(runtime, /installProcedureSelector\(procedure/);
-  assert.match(runtime, /select\.addEventListener\("change"/);
-  assert.match(runtime, /actionAdvanceOneTurn/);
-  assert.match(runtime, /advanceGroupTime\(group, seconds/);
-  assert.match(runtime, /getExplorationEncounterState\(group\)\.turnSeconds/);
-  assert.match(runtime, /REST_TURN_SECONDS/);
-  assert.match(runtime, /COMBAT_TURN_SECONDS = 6/);
-  assert.match(runtime, /fa-forward-step/);
-  assert.doesNotMatch(runtime, /actionTimeControls|Advance Custom|timeAmount|timeUnit/);
-  assert.doesNotMatch(runtime, /resetGroupTime/);
+test("GM Screen header no longer owns Group procedure controls", () => {
+  assert.doesNotMatch(runtime, /GROUP_PROCEDURE_STATES|setGroupProcedureState|installProcedureSelector|actionSelectProcedure/);
+  assert.doesNotMatch(viewModel, /getGroupProcedureState|procedure:/);
+  assert.doesNotMatch(template, />Procedure<|\{\{procedure\}\}/);
+  assert.doesNotMatch(runtime, /actionAdvanceOneTurn|advanceGroupTime|REST_TURN_SECONDS|COMBAT_TURN_SECONDS|fa-forward-step/);
+  assert.doesNotMatch(template, /Elapsed|Every \{\{environment\.intervalTurns\}\}/);
+  assert.doesNotMatch(viewModel, /elapsedSeconds|elapsedLabel|formatDuration|dueChecks|checkTurns/);
 });
 
-test("GM Screen cannot manually enter or exit the canonical Resting workflow", () => {
-  assert.match(runtime, /GM_SCREEN_MANUAL_PROCEDURE_STATES = Object\.freeze\([\s\S]*filter\(state => state !== "resting"\)/);
-  assert.match(runtime, /if \(next === "resting"\)/);
-  assert.match(runtime, /Resting is controlled by the Group rest workflow/);
-  assert.match(runtime, /if \(current === "resting"\)/);
-  assert.match(runtime, /Finish or resolve the active Group rest before changing procedure/);
-  assert.match(runtime, /const restingActive = value === "resting"/);
-  assert.match(runtime, /const states = restingActive \? \["resting"\] : GM_SCREEN_MANUAL_PROCEDURE_STATES/);
-  assert.match(runtime, /select\.disabled = disabled \|\| restingActive/);
+test("pending Group encounter checks and timed workflows are retired", () => {
+  const groupSheet = fs.readFileSync(new URL("../scripts/group-sheet/group-sheet.js", import.meta.url), "utf8");
+  assert.doesNotMatch(groupSheet, /exploration-encounters|rest-encounters|group-sheet\/time/);
+  assert.doesNotMatch(topContext, /getGroupRestState|activeRestRetainsChecks|rest-snapshot-warning/);
+  assert.doesNotMatch(fs.readFileSync(new URL("../scripts/gm-screen/encounter-history.js", import.meta.url), "utf8"), /Reset Timer|Procedure Timer|resetGroupTime|getGroupElapsedTime/);
 });
 
-test("one-turn advancement is 6m Exploration, 1h actual Resting, and 6s Combat", () => {
-  assert.match(runtime, /procedure === "exploration"/);
-  assert.match(runtime, /procedure === "resting"/);
-  assert.match(runtime, /procedure === "combat"/);
-  assert.match(runtime, /if \(procedure === "combat"\) return COMBAT_TURN_SECONDS/);
-  assert.match(viewModel, /return `\$\{minuteLabel\}m`/);
-  assert.doesNotMatch(viewModel, /return `\$\{total\}s`/);
-});
-
-test("GM Screen owns the exact five workspaces in order", () => {
+test("GM Screen owns the exact four workspaces in order", () => {
   assert.match(template, /mk-gm-party-rail/);
   assert.match(template, /mk-gm-pressure-strip/);
 
@@ -124,31 +102,42 @@ test("Overview provides document shortcuts and top Scene Context autosave", () =
   assert.doesNotMatch(topContext, /Save Context|data-mk-context-save/);
 });
 
-test("Encounters is an editable Encounter Zone workspace with detail RollTable slots", () => {
-  const start = template.indexOf('data-workspace-panel="exploration"');
-  const end = template.indexOf('data-workspace-panel="downtime"');
-  const exploration = template.slice(start, end);
-  assert.match(exploration, /data-mk-exploration-zone-grid/);
-  assert.match(exploration, /<span>Encounters<\/span>/);
-  assert.match(exploration, /data-mk-encounter-auxiliary-tables/);
-  assert.doesNotMatch(exploration, />Turns</);
-  assert.doesNotMatch(exploration, />Next Check</);
-  assert.doesNotMatch(exploration, />Due</);
-  assert.doesNotMatch(exploration, /Encounter Table|Latest Check/);
-  assert.doesNotMatch(exploration, /Process Due Checks|Process Encounter Checks/);
-  assert.doesNotMatch(exploration, /Safe: encounter checks are disabled/);
-  assert.doesNotMatch(exploration, />Terrain</);
-  assert.doesNotMatch(exploration, />Danger</);
-  assert.doesNotMatch(exploration, />Period</);
-  assert.doesNotMatch(exploration, />Turn Length</);
-  assert.doesNotMatch(exploration, />Cadence</);
+test("Encounters is an editable Encounter Zone Settings tab with detail RollTable slots", () => {
+  assert.doesNotMatch(template, /data-workspace-panel="exploration"/);
+  const start = settingsTemplate.indexOf('data-settings-page="encounters"');
+  const end = settingsTemplate.indexOf('data-settings-page="compositions"');
+  const encounters = settingsTemplate.slice(start, end);
+  assert.match(encounters, /data-mk-exploration-zone-grid/);
+  assert.match(settingsTemplate, /data-settings-tab="\{\{id\}\}"/);
+  assert.match(explorationRuntime, /SETTINGS_APP_ID/);
+  assert.match(encounters, /data-mk-encounter-auxiliary-tables/);
+  assert.doesNotMatch(encounters, />Turns</);
+  assert.doesNotMatch(encounters, />Next Check</);
+  assert.doesNotMatch(encounters, />Due</);
+  assert.doesNotMatch(encounters, /Encounter Table|Latest Check/);
+  assert.doesNotMatch(encounters, /Process Due Checks|Process Encounter Checks/);
+  assert.doesNotMatch(encounters, /Safe: encounter checks are disabled/);
+  assert.doesNotMatch(encounters, />Terrain</);
+  assert.doesNotMatch(encounters, />Danger</);
+  assert.doesNotMatch(encounters, />Period</);
+  assert.doesNotMatch(encounters, />Turn Length</);
+  assert.doesNotMatch(encounters, />Cadence</);
 });
 
 test("GM Screen encounter roll details are controlled by a disabled-by-default debug setting", () => {
   assert.match(settings, /registerSetting\("gmScreenEncounterDebug",/);
   assert.match(settings, /name: "GM Screen \| Encounter Roll Debug Mode"/);
-  assert.match(settings, /hint: "When enabled, Roll Zone Journal pages show dice formulas, roll totals, and result numbers\./);
+  assert.match(settings, /hint: "When enabled, Roll Encounter Journal pages show dice formulas, roll totals, and result numbers\./);
   const settingStart = settings.indexOf('registerSetting("gmScreenEncounterDebug"');
+  const settingBlock = settings.slice(settingStart, settings.indexOf("});", settingStart));
+  assert.match(settingBlock, /default: false/);
+});
+
+test("GM Screen Tavern Journal roll details are controlled by a disabled-by-default debug setting", () => {
+  assert.match(settings, /registerSetting\("gmScreenTavernDebug",/);
+  assert.match(settings, /name: "GM Screen \| Tavern Generator Debug Mode"/);
+  assert.match(settings, /hint: "When enabled, Tavern Journal pages show source tables, dice formulas, roll totals, and result numbers\./);
+  const settingStart = settings.indexOf('registerSetting("gmScreenTavernDebug"');
   const settingBlock = settings.slice(settingStart, settings.indexOf("});", settingStart));
   assert.match(settingBlock, /default: false/);
 });
@@ -164,6 +153,38 @@ test("visible Downtime workspace is renamed Settlement without changing the inte
   assert.match(template, /Settlement\{\{else\}\}\{\{label\}\}/);
 });
 
+test("NPC Generator lives in GM Screen Settings with left-side navigation", () => {
+  assert.doesNotMatch(template, /data-workspace-panel="compositions"/);
+  assert.doesNotMatch(viewModel, /compositions: "Compositions"/);
+  assert.doesNotMatch(viewModel, /compositions: "fa-font"/);
+  assert.match(settingsRuntime, /SETTINGS_APP_ID/);
+  assert.match(settingsRuntime, /class MKGMscreenSettings extends ApplicationBase/);
+  assert.match(settingsRuntime, /data-mk-gm-open-settings/);
+  assert.match(settingsRuntime, /Open GM Screen Settings/);
+  assert.match(settingsTemplate, /mk-gm-settings-sidebar/);
+  assert.match(settingsTemplate, /data-action="settingsTab"/);
+  assert.match(settingsTemplate, /data-settings-page="encounters"/);
+  assert.match(settingsTemplate, /data-settings-page="tavern-generator"/);
+  assert.match(settingsTemplate, /data-mk-tavern-generator-tables/);
+  assert.match(settingsTemplate, />Tavern Generator</);
+  assert.match(settingsTemplate, />NPC Generator</);
+  assert.match(settingsTemplate, /data-mk-npc-name-composition/);
+  assert.match(settingsTemplate, /data-mk-npc-trait-tables/);
+  assert.match(settingsTemplate, /Scene-owned RollTables used to compose generated NPC names/);
+  assert.match(compositionStylesheet, /\.mk-gm-npc-name-composition-flow/);
+  assert.match(compositionStylesheet, /\.mk-gm-npc-trait-grid/);
+  assert.match(settingsStylesheet, /\.mk-gm-settings-sidebar/);
+  assert.match(settingsStylesheet, /\.mk-gm-settings-nav button\.is-active/);
+});
+
+test("GM Screen Settings cards provide executable drag sources without Open buttons", () => {
+  assert.equal((settingsTemplate.match(/data-mk-gm-overview-tool=/g) ?? []).length, 3);
+  assert.match(settingsTemplate, /data-mk-gm-overview-tool="encounters"[\s\S]*Drag Encounters to Overview/);
+  assert.match(settingsTemplate, /data-mk-gm-overview-tool="npc-generator"[\s\S]*Drag NPC Generator to Overview/);
+  assert.match(settingsTemplate, /data-mk-gm-overview-tool="tavern-generator"[\s\S]*Drag Tavern Generator to Overview/);
+  assert.doesNotMatch(settingsTemplate, /Open Encounters|Open NPC Generator|Open Tavern Generator/);
+});
+
 test("view model workspace contract keeps downtime as the compatibility id", () => {
   for (const workspace of WORKSPACES) {
     assert.match(viewModel, new RegExp(`"${workspace.replace("-", "\\-")}"`));
@@ -177,8 +198,9 @@ test("view model workspace contract keeps downtime as the compatibility id", () 
 });
 
 test("requested workspace active tints remain defined", () => {
-  assert.match(refactorStylesheet, /data-workspace="exploration"/);
+  assert.doesNotMatch(refactorStylesheet, /data-workspace="exploration"/);
   assert.match(refactorStylesheet, /data-workspace="downtime"/);
+  assert.doesNotMatch(refactorStylesheet, /data-workspace="compositions"/);
 });
 
 test("GM Screen exposes a wider standalone Time Passes dice selector", () => {
@@ -216,26 +238,41 @@ test("GM Screen runtime assets are loaded for the production surface", () => {
   const gmScreenStyles = manifest.styles.filter(entry => entry.startsWith("styles/gm-screen"));
   assert.ok(gmScreenEntries.includes("scripts/gm-screen/gm-screen.js"));
   assert.ok(gmScreenEntries.includes("scripts/gm-screen/exploration-zone-grid.js"));
+  assert.ok(gmScreenEntries.includes("scripts/gm-screen/npc-name-compositions.js"));
+  assert.ok(gmScreenEntries.includes("scripts/gm-screen/tavern-generator-settings.js"));
+  assert.ok(gmScreenEntries.includes("scripts/gm-screen/gm-screen-settings.js"));
   assert.ok(gmScreenStyles.includes("styles/gm-screen-exploration.css"));
+  assert.ok(gmScreenStyles.includes("styles/gm-screen-compositions.css"));
+  assert.ok(gmScreenStyles.includes("styles/gm-screen-tavern-generator.css"));
+  assert.ok(gmScreenStyles.includes("styles/gm-screen-settings.css"));
   assert.ok(!manifest.esmodules.includes("scripts/gm-screen-mock/gm-screen-mock.js"));
 });
 
 test("Encounter bar control replaces the Light pressure cell", () => {
   assert.match(topContext, /installEncounterRollControl/);
   assert.match(topContext, /data-mk-gm-roll-encounter-zone/);
-  assert.match(topContext, /rollEncounterZone\(terrain, scene\)/);
+  assert.match(topContext, /name=\"encounterZone\"/);
+  assert.match(topContext, /encounterZoneOptions/);
+  assert.match(topContext, /Roll Encounter/);
+  assert.match(topContext, /rollEncounterZone\(context\?\.terrain \?\? \"\", scene, \{ zoneId \}\)/);
+  assert.doesNotMatch(template, />Procedure<|\{\{procedure\}\}/);
   assert.doesNotMatch(manifest.esmodules.join("\n"), /light-pressure\.js/);
   assert.doesNotMatch(manifest.styles.join("\n"), /gm-screen-light-pressure\.css/);
 });
 
-test("Session Log exposes direct buttons for GM Screen tools", () => {
-  for (const action of ["group", "scene-context", "overview", "exploration", "tables", "settlement", "npc", "time-passes"]) {
-    assert.match(sessionTools, new RegExp(`data-mk-session-tool="${action}"`));
-  }
-  assert.match(sessionTools, /openSceneContextDialog/);
-  assert.match(sessionTools, /createSourceDrivenNpc/);
-  assert.doesNotMatch(sessionTools, /stage-latest|Latest Encounter Staging|openEncounterStagingDialog/);
-  assert.match(sessionToolsStylesheet, /\.mk-gm-session-tools/);
-  assert.ok(manifest.esmodules.includes("scripts/gm-screen/session-tools.js"));
-  assert.ok(manifest.styles.includes("styles/gm-screen-session-tools.css"));
+test("Encounter selector appears before Terrain in the header strip", () => {
+  const encounterZoneIndex = template.indexOf("<div><span>Encounter Zone</span>");
+  const terrainIndex = template.indexOf("<div><span>Terrain</span>");
+  const rollEncounterIndex = template.indexOf("<div><span>Roll Encounter</span>");
+  const combatStart = template.indexOf("{{#if combat.active}}");
+  const combatEnd = template.indexOf("{{/if}}", combatStart);
+
+  assert.ok(encounterZoneIndex < terrainIndex);
+  assert.ok(rollEncounterIndex > combatEnd);
+});
+
+test("Session Log no longer loads the retired GM Tools button panel", () => {
+  assert.doesNotMatch(template, /data-mk-gm-session-tools|data-mk-session-tool/);
+  assert.ok(!manifest.esmodules.includes("scripts/gm-screen/session-tools.js"));
+  assert.ok(!manifest.styles.includes("styles/gm-screen-session-tools.css"));
 });

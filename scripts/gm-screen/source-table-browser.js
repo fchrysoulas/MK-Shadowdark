@@ -1,6 +1,3 @@
-import { sourceTableFlag } from "../source-tables/source-table-importer.js";
-
-const MODULE_ID = "mk-shadowdark";
 const GM_SCREEN_APP_ID = "mk-shadowdark-gm-screen";
 const WORKSPACE_ID = "tables";
 
@@ -41,81 +38,92 @@ function isContextualSourceFormula(value) {
   return String(value ?? "").trim().includes("*");
 }
 
-function collectSourceTableEntries(tables = globalThis.game?.tables) {
+function documentId(document) {
+  return String(document?.id ?? document?._id ?? document ?? "").trim();
+}
+
+function resolveFolder(folderReference, folders = globalThis.game?.folders) {
+  if (folderReference && typeof folderReference === "object") return folderReference;
+  const id = documentId(folderReference);
+  if (!id) return null;
+  return collectionValues(folders).find(folder => documentId(folder) === id) ?? null;
+}
+
+function folderPathForTable(table, folders = globalThis.game?.folders) {
+  const path = [];
+  const visited = new Set();
+  let folder = resolveFolder(table?.folder ?? table?.folderId, folders);
+  while (folder) {
+    const id = documentId(folder) || String(folder.name ?? "");
+    if (visited.has(id)) break;
+    visited.add(id);
+    const name = String(folder.name ?? "").trim();
+    if (name) path.unshift(name);
+    folder = resolveFolder(folder.folder, folders);
+  }
+  return path;
+}
+
+function collectSourceTableEntries(
+  tables = globalThis.game?.tables,
+  folders = globalThis.game?.folders,
+) {
   return collectionValues(tables)
     .map(table => {
-      const metadata = sourceTableFlag(table);
-      if (!metadata?.key) return null;
-
-      const pages = Array.isArray(metadata.pages) ? metadata.pages : [];
-      const warnings = Array.isArray(metadata.warnings) ? metadata.warnings : [];
-      const sourceFormula = String(metadata.formulaRaw ?? metadata.formula ?? "").trim();
-      const formula = sourceFormula || String(table?.formula ?? "");
-      const contextualFormula = isContextualSourceFormula(sourceFormula);
+      const formula = String(table?.formula ?? "").trim();
+      if (!table?.id && !table?._id) return null;
       return {
         id: String(table?.id ?? table?._id ?? ""),
         uuid: String(table?.uuid ?? ""),
-        name: String(table?.name ?? "Imported Table"),
+        name: String(table?.name ?? "RollTable"),
         formula,
-        contextualFormula,
-        bookId: String(metadata.bookId ?? ""),
-        bookTitle: String(metadata.bookTitle ?? metadata.bookId ?? "Imported Source"),
-        pages,
-        pagesLabel: pages.length ? pages.join(", ") : "—",
-        warningCount: warnings.length,
-        warnings,
-        key: String(metadata.key),
+        contextualFormula: isContextualSourceFormula(formula),
+        img: String(table?.img ?? table?.icon ?? "").trim(),
+        folderPath: folderPathForTable(table, folders),
         searchText: [
           table?.name,
           table?.formula,
-          metadata.bookId,
-          metadata.bookTitle,
-          metadata.formula,
-          metadata.formulaRaw,
-          pages.join(" "),
         ].filter(Boolean).join(" ").toLowerCase(),
       };
     })
     .filter(Boolean)
     .sort((left, right) => {
-      const book = left.bookTitle.localeCompare(right.bookTitle, undefined, { sensitivity: "base", numeric: true });
-      if (book !== 0) return book;
       return left.name.localeCompare(right.name, undefined, { sensitivity: "base", numeric: true });
     });
 }
 
-function sourceBookOptions(entries = []) {
-  const books = new Map();
+function groupSourceTableEntries(entries = []) {
+  const groups = new Map();
   for (const entry of entries) {
-    if (!entry?.bookId) continue;
-    if (!books.has(entry.bookId)) books.set(entry.bookId, entry.bookTitle || entry.bookId);
+    const folderPath = Array.isArray(entry?.folderPath) ? entry.folderPath : [];
+    const key = folderPath.join("\u0000");
+    if (!groups.has(key)) {
+      groups.set(key, {
+        key,
+        label: folderPath.length ? folderPath.join(" / ") : "Unfiled",
+        folderPath,
+        entries: [],
+      });
+    }
+    groups.get(key).entries.push(entry);
   }
-  return [...books.entries()]
-    .map(([id, title]) => ({ id, title }))
-    .sort((left, right) => left.title.localeCompare(right.title, undefined, { sensitivity: "base", numeric: true }));
+  return [...groups.values()].sort((left, right) => {
+    if (!left.folderPath.length && right.folderPath.length) return -1;
+    if (left.folderPath.length && !right.folderPath.length) return 1;
+    return left.label.localeCompare(right.label, undefined, { sensitivity: "base", numeric: true });
+  });
 }
 
-function filterSourceTableEntries(entries = [], { query = "", bookId = "" } = {}) {
+function filterSourceTableEntries(entries = [], { query = "" } = {}) {
   const needle = String(query ?? "").trim().toLowerCase();
-  const source = String(bookId ?? "").trim();
-  return entries.filter(entry => {
-    if (source && entry.bookId !== source) return false;
-    if (needle && !entry.searchText.includes(needle)) return false;
-    return true;
-  });
+  return entries.filter(entry => !needle || entry.searchText.includes(needle));
 }
 
 function sourceTablePanelContent(entries = []) {
   return `
     <article class="mk-gm-panel is-wide" data-mk-gm-source-tables-panel>
-      <header><i class="fas fa-table-list"></i><span>Source Tables</span></header>
       <div class="mk-gm-source-table-toolbar">
-        <input type="search" data-mk-source-table-search placeholder="Search imported tables…" autocomplete="off" aria-label="Search imported source tables">
-        <select data-mk-source-table-book aria-label="Filter source book">
-          <option value="">All Sources</option>
-          ${sourceBookOptions(entries).map(book => `<option value="${escapeHtml(book.id)}">${escapeHtml(book.title)}</option>`).join("")}
-        </select>
-        <button type="button" data-mk-source-table-action="import"><i class="fas fa-file-import"></i> Import / Update</button>
+        <input type="search" data-mk-source-table-search placeholder="Search RollTables…" autocomplete="off" aria-label="Search RollTables">
       </div>
       <div class="mk-gm-source-table-summary" data-mk-source-table-summary></div>
       <div class="mk-gm-source-table-list" data-mk-source-table-list></div>
@@ -133,18 +141,19 @@ function sourceTablePanelHtml(entries = []) {
 
 function sourceTableRowHtml(entry) {
   const rollAction = entry.contextualFormula
-    ? '<button type="button" disabled title="This source table uses a contextual dice formula. Roll it through the relevant generator."><i class="fas fa-dice"></i> Contextual</button>'
+    ? '<button type="button" disabled title="This RollTable uses a contextual dice formula. Roll it through the relevant generator."><i class="fas fa-dice"></i> Contextual</button>'
     : `<button type="button" data-mk-source-table-action="roll" data-table-id="${escapeHtml(entry.id)}" title="Roll ${escapeHtml(entry.name)}"><i class="fas fa-dice-d20"></i> Roll</button>`;
+  const icon = entry.img
+    ? `<img src="${escapeHtml(entry.img)}" alt="" loading="lazy">`
+    : '<i class="fas fa-dice-d20" aria-hidden="true"></i>';
   return `
     <article class="mk-gm-source-table-row" data-source-table-id="${escapeHtml(entry.id)}">
       <div class="mk-gm-source-table-main">
+        <span class="mk-gm-source-table-icon" aria-hidden="true">${icon}</span>
         <strong title="${escapeHtml(entry.name)}">${escapeHtml(entry.name)}</strong>
-        <small>${escapeHtml(entry.bookTitle)}</small>
       </div>
       <div class="mk-gm-source-table-meta">
-        <span title="Source roll formula"><i class="fas fa-dice"></i> ${escapeHtml(entry.formula || "—")}</span>
-        <span title="PDF page(s)"><i class="fas fa-book-open"></i> ${escapeHtml(entry.pagesLabel)}</span>
-        ${entry.warningCount ? `<span class="is-warning" title="${entry.warningCount} import warning(s)"><i class="fas fa-triangle-exclamation"></i> ${entry.warningCount}</span>` : ""}
+        <span title="Roll formula"><i class="fas fa-dice"></i> ${escapeHtml(entry.formula || "—")}</span>
       </div>
       <div class="mk-gm-source-table-actions">
         ${rollAction}
@@ -161,26 +170,38 @@ function renderSourceTableList(root, entries, filters = {}) {
 
   const filtered = filterSourceTableEntries(entries, filters);
   summary.textContent = entries.length
-    ? `Showing ${filtered.length} of ${entries.length} imported RollTables.`
-    : "No imported source RollTables are available yet.";
+    ? `Showing ${filtered.length} of ${entries.length} RollTables.`
+    : "No RollTables are available yet.";
 
   if (!entries.length) {
     list.innerHTML = `
       <div class="mk-gm-source-table-empty">
         <i class="fas fa-book"></i>
-        <strong>No source tables imported</strong>
-        <span>Use Import / Update and select one of your supported owned Shadowdark Markdown transcriptions.</span>
+        <strong>No RollTables available</strong>
+        <span>Create or add RollTables through Foundry, then return here to search, roll, or open them.</span>
       </div>
     `;
     return filtered;
   }
 
   if (!filtered.length) {
-    list.innerHTML = '<div class="mk-gm-source-table-empty"><i class="fas fa-magnifying-glass"></i><strong>No matching tables</strong><span>Change the search text or source filter.</span></div>';
+    list.innerHTML = '<div class="mk-gm-source-table-empty"><i class="fas fa-magnifying-glass"></i><strong>No matching tables</strong><span>Change the search text.</span></div>';
     return filtered;
   }
 
-  list.innerHTML = filtered.map(sourceTableRowHtml).join("");
+  list.innerHTML = groupSourceTableEntries(filtered).map(group => `
+    <details class="mk-gm-source-table-group" data-folder-path="${escapeHtml(group.label)}">
+      <summary class="mk-gm-source-table-group-header">
+        <span class="mk-gm-source-table-group-caret" aria-hidden="true"></span>
+        <i class="fas fa-folder-open" aria-hidden="true"></i>
+        <strong>${escapeHtml(group.label)}</strong>
+        <span>${group.entries.length}</span>
+      </summary>
+      <div class="mk-gm-source-table-group-list">
+        ${group.entries.map(sourceTableRowHtml).join("")}
+      </div>
+    </details>
+  `).join("");
   return filtered;
 }
 
@@ -196,9 +217,8 @@ async function rollSourceTable(table) {
     globalThis.ui?.notifications?.warn?.("The selected RollTable is unavailable.");
     return null;
   }
-  const metadata = sourceTableFlag(table);
-  if (isContextualSourceFormula(metadata?.formulaRaw)) {
-    globalThis.ui?.notifications?.warn?.("This source table uses a contextual dice formula. Roll it through the relevant generator.");
+  if (isContextualSourceFormula(table.formula)) {
+    globalThis.ui?.notifications?.warn?.("This RollTable uses a contextual dice formula. Roll it through the relevant generator.");
     return null;
   }
   return table.draw({ displayChat: true });
@@ -218,17 +238,6 @@ async function openSourceTable(table) {
   return table;
 }
 
-async function importSourceTables(application) {
-  const api = globalThis.game?.modules?.get?.(MODULE_ID)?.api?.sourceTables;
-  if (typeof api?.openImporter !== "function") {
-    globalThis.ui?.notifications?.warn?.("The Shadowdark source-table importer is unavailable.");
-    return null;
-  }
-  const result = await api.openImporter();
-  if (result?.report) await application?.render?.({ force: true });
-  return result;
-}
-
 function activateTablesWorkspace(application, root, navButton) {
   application.workspace = WORKSPACE_ID;
   root.dataset.workspace = WORKSPACE_ID;
@@ -245,20 +254,15 @@ function findTablesNavButton(nav) {
   return canonical ?? legacy ?? null;
 }
 
-function bindSourceTableBrowser(application, root, entries) {
+function bindSourceTableBrowser(root, entries) {
   const search = root.querySelector("[data-mk-source-table-search]");
-  const source = root.querySelector("[data-mk-source-table-book]");
   const panel = root.querySelector('[data-workspace-panel="tables"]');
-  if (!panel || !search || !source) return false;
+  if (!panel || !search) return false;
 
-  const currentFilters = () => ({
-    query: search.value ?? "",
-    bookId: source.value ?? "",
-  });
+  const currentFilters = () => ({ query: search.value ?? "" });
   const refreshList = () => renderSourceTableList(panel, entries, currentFilters());
 
   search.addEventListener?.("input", refreshList);
-  source.addEventListener?.("change", refreshList);
 
   panel.addEventListener("click", event => {
     const button = event.target?.closest?.("[data-mk-source-table-action]");
@@ -267,11 +271,6 @@ function bindSourceTableBrowser(application, root, entries) {
     event.stopPropagation();
 
     const action = String(button.dataset.mkSourceTableAction ?? "");
-    if (action === "import") {
-      void importSourceTables(application);
-      return;
-    }
-
     const table = findWorldTable(button.dataset.tableId);
     if (action === "roll") void rollSourceTable(table);
     if (action === "open") void openSourceTable(table);
@@ -332,7 +331,7 @@ async function decorateSourceTableBrowser(application, element) {
     });
   }
 
-  bindSourceTableBrowser(application, root, entries);
+  bindSourceTableBrowser(root, entries);
   return true;
 }
 
@@ -345,7 +344,6 @@ function registerSourceTableBrowser() {
 registerSourceTableBrowser();
 
 export {
-  MODULE_ID,
   GM_SCREEN_APP_ID,
   WORKSPACE_ID,
   collectionValues,
@@ -353,8 +351,9 @@ export {
   gmScreenApplication,
   isContextualSourceFormula,
   collectSourceTableEntries,
-  sourceBookOptions,
+  folderPathForTable,
   filterSourceTableEntries,
+  groupSourceTableEntries,
   sourceTablePanelContent,
   sourceTablePanelHtml,
   sourceTableRowHtml,
@@ -362,7 +361,6 @@ export {
   findWorldTable,
   rollSourceTable,
   openSourceTable,
-  importSourceTables,
   activateTablesWorkspace,
   findTablesNavButton,
   bindSourceTableBrowser,

@@ -4,9 +4,7 @@ import test from "node:test";
 
 import {
   buildLocationDocumentData,
-  buildNpcDocumentData,
   createExplorationLocation,
-  createExplorationNpc,
   pointOfInterestSuggestedName,
   promptForShadowdarkLocation,
 } from "../scripts/gm-screen/exploration-creation-controls.js";
@@ -53,14 +51,6 @@ function syntheticPoint(overrides = {}) {
   point.suggestedName = pointOfInterestSuggestedName(point);
   return point;
 }
-
-test("NPC creation payload uses the native Shadowdark NPC actor type", () => {
-  assert.deepEqual(buildNpcDocumentData("Road Warden"), {
-    name: "Road Warden",
-    type: "NPC",
-  });
-  assert.equal(buildNpcDocumentData("   ").name, "New NPC");
-});
 
 test("point of interest suggested name is built from source-driven Descriptor and Location", () => {
   assert.equal(pointOfInterestSuggestedName(syntheticPoint()), "Mossy Shrine");
@@ -142,32 +132,6 @@ test("missing source is reported distinctly from user cancellation", async () =>
     rollPointOfInterest: async () => null,
   });
   assert.deepEqual(result, { mode: "missing-source" });
-});
-
-test("Create NPC writes through Foundry Actor implementation and opens the new sheet", async () => {
-  const saved = saveGlobals("game", "foundry", "Actor", "ui");
-  let createdData = null;
-  let rendered = false;
-
-  try {
-    globalThis.game = { user: { isGM: true } };
-    mockDialogV2(async () => "Goblin Guide");
-    globalThis.Actor = {
-      implementation: {
-        create: async data => {
-          createdData = data;
-          return { sheet: { render: value => { rendered = value; } } };
-        },
-      },
-    };
-    globalThis.ui = { notifications: {} };
-
-    await createExplorationNpc();
-    assert.deepEqual(createdData, { name: "Goblin Guide", type: "NPC" });
-    assert.equal(rendered, true);
-  } finally {
-    restoreGlobals(saved);
-  }
 });
 
 test("Create Location uses the current imported combination and opens the Journal", async () => {
@@ -296,34 +260,15 @@ test("Cancelling a location generator creates nothing", async () => {
   }
 });
 
-test("Cancelling an NPC creation prompt creates nothing", async () => {
-  const saved = saveGlobals("game", "foundry", "Actor", "ui");
-  let createCalls = 0;
-
-  try {
-    globalThis.game = { user: { isGM: true } };
-    mockDialogV2(async () => null);
-    globalThis.Actor = {
-      implementation: {
-        create: async () => {
-          createCalls += 1;
-          return null;
-        },
-      },
-    };
-    globalThis.ui = { notifications: {} };
-
-    const result = await createExplorationNpc();
-    assert.equal(result, null);
-    assert.equal(createCalls, 0);
-  } finally {
-    restoreGlobals(saved);
-  }
-});
-
-test("Exploration NPC and Location creation controls are no longer loaded", () => {
-  assert.equal(manifest.esmodules.indexOf("scripts/gm-screen/exploration-creation-controls.js"), -1);
+test("Settlement exposes the NPC Generator and Location controls", () => {
+  assert.ok(manifest.esmodules.includes("scripts/gm-screen/exploration-creation-controls.js"));
   assert.equal(manifest.esmodules.indexOf("scripts/gm-screen/npc-creation-controls.js"), -1);
+  assert.match(runtime, /data-workspace-panel="downtime"/);
+  assert.match(runtime, /data-mk-settlement-create="npc"/);
+  assert.match(runtime, /NPC Generator/);
+  assert.match(runtime, /fa-user-plus/);
+  assert.match(runtime, /data-mk-settlement-create="location"/);
+  assert.doesNotMatch(runtime, /Create NPC|createExplorationNpc/);
 });
 
 test("Create Location no longer embeds verbatim Points of Interest arrays", () => {
@@ -334,9 +279,9 @@ test("Create Location no longer embeds verbatim Points of Interest arrays", () =
   assert.match(runtime, /Import \/ Update Source Tables/);
 });
 
-test("GM Screen controllers are excluded while the feature is disabled", () => {
-  assert.equal(manifest.esmodules.includes("scripts/gm-screen/gm-screen.js"), false);
-  assert.equal(manifest.esmodules.includes("scripts/gm-screen/exploration-creation-controls.js"), false);
-  assert.equal(manifest.esmodules.includes("scripts/gm-screen/tavern-shop-creation-controls.js"), false);
+test("GM Screen creation controllers load for the Settlement workspace", () => {
+  assert.equal(manifest.esmodules.includes("scripts/gm-screen/gm-screen.js"), true);
+  assert.equal(manifest.esmodules.includes("scripts/gm-screen/exploration-creation-controls.js"), true);
+  assert.equal(manifest.esmodules.includes("scripts/gm-screen/tavern-shop-creation-controls.js"), true);
   assert.ok(!manifest.esmodules.includes("scripts/gm-screen/presentation-controls.js"));
 });

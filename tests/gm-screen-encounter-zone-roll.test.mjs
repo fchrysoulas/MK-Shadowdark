@@ -6,8 +6,12 @@ import {
   encounterZoneDieFormula,
   findEncounterZoneCell,
   getSceneEncounterZoneAuxiliaryTables,
+  getSceneEncounterZoneGrids,
+  GRID_COLLECTION_FLAG,
   normalizeAuxiliaryTables,
+  normalizeEncounterZoneGrids,
   renderEncounterAuxiliaryTableSetup,
+  renderEncounterZoneGroups,
   renderEncounterZoneRollCard,
   rollEncounterZone,
   setSceneEncounterZoneAuxiliaryTable,
@@ -34,6 +38,45 @@ test("Encounter Zone rolls use the grid die and selected terrain column", () => 
   assert.equal(findEncounterZoneCell(grid(), "forest", 7).cell.uuid, "RollTable.forest-high");
   assert.equal(findEncounterZoneCell(grid(), "RUINS", 4).cell.uuid, "RollTable.ruins-mid");
   assert.equal(findEncounterZoneCell(grid(), "Forest", 9), null);
+});
+
+test("Encounter Zones migrate into named collapsible groups with editable names", () => {
+  const zones = normalizeEncounterZoneGrids([
+    { id: "wilderness", title: "Andrik Zone", ...grid() },
+    { id: "wilderness", title: "Dungeon Zone", ...grid() },
+  ]);
+  assert.deepEqual(zones.map(zone => zone.id), ["wilderness", "wilderness-2"]);
+  assert.deepEqual(zones.map(zone => zone.title), ["Andrik Zone", "Dungeon Zone"]);
+
+  const edit = renderEncounterZoneGroups(zones, { mode: "edit" });
+  assert.equal((edit.match(/data-mk-encounter-zone-group(?=[\s=])/g) ?? []).length, 2);
+  assert.equal((edit.match(/data-grid-title(?=[\s=])/g) ?? []).length, 2);
+  assert.match(edit, /data-grid-add-zone/);
+  assert.match(edit, /value="Andrik Zone"/);
+  assert.match(edit, /value="Dungeon Zone"/);
+  assert.match(edit, /> Save\s*<\/button>/);
+  assert.doesNotMatch(edit, /View Grid/);
+  assert.equal((edit.match(/data-grid-remove-zone/g) ?? []).length, 2);
+
+  const view = renderEncounterZoneGroups(zones, { mode: "view" });
+  assert.equal((view.match(/<details class="mk-gm-encounter-zone-group"/g) ?? []).length, 2);
+  assert.equal((view.match(/data-grid-roll-zone/g) ?? []).length, 2);
+  assert.equal((view.match(/Andrik Zone/g) ?? []).length, 1);
+  assert.equal((view.match(/Dungeon Zone/g) ?? []).length, 1);
+  assert.match(view, /data-grid-add-zone/);
+});
+
+test("Encounter Zone collections keep legacy single-grid scenes readable", () => {
+  const scene = {
+    getFlag(_moduleId, key) {
+      return key === "encounterZoneGrid" ? { ...grid(), title: "Legacy Zone" } : null;
+    },
+  };
+  const zones = getSceneEncounterZoneGrids(scene, { fallback: false });
+  assert.equal(zones.length, 1);
+  assert.equal(zones[0].title, "Legacy Zone");
+  assert.equal(zones[0].id, "zone-1");
+  assert.notEqual(GRID_COLLECTION_FLAG, "encounterZoneGrid");
 });
 
 test("RollTable result metadata is safe when Foundry result sources are unavailable", () => {

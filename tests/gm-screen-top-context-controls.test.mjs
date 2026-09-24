@@ -3,7 +3,7 @@ import assert from "node:assert/strict";
 import fs from "node:fs";
 
 import {
-  activeRestRetainsChecks,
+  encounterZoneOptions,
   periodOptions,
   readTopContext,
 } from "../scripts/gm-screen/top-context-controls.js";
@@ -18,7 +18,8 @@ test("Terrain, Danger, and Period are the three top-bar context selectors", () =
   assert.match(runtime, /pressureCell\(root, "Terrain"\)/);
   assert.match(runtime, /pressureCell\(root, "Danger"\)/);
   assert.match(runtime, /pressureCell\(root, "Period"\)/);
-  assert.match(runtime, /terrainOptions\(view\.terrains, view\.stored\.terrain\)/);
+  assert.match(runtime, /terrainOptions\(terrainChoices, view\.stored\.terrain\)/);
+  assert.match(runtime, /terrainOptions\(terrains, currentTerrain\)/);
   assert.match(runtime, /dangerOptions\(view\.rules, view\.stored\.dangerLevel\)/);
 });
 
@@ -27,6 +28,17 @@ test("Period selector keeps Auto, Day, and Night choices", () => {
   assert.match(html, /value="auto"/);
   assert.match(html, /value="day" selected/);
   assert.match(html, /value="night"/);
+});
+
+test("Encounter selector lists named zones and keeps the selected zone", () => {
+  const html = encounterZoneOptions([
+    { id: "zone-ruins", title: "Ruins" },
+    { id: "zone-road", title: "Old Road" },
+  ], "zone-road");
+
+  assert.match(html, /value="zone-ruins"/);
+  assert.match(html, /value="zone-road" selected/);
+  assert.match(html, />Old Road</);
 });
 
 test("top-bar form reader returns only Terrain, Danger, and Period", () => {
@@ -58,28 +70,12 @@ test("top context auto-saves on selector changes and has no Save Context button"
   assert.doesNotMatch(runtime, /setInterval|setTimeout/);
 });
 
-test("Safe warns only when an active rest retains snapshotted encounter checks", () => {
-  const retained = {
-    workflow: { status: "checking" },
-    cadenceSnapshotted: true,
-    checkTurns: [2, 4, 6, 8],
-  };
-  assert.equal(activeRestRetainsChecks(retained, "safe"), true);
-  assert.equal(activeRestRetainsChecks(retained, "risky"), false);
-  assert.equal(activeRestRetainsChecks({ ...retained, checkTurns: [] }, "safe"), false);
-  assert.equal(activeRestRetainsChecks({ ...retained, workflow: { status: "completed" } }, "safe"), false);
-  assert.equal(activeRestRetainsChecks({ ...retained, workflow: { status: "interrupted" } }, "safe"), true);
+test("top context no longer carries a pending-rest encounter warning", () => {
+  assert.doesNotMatch(runtime, /Active rest keeps its original encounter schedule/);
+  assert.doesNotMatch(runtime, /data-mk-rest-snapshot-warning|getGroupRestState|activeRestRetainsChecks/);
 });
 
-test("Safe/rest mismatch is rendered as a compact persistent warning without a modal", () => {
-  assert.match(runtime, /Active rest keeps its original encounter schedule/);
-  assert.match(runtime, /data-mk-rest-snapshot-warning/);
-  assert.match(runtime, /getGroupRestState/);
-  assert.match(runtime, /resolveGmScreenGroup/);
-  assert.doesNotMatch(runtime, /confirmGmDialog|waitForGmDialog/);
-});
-
-test("top context runtime is excluded while the GM Screen is disabled", () => {
-  assert.equal(manifest.esmodules.includes("scripts/gm-screen/environment-controls.js"), false);
-  assert.equal(manifest.esmodules.includes("scripts/gm-screen/top-context-controls.js"), false);
+test("top context runtime is loaded with the production GM Screen", () => {
+  assert.equal(manifest.esmodules.includes("scripts/gm-screen/environment-controls.js"), true);
+  assert.equal(manifest.esmodules.includes("scripts/gm-screen/top-context-controls.js"), true);
 });

@@ -1,11 +1,16 @@
 import { waitForGmDialog } from "../libs/dialog-v2.js";
 import {
-  CORE_BOOK_TITLE,
-  npcSourceStatus,
+  linkedNpcTraitStatus,
+  NPC_ABILITY_KEYS,
+  NPC_ABILITY_LABELS,
+  npcAbilityModifier,
   rollNpcProfileFromSource,
 } from "./npc-source-tables.js";
+import {
+  getSceneNpcNameComposition,
+  getSceneNpcTraitTables,
+} from "./npc-name-compositions.js";
 
-const MODULE_ID = "mk-shadowdark";
 const DEFAULT_NPC_NAME = "New NPC";
 const NPC_PROFILE_NAME = "NPC Profile";
 
@@ -37,32 +42,83 @@ function configuredDocumentClass(baseClass) {
   return baseClass?.implementation ?? baseClass ?? null;
 }
 
+function currentScene() {
+  return globalThis.canvas?.scene ?? globalThis.game?.scenes?.current ?? null;
+}
+
 const NPC_PROFILE_FIELDS = Object.freeze([
+  ["Name", "name"],
+  ["Identifier", "identifier"],
+  ["Features", "features"],
   ["Ancestry", "ancestry"],
   ["Alignment", "alignment"],
   ["Age", "age"],
   ["Wealth", "wealth"],
-  ["Appearance", "appearance"],
-  ["Does", "does"],
-  ["Secret", "secret"],
   ["Occupation", "occupation"],
-  ["Name", "name"],
 ]);
 
 function npcProfileFields(profile) {
   return NPC_PROFILE_FIELDS.map(([label, key]) => ({
     label,
-    value: String(profile?.[key] ?? ""),
+    value: Array.isArray(profile?.[key])
+      ? profile[key].join("; ")
+      : String(profile?.[key] ?? ""),
   }));
 }
 
+function numericValue(value) {
+  if (value === undefined || value === null || value === "") return null;
+  const number = Number(value);
+  return Number.isFinite(number) ? number : null;
+}
+
+function npcAbilityFields(profile) {
+  return NPC_ABILITY_KEYS.map(key => {
+    const ability = profile?.abilities?.[key] ?? {};
+    const score = numericValue(ability.score ?? ability.value);
+    const roll = numericValue(ability.roll ?? profile?.rolls?.abilities?.[key] ?? score);
+    const modifierValue = numericValue(
+      ability.modifier
+      ?? ability.mod
+      ?? profile?.rolls?.abilityModifiers?.[key],
+    );
+    const modifier = modifierValue ?? npcAbilityModifier(score);
+    if (score === null && roll === null && modifier === null) return null;
+    return {
+      key,
+      label: ability.label ?? NPC_ABILITY_LABELS[key],
+      formula: ability.formula ?? "3d6",
+      roll,
+      score,
+      modifier,
+    };
+  }).filter(Boolean);
+}
+
+function formatModifier(value) {
+  const number = numericValue(value);
+  if (number === null) return "";
+  return number > 0 ? `+${number}` : String(number);
+}
+
 function npcProfileDescription(profile) {
-  return [
+  const sections = [
     `<h2>${escapeHtml(NPC_PROFILE_NAME)}</h2>`,
     ...npcProfileFields(profile).map(({ label, value }) => (
       `<p><strong>${escapeHtml(label)}:</strong> ${escapeHtml(value)}</p>`
     )),
-  ].join("\n");
+  ];
+  const abilities = npcAbilityFields(profile);
+  if (abilities.length) {
+    sections.push(
+      "<h2>Ability Scores</h2>",
+      ...abilities.map(ability => (
+        `<p><strong>${escapeHtml(ability.label)} (${escapeHtml(ability.key.toUpperCase())}):</strong> ${escapeHtml(ability.score ?? "")} `
+        + `(${escapeHtml(formatModifier(ability.modifier))})</p>`
+      )),
+    );
+  }
+  return sections.join("\n");
 }
 
 function buildNpcActorData(name = DEFAULT_NPC_NAME, profile = null) {
@@ -70,7 +126,20 @@ function buildNpcActorData(name = DEFAULT_NPC_NAME, profile = null) {
     name: String(name ?? "").trim() || DEFAULT_NPC_NAME,
     type: "NPC",
   };
-  if (profile) data.system = { notes: npcProfileDescription(profile) };
+  if (profile) {
+    const system = { notes: npcProfileDescription(profile) };
+    const abilities = Object.fromEntries(
+      npcAbilityFields(profile)
+        .map(ability => {
+          const values = {};
+          if (ability.modifier !== null) values.mod = ability.modifier;
+          return [ability.key, values];
+        })
+        .filter(([, values]) => Object.keys(values).length > 0),
+    );
+    if (Object.keys(abilities).length) system.abilities = abilities;
+    data.system = system;
+  }
   return data;
 }
 
@@ -79,11 +148,16 @@ function npcGeneratorDialogContent(profile) {
     <div class="mk-gm-create-document-form mk-gm-npc-generator-form">
       <div class="form-group">
         <label>NPC Name</label>
-        <input type="text" name="name" value="${escapeHtml(profile.name)}" autofocus autocomplete="off">
+        <input type="text" name="name" value="${escapeHtml(profile.name)}" required autofocus autocomplete="off">
       </div>
       <dl class="mk-gm-data-list">
         ${npcProfileFields(profile).map(({ label, value }) => `<div><dt>${escapeHtml(label)}</dt><dd>${escapeHtml(value)}</dd></div>`).join("\n        ")}
       </dl>
+      ${npcAbilityFields(profile).length ? `
+      <h3>Ability Scores</h3>
+      <dl class="mk-gm-data-list mk-gm-npc-ability-list">
+        ${npcAbilityFields(profile).map(ability => `<div><dt>${escapeHtml(ability.key.toUpperCase())}</dt><dd>${escapeHtml(ability.score ?? "")} (${escapeHtml(formatModifier(ability.modifier))})</dd></div>`).join("\n        ")}
+      </dl>` : ""}
     </div>
   `;
 }
@@ -92,9 +166,11 @@ async function promptForGeneratedNpc({
   rollProfile = rollNpcProfileFromSource,
   sourceStatus = null,
   tables = globalThis.game?.tables,
+  nameComposition = null,
+  traitTables = null,
 } = {}) {
-  let profile = await rollProfile({ status: sourceStatus, tables });
-  if (!profile) return { mode: "missing-source" };
+  let profile = await rollProfile({ status: sourceStatus, tables, nameComposition, traitTables });
+  if (!profile) return { mode: "missing-linked-tables" };
 
   while (true) {
     const choice = await waitForGmDialog({
@@ -126,90 +202,26 @@ async function promptForGeneratedNpc({
 
     if (!choice || choice.action === "cancel") return null;
     if (choice.action === "reroll") {
-      profile = await rollProfile({ status: sourceStatus, tables: globalThis.game?.tables ?? tables });
-      if (!profile) return { mode: "missing-source" };
+      profile = await rollProfile({
+        status: sourceStatus,
+        tables: globalThis.game?.tables ?? tables,
+        nameComposition,
+        traitTables,
+      });
+      if (!profile) return { mode: "missing-linked-tables" };
+      continue;
+    }
+    const name = String(choice.name ?? "").trim();
+    if (!name) {
+      globalThis.ui?.notifications?.warn?.("NPC Name is required.");
       continue;
     }
     return {
       mode: "generated",
       profile,
-      name: String(choice.name ?? "").trim() || profile.name || DEFAULT_NPC_NAME,
+      name,
     };
   }
-}
-
-function missingNpcSourceDialogContent(status) {
-  const missing = status?.missing ?? [];
-  return `
-    <div class="mk-gm-create-document-form">
-      <p>The imported <strong>${escapeHtml(CORE_BOOK_TITLE)}</strong> NPC RollTables are required for generated NPCs.</p>
-      ${missing.length ? `<p>Missing: ${missing.map(escapeHtml).join(", ")}.</p>` : ""}
-      <p class="hint">Import or update your owned Core v4.9 Markdown transcription, or create a blank NPC.</p>
-    </div>
-  `;
-}
-
-async function promptForMissingNpcSource(status) {
-  return waitForGmDialog({
-    title: "NPC Source Tables Required",
-    content: missingNpcSourceDialogContent(status),
-    buttons: [
-      {
-        action: "import",
-        icon: '<i class="fas fa-file-import"></i>',
-        label: "Import / Update Source Tables",
-        default: true,
-        callback: () => "import",
-      },
-      {
-        action: "blank",
-        icon: '<i class="fas fa-user-plus"></i>',
-        label: "Create Blank NPC",
-        callback: () => "blank",
-      },
-      {
-        action: "cancel",
-        icon: '<i class="fas fa-xmark"></i>',
-        label: "Cancel",
-        callback: () => "cancel",
-      },
-    ],
-    close: () => "cancel",
-  });
-}
-
-async function promptForBlankNpcName() {
-  const result = await waitForGmDialog({
-    title: "Create Blank NPC",
-    content: `<div class="mk-gm-create-document-form"><div class="form-group"><label>NPC Name</label><input type="text" name="name" value="${DEFAULT_NPC_NAME}" autofocus autocomplete="off"></div></div>`,
-    buttons: [
-      {
-        action: "create",
-        icon: '<i class="fas fa-user-plus"></i>',
-        label: "Create",
-        default: true,
-        callback: (_event, button) => dialogName(button.form),
-      },
-      {
-        action: "cancel",
-        icon: '<i class="fas fa-xmark"></i>',
-        label: "Cancel",
-        callback: () => null,
-      },
-    ],
-    close: () => null,
-  });
-  if (result === null || result === undefined) return null;
-  return String(result).trim() || DEFAULT_NPC_NAME;
-}
-
-async function openSourceTableImporter() {
-  const api = globalThis.game?.modules?.get?.(MODULE_ID)?.api?.sourceTables;
-  if (typeof api?.openImporter !== "function") {
-    globalThis.ui?.notifications?.warn?.("Source Table Importer is unavailable.");
-    return null;
-  }
-  return api.openImporter();
 }
 
 async function createNpcActor({ name, profile = null } = {}) {
@@ -226,52 +238,44 @@ async function createNpcActor({ name, profile = null } = {}) {
 
 async function createSourceDrivenNpc({
   tables = globalThis.game?.tables,
-  promptMissingSource = promptForMissingNpcSource,
-  importSources = openSourceTableImporter,
+  scene = currentScene(),
+  nameComposition = null,
   promptGenerated = promptForGeneratedNpc,
-  promptBlank = promptForBlankNpcName,
 } = {}) {
   if (!globalThis.game?.user?.isGM) {
     globalThis.ui?.notifications?.warn?.("Only the GM can create NPCs.");
     return null;
   }
 
-  let status = npcSourceStatus(tables);
-  if (!status.available) {
-    const missingChoice = await promptMissingSource(status);
-    if (!missingChoice || missingChoice === "cancel") return null;
-    if (missingChoice === "blank") {
-      const name = await promptBlank();
-      return name ? createNpcActor({ name }) : null;
-    }
-    await importSources();
-    status = npcSourceStatus(globalThis.game?.tables ?? tables);
-    if (!status.available) {
-      globalThis.ui?.notifications?.warn?.("Required Core NPC RollTables are still unavailable after import.");
-      return null;
-    }
-  }
+  const traitTables = getSceneNpcTraitTables(scene);
+  const resolvedTables = globalThis.game?.tables ?? tables;
+  const status = linkedNpcTraitStatus(resolvedTables, { traitTables });
 
-  const generated = await promptGenerated({ sourceStatus: status, tables: globalThis.game?.tables ?? tables });
+  const composition = nameComposition ?? getSceneNpcNameComposition(scene);
+
+  const generated = await promptGenerated({
+    sourceStatus: status,
+    tables: resolvedTables,
+    nameComposition: composition,
+    traitTables,
+  });
   if (!generated || generated.mode !== "generated") return null;
   return createNpcActor({ name: generated.name, profile: generated.profile });
 }
 
 export {
-  MODULE_ID,
   DEFAULT_NPC_NAME,
   NPC_PROFILE_NAME,
+  currentScene,
   escapeHtml,
   configuredDocumentClass,
   npcProfileFields,
+  npcAbilityFields,
+  formatModifier,
   npcProfileDescription,
   buildNpcActorData,
   npcGeneratorDialogContent,
   promptForGeneratedNpc,
-  missingNpcSourceDialogContent,
-  promptForMissingNpcSource,
-  promptForBlankNpcName,
-  openSourceTableImporter,
   createNpcActor,
   createSourceDrivenNpc,
 };

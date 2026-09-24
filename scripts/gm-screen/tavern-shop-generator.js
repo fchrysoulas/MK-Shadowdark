@@ -8,6 +8,7 @@ import {
   shopSourceStatus,
   tavernSourceStatus,
 } from "./tavern-shop-source-tables.js";
+import { currentScene } from "./tavern-generator-settings.js";
 
 const MODULE_ID = "mk-shadowdark";
 const DEFAULT_TAVERN_NAME = "New Tavern";
@@ -23,6 +24,48 @@ function escapeHtml(value) {
     '"': "&quot;",
     "'": "&#39;",
   })[character]);
+}
+
+function decodeHtmlEntities(value) {
+  const text = String(value ?? "");
+  if (!text.includes("&")) return text;
+
+  const textarea = globalThis.document?.createElement?.("textarea");
+  if (textarea) {
+    textarea.innerHTML = text;
+    return textarea.value;
+  }
+
+  return text
+    .replace(/&amp;/gi, "&")
+    .replace(/&lt;/gi, "<")
+    .replace(/&gt;/gi, ">")
+    .replace(/&quot;/gi, '"')
+    .replace(/&apos;/gi, "'")
+    .replace(/&#(\d+);/g, (_match, code) => {
+      const point = Number(code);
+      return Number.isInteger(point) && point >= 0 && point <= 0x10ffff
+        ? String.fromCodePoint(point)
+        : _match;
+    })
+    .replace(/&#x([\da-f]+);/gi, (_match, code) => {
+      const point = Number.parseInt(code, 16);
+      return Number.isInteger(point) && point >= 0 && point <= 0x10ffff
+        ? String.fromCodePoint(point)
+        : _match;
+    });
+}
+
+function journalText(value) {
+  return escapeHtml(decodeHtmlEntities(value));
+}
+
+function tavernDebugEnabled() {
+  try {
+    return Boolean(globalThis.game?.settings?.get?.(MODULE_ID, "gmScreenTavernDebug"));
+  } catch (_error) {
+    return false;
+  }
 }
 
 function dialogRoot(html) {
@@ -104,10 +147,32 @@ function sourceLabel(result) {
   return `${escapeHtml(result?.sourceBookTitle || CORE_BOOK_TITLE)}${pages.length ? ` · PDF p. ${escapeHtml(pages.join(", "))}` : ""}`;
 }
 
+function sourceRollFormula(result, key, fallback = "die") {
+  return result?.sources?.[key]?.formulaRaw
+    || result?.sources?.[key]?.formula
+    || fallback;
+}
+
+function tavernIdentityDialogRows(result) {
+  if (result?.sourceMode === "linked") {
+    return [
+      `<div><dt>Wealth · ${escapeHtml(sourceRollFormula(result, "wealth"))} ${escapeHtml(result?.rolls?.wealth)}</dt><dd>${escapeHtml(result?.wealthLabel || result?.qualityLabel)}</dd></div>`,
+      `<div><dt>First Part · ${escapeHtml(sourceRollFormula(result, "firstPart"))} ${escapeHtml(result?.rolls?.firstPart)}</dt><dd>${escapeHtml(result?.nameParts?.first)}</dd></div>`,
+      `<div><dt>Second Part · ${escapeHtml(sourceRollFormula(result, "secondPart"))} ${escapeHtml(result?.rolls?.secondPart)}</dt><dd>${escapeHtml(result?.nameParts?.second)}</dd></div>`,
+      `<div><dt>Known For · ${escapeHtml(sourceRollFormula(result, "knownFor"))} ${escapeHtml(result?.rolls?.knownFor)}</dt><dd>${escapeHtml(result?.knownFor)}</dd></div>`,
+    ].join("");
+  }
+  return [
+    `<div><dt>Wealth</dt><dd>${escapeHtml(result?.wealthLabel || result?.qualityLabel)}</dd></div>`,
+    `<div><dt>Identity · d20 ${escapeHtml(result?.rolls?.identity)}</dt><dd>${escapeHtml(result?.name)}</dd></div>`,
+    `<div><dt>Known For · same d20</dt><dd>${escapeHtml(result?.knownFor)}</dd></div>`,
+  ].join("");
+}
+
 function tavernGeneratorDialogContent(result) {
   const foods = (result?.foods ?? []).map(food => `
     <div>
-      <dt>${escapeHtml(food.tierLabel)} Food · d12 ${escapeHtml(food.roll)}</dt>
+      <dt>${escapeHtml(food.tierLabel)} Food · ${escapeHtml(food.formula || "die")} ${escapeHtml(food.roll)}</dt>
       <dd>${escapeHtml(food.item)} · ${escapeHtml(food.priceRoll)} ${escapeHtml(food.currency)} <small>(${escapeHtml(food.priceFormula)})</small></dd>
     </div>
   `).join("");
@@ -122,9 +187,7 @@ function tavernGeneratorDialogContent(result) {
       </div>
       <p class="mk-gm-secondary">${sourceLabel(result)}</p>
       <dl class="mk-gm-data-list">
-        <div><dt>Quality</dt><dd>${escapeHtml(result?.qualityLabel)}</dd></div>
-        <div><dt>Identity · d20 ${escapeHtml(result?.rolls?.identity)}</dt><dd>${escapeHtml(result?.name)}</dd></div>
-        <div><dt>Known For · same d20</dt><dd>${escapeHtml(result?.knownFor)}</dd></div>
+        ${tavernIdentityDialogRows(result)}
         ${foods}
         ${drinks}
       </dl>
@@ -156,6 +219,7 @@ async function promptForGeneratedEstablishment({
   kind,
   quality,
   sourceStatus,
+  scene = currentScene(),
   tables = globalThis.game?.tables,
   rollTavern = rollTavernFromSource,
   rollShop = rollShopFromSource,
@@ -163,7 +227,7 @@ async function promptForGeneratedEstablishment({
   const isShop = kind === "shop";
   const roll = isShop ? rollShop : rollTavern;
   const label = isShop ? "Shop" : "Tavern";
-  let generated = await roll({ quality, status: sourceStatus, tables });
+  let generated = await roll({ quality, status: sourceStatus, tables, scene });
   if (!generated) return { mode: "missing-source" };
 
   while (true) {
@@ -200,6 +264,7 @@ async function promptForGeneratedEstablishment({
         quality,
         status: sourceStatus,
         tables: globalThis.game?.tables ?? tables,
+        scene,
       });
       if (!generated) return { mode: "missing-source" };
       continue;
@@ -291,30 +356,90 @@ async function openSourceTableImporter() {
   return api.openImporter();
 }
 
-function tavernPageContent(result, name) {
-  if (!result) return "<h2>GM Notes</h2><p></p>";
+function tavernIdentityJournalRows(result) {
+  if (result?.sourceMode === "linked") {
+    return [
+      `<li><strong>Wealth:</strong> ${journalText(sourceRollFormula(result, "wealth"))} ${journalText(result?.rolls?.wealth)} — ${journalText(result?.wealthLabel || result?.qualityLabel)}</li>`,
+      `<li><strong>First Part:</strong> ${journalText(sourceRollFormula(result, "firstPart"))} ${journalText(result?.rolls?.firstPart)} — ${journalText(result?.nameParts?.first)}</li>`,
+      `<li><strong>Second Part:</strong> ${journalText(sourceRollFormula(result, "secondPart"))} ${journalText(result?.rolls?.secondPart)} — ${journalText(result?.nameParts?.second)}</li>`,
+      `<li><strong>Known For:</strong> ${journalText(sourceRollFormula(result, "knownFor"))} ${journalText(result?.rolls?.knownFor)} — ${journalText(result?.knownFor)}</li>`,
+    ].join("");
+  }
+  return [
+    `<li><strong>Wealth:</strong> ${journalText(result?.wealthLabel || result?.qualityLabel)}</li>`,
+    `<li><strong>Identity roll:</strong> d20 ${journalText(result?.rolls?.identity)} — ${journalText(result?.name)}</li>`,
+    `<li><strong>Known For:</strong> same d20 — ${journalText(result?.knownFor)}</li>`,
+  ].join("");
+}
+
+function tavernDebugJournalContent(result) {
   const pages = sourcePages(result);
-  const foods = result.foods.map(food => (
-    `<li><strong>${escapeHtml(food.tierLabel)}</strong> · d12 ${escapeHtml(food.roll)}: ${escapeHtml(food.item)} — ${escapeHtml(food.priceRoll)} ${escapeHtml(food.currency)} (${escapeHtml(food.priceFormula)})</li>`
+  const foods = (result?.foods ?? []).map(food => (
+    `<li><strong>${journalText(food.tierLabel)} Food:</strong> ${journalText(food.formula || "die")} ${journalText(food.roll)} — ${journalText(food.item)} · ${journalText(food.priceRoll)} ${journalText(food.currency)} (${journalText(food.priceFormula)})</li>`
   )).join("");
-  const drinks = result.drinks.map(drink => (
-    `<li><strong>${escapeHtml(drink.formula)} = ${escapeHtml(drink.roll)}</strong>: ${escapeHtml(drink.details)}</li>`
+  const drinks = (result?.drinks ?? []).map(drink => (
+    `<li><strong>Drink:</strong> ${journalText(drink.formula)} = ${journalText(drink.roll)} — ${journalText(drink.details)}</li>`
   )).join("");
   return `
-    <h1>${escapeHtml(name)}</h1>
-    <p><strong>Source:</strong> ${escapeHtml(result.sourceBookTitle || CORE_BOOK_TITLE)}${pages.length ? ` · PDF p. ${escapeHtml(pages.join(", "))}` : ""}</p>
-    <h2>Shadowdark Tavern</h2>
-    <ul>
-      <li><strong>Quality:</strong> ${escapeHtml(result.qualityLabel)}</li>
-      <li><strong>Identity roll:</strong> d20 ${escapeHtml(result.rolls.identity)}</li>
-      <li><strong>Known For:</strong> ${escapeHtml(result.knownFor)}</li>
-    </ul>
-    <h3>Food</h3>
-    <ul>${foods}</ul>
-    <h3>Drinks</h3>
-    <ul>${drinks}</ul>
-    <h2>GM Notes</h2>
-    <p></p>
+    <section class="mk-gm-tavern-journal-section mk-gm-tavern-journal-debug">
+      <h2><i class="fas fa-bug" aria-hidden="true"></i> Roll Details</h2>
+      <div class="mk-gm-tavern-journal-card">
+        <p><strong>Source:</strong> ${journalText(result?.sourceBookTitle || CORE_BOOK_TITLE)}${pages.length ? ` · PDF p. ${journalText(pages.join(", "))}` : ""}</p>
+        <ul>
+          ${tavernIdentityJournalRows(result)}
+          ${foods}
+          ${drinks}
+        </ul>
+      </div>
+    </section>
+  `.trim();
+}
+
+function tavernPageContent(result, name, { debug = tavernDebugEnabled() } = {}) {
+  if (!result) return "<h2>GM Notes</h2><p></p>";
+  const foods = (result.foods ?? []).map(food => (
+    `<li><strong>${journalText(food.tierLabel)}:</strong> ${journalText(food.item)} <span>— ${journalText(food.priceRoll)} ${journalText(food.currency)}</span></li>`
+  )).join("");
+  const drinks = (result.drinks ?? []).map(drink => (
+    `<li>${journalText(drink.details)}</li>`
+  )).join("");
+  const quality = String(result.wealthLabel || result.qualityLabel || "unknown").trim().toLowerCase();
+  const knownFor = String(result.knownFor || "nothing in particular").trim() || "nothing in particular";
+  return `
+    <div class="mk-gm-tavern-journal">
+      <h1>${journalText(name)}</h1>
+      <section class="mk-gm-tavern-journal-section mk-gm-tavern-journal-overview">
+        <h2><i class="fas fa-beer-mug-empty" aria-hidden="true"></i> Tavern Overview</h2>
+        <div class="mk-gm-tavern-journal-card">
+          <p><strong>${journalText(name)}</strong> is a <strong>${journalText(quality)}</strong> tavern known for <strong>${journalText(knownFor)}</strong>.</p>
+        </div>
+      </section>
+      ${debug ? tavernDebugJournalContent(result) : ""}
+      <section class="mk-gm-tavern-journal-section mk-gm-tavern-journal-menu">
+        <h2><i class="fas fa-utensils" aria-hidden="true"></i> Food</h2>
+        <div class="mk-gm-tavern-journal-card">
+          <ul>${foods || "<li>None listed.</li>"}</ul>
+        </div>
+      </section>
+      <section class="mk-gm-tavern-journal-section mk-gm-tavern-journal-menu">
+        <h2><i class="fas fa-wine-glass" aria-hidden="true"></i> Drinks</h2>
+        <div class="mk-gm-tavern-journal-card">
+          <ul>${drinks || "<li>None listed.</li>"}</ul>
+        </div>
+      </section>
+      <section class="mk-gm-tavern-journal-section mk-gm-tavern-journal-notes">
+        <h2><i class="fas fa-scroll" aria-hidden="true"></i> GM Notes</h2>
+        <div class="mk-gm-tavern-journal-card">
+          <h3>Current Situation</h3>
+          <p>Add current events, conflicts, complications, or other information that becomes relevant during play.</p>
+          <hr>
+          <p><strong>Proprietor:</strong> <em>Not defined</em></p>
+          <p><strong>Staff:</strong> <em>Not defined</em></p>
+          <p><strong>Important Patrons:</strong> <em>Not defined</em></p>
+          <p><strong>Rumors:</strong> <em>Not defined</em></p>
+        </div>
+      </section>
+    </div>
   `.trim();
 }
 
@@ -376,6 +501,7 @@ async function createEstablishmentJournal({ kind, name, result = null } = {}) {
 
 async function createSourceDrivenEstablishment(kind, {
   tables = globalThis.game?.tables,
+  scene = currentScene(),
   promptMissing = promptForMissingSource,
   importSources = openSourceTableImporter,
   promptQuality = promptForQuality,
@@ -390,7 +516,11 @@ async function createSourceDrivenEstablishment(kind, {
   }
 
   const statusFor = isShop ? shopSourceStatus : tavernSourceStatus;
-  let status = statusFor(tables);
+  let status = isShop ? statusFor(tables) : statusFor(tables, { scene });
+  if (!status.available && !isShop && status.mode === "linked") {
+    globalThis.ui?.notifications?.warn?.("Assign all Tavern Generator RollTables in GM Screen Settings.");
+    return null;
+  }
   if (!status.available) {
     const missingChoice = await promptMissing(kind, status);
     if (!missingChoice || missingChoice === "cancel") return null;
@@ -399,20 +529,25 @@ async function createSourceDrivenEstablishment(kind, {
       return name ? createEstablishmentJournal({ kind, name }) : null;
     }
     await importSources();
-    status = statusFor(globalThis.game?.tables ?? tables);
+    status = isShop
+      ? statusFor(globalThis.game?.tables ?? tables)
+      : statusFor(globalThis.game?.tables ?? tables, { scene });
     if (!status.available) {
       globalThis.ui?.notifications?.warn?.(`Required Core ${label} RollTables are still unavailable after import.`);
       return null;
     }
   }
 
-  const quality = await promptQuality(kind);
-  if (!quality) return null;
+  const quality = !isShop && status.mode === "linked"
+    ? null
+    : await promptQuality(kind);
+  if ((isShop || status.mode !== "linked") && !quality) return null;
   const generated = await promptGenerated({
     kind,
     quality,
     sourceStatus: status,
     tables: globalThis.game?.tables ?? tables,
+    scene,
   });
   if (!generated || generated.mode !== "generated") return null;
   return createEstablishmentJournal({ kind, name: generated.name, result: generated.result });

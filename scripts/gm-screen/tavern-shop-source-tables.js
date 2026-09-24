@@ -6,6 +6,11 @@ import {
   tableResultText,
 } from "../source-tables/source-table-service.js";
 import { sourceTableFlag } from "../source-tables/source-table-importer.js";
+import {
+  currentScene,
+  getSceneTavernGeneratorTables,
+  tavernGeneratorTableStatus,
+} from "./tavern-generator-settings.js";
 
 const CORE_BOOK_ID = "shadowdark-core-v4.9";
 const CORE_BOOK_TITLE = "Shadowdark RPG Core Rulebook v4.9";
@@ -30,6 +35,13 @@ const TAVERN_QUALITIES = Object.freeze({
     foodTiers: Object.freeze(["standard", "standard", "wealthy", "wealthy"]),
   }),
 });
+
+const TAVERN_FOOD_PRICE_SPECS = Object.freeze({
+  poor: Object.freeze({ formula: "1d4", currency: "cp" }),
+  standard: Object.freeze({ formula: "1d6", currency: "sp" }),
+  wealthy: Object.freeze({ formula: "1d8", currency: "gp" }),
+});
+const MAX_UNIQUE_RESULT_ATTEMPTS = 100;
 
 const SHOP_QUALITIES = Object.freeze({
   poor: Object.freeze({ id: "poor", label: "Poor" }),
@@ -57,7 +69,9 @@ function normalize(value) {
 
 function sourceColumns(table) {
   const metadata = sourceTableFlag(table) ?? {};
-  return Array.isArray(metadata.columns) ? metadata.columns : [];
+  if (Array.isArray(metadata.columns) && metadata.columns.length) return metadata.columns;
+  const firstResult = collectionValues(table?.results)[0];
+  return Object.keys(parseLabeledResultText(tableResultText(firstResult)));
 }
 
 function findCoreTable({ nameIncludes, requiredColumns, tables = globalThis.game?.tables } = {}) {
@@ -101,7 +115,18 @@ function findInterestingCustomerTable(tables = globalThis.game?.tables) {
   return findCoreTable({ nameIncludes: "interesting customer", requiredColumns: SHOP_SOURCE_COLUMNS.customer, tables });
 }
 
-function tavernSourceStatus(tables = globalThis.game?.tables) {
+function tavernSourceStatus(tables = globalThis.game?.tables, {
+  scene = currentScene(),
+} = {}) {
+  const assignments = getSceneTavernGeneratorTables(scene);
+  if (Object.entries(assignments)
+    .some(([key, value]) => key !== "schema" && Boolean(value))) {
+    return {
+      ...tavernGeneratorTableStatus(assignments, tables),
+      mode: "linked",
+    };
+  }
+
   const resolved = {
     generator: findTavernGeneratorTable(tables),
     food: findTavernFoodTable(tables),
@@ -113,7 +138,15 @@ function tavernSourceStatus(tables = globalThis.game?.tables) {
     drinks: "Drinks",
   };
   const missing = Object.entries(resolved).filter(([, table]) => !table).map(([key]) => labels[key]);
-  return { available: missing.length === 0, missing, tables: resolved };
+  return {
+    available: missing.length === 0,
+    configured: false,
+    mode: "legacy",
+    missing,
+    unavailable: [],
+    assignments,
+    tables: resolved,
+  };
 }
 
 function shopSourceStatus(tables = globalThis.game?.tables) {
@@ -186,9 +219,23 @@ function normalizeQuality(value, allowed = TAVERN_QUALITIES) {
   return allowed[key] ? key : "poor";
 }
 
+function normalizeTavernWealth(value) {
+  const key = normalize(value);
+  if (TAVERN_QUALITIES[key]) return key;
+  return ["poor", "standard", "wealthy"].find(wealth => key.includes(wealth)) ?? "";
+}
+
 function foodColumnForTier(table, tier) {
   const wanted = normalize(tier);
   return sourceColumns(table).find(column => normalize(column).startsWith(`${wanted} (`)) ?? "";
+}
+
+function tavernTierTableKey(family, tier) {
+  return `${family}${tier[0].toUpperCase()}${tier.slice(1)}`;
+}
+
+function foodPriceSpecForTier(tier) {
+  return TAVERN_FOOD_PRICE_SPECS[normalize(tier)] ?? null;
 }
 
 function foodPriceSpec(column) {
@@ -220,52 +267,176 @@ function tableProvenance(table) {
   };
 }
 
+function tableFormula(table, fallback = "die") {
+  const metadata = sourceTableFlag(table) ?? {};
+  return String(metadata.formulaRaw ?? table?.formula ?? fallback);
+}
+
+function generatorTextValue(draw, labels = []) {
+  const text = tableResultText(draw?.result);
+  const fields = parseLabeledResultText(text);
+  const wanted = labels.map(normalize);
+  const match = Object.entries(fields).find(([label]) => wanted.includes(normalize(label)));
+  return String(match?.[1] ?? text).trim();
+}
+
+async function rollUniqueResult({ draw, value, seen, label }) {
+  for (let attempt = 0; attempt < MAX_UNIQUE_RESULT_ATTEMPTS; attempt += 1) {
+    const candidate = await draw();
+    const resolved = String(value(candidate) ?? "").trim();
+    if (!resolved) continue;
+    const key = normalize(resolved).replace(/\s+/g, " ");
+    if (seen.has(key)) continue;
+    seen.add(key);
+    return { draw: candidate, value: resolved };
+  }
+  throw new Error(`${label} did not provide another unique result after ${MAX_UNIQUE_RESULT_ATTEMPTS} rolls.`);
+}
+
 async function rollTavernFromSource({
   quality = "poor",
   tables = globalThis.game?.tables,
+  scene = currentScene(),
   status = null,
   rollTable = rollImportedSourceTable,
   rollField = rollImportedSourceTableField,
   rollDice = rollFormula,
 } = {}) {
-  const source = status ?? tavernSourceStatus(tables);
+  const source = status ?? tavernSourceStatus(tables, { scene });
   if (!source.available) return null;
-  const qualityKey = normalizeQuality(quality, TAVERN_QUALITIES);
+
+  let qualityKey = "";
+  let name = "";
+  let firstPart = "";
+  let secondPart = "";
+  let knownFor = "";
+  const rolls = {};
+  const sources = {};
+  if (source.mode === "linked") {
+    const wealthDraw = await rollTable(source.tables.wealth);
+    const wealthResult = generatorTextValue(wealthDraw, ["Wealth", "Tavern Wealth", "Quality"]);
+    qualityKey = normalizeTavernWealth(wealthResult);
+    if (!qualityKey) throw new Error("The linked Wealth RollTable must resolve to Poor, Standard, or Wealthy.");
+    rolls.wealth = wealthDraw.total;
+    sources.wealth = tableProvenance(source.tables.wealth);
+
+    const firstPartDraw = await rollTable(source.tables.firstPart);
+    const secondPartDraw = await rollTable(source.tables.secondPart);
+    const knownForDraw = await rollTable(source.tables.knownFor);
+    firstPart = generatorTextValue(firstPartDraw, ["First Part", "Name"]);
+    secondPart = generatorTextValue(secondPartDraw, ["Second Part", "Name"]);
+    knownFor = generatorTextValue(knownForDraw, ["Known For"]);
+    name = [firstPart, secondPart].filter(Boolean).join(" ");
+    if (!name || !knownFor) throw new Error("The linked Tavern Generator RollTables could not resolve the name and Known For.");
+    rolls.firstPart = firstPartDraw.total;
+    rolls.secondPart = secondPartDraw.total;
+    rolls.knownFor = knownForDraw.total;
+    sources.firstPart = tableProvenance(source.tables.firstPart);
+    sources.secondPart = tableProvenance(source.tables.secondPart);
+    sources.knownFor = tableProvenance(source.tables.knownFor);
+  } else {
+    const identityDraw = await rollTable(source.tables.generator);
+    const identity = pairedGeneratorResult(identityDraw);
+    if (!identity.name || !identity.knownFor) throw new Error("The imported Tavern Generator could not resolve Name and Known For together.");
+    name = identity.name;
+    knownFor = identity.knownFor;
+    rolls.identity = identityDraw.total;
+    sources.generator = tableProvenance(source.tables.generator);
+  }
+
+  if (!qualityKey) qualityKey = normalizeQuality(quality, TAVERN_QUALITIES);
   const config = TAVERN_QUALITIES[qualityKey];
-
-  const identityDraw = await rollTable(source.tables.generator);
-  const identity = pairedGeneratorResult(identityDraw);
-  if (!identity.name || !identity.knownFor) throw new Error("The imported Tavern Generator could not resolve Name and Known For together.");
-
   const foods = [];
+  const seenFoods = new Set();
   for (const tier of config.foodTiers) {
-    const column = foodColumnForTier(source.tables.food, tier);
-    const priceSpec = foodPriceSpec(column);
-    if (!column || !priceSpec) throw new Error(`The imported Food table does not expose a priced ${tier} column.`);
-    const foodDraw = await rollField(source.tables.food, column);
+    const linked = source.mode === "linked";
+    const sourceKey = linked ? tavernTierTableKey("food", tier) : "food";
+    const foodTable = source.tables[sourceKey];
+    let foodDraw;
+    let item;
+    let priceSpec;
+    if (linked) {
+      const uniqueFood = await rollUniqueResult({
+        draw: () => rollTable(foodTable),
+        value: draw => generatorTextValue(draw, ["Food", `${tier} Food`, "Result", "Item"]),
+        seen: seenFoods,
+        label: `${TAVERN_QUALITIES[tier]?.label ?? tier} Food`,
+      });
+      foodDraw = uniqueFood.draw;
+      item = uniqueFood.value;
+      priceSpec = foodPriceSpecForTier(tier);
+    } else {
+      const column = foodColumnForTier(foodTable, tier);
+      priceSpec = foodPriceSpec(column);
+      if (!column || !priceSpec) throw new Error(`The imported Food table does not expose a priced ${tier} column.`);
+      const uniqueFood = await rollUniqueResult({
+        draw: () => rollField(foodTable, column),
+        value: draw => draw.value,
+        seen: seenFoods,
+        label: `${TAVERN_QUALITIES[tier]?.label ?? tier} Food`,
+      });
+      foodDraw = uniqueFood.draw;
+      item = uniqueFood.value;
+    }
     const priceRoll = await rollDice(priceSpec.formula);
-    if (!foodDraw.value) throw new Error(`The imported Food table could not resolve ${column}.`);
+    if (!item) throw new Error(`The ${linked ? "linked " : "imported "}${tier} Food table could not resolve a result.`);
+    if (linked) sources[sourceKey] = tableProvenance(foodTable);
     foods.push({
       tier,
       tierLabel: TAVERN_QUALITIES[tier]?.label ?? tier,
       roll: foodDraw.total,
-      item: foodDraw.value,
+      item,
+      formula: tableFormula(foodTable, "d12"),
       priceFormula: priceSpec.formula,
       priceRoll: priceRoll.total,
       currency: priceSpec.currency,
+      sourceKey,
     });
   }
 
   const drinks = [];
+  const seenDrinks = new Set();
+  const linked = source.mode === "linked";
+  const drinksSourceKey = linked ? tavernTierTableKey("drinks", qualityKey) : "drinks";
+  const drinksTable = source.tables[drinksSourceKey];
+  if (linked) sources[drinksSourceKey] = tableProvenance(drinksTable);
   for (let index = 0; index < config.drinks.count; index += 1) {
-    const drinkRoll = await rollDice(config.drinks.formula);
-    const result = findResultForTotal(source.tables.drinks, drinkRoll.total);
-    const details = tableResultText(result);
-    if (!details) throw new Error(`The imported Drinks table has no result for ${config.drinks.formula} total ${drinkRoll.total}.`);
+    let formula = config.drinks.formula;
+    let roll;
+    let details;
+    if (linked) {
+      const uniqueDrink = await rollUniqueResult({
+        draw: () => rollTable(drinksTable),
+        value: draw => generatorTextValue(draw, ["Drink", "Drinks", "Details", "Result"]),
+        seen: seenDrinks,
+        label: `${config.label} Drinks`,
+      });
+      const drinkDraw = uniqueDrink.draw;
+      formula = tableFormula(drinksTable, formula);
+      roll = drinkDraw.total;
+      details = uniqueDrink.value;
+    } else {
+      const uniqueDrink = await rollUniqueResult({
+        draw: async () => {
+          const drinkRoll = await rollDice(formula);
+          return {
+            drinkRoll,
+            result: findResultForTotal(drinksTable, drinkRoll.total),
+          };
+        },
+        value: candidate => tableResultText(candidate.result),
+        seen: seenDrinks,
+        label: `${config.label} Drinks`,
+      });
+      roll = uniqueDrink.draw.drinkRoll.total;
+      details = uniqueDrink.value;
+    }
+    if (!details) throw new Error(`The ${linked ? "linked " : "imported "}Drinks table could not resolve a result.`);
     drinks.push({
-      formula: config.drinks.formula,
-      roll: drinkRoll.total,
+      formula,
+      roll,
       details,
+      sourceKey: drinksSourceKey,
     });
   }
 
@@ -273,17 +444,29 @@ async function rollTavernFromSource({
     kind: "tavern",
     quality: qualityKey,
     qualityLabel: config.label,
-    name: identity.name,
-    knownFor: identity.knownFor,
-    rolls: { identity: identityDraw.total },
+    wealth: qualityKey,
+    wealthLabel: config.label,
+    name,
+    nameParts: source.mode === "linked"
+      ? { first: firstPart, second: secondPart }
+      : null,
+    knownFor,
+    rolls,
     foods,
     drinks,
     sources: {
-      generator: tableProvenance(source.tables.generator),
-      food: tableProvenance(source.tables.food),
-      drinks: tableProvenance(source.tables.drinks),
+      ...sources,
+      ...(source.mode === "linked"
+        ? {}
+        : {
+          food: tableProvenance(source.tables.food),
+          drinks: tableProvenance(source.tables.drinks),
+        }),
     },
-    sourceBookTitle: CORE_BOOK_TITLE,
+    sourceBookTitle: source.mode === "linked"
+      ? "Scene-linked Tavern Generator RollTables"
+      : CORE_BOOK_TITLE,
+    sourceMode: source.mode ?? "legacy",
   };
 }
 

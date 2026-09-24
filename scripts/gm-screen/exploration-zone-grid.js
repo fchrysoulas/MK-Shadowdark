@@ -1,9 +1,10 @@
 import { getSceneEnvironmentContext, setSceneEnvironmentContext } from "../libs/environment-context.js";
 import { sourceTableFlag } from "../source-tables/source-table-importer.js";
-import { APP_ID } from "./gm-screen.js";
+import { APP_ID, SETTINGS_APP_ID } from "./gm-screen.js";
 
 const MODULE_ID = "mk-shadowdark";
 const GRID_FLAG = "encounterZoneGrid";
+const GRID_COLLECTION_FLAG = "encounterZoneGrids";
 const ENCOUNTER_ZONE_FLAG = "encounterZoneTableUuid";
 const AUXILIARY_TABLE_FLAG = "encounterZoneAuxiliaryTables";
 const ENCOUNTER_DEBUG_SETTING = "gmScreenEncounterDebug";
@@ -185,6 +186,49 @@ function normalizeGrid(rawGrid) {
   };
 }
 
+function uniqueZoneId(value, used, fallbackIndex) {
+  const base = String(value ?? `zone-${fallbackIndex + 1}`)
+    .trim()
+    .replace(/[^a-zA-Z0-9_-]+/g, "-")
+    .replace(/^-+|-+$/g, "") || `zone-${fallbackIndex + 1}`;
+  let candidate = base;
+  let suffix = 2;
+  while (used.has(candidate)) {
+    candidate = `${base}-${suffix}`;
+    suffix += 1;
+  }
+  used.add(candidate);
+  return candidate;
+}
+
+function normalizeEncounterZoneEntry(rawZone, index, usedIds = new Set()) {
+  const rawGrid = rawZone?.grid && typeof rawZone.grid === "object"
+    ? { ...rawZone.grid, title: rawZone.title ?? rawZone.grid.title }
+    : rawZone;
+  const grid = normalizeGrid(rawGrid);
+  const title = String(rawZone?.title ?? grid.title ?? `Encounter Zone ${index + 1}`).trim()
+    || `Encounter Zone ${index + 1}`;
+
+  return {
+    ...grid,
+    id: uniqueZoneId(rawZone?.id ?? rawGrid?.id, usedIds, index),
+    title,
+  };
+}
+
+function normalizeEncounterZoneGrids(rawValue) {
+  const source = Array.isArray(rawValue)
+    ? rawValue
+    : Array.isArray(rawValue?.zones)
+      ? rawValue.zones
+      : rawValue && typeof rawValue === "object"
+        ? [rawValue]
+        : [];
+  const usedIds = new Set();
+  const zones = source.map((zone, index) => normalizeEncounterZoneEntry(zone, index, usedIds));
+  return zones.length ? zones : [normalizeEncounterZoneEntry(createDefaultGrid(), 0, usedIds)];
+}
+
 function isDiceColumn(value) {
   return /^\s*(?:\d*)d\d+(?:\s*,\s*(?:\d*)d\d+)?(?:\s*\+.*)?\s*$/i.test(String(value ?? ""));
 }
@@ -228,10 +272,34 @@ function gridFromZoneTable(table) {
   });
 }
 
-function getSceneEncounterZoneGrid(scene = currentScene()) {
-  const stored = getSceneFlag(scene, GRID_FLAG, null);
-  if (stored && typeof stored === "object" && !Array.isArray(stored)) return normalizeGrid(stored);
-  return gridFromZoneTable(sourceTableForScene(scene)) ?? createDefaultGrid();
+function getStoredEncounterZoneGrids(scene = currentScene()) {
+  const storedCollection = getSceneFlag(scene, GRID_COLLECTION_FLAG, null);
+  if (Array.isArray(storedCollection) && storedCollection.length) {
+    return normalizeEncounterZoneGrids(storedCollection);
+  }
+  if (Array.isArray(storedCollection?.zones) && storedCollection.zones.length) {
+    return normalizeEncounterZoneGrids(storedCollection.zones);
+  }
+
+  const storedGrid = getSceneFlag(scene, GRID_FLAG, null);
+  if (storedGrid && typeof storedGrid === "object" && !Array.isArray(storedGrid)) {
+    return normalizeEncounterZoneGrids([storedGrid]);
+  }
+
+  const sourceGrid = gridFromZoneTable(sourceTableForScene(scene));
+  return sourceGrid ? normalizeEncounterZoneGrids([sourceGrid]) : [];
+}
+
+function getSceneEncounterZoneGrids(scene = currentScene(), { fallback = true } = {}) {
+  const stored = getStoredEncounterZoneGrids(scene);
+  if (stored.length) return stored;
+  return fallback ? normalizeEncounterZoneGrids([createDefaultGrid()]) : [];
+}
+
+function getSceneEncounterZoneGrid(scene = currentScene(), zoneId = "") {
+  const zones = getSceneEncounterZoneGrids(scene);
+  const requestedId = String(zoneId ?? "").trim();
+  return zones.find(zone => requestedId && zone.id === requestedId) ?? zones[0];
 }
 
 function normalizeAuxiliaryTableList(value) {
@@ -339,7 +407,7 @@ function findEncounterZoneCell(grid, terrain, total) {
   };
 }
 
-async function saveSceneEncounterZoneGrid(grid, scene = currentScene(), {
+async function saveSceneEncounterZoneGrids(grids, scene = currentScene(), {
   user = globalThis.game?.user,
 } = {}) {
   if (!scene?.setFlag) return null;
@@ -348,10 +416,12 @@ async function saveSceneEncounterZoneGrid(grid, scene = currentScene(), {
     return null;
   }
 
-  const normalized = normalizeGrid(grid);
-  await scene.setFlag(MODULE_ID, GRID_FLAG, normalized);
+  const normalized = normalizeEncounterZoneGrids(grids);
+  await scene.setFlag(MODULE_ID, GRID_COLLECTION_FLAG, normalized);
+  // Keep the original single-grid flag in sync for older integrations.
+  await scene.setFlag(MODULE_ID, GRID_FLAG, normalized[0]);
 
-  const columns = gridColumnLabels(normalized);
+  const columns = [...new Set(normalized.flatMap(gridColumnLabels))];
   const environment = getSceneEnvironmentContext(scene);
   if (columns.length && !columns.includes(environment.terrain)) {
     await setSceneEnvironmentContext({
@@ -363,6 +433,34 @@ async function saveSceneEncounterZoneGrid(grid, scene = currentScene(), {
   return normalized;
 }
 
+async function saveSceneEncounterZoneGrid(grid, scene = currentScene(), {
+  user = globalThis.game?.user,
+  zoneId = "",
+} = {}) {
+  const zones = getSceneEncounterZoneGrids(scene);
+  const requestedId = String(zoneId ?? grid?.id ?? "").trim();
+  const index = zones.findIndex(zone => requestedId && zone.id === requestedId);
+  const next = [...zones];
+  if (index < 0) next[0] = grid;
+  else next[index] = { ...grid, id: zones[index].id };
+  return saveSceneEncounterZoneGrids(next, scene, { user });
+}
+
+async function removeSceneEncounterZone(zoneId, scene = currentScene(), {
+  user = globalThis.game?.user,
+} = {}) {
+  const zones = getSceneEncounterZoneGrids(scene);
+  if (zones.length <= 1) {
+    globalThis.ui?.notifications?.warn?.("Keep at least one Encounter Zone on the scene.");
+    return zones;
+  }
+
+  const normalizedId = String(zoneId ?? "").trim();
+  const next = zones.filter(zone => zone.id !== normalizedId);
+  if (next.length === zones.length) return zones;
+  return saveSceneEncounterZoneGrids(next, scene, { user });
+}
+
 function gmScreenApplication(application) {
   return Boolean(
     application
@@ -370,6 +468,9 @@ function gmScreenApplication(application) {
       application.id === APP_ID
       || application.options?.id === APP_ID
       || application.constructor?.DEFAULT_OPTIONS?.id === APP_ID
+      || application.id === SETTINGS_APP_ID
+      || application.options?.id === SETTINGS_APP_ID
+      || application.constructor?.DEFAULT_OPTIONS?.id === SETTINGS_APP_ID
     )
   );
 }
@@ -943,6 +1044,7 @@ async function createEncounterZoneRollJournal(data = {}) {
 
 async function rollEncounterZone(terrain, scene = currentScene(), {
   user = globalThis.game?.user,
+  zoneId = "",
 } = {}) {
   if (!user?.isGM) {
     globalThis.ui?.notifications?.warn?.("Only the GM can roll an Encounter Zone.");
@@ -955,7 +1057,14 @@ async function rollEncounterZone(terrain, scene = currentScene(), {
     return null;
   }
 
-  const grid = getSceneEncounterZoneGrid(scene);
+  const zones = getSceneEncounterZoneGrids(scene);
+  const requestedZoneId = String(zoneId ?? "").trim();
+  const terrainKey = selectedTerrain.toLowerCase();
+  const grid = zones.find(zone => requestedZoneId && zone.id === requestedZoneId)
+    ?? zones.find(zone => zone.columns.some(column => (
+      String(column?.label ?? "").trim().toLowerCase() === terrainKey
+    )))
+    ?? zones[0];
   const formula = encounterZoneDieFormula(grid);
   const RollClass = globalThis.Roll ?? globalThis.foundry?.dice?.Roll;
   if (!RollClass) {
@@ -985,6 +1094,8 @@ async function rollEncounterZone(terrain, scene = currentScene(), {
   const tableRoll = await drawRollTable(table, { displayChat: false });
   const auxiliaryRolls = await rollEncounterAuxiliaryTables(scene);
   const detail = {
+    zoneId: String(grid.id ?? ""),
+    zoneTitle: String(grid.title ?? "Encounter Zone"),
     terrain: selection.terrain,
     rowLabel: selection.row.label,
     rowRange: selection.range,
@@ -1009,7 +1120,7 @@ async function rollEncounterZone(terrain, scene = currentScene(), {
   };
 }
 
-function renderGridView(grid, { sourceTable = null } = {}) {
+function renderGridView(grid, { sourceTable = null, zoneId = "" } = {}) {
   const normalized = normalizeGrid(grid);
   const sourceHint = sourceTable
     ? `Loaded from ${sourceTable.name ?? "the selected Encounter Zone source"}.`
@@ -1019,10 +1130,12 @@ function renderGridView(grid, { sourceTable = null } = {}) {
     <div class="mk-gm-encounter-zone-editor" data-mk-encounter-zone-editor data-grid-mode="view">
       <div class="mk-gm-encounter-zone-heading">
         <div>
-          <strong>${gridInputValue(normalized.title)}</strong>
           <span>${escapeHtml(sourceHint)}</span>
         </div>
         <div class="mk-gm-encounter-zone-actions">
+          <button type="button" data-grid-roll-zone data-grid-zone-id="${gridInputValue(zoneId)}" title="Roll this Encounter Zone">
+            <i class="fas fa-dice-d20"></i> Roll Zone
+          </button>
           <button type="button" data-grid-toggle-mode data-grid-mode="view" title="Edit this Encounter Zone grid">
             <i class="fas fa-pen"></i> Edit Grid
           </button>
@@ -1055,8 +1168,13 @@ function renderGridView(grid, { sourceTable = null } = {}) {
   `;
 }
 
-function renderGridEditor(grid, { sourceTable = null, mode = "edit" } = {}) {
-  if (mode !== "edit") return renderGridView(grid, { sourceTable });
+function renderGridEditor(grid, {
+  sourceTable = null,
+  mode = "edit",
+  zoneId = "",
+  canRemove = false,
+} = {}) {
+  if (mode !== "edit") return renderGridView(grid, { sourceTable, zoneId });
 
   const normalized = normalizeGrid(grid);
   const removeColumnDisabled = normalized.columns.length <= 1 ? "disabled" : "";
@@ -1066,15 +1184,16 @@ function renderGridEditor(grid, { sourceTable = null, mode = "edit" } = {}) {
     : "Changes are staged locally until you save the grid.";
 
   return `
-    <div class="mk-gm-encounter-zone-editor" data-mk-encounter-zone-editor data-grid-title-value="${gridInputValue(normalized.title)}">
+    <div class="mk-gm-encounter-zone-editor" data-mk-encounter-zone-editor data-grid-zone-id="${gridInputValue(zoneId)}" data-grid-title-value="${gridInputValue(normalized.title)}">
       <div class="mk-gm-encounter-zone-heading">
-        <div>
-          <strong>${gridInputValue(normalized.title)}</strong>
+        <div class="mk-gm-encounter-zone-title-field">
+          <label for="mk-encounter-zone-title-${gridInputValue(zoneId || "new")}">Encounter Zone</label>
+          <input id="mk-encounter-zone-title-${gridInputValue(zoneId || "new")}" type="text" data-grid-title value="${gridInputValue(normalized.title)}" aria-label="Encounter Zone name">
           <span>${escapeHtml(sourceHint)}</span>
         </div>
         <div class="mk-gm-encounter-zone-actions">
-          <button type="button" data-grid-toggle-mode data-grid-mode="edit" title="View this Encounter Zone grid">
-            <i class="fas fa-eye"></i> View Grid
+          <button type="button" data-grid-toggle-mode data-grid-mode="edit" title="Save this Encounter Zone and leave edit mode">
+            <i class="fas fa-floppy-disk"></i> Save
           </button>
           <button type="button" data-grid-add-column title="Add an encounter zone column">
             <i class="fas fa-table-columns"></i> Add Column
@@ -1082,8 +1201,8 @@ function renderGridEditor(grid, { sourceTable = null, mode = "edit" } = {}) {
           <button type="button" data-grid-add-row title="Add an encounter zone row">
             <i class="fas fa-plus"></i> Add Row
           </button>
-          <button type="button" data-grid-save hidden disabled>
-            <i class="fas fa-floppy-disk"></i> Save Grid
+          <button type="button" data-grid-remove-zone data-grid-zone-id="${gridInputValue(zoneId)}" ${canRemove ? "" : "disabled"} title="Remove this Encounter Zone">
+            <i class="fas fa-trash"></i> Remove Zone
           </button>
         </div>
       </div>
@@ -1138,6 +1257,51 @@ function renderGridEditor(grid, { sourceTable = null, mode = "edit" } = {}) {
   `;
 }
 
+function renderEncounterZoneGroups(grids, {
+  sourceTable = null,
+  mode = "view",
+  openZoneIds = null,
+} = {}) {
+  const zones = normalizeEncounterZoneGrids(grids);
+  const expanded = openZoneIds instanceof Set
+    ? openZoneIds
+    : new Set(zones.map(zone => zone.id));
+
+  return `
+    <div class="mk-gm-encounter-zone-groups" data-mk-encounter-zone-groups data-grid-mode="${escapeHtml(mode)}">
+      <div class="mk-gm-encounter-zone-groups-heading">
+        <div>
+          <strong>Encounter Zones</strong>
+          <span>${zones.length === 1 ? "One configurable zone" : `${zones.length} configurable zones`} · collapse any group to keep the workspace compact.</span>
+        </div>
+        <button type="button" data-grid-add-zone title="Add another Encounter Zone"><i class="fas fa-plus"></i> Add Encounter Zone</button>
+      </div>
+      <div class="mk-gm-encounter-zone-group-list">
+        ${zones.map((zone, index) => `
+          <details class="mk-gm-encounter-zone-group" data-mk-encounter-zone-group data-zone-id="${gridInputValue(zone.id)}"${expanded.has(zone.id) ? " open" : ""}>
+            <summary class="mk-gm-encounter-zone-group-summary">
+              <span>
+                <i class="fas fa-dice-d20" aria-hidden="true"></i>
+                <strong>${gridInputValue(zone.title)}</strong>
+                <small>${zone.rows.length} rows · ${zone.columns.length} terrains</small>
+              </span>
+              <i class="fas fa-chevron-down" aria-hidden="true"></i>
+            </summary>
+            <div class="mk-gm-encounter-zone-group-body">
+              ${renderGridEditor(zone, {
+                sourceTable: index === 0 ? sourceTable : null,
+                mode,
+                zoneId: zone.id,
+                canRemove: zones.length > 1,
+              })}
+            </div>
+          </details>
+        `).join("")}
+      </div>
+    </div>
+  `;
+}
+
 function readGridEditor(editor) {
   const columns = [...(editor?.querySelectorAll?.("[data-grid-column-label]") ?? [])]
     .map((input, index) => ({
@@ -1154,11 +1318,35 @@ function readGridEditor(editor) {
     }));
 
   return normalizeGrid({
-    title: String(editor?.dataset?.gridTitleValue ?? "ENCOUNTER ZONE").trim() || "ENCOUNTER ZONE",
+    title: String(editor?.querySelector?.("[data-grid-title]")?.value ?? editor?.dataset?.gridTitleValue ?? "ENCOUNTER ZONE").trim() || "ENCOUNTER ZONE",
     rowHeader: String(editor?.querySelector?.("[data-grid-row-header]")?.value ?? "d8").trim() || "d8",
     columns,
     rows,
   });
+}
+
+function readEncounterZoneEditors(root) {
+  return [...(root?.querySelectorAll?.("[data-mk-encounter-zone-group]") ?? [])]
+    .map(group => {
+      const editor = group.querySelector?.("[data-mk-encounter-zone-editor]");
+      if (!editor) return null;
+      return {
+        ...readGridEditor(editor),
+        id: String(group.dataset?.zoneId ?? editor.dataset?.gridZoneId ?? "").trim(),
+      };
+    })
+    .filter(Boolean);
+}
+
+function nextEncounterZone(grids) {
+  const zones = normalizeEncounterZoneGrids(grids);
+  const usedIds = new Set(zones.map(zone => zone.id));
+  const index = zones.length;
+  return normalizeEncounterZoneEntry({
+    ...createDefaultGrid(),
+    id: `zone-${index + 1}`,
+    title: `ENCOUNTER ZONE ${index + 1}`,
+  }, index, usedIds);
 }
 
 function setGridSaveState(editor, baseline) {
@@ -1186,14 +1374,21 @@ function nextColumnId(columns) {
   return id;
 }
 
-function bindGridEditor(application, editor, scene, baseline) {
+function bindGridEditor(application, editor, scene, baseline, {
+  zoneId = "",
+  canRemove = false,
+} = {}) {
   const rerender = nextGrid => {
-    editor.innerHTML = renderGridEditor(nextGrid, { sourceTable: null });
-    bindGridModeToggle(application, editor, "edit");
-    bindGridEditor(application, editor, scene, baseline);
+    editor.innerHTML = renderGridEditor(nextGrid, {
+      sourceTable: null,
+      zoneId,
+      canRemove,
+    });
+    bindGridModeToggle(application, editor, "edit", { scene, zoneId });
+    bindGridEditor(application, editor, scene, baseline, { zoneId, canRemove });
   };
 
-  editor.querySelectorAll?.("[data-grid-column-label], [data-grid-row-label], [data-grid-row-header]")
+  editor.querySelectorAll?.("[data-grid-title], [data-grid-column-label], [data-grid-row-label], [data-grid-row-header]")
     .forEach(input => input.addEventListener("input", () => setGridSaveState(editor, baseline)));
 
   editor.querySelector?.("[data-grid-add-column]")?.addEventListener("click", event => {
@@ -1244,7 +1439,7 @@ function bindGridEditor(application, editor, scene, baseline) {
     });
   });
 
-  bindGridRollControls(editor);
+  bindGridRollControls(editor, scene, zoneId);
   bindGridDropTargets(editor, rerender);
 
   editor.querySelectorAll?.("[data-grid-remove-row]").forEach(button => {
@@ -1258,26 +1453,14 @@ function bindGridEditor(application, editor, scene, baseline) {
     });
   });
 
-  editor.querySelector?.("[data-grid-save]")?.addEventListener("click", async event => {
-    event.preventDefault();
-    event.stopPropagation();
-    const save = event.currentTarget;
-    save.disabled = true;
-    try {
-      await saveSceneEncounterZoneGrid(readGridEditor(editor), scene);
-      await application?.render?.({ force: true });
-    } catch (error) {
-      console.error("mk-shadowdark | GM Screen Encounter Zone | Save failed", error);
-      globalThis.ui?.notifications?.error?.(`Encounter Zone grid save failed: ${error.message}`);
-      setGridSaveState(editor, baseline);
-    }
-  });
-
   setGridSaveState(editor, baseline);
   return true;
 }
 
-function bindGridModeToggle(application, editor, mode) {
+function bindGridModeToggle(application, editor, mode, {
+  scene = currentScene(),
+  zoneId = "",
+} = {}) {
   const toggle = editor?.querySelector?.("[data-grid-toggle-mode]");
   if (!toggle) return false;
 
@@ -1285,19 +1468,43 @@ function bindGridModeToggle(application, editor, mode) {
     event.preventDefault();
     event.stopPropagation();
 
-    if (mode === "edit" && editor.dataset.gridDirty === "true") {
-      globalThis.ui?.notifications?.warn?.("Save the Encounter Zone grid before switching to View mode.");
-      return;
+    toggle.disabled = true;
+    try {
+      if (mode === "edit") {
+        await saveSceneEncounterZoneGrid(readGridEditor(editor), scene, { zoneId });
+        application.encounterZoneGridEditMode = false;
+      } else {
+        application.encounterZoneGridEditMode = true;
+      }
+      await application.render?.({ force: true });
+    } catch (error) {
+      console.error("mk-shadowdark | GM Screen Encounter Zone | Save failed", error);
+      globalThis.ui?.notifications?.error?.(`Encounter Zone grid save failed: ${error.message}`);
+      toggle.disabled = false;
     }
-
-    application.encounterZoneGridEditMode = mode !== "edit";
-    await application.render?.({ force: true });
   });
 
   return true;
 }
 
-function bindGridRollControls(editor) {
+function bindGridRollControls(editor, scene = currentScene(), zoneId = "") {
+  editor?.querySelectorAll?.("[data-grid-roll-zone]").forEach(button => {
+    button.addEventListener("click", async event => {
+      event.preventDefault();
+      event.stopPropagation();
+      button.disabled = true;
+      try {
+        const terrain = getSceneEnvironmentContext(scene)?.terrain ?? "";
+        await rollEncounterZone(terrain, scene, { zoneId });
+      } catch (error) {
+        console.error("mk-shadowdark | GM Screen Encounter Zone | Roll failed", error);
+        globalThis.ui?.notifications?.error?.(`Encounter Zone roll failed: ${error.message}`);
+      } finally {
+        button.disabled = false;
+      }
+    });
+  });
+
   editor?.querySelectorAll?.("[data-grid-roll]").forEach(button => {
     button.addEventListener("click", async event => {
       event.preventDefault();
@@ -1313,6 +1520,76 @@ function bindGridRollControls(editor) {
       }
     });
   });
+  return true;
+}
+
+function bindEncounterZoneGroups(application, target, scene, baseline) {
+  const groupsRoot = target?.matches?.("[data-mk-encounter-zone-groups]")
+    ? target
+    : target?.querySelector?.("[data-mk-encounter-zone-groups]");
+  const mode = groupsRoot?.dataset?.gridMode === "edit" ? "edit" : "view";
+  const baselineZones = normalizeEncounterZoneGrids(baseline);
+
+  groupsRoot?.querySelectorAll?.("[data-mk-encounter-zone-group]")?.forEach(group => {
+    const zoneId = String(group.dataset?.zoneId ?? "").trim();
+    const editor = group.querySelector?.("[data-mk-encounter-zone-editor]");
+    const baselineZone = baselineZones.find(zone => zone.id === zoneId) ?? baselineZones[0];
+
+    group.addEventListener?.("toggle", () => {
+      application.encounterZoneOpenIds ??= new Set();
+      if (group.open) application.encounterZoneOpenIds.add(zoneId);
+      else application.encounterZoneOpenIds.delete(zoneId);
+    });
+
+    if (editor) {
+      bindGridModeToggle(application, editor, mode, { scene, zoneId });
+      if (mode === "edit") {
+        bindGridEditor(application, editor, scene, baselineZone, {
+          zoneId,
+          canRemove: baselineZones.length > 1,
+        });
+      } else {
+        bindGridRollControls(editor, scene, zoneId);
+      }
+    }
+
+    group.querySelector?.("[data-grid-remove-zone]")?.addEventListener("click", async event => {
+      event.preventDefault();
+      event.stopPropagation();
+      const current = readEncounterZoneEditors(groupsRoot);
+      if (current.length <= 1) return;
+      const button = event.currentTarget;
+      button.disabled = true;
+      try {
+        await saveSceneEncounterZoneGrids(current.filter(zone => zone.id !== zoneId), scene);
+        application.encounterZoneOpenIds?.delete(zoneId);
+        await application?.render?.({ force: true });
+      } catch (error) {
+        console.error("mk-shadowdark | GM Screen Encounter Zone | Remove failed", error);
+        globalThis.ui?.notifications?.error?.(`Encounter Zone removal failed: ${error.message}`);
+        button.disabled = false;
+      }
+    });
+  });
+
+  groupsRoot?.querySelector?.("[data-grid-add-zone]")?.addEventListener("click", async event => {
+    event.preventDefault();
+    event.stopPropagation();
+    const button = event.currentTarget;
+    button.disabled = true;
+    try {
+      const current = readEncounterZoneEditors(groupsRoot);
+      const next = [...current, nextEncounterZone(current)];
+      await saveSceneEncounterZoneGrids(next, scene);
+      application.encounterZoneOpenIds = new Set(next.map(zone => zone.id));
+      await application?.render?.({ force: true });
+    } catch (error) {
+      console.error("mk-shadowdark | GM Screen Encounter Zone | Add failed", error);
+      globalThis.ui?.notifications?.error?.(`Encounter Zone creation failed: ${error.message}`);
+      button.disabled = false;
+    }
+  });
+
   return true;
 }
 
@@ -1365,12 +1642,17 @@ function decorateExplorationZoneGrid(application, element) {
   if ((!target && !auxiliaryTarget) || !scene) return false;
 
   if (target) {
-    const grid = getSceneEncounterZoneGrid(scene);
-    const sourceTable = getSceneFlag(scene, GRID_FLAG, null) ? null : sourceTableForScene(scene);
+    const grids = getSceneEncounterZoneGrids(scene);
+    const storedGrid = getSceneFlag(scene, GRID_COLLECTION_FLAG, null) ?? getSceneFlag(scene, GRID_FLAG, null);
+    const sourceTable = storedGrid ? null : sourceTableForScene(scene);
     const mode = application.encounterZoneGridEditMode === true ? "edit" : "view";
-    target.innerHTML = renderGridEditor(grid, { sourceTable, mode });
-    bindGridModeToggle(application, target, mode);
-    if (mode === "edit") bindGridEditor(application, target, scene, grid);
+    application.encounterZoneOpenIds ??= new Set(grids.map(zone => zone.id));
+    target.innerHTML = renderEncounterZoneGroups(grids, {
+      sourceTable,
+      mode,
+      openZoneIds: application.encounterZoneOpenIds,
+    });
+    bindEncounterZoneGroups(application, target, scene, grids);
   }
 
   if (auxiliaryTarget) {
@@ -1393,6 +1675,8 @@ registerExplorationZoneGrid();
 export {
   MODULE_ID,
   GRID_FLAG,
+  GRID_COLLECTION_FLAG,
+  ENCOUNTER_ZONE_FLAG,
   AUXILIARY_TABLE_FLAG,
   AUXILIARY_TABLE_KEYS,
   AUXILIARY_MULTI_TABLE_KEYS,
@@ -1401,8 +1685,11 @@ export {
   DEFAULT_COLUMNS,
   createDefaultGrid,
   normalizeGrid,
+  normalizeEncounterZoneEntry,
+  normalizeEncounterZoneGrids,
   sourceTableForScene,
   gridFromZoneTable,
+  getSceneEncounterZoneGrids,
   getSceneEncounterZoneGrid,
   normalizeAuxiliaryTables,
   getSceneEncounterZoneAuxiliaryTables,
@@ -1411,6 +1698,7 @@ export {
   encounterZoneDieFormula,
   encounterZoneRowRange,
   findEncounterZoneCell,
+  saveSceneEncounterZoneGrids,
   rollSummary,
   tableResultSummary,
   tableRollSummary,
@@ -1420,11 +1708,16 @@ export {
   renderEncounterZoneRollCard,
   createEncounterZoneRollJournal,
   saveSceneEncounterZoneGrid,
+  removeSceneEncounterZone,
   renderGridView,
   renderGridEditor,
+  renderEncounterZoneGroups,
   readGridEditor,
+  readEncounterZoneEditors,
   setGridSaveState,
+  nextEncounterZone,
   bindGridEditor,
+  bindEncounterZoneGroups,
   bindGridModeToggle,
   bindGridRollControls,
   rollEncounterZone,

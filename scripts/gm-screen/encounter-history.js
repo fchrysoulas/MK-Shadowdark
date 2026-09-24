@@ -1,11 +1,7 @@
-import { getGroupProcedureState } from "../group-sheet/procedure.js";
-import { getGroupElapsedTime, resetGroupTime } from "../group-sheet/time.js";
-import { confirmGmDialog } from "../libs/dialog-v2.js";
 import { APP_ID } from "./gm-screen.js";
 import { executeEncounterAction } from "./encounter-controls.js";
 import {
   collectionValues,
-  formatDuration,
   messageEncounterData,
   resolveGmScreenGroup,
 } from "./view-model.js";
@@ -63,14 +59,7 @@ async function setSessionState(group, value) {
   return normalized;
 }
 
-function procedureLabel(procedure) {
-  const value = String(procedure ?? "downtime");
-  return value.charAt(0).toUpperCase() + value.slice(1);
-}
-
 function renderSessionControls(session, {
-  procedure = "downtime",
-  elapsedLabel = "0m",
   hasGroup = true,
 } = {}) {
   return `
@@ -82,12 +71,9 @@ function renderSessionControls(session, {
           <input type="text" data-mk-session-start-text value="${escapeHtml(session.startLabel)}" placeholder="e.g. 14 Frostwane, 10:00 PM" ${hasGroup ? "" : "disabled"}>
         </div>
         <button type="button" data-mk-session-action="start" ${hasGroup ? "" : "disabled"}><i class="fas fa-play"></i> Start Session</button>
-        <button type="button" data-mk-session-action="reset" ${hasGroup ? "" : "disabled"}><i class="fas fa-arrow-rotate-left"></i> Reset Timer</button>
       </div>
       <dl class="mk-gm-data-list">
         <div><dt>Session Start</dt><dd>${escapeHtml(session.startLabel || "Not started")}</dd></div>
-        <div><dt>Current Procedure</dt><dd>${escapeHtml(procedureLabel(procedure))}</dd></div>
-        <div><dt>Procedure Timer</dt><dd>${escapeHtml(elapsedLabel)}</dd></div>
       </dl>
     </article>
   `;
@@ -103,36 +89,14 @@ async function startSession(application, group, workspace) {
     return null;
   }
 
-  const procedure = getGroupProcedureState(group);
   const state = await setSessionState(group, {
     startLabel,
     startedAt: Date.now(),
     worldTime: Number(globalThis.game?.time?.worldTime ?? 0) || 0,
   });
-  await resetGroupTime(group, procedure, {
-    reason: "gm-screen-session-start",
-  });
   application.encounterMessageId = "";
   await application.render({ force: true });
   return state;
-}
-
-async function resetSessionTimer(application, group) {
-  if (!group) return null;
-  const procedure = getGroupProcedureState(group);
-  const confirmed = await confirmGmDialog({
-    title: `Reset ${procedureLabel(procedure)} Timer`,
-    content: `<p>Reset the current <strong>${escapeHtml(procedureLabel(procedure))}</strong> timer for <strong>${escapeHtml(group.name ?? "Group")}</strong> to zero?</p>`,
-    yes: { label: "Reset" },
-    no: { label: "Cancel", default: true },
-  });
-  if (!confirmed) return null;
-
-  const result = await resetGroupTime(group, procedure, {
-    reason: "gm-screen-session-log-reset",
-  });
-  await application.render({ force: true });
-  return result;
 }
 
 function bindSessionControls(application, workspace, group) {
@@ -140,11 +104,6 @@ function bindSessionControls(application, workspace, group) {
     event.preventDefault();
     event.stopPropagation();
     void startSession(application, group, workspace);
-  });
-  workspace.querySelector?.('[data-mk-session-action="reset"]')?.addEventListener("click", event => {
-    event.preventDefault();
-    event.stopPropagation();
-    void resetSessionTimer(application, group);
   });
   return true;
 }
@@ -375,11 +334,7 @@ async function decorateEncounterHistory(application, element) {
   });
   application.encounterMessageId = history.selectedMessageId;
 
-  const procedure = group ? getGroupProcedureState(group) : "downtime";
-  const elapsedLabel = group ? formatDuration(getGroupElapsedTime(group, procedure)) : "0m";
   workspace.innerHTML = `${renderSessionControls(session, {
-    procedure,
-    elapsedLabel,
     hasGroup: Boolean(group),
   })}${renderEncounterInspector(history)}`;
 
@@ -407,7 +362,6 @@ export {
   setSessionState,
   renderSessionControls,
   startSession,
-  resetSessionTimer,
   bindSessionControls,
   messageTimestamp,
   sessionHistoryBoundary,

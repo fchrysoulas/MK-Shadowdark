@@ -159,15 +159,19 @@ function syntheticTables() {
 function diceRecorder() {
   const calls = [];
   const totals = {
-    "1d4": 2,
-    "1d6": 3,
-    "1d8": 4,
-    "2d6": 7,
-    "1d12": 8,
+    "1d4": [2],
+    "1d6": [3, 4, 5, 6],
+    "1d8": [4, 5, 6, 7],
+    "2d6": [7, 8, 9, 10],
+    "1d12": [8, 9, 10, 11],
   };
+  const indexes = new Map();
   const roll = async formula => {
     calls.push(formula);
-    return { formula, total: totals[formula] ?? 1 };
+    const sequence = totals[formula] ?? [1];
+    const index = indexes.get(formula) ?? 0;
+    indexes.set(formula, index + 1);
+    return { formula, total: sequence[index] ?? sequence.at(-1) };
   };
   return { calls, roll };
 }
@@ -199,6 +203,158 @@ test("source status resolves all imported Core Tavern and Shop tables by metadat
   assert.equal(shopSourceStatus(tables).available, true);
   assert.equal(tavernSourceStatus(tables.filter(table => table.id !== "drinks")).available, false);
   assert.ok(shopSourceStatus(tables.filter(table => table.id !== "wealthy-shop")).missing.includes("Wealthy Shop"));
+});
+
+test("linked Tavern Generator assignments take precedence over legacy source discovery", () => {
+  const tables = syntheticTables();
+  const scene = {
+    getFlag() {
+      return {
+        firstPart: "RollTable.tavern-generator",
+        secondPart: "RollTable.tavern-generator",
+        knownFor: "RollTable.tavern-generator",
+        wealth: "RollTable.tavern-generator",
+        foodPoor: "RollTable.food",
+        foodStandard: "RollTable.food",
+        foodWealthy: "RollTable.food",
+        drinksPoor: "RollTable.drinks",
+        drinksStandard: "RollTable.drinks",
+        drinksWealthy: "RollTable.drinks",
+      };
+    },
+  };
+  const status = tavernSourceStatus(tables, { scene });
+
+  assert.equal(status.mode, "linked");
+  assert.equal(status.configured, true);
+  assert.equal(status.available, true);
+  assert.equal(status.tables.firstPart.name, "Taverns — TAVERN GENERATOR");
+
+  const incomplete = tavernSourceStatus(tables, {
+    scene: {
+      getFlag() {
+        return { firstPart: "RollTable.tavern-generator" };
+      },
+    },
+  });
+  assert.equal(incomplete.mode, "linked");
+  assert.equal(incomplete.available, false);
+  assert.deepEqual(incomplete.missing, [
+    "Second Part",
+    "Known For",
+    "Wealth",
+    "Poor Food",
+    "Standard Food",
+    "Wealthy Food",
+    "Poor Drinks",
+    "Standard Drinks",
+    "Wealthy Drinks",
+  ]);
+});
+
+test("linked Tavern Generator rolls Wealth, First Part, Second Part, and Known For separately", async () => {
+  const tables = syntheticTables();
+  tables.push(
+    mockTable({
+      id: "tavern-wealth",
+      name: "Tavern Wealth",
+      formula: "1d3",
+      columns: ["d3"],
+      results: numberedResults(3, value => ["Poor", "Standard", "Wealthy"][value - 1]),
+      totals: [2],
+    }),
+    mockTable({
+      id: "tavern-first",
+      name: "Tavern First Part",
+      formula: "1d6",
+      columns: ["d6"],
+      results: numberedResults(6, value => "First " + value),
+      totals: [2],
+    }),
+    mockTable({
+      id: "tavern-second",
+      name: "Tavern Second Part",
+      formula: "1d6",
+      columns: ["d6"],
+      results: numberedResults(6, value => "Second " + value),
+      totals: [3],
+    }),
+    mockTable({
+      id: "tavern-known-for",
+      name: "Tavern Known For",
+      formula: "1d6",
+      columns: ["d6"],
+      results: numberedResults(6, value => "Known For " + value),
+      totals: [4],
+    }),
+    ...["poor", "standard", "wealthy"].map(tier => mockTable({
+      id: `tavern-food-${tier}`,
+      name: `Tavern ${tier} Food`,
+      formula: "1d12",
+      columns: ["d12"],
+      results: numberedResults(12, value => `${tier[0].toUpperCase()}${tier.slice(1)} Meal ${value}`),
+      totals: tier === "standard" ? [3, 3, 4] : [2],
+    })),
+    ...["poor", "standard", "wealthy"].map(tier => mockTable({
+      id: `tavern-drinks-${tier}`,
+      name: `Tavern ${tier} Drinks`,
+      formula: tier === "wealthy" ? "1d12" : "1d6",
+      columns: [tier === "wealthy" ? "d12" : "d6"],
+      results: numberedResults(12, value => `${tier[0].toUpperCase()}${tier.slice(1)} Drink ${value}`),
+      totals: [3, 3, 4, 5],
+    })),
+  );
+  const scene = {
+    getFlag() {
+      return {
+        firstPart: "RollTable.tavern-first",
+        secondPart: "RollTable.tavern-second",
+        knownFor: "RollTable.tavern-known-for",
+        wealth: "RollTable.tavern-wealth",
+        foodPoor: "RollTable.tavern-food-poor",
+        foodStandard: "RollTable.tavern-food-standard",
+        foodWealthy: "RollTable.tavern-food-wealthy",
+        drinksPoor: "RollTable.tavern-drinks-poor",
+        drinksStandard: "RollTable.tavern-drinks-standard",
+        drinksWealthy: "RollTable.tavern-drinks-wealthy",
+      };
+    },
+  };
+  const dice = diceRecorder();
+  const result = await rollTavernFromSource({
+    quality: "poor",
+    tables,
+    scene,
+    rollDice: dice.roll,
+  });
+
+  assert.equal(result.name, "First 2 Second 3");
+  assert.equal(result.knownFor, "Known For 4");
+  assert.equal(result.quality, "standard");
+  assert.equal(result.wealth, "standard");
+  assert.equal(result.wealthLabel, "Standard");
+  assert.deepEqual(result.nameParts, { first: "First 2", second: "Second 3" });
+  assert.deepEqual(result.rolls, {
+    wealth: 2,
+    firstPart: 2,
+    secondPart: 3,
+    knownFor: 4,
+  });
+  assert.equal(result.sources.firstPart.tableName, "Tavern First Part");
+  assert.equal(result.sources.secondPart.tableName, "Tavern Second Part");
+  assert.equal(result.sources.knownFor.tableName, "Tavern Known For");
+  assert.equal(result.sources.wealth.tableName, "Tavern Wealth");
+  assert.deepEqual(result.foods.map(food => food.sourceKey), ["foodPoor", "foodStandard", "foodStandard"]);
+  assert.deepEqual(result.drinks.map(drink => drink.sourceKey), ["drinksStandard", "drinksStandard", "drinksStandard"]);
+  assert.equal(new Set(result.foods.map(food => food.item)).size, result.foods.length);
+  assert.equal(new Set(result.drinks.map(drink => drink.details)).size, result.drinks.length);
+  assert.equal(result.sources.foodPoor.tableName, "Tavern poor Food");
+  assert.equal(result.sources.foodStandard.tableName, "Tavern standard Food");
+  assert.equal(result.sources.drinksStandard.tableName, "Tavern standard Drinks");
+  const journalHtml = tavernPageContent(result, "First 2 Second 3", { debug: true });
+  assert.match(journalHtml, /First Part/);
+  assert.match(journalHtml, /Second Part/);
+  assert.match(journalHtml, /Known For/);
 });
 
 test("food price formulas and currencies are derived from source column labels", () => {
@@ -244,9 +400,11 @@ test("Tavern Food records source roll, source-derived price formula, and price r
     tierLabel: "Poor",
     roll: 1,
     item: "Poor Meal 1",
+    formula: "1d12",
     priceFormula: "1d4",
     priceRoll: 2,
     currency: "cp",
+    sourceKey: "food",
   });
   assert.equal(result.foods[1].tier, "standard");
   assert.equal(result.foods[1].priceFormula, "1d6");
@@ -283,7 +441,7 @@ test("generated Tavern and Shop Journal pages preserve rolls and source provenan
     tables: tavernTables,
     rollDice: diceRecorder().roll,
   });
-  const tavernHtml = tavernPageContent(tavern, "Edited Tavern");
+  const tavernHtml = tavernPageContent(tavern, "Edited Tavern", { debug: true });
   assert.match(tavernHtml, /Edited Tavern/);
   assert.match(tavernHtml, /Shadowdark RPG Core Rulebook v4\.9/);
   assert.match(tavernHtml, /PDF p\./);
@@ -303,6 +461,49 @@ test("generated Tavern and Shop Journal pages preserve rolls and source provenan
   assert.match(shopHtml, /Shop Type/);
   assert.match(shopHtml, /Interesting Customer/);
   assert.match(shopHtml, /d4 3, d4 2/);
+});
+
+test("Tavern Journal pages hide roll details by default and preserve ampersands", () => {
+  const result = {
+    sourceMode: "linked",
+    sourceBookTitle: "Linked Tavern Tables",
+    qualityLabel: "Standard",
+    wealthLabel: "Standard",
+    knownFor: "dancing & contests",
+    nameParts: { first: "Cup", second: "Blade" },
+    rolls: { wealth: 2, firstPart: 3, secondPart: 4, knownFor: 5 },
+    sources: {
+      wealth: { formulaRaw: "1d6", pages: [1] },
+      firstPart: { formulaRaw: "1d20", pages: [2] },
+      secondPart: { formulaRaw: "1d20", pages: [2] },
+      knownFor: { formulaRaw: "1d20", pages: [2] },
+    },
+    foods: [{
+      tierLabel: "Poor",
+      formula: "1d12",
+      roll: 3,
+      item: "Bread & Butter",
+      priceRoll: 2,
+      currency: "cp",
+      priceFormula: "1d4",
+    }],
+    drinks: [{ formula: "2d6", roll: 7, details: "Cider & Spice" }],
+  };
+
+  const readable = tavernPageContent(result, "Cup &amp; Blade");
+  assert.match(readable, /Cup &amp; Blade/);
+  assert.doesNotMatch(readable, /&amp;amp;/);
+  assert.match(readable, /Tavern Overview/);
+  assert.match(readable, /Food/);
+  assert.match(readable, /Drinks/);
+  assert.match(readable, /GM Notes/);
+  assert.doesNotMatch(readable, /Roll Details|Source:|1d6|1d12|2d6/);
+
+  const debug = tavernPageContent(result, "Cup &amp; Blade", { debug: true });
+  assert.match(debug, /Roll Details/);
+  assert.match(debug, /Source:/);
+  assert.match(debug, /1d12/);
+  assert.match(debug, /2d6/);
 });
 
 test("Journal payloads use one native editable text page and no custom gameplay state", () => {
@@ -401,11 +602,11 @@ test("Import / Update retries Shop source status before generated creation", asy
   }
 });
 
-test("Tavern and Shop controller is excluded with the disabled GM Screen", () => {
-  assert.equal(manifest.esmodules.includes("scripts/gm-screen/gm-screen.js"), false);
-  assert.equal(manifest.esmodules.includes("scripts/gm-screen/exploration-creation-controls.js"), false);
+test("Settlement creation controllers are enabled together", () => {
+  assert.equal(manifest.esmodules.includes("scripts/gm-screen/gm-screen.js"), true);
+  assert.equal(manifest.esmodules.includes("scripts/gm-screen/exploration-creation-controls.js"), true);
   assert.equal(manifest.esmodules.includes("scripts/gm-screen/npc-creation-controls.js"), false);
-  assert.equal(manifest.esmodules.includes("scripts/gm-screen/tavern-shop-creation-controls.js"), false);
+  assert.equal(manifest.esmodules.includes("scripts/gm-screen/tavern-shop-creation-controls.js"), true);
 });
 
 test("public Tavern/Shop runtime contains procedures and resolvers without hardcoded result maps", () => {

@@ -4,11 +4,15 @@ import test from "node:test";
 
 import {
   OVERVIEW_LINKS_FLAG,
+  OVERVIEW_TOOL_DEFINITIONS,
+  dragEventData,
   dragDataUuid,
   getOverviewLinkUuids,
   normalizeOverviewLinkUuids,
   overviewLinkHtml,
   overviewShellHtml,
+  overviewToolForUuid,
+  overviewToolUuid,
   setOverviewLinkUuids,
 } from "../scripts/gm-screen/overview-links.js";
 
@@ -57,12 +61,31 @@ test("Foundry document drop data resolves by UUID", () => {
   assert.equal(dragDataUuid({ type: "Actor" }), "");
 });
 
+test("Overview drop parsing accepts raw URI-list UUIDs when Foundry returns no JSON", () => {
+  const event = {
+    dataTransfer: {
+      getData(type) {
+        return type === "text/uri-list" ? "mk-shadowdark.gm-screen-tool:encounters" : "";
+      },
+    },
+  };
+  assert.equal(dragDataUuid(dragEventData(event)), "mk-shadowdark.gm-screen-tool:encounters");
+});
+
+test("GM Screen tool shortcuts use stable non-document identifiers", () => {
+  assert.deepEqual(OVERVIEW_TOOL_DEFINITIONS.map(tool => tool.id), ["encounters", "npc-generator", "tavern-generator"]);
+  const uuid = overviewToolUuid("npc-generator");
+  assert.equal(uuid, "mk-shadowdark.gm-screen-tool:npc-generator");
+  assert.equal(overviewToolForUuid(uuid)?.action, "generate-npc");
+  assert.equal(overviewToolForUuid(overviewToolUuid("tavern-generator"))?.action, "generate-tavern");
+});
+
 test("Overview is a document pin canvas without summary info panels", () => {
   const html = overviewShellHtml();
   assert.doesNotMatch(html, /data-mk-overview-summary|>Procedure<|>Light<|>Encounter<|>Session</);
   assert.match(html, /Pinned Documents/);
   assert.match(html, /data-mk-overview-shortcuts/);
-  assert.match(html, /Drop Journals, Actors, Items, RollTables/);
+  assert.match(html, /Pinned Documents &amp; Actions/);
   assert.doesNotMatch(html, /Scene Context|Combat \/ Morale|Resting/);
 });
 
@@ -81,20 +104,33 @@ test("Overview shortcut cards open the source document and expose a separate rem
   assert.match(html, /hero\.webp/);
 });
 
+test("Overview renders GM Screen tool shortcuts as available cards", () => {
+  const html = overviewLinkHtml({ uuid: overviewToolUuid("encounters"), document: null });
+  assert.match(html, /data-mk-overview-open="mk-shadowdark\.gm-screen-tool:encounters"/);
+  assert.match(html, /<strong>Encounters<\/strong>/);
+  assert.match(html, /<small>GM Screen<\/small>/);
+  assert.doesNotMatch(html, /disabled/);
+});
+
 test("Overview uses Foundry drag-data and UUID document APIs without full GM Screen rerenders", () => {
   assert.match(runtime, /getDragEventData/);
   assert.match(runtime, /foundry\?\.utils\?\.fromUuid|globalThis\.fromUuid/);
   assert.match(runtime, /user\.getFlag\?\.\(MODULE_ID, OVERVIEW_LINKS_FLAG\)/);
   assert.match(runtime, /user\.setFlag\(MODULE_ID, OVERVIEW_LINKS_FLAG, normalized\)/);
   assert.match(runtime, /"dragover"/);
+  assert.match(runtime, /dropEffect = "copy"/);
   assert.match(runtime, /"drop"/);
   assert.match(runtime, /openOverviewDocument/);
+  assert.match(runtime, /overviewToolForUuid/);
+  assert.match(runtime, /executeOverviewTool/);
+  assert.match(runtime, /rollEncounterZone/);
+  assert.match(runtime, /createSourceDrivenNpc/);
   assert.doesNotMatch(runtime, /application\?\.render|application\.render/);
   assert.doesNotMatch(runtime, /updateActor|updateScene|updateCombat|updateToken/);
 });
 
 test("Overview does not own NPC creation controls", () => {
-  assert.doesNotMatch(runtime, /createSourceDrivenNpc|npcSourceStatus|data-mk-overview-create-npc|Create NPC/);
+  assert.doesNotMatch(runtime, /npcSourceStatus|data-mk-overview-create-npc|Create NPC/);
   assert.doesNotMatch(stylesheet, /mk-gm-overview-create-npc|mk-gm-overview-action-tooltip/);
 });
 

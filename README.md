@@ -84,11 +84,8 @@ The old **MK-Shadowdark GM Screen Mock** prototype is not a dependency and is no
 
 - **Group Sheet** — members, active party, hirelings, mounts, shared inventory, Traveling, Camping, and party resources.
 - **Camping Tasks** — Bed Down, Cook, Craft, Entertain, Scavenge, Hunt, Keep Watch, and Predict.
-- **Shared Scene Context** — terrain, danger, day/night period, and encounter table belong to the active Scene context.
-- **Unified Group Time** — Group procedures store elapsed procedure time while Foundry world time remains the only absolute clock.
+- **Shared Scene Context** — terrain, danger, and day/night period belong to the active Scene context.
 - **Marching / Role Context** — Front, Middle, Rear, Scout, Light Bearer, and ordered camp watches.
-- **Group Exploration Encounters** — encounter cadence/checks are part of Traveling.
-- **Group Resting Interruptions** — Rest Party resolves required encounter checks before benefits/resources finalize.
 - **Encounter Staging** — preview-first deployment into the Scene with optional Foundry Combat handoff.
 - **GM Member Status** — compact GM-only status affordance for HP/AC/death/wounds/Focus/light/effects.
 - **Time Passes** — a standalone GM 1d6/2d6/3d6 public roll with synchronized v1.6 visual cues and no encounter automation.
@@ -99,46 +96,43 @@ The GM Screen is available to GMs through its shield button in the Token Scene C
 
 The GM Screen implementation is a native Foundry ApplicationV2 surface. It is not a replacement for the Group Sheet and it does not own duplicate gameplay state.
 
-The **GM Screen | Encounter Roll Debug Mode** setting is disabled by default. Roll Zone Journal pages use a readable encounter-report layout with the selected table and supporting tables separated into category groups, including Danger Level, Starting Distance, Activity, one group for all Trap tables, and another for all Hazard tables. When enabled, the report includes dice formulas, roll totals, and result numbers; otherwise it retains the encounter context and all table result text, including Trap and Hazard results, while hiding dice, roll details, and result numbers.
+The **GM Screen | Encounter Roll Debug Mode** setting is disabled by default. Roll Encounter Journal pages use a readable encounter-report layout with the selected table and supporting tables separated into category groups, including Danger Level, Starting Distance, Activity, one group for all Trap tables, and another for all Hazard tables. When enabled, the report includes dice formulas, roll totals, and result numbers; otherwise it retains the encounter context and all table result text, including Trap and Hazard results, while hiding dice, roll details, and result numbers.
+
+The **GM Screen | Tavern Generator Debug Mode** setting is disabled by default. Tavern Journal pages show a tidy Tavern Overview, distinct food and drinks lists, and editable GM Notes without source tables, dice formulas, or roll totals. When enabled, the page adds the source and full roll details for troubleshooting.
 
 The GM Screen is intentionally a **manual-update surface** for outside changes. It does not subscribe to ambient Actor, Scene, Combat, or MK workflow changes in order to force background rerenders, and it does not expose a generic Refresh button. Direct GM Screen actions rerender when they complete. Group/workspace selection is kept only in the currently open application and is not silently persisted as a presentation preference. The former Hide/Show Active Party rail and Reset GM Screen Presentation controls are retired.
 
 Its production layout contains:
 
 - a persistent active-party/status rail
-- a persistent procedure/pressure strip
-- **Terrain, Danger, and Period dropdowns in the top strip**
-- a direct **Elapsed** one-turn control
+- a persistent Scene Context strip
+- **Encounter Zone, Terrain, Danger, and Period selectors in the top strip**
+- a direct **Roll Encounter** control in its own final header box
+- a gear button that opens **GM Screen Settings** in a separate window
 - a central contextual workspace
 
 Terrain, Danger, and Period **save immediately when their dropdown changes**. There is no Save Context button. The saved Scene Context then rerenders the GM Screen once so all workspaces use the new values.
 
-The Procedure dropdown changes the canonical Group procedure. Clicking **Elapsed** advances exactly one canonical turn for that procedure:
-
-- **Exploration:** 6 minutes
-- **Resting:** 1 hour
-- **Combat:** 6 seconds
-- **Downtime:** no generic turn duration, so Elapsed is disabled
-
-The Elapsed readout uses hours and minutes only. Combat's 6-second turns are therefore represented in fractional minutes rather than a seconds display. There is no custom-time popup or Advance Custom action on the GM Screen.
+The top strip selects the Scene's Encounter Zone, Terrain, Danger, and Period for the manual **Roll Encounter** action. The module does not maintain a Group elapsed-time clock or a GM Screen turn counter; Foundry world time and Foundry Combat remain the authoritative time/round surfaces.
 
 Available workspaces, in order, are:
 
-- **Overview** — a per-GM shortcut dashboard. Drag normal Foundry documents such as Journal entries/pages, Actors, Items, RollTables, and other UUID-backed documents onto Overview to pin them. Clicking a pinned shortcut opens the original document; removing a shortcut deletes only the pin.
-- **Encounters** — a View/Edit Encounter Zone grid with eight default rows plus four optional RollTable drop areas for Starting Distance, Activity, Trap, and Hazard. In Edit mode, drag RollTables from Foundry onto zone cells or these encounter detail boxes; Trap and Hazard accept multiple tables and roll each assigned table. In View mode, click an assigned cell to roll it. Roll Zone uses the selected terrain and records every configured encounter detail table in a GM-only Journal Entry page. Encounter checks remain owned by Group Management, while marching order, exploration timing, and role editing remain there as well.
-- **Downtime** — settlement-facing generators only, including **Create Tavern** and **Create Shop**. Resting/Camp status and controls are intentionally absent from this workspace.
-- **Tables** — imported Shadowdark source RollTables with search, filtering, rolling, and source metadata.
-- **Session Log** — session metadata/timer controls plus recent canonical Group encounter records with inspection, staging, reveal, and reroll actions.
+- **Overview** — a per-GM shortcut dashboard. Drag normal Foundry documents such as Journal entries/pages, Actors, Items, RollTables, and other UUID-backed documents onto Overview to pin them. The GM Screen Settings Home tab provides draggable **Encounters**, **NPC Generator**, and **Tavern Generator** actions at the end of their matching configuration cards; dropping one onto Overview pins an executable button. Clicking a pinned shortcut opens the original document, while clicking **Encounters** rolls the selected Encounter Zone, **NPC Generator** opens the existing generation flow, and **Tavern Generator** starts tavern generation; removing a pin deletes only that shortcut.
+- **Downtime** — settlement-facing generators only, including **Create Tavern**, **Create Shop**, **NPC Generator (Create NPC)**, and **Create Location**. NPC generation is configured in **GM Screen Settings -> NPC Generator**. Resting/Camp status and controls are intentionally absent from this workspace.
+- **GM Screen Settings** — a separate gear-button window with left-side tabs. **Encounters** contains one or more named, collapsible Encounter Zone grids with eight default rows plus five optional RollTable drop areas for Danger Level, Starting Distance, Activity, Trap, and Hazard. In Edit mode, edit each zone name, add or remove zones, and drag RollTables from Foundry onto zone cells or the encounter detail boxes; Trap and Hazard accept multiple tables and roll each assigned table. In View mode, expand a zone and use its Roll Zone action or click an assigned cell. **Roll Encounter** uses the selected terrain and zone, and records every configured encounter detail table in a GM-only Journal Entry page. **NPC Generator** contains the Scene-owned RollTable assignments for generated NPC names and traits. Name parts use **Prefix**, one or more **Possible Syllables** tables, **Suffix**, and an optional **NPC Identifier** table rolled as the second name part. Trait assignments cover **Ancestry**, **Age**, **Alignment**, **Wealth**, multiple **NPC Features**, and **Occupation**. Linked tables are rolled when available; missing entries remain blank, and only the NPC name is required. The configurable **Two-syllable chance** decides whether one or two syllable tables are rolled. Every generated NPC also receives six ordered 3d6 ability rolls; the rolls and modifiers are recorded in the description and the native NPC ability modifiers are populated on the sheet. **Tavern Generator** contains Scene-owned drag-and-drop assignments for **First Part**, **Second Part**, **Known For**, **Wealth**, **Poor Food**, **Standard Food**, **Wealthy Food**, **Poor Drinks**, **Standard Drinks**, and **Wealthy Drinks** RollTables. The Wealth result is randomly rolled as Poor, Standard, or Wealthy; it determines the complete procedure: Poor rolls 2 times on Poor Drinks and 3 Poor Food entries, Standard rolls 3 times on Standard Drinks plus 1 Poor Food and 2 Standard Food entries, and Wealthy rolls 4 times on Wealthy Drinks plus 2 Standard Food and 2 Wealthy Food entries. Food prices remain tier-specific: 1d4 cp for Poor, 1d6 sp for Standard, and 1d8 gp for Wealthy. Food and drink results are rerolled when they duplicate an earlier result in the same tavern, so each generated list contains distinct options; generation reports an error if the assigned tables cannot provide enough unique results. The first two name rolls are joined to form the tavern name, and Known For supplies the tavern's distinguishing result. When any Tavern assignment is configured, those linked tables are used by **Create Tavern**; otherwise existing imported source tables remain available for legacy scenes.
+- **Tables** — existing world RollTables with a fixed search control, rolling, native sheet access, independently collapsible Foundry folder grouping that starts collapsed, and document icons. Only the folder/table list scrolls. The browser does not import or update tables or infer source metadata; existing imported RollTables remain usable like any other world table.
+- **GM Screen transfer** — use the header **Export** and **Import** controls to save or restore the active Scene's Encounter Zones, supporting encounter RollTables, environment context, NPC Compositions, and Tavern Generator assignments. RollTable references include names for unique-name remapping; unavailable references remain visible as unavailable. Journals, Actors, global settings, and temporary workspace presentation state are not included.
+- **Session Log** — session metadata plus recent legacy Group encounter records with inspection, staging, reveal, and reroll actions.
 
-Session Log includes a free-text **Starting date and time** field, **Start Session**, and **Reset Timer**. Start Session stores the entered label as Group session metadata and resets the currently selected procedure timer to zero. It also records the current Foundry world-time value as metadata, but it does **not** rewrite the world's calendar/time. Reset Timer resets only the current Group procedure timer after confirmation.
-
-The GM-only **GM Tools** panel in Session Log provides direct open/test buttons for Scene Context and encounter setup, Group Management, the Encounters/Tables/Settlement workspaces, source-driven NPC generation, and Time Passes dice.
+Session Log includes a free-text **Starting date and time** field and **Start Session**. Start Session stores the entered label and history boundary as Group session metadata. It also records the current Foundry world-time value as metadata, but it does **not** rewrite the world's calendar/time and does not start a module timer.
 
 Overview pins are presentation-only state stored on the current GM user as document UUIDs. They do not copy Journal/Actor/Item content and do not become Scene, Group, encounter, combat, morale, wound, or Focus state. Pinning or removing a shortcut updates the Overview canvas directly and does not force a full GM Screen rerender.
 
-The **Encounters** and **Downtime** active tabs use distinct tints. The former dedicated Encounter, Environment, Resting, Rules, Tools, and Combat workspaces are not part of the production navigation. Encounter history lives in Session Log, while Terrain, Danger, and Period are edited from the persistent top strip. **Roll Zone** rolls the selected terrain's Encounter Zone die, the assigned terrain cell's RollTable, and each configured Starting Distance, Activity, Trap, and Hazard RollTable; every assigned Trap or Hazard table is rolled into a new GM-only Journal Entry page.
+The Settings **Encounters** tab and main **Downtime** workspace use distinct tints. The former dedicated Encounter, Environment, Resting, Rules, Tools, and Combat workspaces are not part of the production navigation. Encounter history lives in Session Log, while Encounter Zone, Terrain, Danger, and Period are selected from the persistent top strip. **Roll Encounter** rolls the selected zone's terrain die, the assigned terrain cell's RollTable, and each configured Danger Level, Starting Distance, Activity, Trap, and Hazard RollTable; every assigned Trap or Hazard table is rolled into a new GM-only Journal Entry page.
 
 The GM Screen reads canonical state from Group, Scene Context, internal encounter services, Encounter Staging, Foundry Combat, Morale, and the prepared GM member-status model. It does not store a second party, procedure clock, encounter, combat, morale, wound, or Focus model.
+
+The header **Export** button saves a versioned JSON configuration for the active Scene through Foundry's native file-save workflow. **Import** opens the standard JSON file chooser, validates the file, and asks for confirmation before replacing the current Scene's GM Screen configuration. Imported RollTable UUIDs are reused when available, or remapped by an exact unique table name; ambiguous or missing tables are left unresolved and reported to the GM.
 
 ## Journal Entries
 
@@ -146,25 +140,9 @@ The **Journal Sheet | Use as Default** world setting is enabled by default. When
 
 ---
 
-# Source Table Import
+# RollTable Browser
 
-The source-table importer can import native Foundry RollTables from Markdown transcriptions supplied by the GM. MK-Shadowdark parses the selected files locally and does not bundle the sourcebook table content. Open it from the GM Screen Tables workspace or through `game.modules.get("mk-shadowdark").api.sourceTables.openImporter()`.
-
-The **Tables** workspace contains only the imported source-table browser. It does not configure encounter state; the persistent top strip displays and saves the current Scene context.
-
-
-Supported source detection includes:
-
-- **Shadowdark RPG Core Rulebook v4.9**
-- **Player's Guide to the Western Reaches V1**
-- **Cursed Scroll 1: Diablerie!**
-- **Cursed Scroll 2: Red Sands**
-- **Cursed Scroll 3: Midnight Sun**
-- **Cursed Scroll 4: River of Night**
-- **Cursed Scroll 5: Dwellers in the Deep**
-- **Cursed Scroll 6: City of Masks**
-
-Imported tables receive stable source keys and metadata. Reimporting the same source table updates the existing RollTable instead of creating a duplicate. Source tables whose dice formula is contextual rather than fixed are preserved as contextual source data and are not exposed as an ordinary generic roll when that would invent a rule the source does not provide.
+The **Tables** workspace lists the RollTables that already exist in the world. Use the fixed search field to find a table, **Roll** to draw from it, or open its native Foundry sheet for editing. Foundry folder paths are retained as independently collapsible grouping headings that start collapsed, and each table displays its document icon. Only the folder/table list scrolls beneath the search area. Existing imported RollTables remain available, but the workspace does not expose an Import / Update procedure and does not infer source books or source metadata.
 
 ---
 
@@ -185,6 +163,8 @@ The Group Sheet structure is intentionally stable. Its main areas remain:
 
 The production GM Screen exists **beside** this interface. New GM overview tools must not require redesigning or replacing the Group Sheet.
 
+Marching order and exploration-role editing remain in Group Management. The production GM Screen no longer edits watches or starts/resumes rests.
+
 ## Active party and roster
 
 The Group maintains a roster plus an active-party subset. Procedure assignments, roles, watches, encounter context, Group summaries, and the GM Screen party rail use active members as the canonical party source.
@@ -197,7 +177,6 @@ The Group procedure service supports:
 
 ```text
 exploration
-resting
 combat
 downtime
 ```
@@ -209,9 +188,9 @@ This is infrastructure shared by Group procedures and the GM Screen. It is not a
 ```text
 WHO?       Group active members / roles / watches
 WHERE?     Active Scene Context
-WHEN?      Group elapsed procedure time + Foundry world time
+WHEN?      Foundry world time + Foundry Combat
 STATE?     Group procedure state
-WHAT?      Internal encounter service
+WHAT?      Manual GM Screen Encounter Zone roll
 STAGE?     Encounter staging service
 COMBAT?    Foundry Combat + MK initiative/morale
 VIEW?      Group Management + GM Screen
@@ -220,140 +199,45 @@ VIEW?      Group Management + GM Screen
 Important invariants:
 
 - Foundry world time is the only absolute clock.
-- Group stores elapsed procedure time, not a second world clock.
 - Scene Context belongs to Scene state.
-- Encounter intervals always mean procedure turns.
-- Exploration and Resting decide when encounter checks are due.
-- Encounter formulas/tables/reaction/resolution have one internal implementation.
-- Time Passes owns only its standalone GM roll and visual cues; Group Time and encounter cadence never call it.
+- Encounter rolls are explicit GM actions from the GM Screen Settings Encounters tab.
+- Legacy encounter formulas/tables/reaction/resolution remain available for existing chat-card records and integrations, but they are not scheduled automatically.
+- Time Passes owns only its standalone GM roll and visual cues; no encounter workflow calls it.
 - Encounter staging creates no documents before explicit **Deploy**.
 - GM Screen presentation never becomes a duplicate gameplay-state owner.
 
----
+# Manual Encounter Zone Rolls
 
-# Encounter Intervals Are Turns
+Encounter timing is no longer advanced by a module clock. The GM decides when to roll from the selected Scene terrain and Encounter Zone using the **Roll Encounter** button in the top strip or the GM Screen Settings Encounters tab.
 
-The core cadence rule is:
+There is no encounter cadence, due-check queue, or Group turn counter.
 
-> **Every encounter interval means a number of procedure turns.**
+The roll sequence is:
 
-An interval is never interpreted as a mixed “rounds/hours” value and is not itself a number of hours.
+1. Roll the selected terrain's Encounter Zone die.
+2. Use that result to select the terrain row's RollTable and roll it.
+3. Roll each configured Danger Level, Starting Distance, Activity, Trap, and Hazard table.
+4. Write one GM-only Journal Entry page containing the encounter context and results.
 
-Procedure turn lengths used by the GM Screen:
-
-- **Exploration:** 6 minutes / 360 seconds per turn.
-- **Resting:** 1 hour / 3600 seconds per turn.
-- **Combat:** 6 seconds per turn.
-
-Default danger cadence:
-
-| Danger | Encounter check cadence |
-| --- | --- |
-| Safe | No encounter checks |
-| Unsafe | Every 3 turns |
-| Risky | Every 2 turns |
-| Deadly | Every 1 turn |
-
-For Unsafe/Risky/Deadly, the default occurrence check is **1d6**, with an encounter on **1**. **Safe performs no encounter roll at all.**
-
----
-
-# Group Exploration Encounters
-
-Random encounter timing is integrated directly into **Group Traveling**.
-
-The Group derives completed Exploration turns from unified elapsed Exploration time and calculates how many checks are due from the active Scene's danger interval.
-
-With the default 6-minute Exploration turn:
-
-- Safe schedules no checks
-- Unsafe checks after turns 3, 6, 9, ...
-- Risky checks after turns 2, 4, 6, ...
-- Deadly checks every turn
-
-If a time advance crosses multiple check boundaries, MK-Shadowdark preserves the exact number of due checks rather than collapsing them into one.
-
-Group Traveling remains the Group-facing surface for exploration encounter state and processing through the canonical Group encounter service. The GM Screen Encounters workspace owns only the editable Encounter Zone grid, encounter detail RollTable assignments, and the explicit GM-only Roll Zone Journal Entry page; it does not duplicate Group timing, encounter-check, Marching Order, role, or Traveling controls.
-
-## Scene encounter context
-
-The active Scene is the source of truth for:
-
-- terrain
-- danger level
-- requested/effective day or night period
-- explicit encounter-table override
-- effective encounter table
-- encounter interval/formula
-
-The persisted Scene Context contains exactly four fields: **Terrain, Danger, Period, and Encounter Table**. The persistent top strip auto-saves Terrain, Danger, and Period when one of those dropdowns changes. There is no GM-facing Profile field or `profileId` in Scene Context state.
-
-The internal encounter resolver still owns one canonical Shadowdark rules definition for cadence, outcome tables, rerolls, and compatibility. That implementation detail is not a Scene Context choice.
-
-## Encounter-table selection
-
-The effective table is selected in this order:
-
-1. explicit Scene table override
-2. matching canonical terrain + effective day/night table
-3. canonical terrain `any` table
-4. world fallback encounter table
-
-If no valid table is configured, a due encounter check is not silently consumed. Safe requires no encounter table because it schedules no encounter checks.
-
----
-
-# Group Resting
-
-The existing **Rest Party** action is a staged procedure rather than an immediate heal/resource button.
-
-A normal Group rest lasts:
-
-- **8 resting turns**
-- **1 hour per resting turn**
-- **8 hours total**
-
-Required encounter checks happen chronologically before rest benefits finalize.
-
-| Danger | Checks during an 8-turn rest |
-| --- | --- |
-| Safe | None |
-| Unsafe | Turns 3 and 6 |
-| Risky | Turns 2, 4, 6, and 8 |
-| Deadly | Every resting turn |
-
-The required check turns are snapshotted when the rest begins. A rest started under Safe snapshots an empty encounter schedule. Changing the Scene's Danger while a rest is active affects later rests, not the current check schedule; changing Period or Encounter Table can affect how a later due check resolves, but it cannot add, remove, consume, or skip that rest's scheduled checks.
-
-## Rest order of operations
-
-1. GM confirms the active resting party and intended ration use.
-2. Group enters Resting and starts the current rest timeline.
-3. Group/Foundry time advances to the next required check turn when one exists.
-4. The internal encounter service performs the occurrence check and resolves an encounter when triggered.
-5. If there is no encounter, resting continues.
-6. If an encounter occurs, resting pauses immediately.
-7. The GM resolves the interruption and explicitly uses **Resume Rest** from Group Management.
-8. After all required checks and the full eight hours complete, planned resources and benefits finalize.
-
-An interrupted rest consumes **0 planned rations** and grants **0 completed-rest benefits** until successful completion.
-
-Camp-watch assignments remain Group Management procedure context but do not automatically modify encounter odds. The production GM Screen no longer edits watches or starts/resumes rests, and rest schedule state is not displayed in the GM Screen.
+Trap and Hazard assignments may contain multiple RollTables. The debug setting controls only dice formulas, roll totals, and result numbers; table result text remains visible to the GM.
 
 ---
 
 # Group Encounter Resolution
 
-Encounter timing and resolution belong to Group Management. The former standalone encounter feature and its separate entry points have been removed.
+The former automatic Group encounter timing feature and its separate entry points have been removed. The remaining headless encounter service is retained for existing encounter cards, rerolls, and staging integrations; it does not own a clock or create pending checks.
+
+The old standalone Encounter Engine UI is retired.
 
 There is no separate:
 
 - Encounter Scene Control button
 - standalone Encounter dialog
 - RollTable directory Resolve Encounter action
-- independent encounter clock
+- pending encounter-check queue
 - Time Passes → encounter auto-resolution path
 
-Encounter rules remain centralized as Group-owned internal services consumed by Group Exploration, Group Resting, and encounter chat-card workflows.
+Encounter rules remain centralized as compatibility services for legacy encounter chat-card workflows.
 
 A resolved encounter can include:
 
@@ -391,7 +275,7 @@ Direct world/Compendium Actor results are preferred for reliable staging Actor r
 
 ---
 
-# Group Encounter Staging
+# Encounter Staging
 
 A resolved GM encounter card includes **Stage Encounter**, and the production GM Screen can route encounter history into the same staging service.
 
@@ -416,7 +300,7 @@ World Actors are reused. Compendium Actors can be previewed without import and a
 
 When **Add to Combat** is selected, the created TokenDocuments enter Foundry Combat through supported document APIs. MK-Shadowdark does not automatically roll initiative or start the round.
 
-A Resting encounter remains interrupted until the GM explicitly resumes the rest from Group Management.
+To resume rest, use the Group Management rest workflow.
 
 ---
 
@@ -488,9 +372,7 @@ Foundry Combat and MK Morale remain authoritative outside the GM Screen. The GM 
 
 Time Passes restores the v1.6.0 standalone GM flow. In the GM Screen, choose **1d6**, **2d6**, or **3d6**, then press **Time Passes**. The synchronized splash/progress display appears for all clients and the selected dice are published as a public chat roll after the splash completes. If any selected d6 shows **1**, the original synchronized **ENCOUNTER!** skull splash is displayed.
 
-The result-of-1 behavior is a visual cue only. It does not schedule, resolve, stage, or create an encounter, and it never calls the Encounter service. Encounter timing belongs exclusively to Group Exploration and Resting.
-
-Group Time is fully separate and does not invoke Time Passes for rolls or presentation.
+The result-of-1 behavior is a visual cue only. It does not schedule, resolve, stage, or create an encounter, and it never calls the legacy Encounter service. Time Passes has no connection to encounter timing. Group Time is fully separate and does not invoke Time Passes.
 
 ---
 
@@ -583,10 +465,7 @@ Current service surfaces include, among others:
 
 ```js
 mk.environment
-mk.groupTime
 mk.groupAssignments
-mk.groupExplorationEncounters
-mk.groupRest
 mk.groupMemberStatus
 mk.groupEncounters
 mk.timePasses
@@ -622,17 +501,17 @@ Prefer canonical service APIs over private flags or rendered DOM state.
 
 The shield button is available to GMs in the Token Scene Controls. If it is missing, verify that the module is enabled, the current user is a GM, and the world is serving the current `module.json` rather than a cached module installation.
 
-## A Group encounter check is due but cannot run
+## I need to roll an encounter
 
-Verify the active Scene resolves a valid encounter RollTable, then process the due check. If Danger is **Safe**, no encounter check should be due.
+Select a Scene terrain and Encounter Zone, then configure one or more named Encounter Zone grids and supporting RollTables in **GM Screen -> gear -> Encounters**. Press **Roll Encounter** to roll the selected zone. There is no pending encounter-check queue or elapsed-time trigger to process.
 
 ## Scene Context changes do not affect the other GM Screen workspaces
 
-Terrain, Danger, and Period auto-save when their top-strip dropdown changes and then perform one explicit GM Screen rerender. There is no Save Context button. The Tables workspace is reserved for browsing imported source RollTables.
+Terrain, Danger, and Period auto-save when their top-strip dropdown changes and then perform one explicit GM Screen rerender. There is no Save Context button. The Tables workspace is reserved for browsing imported source RollTables and existing world RollTables.
 
 ## I cannot select Terrain
 
-Terrain choices in the top strip come from the active Scene's configured Encounter Zone source columns. The Tables workspace only browses imported source RollTables.
+Terrain choices in the top strip come from the active Scene's configured Encounter Zone columns. The Tables workspace browses existing world RollTables and does not determine terrain sources.
 
 ## An Overview shortcut disappeared from the source document
 
@@ -642,25 +521,9 @@ Overview stores only the document UUID as a per-GM shortcut. It does not copy th
 
 This is intentional. The GM Screen has no ambient live-refresh mechanism. Use an explicit GM Screen action, change a top context dropdown, switch workspaces, or reopen the screen when you want the surface rebuilt.
 
-## Elapsed does not advance time in Downtime
-
-Downtime has no canonical generic turn duration. Elapsed advances exactly one turn only for Exploration (6 minutes), Resting (1 hour), and Combat (6 seconds).
-
-## I need to reset a procedure timer
-
-Use **Session Log -> Reset Timer**. It resets the currently selected Group procedure timer after confirmation.
-
 ## I need to record the start of a session
 
-Enter your campaign date/time text in **Session Log -> Starting date and time**, then press **Start Session**. This stores the label and resets the current procedure timer; it does not overwrite Foundry world time.
-
-## Rest Party pauses with a configuration warning
-
-The current danger requires encounter checks but the Scene has no valid encounter table. Configure Encounter Setup and continue the same rest from Group Management. Safe rests have no scheduled encounter checks.
-
-## Rest Party says Resume Rest
-
-The rest was interrupted. Resolve the encounter/interruption, then explicitly press **Resume Rest** from Group Management.
+Enter your campaign date/time text in **Session Log -> Starting date and time**, then press **Start Session**. This stores the label and starts the Session Log history boundary; it does not overwrite Foundry world time or start a module timer.
 
 ## Stage Encounter cannot deploy
 

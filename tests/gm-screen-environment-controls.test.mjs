@@ -3,12 +3,8 @@ import fs from "node:fs";
 import test from "node:test";
 
 import {
-  buildEncounterSetupView,
   buildEnvironmentEditorView,
   encounterZoneTerrainNames,
-  readEncounterSetupForm,
-  renderEncounterSetup,
-  sameEncounterSetupValue,
 } from "../scripts/gm-screen/environment-controls.js";
 
 const environmentRuntime = fs.readFileSync(new URL("../scripts/gm-screen/environment-controls.js", import.meta.url), "utf8");
@@ -85,6 +81,37 @@ test("top-bar context view derives Terrain, Danger, and Period from canonical Sc
   assert.equal(view.stored.period, "auto");
 });
 
+test("Encounter Zone view data keeps terrains grouped by zone", () => {
+  const view = buildEnvironmentEditorView({
+    scene: {
+      name: "Split Road",
+      getFlag(_moduleId, key) {
+        if (key !== "encounterZoneGrids") return null;
+        return [
+          {
+            id: "zone-ruins",
+            title: "Ruins",
+            rowHeader: "d8",
+            columns: [{ id: "column-forest", label: "Forest" }],
+            rows: [{ label: "1", cells: [null] }],
+          },
+          {
+            id: "zone-coast",
+            title: "Coast",
+            rowHeader: "d8",
+            columns: [{ id: "column-sea", label: "Sea" }],
+            rows: [{ label: "1", cells: [null] }],
+          },
+        ];
+      },
+    },
+    stored: { terrain: "Forest", dangerLevel: "risky", period: "auto", tableUuid: "" },
+    resolved: resolvedContext(),
+  });
+
+  assert.deepEqual(view.encounterZones.map(zone => zone.terrains), [["Forest"], ["Sea"]]);
+});
+
 test("Terrain remains unavailable until an Encounter Zone supplies terrain columns", () => {
   const view = buildEnvironmentEditorView({
     scene: { name: "Unknown Waste" },
@@ -95,7 +122,7 @@ test("Terrain remains unavailable until an Encounter Zone supplies terrain colum
   });
 
   assert.deepEqual(view.terrains, []);
-  assert.match(topRuntime, /No imported Encounter Zone source is configured for this scene/);
+  assert.match(topRuntime, /No Encounter Zone is configured for this scene/);
   assert.match(topRuntime, /disabled: view\.terrains\.length === 0/);
 });
 
@@ -103,6 +130,8 @@ test("visible Scene Context editing is owned by the top strip rather than Overvi
   assert.match(topRuntime, /pressureCell\(root, "Terrain"\)/);
   assert.match(topRuntime, /pressureCell\(root, "Danger"\)/);
   assert.match(topRuntime, /pressureCell\(root, "Period"\)/);
+  assert.match(topRuntime, /encounterZoneTerrains/);
+  assert.match(topRuntime, /Scene terrain available in the selected Encounter Zone/);
   assert.doesNotMatch(topRuntime, /Save Context|data-mk-context-save/);
   assert.match(overviewRuntime, /overview\.innerHTML = overviewShellHtml\(\)/);
   assert.doesNotMatch(overviewRuntime, /mk-gm-overview-summary|buildOverviewSummary|overviewSummaryHtml/);
@@ -139,50 +168,9 @@ test("Danger choices include Safe through canonical rules", () => {
   assert.equal(view.rules.dangerLevels.safe.label, "Safe");
 });
 
-test("Encounter Setup contains explicit Encounter Zone and Encounter Table save controls", () => {
-  const zone = encounterZoneTable();
-  const view = buildEncounterSetupView({
-    scene: { name: "Salt Road" },
-    tables: [
-      { uuid: zone.uuid, name: zone.name, group: "World" },
-      { uuid: "RollTable.encounters", name: "Wastes Encounters", group: "World" },
-    ],
-    stored: { terrain: "Desert", dangerLevel: "risky", period: "day", tableUuid: "RollTable.encounters" },
-    zoneTableUuid: zone.uuid,
-    zoneTables: [{ uuid: zone.uuid, name: zone.name, group: "Test Source", document: zone }],
-  });
-  const html = renderEncounterSetup(view);
-
-  assert.match(html, /name="zoneTableUuid"/);
-  assert.match(html, /name="tableUuid"/);
-  assert.match(html, /Desert, Canyon, Mountain, Salt Flat/);
-  assert.match(html, /data-mk-encounter-setup-save hidden disabled/);
-  assert.match(html, /Save Encounter Setup/);
-  assert.doesNotMatch(html, /save automatically/i);
-  assert.equal(sameEncounterSetupValue(
-    { zoneTableUuid: zone.uuid, tableUuid: "RollTable.encounters" },
-    { zoneTableUuid: zone.uuid, tableUuid: "RollTable.encounters" },
-  ), true);
-});
-
-test("Encounter Setup form reader stages both selectors without persisting them", () => {
-  const values = {
-    zoneTableUuid: "RollTable.zone",
-    tableUuid: "RollTable.encounters",
-  };
-  const form = {
-    querySelector(selector) {
-      const name = selector.match(/name="([^"]+)"/)?.[1];
-      return name ? { value: values[name] ?? "" } : null;
-    },
-  };
-  const root = {
-    querySelector(selector) {
-      return selector === "[data-mk-encounter-setup-form]" ? form : null;
-    },
-  };
-
-  assert.deepEqual(readEncounterSetupForm(root), values);
+test("Scene Context no longer exposes a legacy encounter-check table setup", () => {
+  assert.doesNotMatch(environmentRuntime, /buildEncounterSetupView|renderEncounterSetup|data-mk-encounter-setup-form/);
+  assert.doesNotMatch(environmentRuntime, /Encounter Table|encounter check triggers/);
 });
 
 test("GM Screen context and overview controllers are loaded for the production surface", () => {
@@ -190,5 +178,5 @@ test("GM Screen context and overview controllers are loaded for the production s
   assert.equal(manifest.esmodules.includes("scripts/gm-screen/top-context-controls.js"), true);
   assert.equal(manifest.esmodules.includes("scripts/gm-screen/overview-links.js"), true);
   assert.equal(manifest.esmodules.includes("scripts/gm-screen/source-table-browser.js"), true);
-  assert.match(environmentRuntime, /bindEncounterSetupManualSave/);
+  assert.doesNotMatch(environmentRuntime, /bindEncounterSetupManualSave/);
 });

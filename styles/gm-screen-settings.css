@@ -1,0 +1,357 @@
+.mk-shadowdark-gm-screen-settings-window .window-content {
+  padding: 0;
+  overflow: hidden;
+  background: #0b0c0d;
+}
+
+.mk-gm-settings,
+.mk-gm-settings * {
+  box-sizing: border-box;
+}
+
+.mk-gm-settings {
+  --mk-gm-bg: #0b0c0d;
+  --mk-gm-panel: #141618;
+  --mk-gm-panel-2: #1b1e21;
+  --mk-gm-border: rgba(255, 255, 255, 0.12);
+  --mk-gm-text: #e2e2df;
+  --mk-gm-muted: #969b9f;
+  --mk-gm-accent: #b82f45;
+  --mk-gm-warn: #d49a45;
+  --mk-gm-good: #6fa878;
+  display: flex;
+  height: 100%;
+  min-height: 0;
+  background: var(--mk-gm-bg);
+  color: var(--mk-gm-text);
+}
+
+.mk-gm-settings button,
+.mk-gm-settings input {
+  font: inherit;
+}
+
+.mk-gm-settings button {
+  width: auto;
+  border: 1px solid var(--mk-gm-border);
+  border-radius: 4px;
+  background: rgba(255, 255, 255, 0.055);
+  color: var(--mk-gm-text);
+  cursor: pointer;
+}
+
+.mk-gm-settings button:hover:not(:disabled) {
+  border-color: rgba(255, 255, 255, 0.3);
+  background: rgba(255, 255, 255, 0.1);
+}
+
+.mk-gm-settings-sidebar {
+  display: flex;
+  flex: 0 0 205px;
+  flex-direction: column;
+  min-height: 0;
+  border-right: 1px solid var(--mk-gm-border);
+  background: #111216;
+}
+
+.mk-gm-settings-sidebar-heading {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 48px;
+  padding: 10px 13px;
+  border-bottom: 1px solid var(--mk-gm-border);
+  color: var(--mk-gm-text);
+  font-size: 14px;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+}
+
+.mk-gm-settings-sidebar-heading i {
+  color: #d6c68a;
+  font-size: 16px;
+}
+
+.mk-gm-settings-search {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 35px;
+  margin: 10px 8px 7px;
+  padding: 6px 9px;
+  border: 1px solid var(--mk-gm-border);
+  border-radius: 4px;
+  color: var(--mk-gm-muted);
+  font-size: 11px;
+}
+
+.mk-gm-settings-search i {
+  font-size: 11px;
+}
+
+.mk-gm-settings-nav {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+}
+
+.mk-gm-settings-nav-group {
+  display: grid;
+  gap: 2px;
+}
+
+.mk-gm-settings-nav-group h2 {
+  margin: 8px 12px 4px;
+  color: var(--mk-gm-muted);
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+}
+
+.mk-gm-settings-nav button {
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 9px;
+  min-height: 34px;
+  margin: 0 7px;
+  padding: 6px 9px;
+  border-color: transparent;
+  background: transparent;
+  color: var(--mk-gm-muted);
+  text-align: left;
+}
+
+.mk-gm-settings-nav button i {
+  width: 15px;
+  color: #cbbb80;
+  text-align: center;
+}
+
+.mk-gm-settings-nav button:hover:not(:disabled),
+.mk-gm-settings-nav button.is-active {
+  border-color: rgba(184, 47, 69, 0.8);
+  background: rgba(184, 47, 69, 0.23);
+  color: var(--mk-gm-text);
+}
+
+.mk-gm-settings-nav button.is-active {
+  box-shadow: inset 3px 0 0 #c33c54;
+}
+
+.mk-gm-settings-sidebar-footer {
+  padding: 12px;
+  color: #676d70;
+  font-size: 9px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.mk-gm-settings-content {
+  flex: 1;
+  min-width: 0;
+  min-height: 0;
+  overflow-y: auto;
+  padding: 20px 22px 28px;
+}
+
+.mk-gm-settings-page {
+  display: grid;
+  gap: 14px;
+  max-width: 920px;
+  margin: 0 auto;
+}
+
+.mk-gm-settings-page-heading {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 15px;
+  padding: 1px 2px 7px;
+}
+
+.mk-gm-settings-page-heading h1 {
+  margin: 2px 0 0;
+  color: var(--mk-gm-text);
+  font-size: 20px;
+  letter-spacing: 0.03em;
+}
+
+.mk-gm-settings-page-heading p {
+  margin: 7px 0 0;
+  color: var(--mk-gm-muted);
+  font-size: 11px;
+}
+
+.mk-gm-settings-page-heading > i {
+  padding-top: 5px;
+  color: #cbbb80;
+  font-size: 22px;
+}
+
+.mk-gm-settings-eyebrow {
+  color: #cbbb80;
+  font-size: 9px;
+  font-weight: 800;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.mk-gm-settings-card {
+  display: grid;
+  gap: 9px;
+  padding: 16px 17px;
+  border: 1px solid var(--mk-gm-border);
+  border-radius: 5px;
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.045), rgba(255, 255, 255, 0.018));
+}
+
+.mk-gm-settings-card h2 {
+  margin: 0;
+  color: var(--mk-gm-text);
+  font-size: 13px;
+  letter-spacing: 0.04em;
+}
+
+.mk-gm-settings-card p {
+  margin: 0;
+  color: var(--mk-gm-muted);
+  font-size: 12px;
+  line-height: 1.55;
+}
+
+.mk-gm-settings-overview-tools {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 7px;
+}
+
+.mk-gm-settings-overview-tools button {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 36px;
+  padding: 7px 9px;
+  border-style: dashed;
+  color: var(--mk-gm-text);
+  cursor: grab;
+  text-align: left;
+}
+
+.mk-gm-settings-overview-tools button:active {
+  cursor: grabbing;
+}
+
+.mk-gm-settings-overview-tools button > i:first-child {
+  width: 16px;
+  color: #cbbb80;
+  text-align: center;
+}
+
+.mk-gm-settings-overview-tools button > span {
+  min-width: 0;
+  flex: 1;
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.mk-gm-settings-overview-tools button > i:last-child {
+  color: var(--mk-gm-muted);
+  font-size: 11px;
+}
+
+.mk-gm-settings-card-accent {
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  border-color: rgba(165, 117, 62, 0.52);
+  background: rgba(165, 117, 62, 0.08);
+}
+
+.mk-gm-settings-card-accent button {
+  min-height: 31px;
+  padding: 5px 10px;
+}
+
+.mk-gm-settings-card-accent button i {
+  color: #cbbb80;
+}
+
+.mk-gm-settings-compositions {
+  padding: 14px 15px 17px;
+}
+
+.mk-gm-settings-compositions input,
+.mk-gm-settings-compositions select {
+  border: 1px solid var(--mk-gm-border);
+  border-radius: 3px;
+  background: #17191b;
+  color: var(--mk-gm-text);
+}
+
+.mk-gm-settings-denied {
+  display: grid;
+  height: 100%;
+  place-content: center;
+  gap: 8px;
+  color: var(--mk-gm-muted);
+  text-align: center;
+}
+
+.mk-gm-settings-denied i {
+  color: #c33c54;
+  font-size: 22px;
+}
+
+.mk-gm-settings .mk-gm-empty {
+  color: var(--mk-gm-muted);
+}
+
+@media (max-width: 720px) {
+  .mk-gm-settings-sidebar {
+    flex-basis: 165px;
+  }
+
+  .mk-gm-settings-content {
+    padding: 15px 13px 22px;
+  }
+
+  .mk-gm-settings-card-accent {
+    grid-template-columns: 1fr;
+  }
+
+  .mk-gm-settings-overview-tools {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 520px) {
+  .mk-gm-settings-sidebar {
+    flex-basis: 52px;
+  }
+
+  .mk-gm-settings-sidebar-heading {
+    justify-content: center;
+    padding: 10px 4px;
+  }
+
+  .mk-gm-settings-sidebar-heading strong,
+  .mk-gm-settings-search span,
+  .mk-gm-settings-nav-group h2,
+  .mk-gm-settings-nav button span,
+  .mk-gm-settings-sidebar-footer {
+    display: none;
+  }
+
+  .mk-gm-settings-search {
+    justify-content: center;
+    margin: 9px 7px;
+    padding: 6px 0;
+  }
+
+  .mk-gm-settings-nav button {
+    justify-content: center;
+    margin: 0 5px;
+    padding: 8px 4px;
+  }
+}

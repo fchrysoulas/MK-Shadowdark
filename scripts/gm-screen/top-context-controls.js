@@ -1,4 +1,3 @@
-import { getGroupRestState } from "../group-sheet/rest-encounters.js";
 import {
   getSceneEnvironmentContext,
   setSceneEnvironmentContext,
@@ -10,7 +9,6 @@ import {
 } from "./environment-controls.js";
 import { rollEncounterZone } from "./exploration-zone-grid.js";
 import { APP_ID } from "./gm-screen.js";
-import { resolveGmScreenGroup } from "./view-model.js";
 
 function gmScreenApplication(application) {
   return Boolean(
@@ -44,6 +42,42 @@ function periodOptions(selected) {
   `;
 }
 
+function escapeHtml(value) {
+  return String(value ?? "").replace(/[&<>"']/g, character => ({
+    "&": "&amp;",
+    "<": "&lt;",
+    ">": "&gt;",
+    '"': "&quot;",
+    "'": "&#39;",
+  })[character]);
+}
+
+function encounterZoneOptions(zones = [], selected = "") {
+  const normalized = (Array.isArray(zones) ? zones : [])
+    .map((zone, index) => ({
+      id: String(zone?.id ?? `zone-${index + 1}`).trim(),
+      title: String(zone?.title ?? `Encounter Zone ${index + 1}`).trim() || `Encounter Zone ${index + 1}`,
+    }))
+    .filter(zone => zone.id);
+
+  if (!normalized.length) {
+    return '<option value="" selected>No Encounter Zone configured</option>';
+  }
+
+  const selectedId = normalized.some(zone => zone.id === String(selected ?? ""))
+    ? String(selected)
+    : normalized[0].id;
+  return normalized.map(zone => `
+    <option value="${escapeHtml(zone.id)}" ${zone.id === selectedId ? "selected" : ""}>${escapeHtml(zone.title)}</option>
+  `).join("");
+}
+
+function encounterZoneTerrains(zones = [], selectedZoneId = "") {
+  const selected = (Array.isArray(zones) ? zones : [])
+    .find(zone => String(zone?.id ?? "") === String(selectedZoneId ?? ""));
+  return Array.isArray(selected?.terrains) ? selected.terrains : [];
+}
+
 function installSelect(cell, {
   label,
   name,
@@ -62,19 +96,78 @@ function installSelect(cell, {
   return cell.querySelector(`select[name="${name}"]`);
 }
 
-function installEncounterRollControl(cell, { disabled = false, title = "" } = {}) {
+function installEncounterZoneSelector(cell, {
+  zones = [],
+  selectedZoneId = "",
+  disabled = false,
+} = {}) {
   if (!cell) return null;
   const label = String(cell.querySelector?.("span")?.textContent ?? "Encounter").trim() || "Encounter";
-  const detail = String(cell.querySelector?.("strong")?.textContent ?? "").trim() || "Zone Roll";
+  const zoneDisabled = disabled || !zones.length;
+  cell.dataset.mkEncounterZoneSelector = "true";
+  cell.innerHTML = `
+    <span>${label}</span>
+    <select name="encounterZone" data-mk-gm-encounter-zone-selector ${zoneDisabled ? "disabled" : ""} title="Select the Encounter Zone to roll" aria-label="Select Encounter Zone">
+      ${encounterZoneOptions(zones, selectedZoneId)}
+    </select>
+  `;
+  return cell.querySelector("[data-mk-gm-encounter-zone-selector]");
+}
+
+function installEncounterRollControl(cell, { disabled = false, title = "" } = {}) {
+  if (!cell) return null;
+  const label = String(cell.querySelector?.("span")?.textContent ?? "Roll Encounter").trim() || "Roll Encounter";
   cell.dataset.mkEncounterRollControl = "true";
   cell.innerHTML = `
     <span>${label}</span>
-    <strong>${detail}</strong>
     <button type="button" class="mk-gm-encounter-roll" data-mk-gm-roll-encounter-zone ${disabled ? "disabled" : ""} ${title ? `title="${title}"` : ""}>
-      <i class="fas fa-dice-d20"></i> Roll Zone
+      <i class="fas fa-dice-d20"></i> Roll Encounter
     </button>
   `;
   return cell.querySelector("[data-mk-gm-roll-encounter-zone]");
+}
+
+function bindEncounterZoneSelector(application, selector, {
+  zones = [],
+  terrainCell = null,
+  strip = null,
+  scene = null,
+  storedTerrain = "Default",
+} = {}) {
+  if (!selector) return false;
+  selector.addEventListener?.("change", event => {
+    event.stopPropagation();
+    const zoneId = String(event.currentTarget?.value ?? "");
+    application.encounterZoneId = zoneId;
+
+    const terrains = encounterZoneTerrains(zones, zoneId);
+    const currentTerrain = readTopContext(strip)?.terrain ?? storedTerrain;
+    const terrainSelect = installSelect(terrainCell, {
+      label: "Terrain",
+      name: "terrain",
+      options: terrainOptions(terrains, currentTerrain),
+      disabled: terrains.length === 0,
+      title: terrains.length
+        ? "Scene terrain available in the selected Encounter Zone"
+        : "The selected Encounter Zone has no terrain columns",
+    });
+
+    bindTopContextAutosave(application, strip, scene, [terrainSelect]);
+    if (terrainSelect?.value && terrainSelect.value !== currentTerrain) {
+      void saveTopContext(application, strip, scene).catch(error => {
+        console.error("mk-shadowdark | GM Screen Top Context | Zone terrain update failed", error);
+        globalThis.ui?.notifications?.error?.(`Encounter Zone terrain update failed: ${error.message}`);
+      });
+    }
+  });
+  return true;
+}
+
+function readEncounterZoneSelection(root) {
+  const strip = root?.matches?.(".mk-gm-pressure-strip")
+    ? root
+    : root?.querySelector?.(".mk-gm-pressure-strip");
+  return String(strip?.querySelector?.('select[name="encounterZone"]')?.value ?? "").trim();
 }
 
 function readTopContext(root) {
@@ -134,8 +227,9 @@ function bindEncounterRollButton(button, strip, scene) {
     event.stopPropagation();
     button.disabled = true;
     try {
-      const terrain = readTopContext(strip)?.terrain ?? "";
-      await rollEncounterZone(terrain, scene);
+      const context = readTopContext(strip);
+      const zoneId = readEncounterZoneSelection(strip);
+      await rollEncounterZone(context?.terrain ?? "", scene, { zoneId });
     } catch (error) {
       console.error("mk-shadowdark | GM Screen Encounter Zone | Roll failed", error);
       globalThis.ui?.notifications?.error?.(`Encounter Zone roll failed: ${error.message}`);
@@ -143,28 +237,6 @@ function bindEncounterRollButton(button, strip, scene) {
       button.disabled = false;
     }
   });
-  return true;
-}
-
-function activeRestRetainsChecks(restState, dangerLevel) {
-  const active = ["checking", "interrupted"].includes(String(restState?.workflow?.status ?? ""));
-  return dangerLevel === "safe"
-    && active
-    && restState?.cadenceSnapshotted === true
-    && Array.isArray(restState?.checkTurns)
-    && restState.checkTurns.length > 0;
-}
-
-function renderRestSnapshotWarning(cell, visible) {
-  cell?.querySelector?.("[data-mk-rest-snapshot-warning]")?.remove?.();
-  if (!cell || !visible) return false;
-  const warning = globalThis.document?.createElement?.("small");
-  if (!warning) return false;
-  warning.dataset.mkRestSnapshotWarning = "true";
-  warning.className = "mk-gm-context-warning";
-  warning.textContent = "Active rest keeps its original encounter schedule";
-  warning.title = "This rest started before the Scene became Safe, so its snapshotted encounter checks still apply.";
-  cell.append(warning);
   return true;
 }
 
@@ -180,17 +252,27 @@ async function decorateTopContext(application, element) {
   const terrainCell = pressureCell(root, "Terrain");
   const dangerCell = pressureCell(root, "Danger");
   const periodCell = pressureCell(root, "Period");
-  const encounterCell = pressureCell(root, "Encounter");
-  if (!terrainCell || !dangerCell || !periodCell || !encounterCell) return false;
+  const encounterZoneCell = pressureCell(root, "Encounter Zone");
+  const encounterRollCell = pressureCell(root, "Roll Encounter");
+  if (!terrainCell || !dangerCell || !periodCell || !encounterZoneCell || !encounterRollCell) return false;
+
+  const zones = Array.isArray(view.encounterZones) ? view.encounterZones : [];
+  const currentZoneId = String(application.encounterZoneId ?? "");
+  const selectedZoneId = zones.some(zone => zone.id === currentZoneId)
+    ? currentZoneId
+    : String(zones[0]?.id ?? "");
+  application.encounterZoneId = selectedZoneId;
+  const selectedZoneTerrains = encounterZoneTerrains(zones, selectedZoneId);
+  const terrainChoices = selectedZoneTerrains.length ? selectedZoneTerrains : view.terrains;
 
   const terrainSelect = installSelect(terrainCell, {
     label: "Terrain",
     name: "terrain",
-    options: terrainOptions(view.terrains, view.stored.terrain),
-    disabled: view.terrains.length === 0,
-    title: view.terrains.length
-      ? "Scene terrain"
-      : "No imported Encounter Zone source is configured for this scene",
+    options: terrainOptions(terrainChoices, view.stored.terrain),
+    disabled: terrainChoices.length === 0,
+    title: terrainChoices.length
+      ? "Scene terrain available in the selected Encounter Zone"
+      : "No Encounter Zone is configured for this scene",
   });
   const dangerSelect = installSelect(dangerCell, {
     label: "Danger",
@@ -204,21 +286,26 @@ async function decorateTopContext(application, element) {
     options: periodOptions(view.stored.period),
     title: "Scene day/night period",
   });
-  const encounterButton = installEncounterRollControl(encounterCell, {
-    disabled: view.terrains.length === 0,
-    title: view.terrains.length
+  const encounterZoneSelect = installEncounterZoneSelector(encounterZoneCell, {
+    zones,
+    selectedZoneId,
+    disabled: view.terrains.length === 0 || zones.length === 0,
+  });
+  const encounterButton = installEncounterRollControl(encounterRollCell, {
+    disabled: terrainChoices.length === 0 || zones.length === 0,
+    title: zones.length && terrainChoices.length
       ? "Roll the selected Encounter Zone terrain"
-      : "No Encounter Zone terrain is configured for this scene",
+      : "No Encounter Zone is configured for this scene",
   });
 
-  const group = await resolveGmScreenGroup(application.groupActorUuid ?? "");
-  const restState = group ? getGroupRestState(group) : null;
-  renderRestSnapshotWarning(
-    dangerCell,
-    activeRestRetainsChecks(restState, view.stored.dangerLevel),
-  );
-
   bindTopContextAutosave(application, strip, view.scene, [terrainSelect, dangerSelect, periodSelect]);
+  bindEncounterZoneSelector(application, encounterZoneSelect, {
+    zones,
+    terrainCell,
+    strip,
+    scene: view.scene,
+    storedTerrain: view.stored.terrain,
+  });
   bindEncounterRollButton(encounterButton, strip, view.scene);
   return true;
 }
@@ -236,14 +323,17 @@ export {
   rootElement,
   pressureCell,
   periodOptions,
+  encounterZoneOptions,
+  encounterZoneTerrains,
   installSelect,
+  installEncounterZoneSelector,
   installEncounterRollControl,
+  bindEncounterZoneSelector,
+  readEncounterZoneSelection,
   readTopContext,
   saveTopContext,
   bindTopContextAutosave,
   bindEncounterRollButton,
-  activeRestRetainsChecks,
-  renderRestSnapshotWarning,
   decorateTopContext,
   registerTopContextControls,
 };

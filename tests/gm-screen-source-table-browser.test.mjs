@@ -8,9 +8,11 @@ import {
   filterSourceTableEntries,
   findTablesNavButton,
   findWorldTable,
+  groupSourceTableEntries,
   openSourceTable,
   rollSourceTable,
-  sourceBookOptions,
+  sourceTableRowHtml,
+  sourceTablePanelContent,
 } from "../scripts/gm-screen/source-table-browser.js";
 import {
   WORKSPACES,
@@ -35,12 +37,16 @@ function importedTable({
   bookTitle,
   pages = [],
   warnings = [],
+  img = "",
+  folder = null,
 } = {}) {
   return {
     id,
     uuid: `RollTable.${id}`,
     name,
     formula,
+    img,
+    folder,
     flags: {
       "mk-shadowdark": {
         sourceTable: {
@@ -84,7 +90,7 @@ test("source table browser reuses the canonical Tables nav entry and removes a l
   assert.equal(removed, 1);
 });
 
-test("source table browser includes only canonical imported RollTables", () => {
+test("RollTable browser includes existing imported and ordinary RollTables", () => {
   const tables = [
     importedTable({
       id: "core-1",
@@ -103,15 +109,13 @@ test("source table browser includes only canonical imported RollTables", () => {
   ];
 
   const entries = collectSourceTableEntries(tables);
-  assert.equal(entries.length, 1);
-  assert.equal(entries[0].id, "core-1");
-  assert.equal(entries[0].name, "Synthetic Core Table");
-  assert.equal(entries[0].bookTitle, "Core Source");
-  assert.equal(entries[0].formula, "1d20");
-  assert.equal(entries[0].pagesLabel, "10");
+  assert.equal(entries.length, 2);
+  assert.deepEqual(entries.map(entry => entry.id), ["ordinary", "core-1"]);
+  assert.equal(entries[1].name, "Synthetic Core Table");
+  assert.equal(entries[1].formula, "1d20");
 });
 
-test("source table browser sorts by source then table name", () => {
+test("RollTable browser sorts alphabetically by table name", () => {
   const entries = collectSourceTableEntries([
     importedTable({ id: "b2", name: "Zulu", formula: "1d6", bookId: "western", bookTitle: "Western" }),
     importedTable({ id: "a2", name: "Beta", formula: "1d6", bookId: "core", bookTitle: "Core" }),
@@ -121,30 +125,57 @@ test("source table browser sorts by source then table name", () => {
   assert.deepEqual(entries.map(entry => entry.id), ["a1", "a2", "b2"]);
 });
 
-test("search covers name, source, formula, and page metadata", () => {
+test("RollTable browser preserves native folder paths and groups", () => {
+  const folders = [
+    { id: "encounters", name: "Encounters", type: "RollTable", folder: null },
+    { id: "npc", name: "NPC", type: "RollTable", folder: "encounters" },
+  ];
+  const tables = [
+    importedTable({ id: "unfiled", name: "Unfiled", formula: "1d6" }),
+    importedTable({ id: "npc-name", name: "Name", formula: "1d20", folder: "npc", img: "icons/svg/d20.svg" }),
+  ];
+
+  const entries = collectSourceTableEntries(tables, folders);
+  assert.deepEqual(entries.find(entry => entry.id === "unfiled").folderPath, []);
+  assert.deepEqual(entries.find(entry => entry.id === "npc-name").folderPath, ["Encounters", "NPC"]);
+  assert.deepEqual(groupSourceTableEntries(entries).map(group => group.label), ["Unfiled", "Encounters / NPC"]);
+  assert.match(sourceTableRowHtml(entries.find(entry => entry.id === "npc-name")), /icons\/svg\/d20\.svg/);
+});
+
+test("RollTable search covers name and formula", () => {
   const entries = collectSourceTableEntries([
     importedTable({ id: "a", name: "Synthetic Talents", formula: "2d6", bookId: "core", bookTitle: "Core Source", pages: [42] }),
     importedTable({ id: "b", name: "Synthetic Encounters", formula: "1d100", bookId: "western", bookTitle: "Western Source", pages: [77] }),
   ]);
 
   assert.deepEqual(filterSourceTableEntries(entries, { query: "talents" }).map(entry => entry.id), ["a"]);
-  assert.deepEqual(filterSourceTableEntries(entries, { query: "western" }).map(entry => entry.id), ["b"]);
   assert.deepEqual(filterSourceTableEntries(entries, { query: "2d6" }).map(entry => entry.id), ["a"]);
-  assert.deepEqual(filterSourceTableEntries(entries, { query: "77" }).map(entry => entry.id), ["b"]);
-  assert.deepEqual(filterSourceTableEntries(entries, { bookId: "core" }).map(entry => entry.id), ["a"]);
+  assert.deepEqual(filterSourceTableEntries(entries, { query: "western" }).map(entry => entry.id), []);
 });
 
-test("source filter options are unique and alphabetized", () => {
+test("RollTable browser ignores source metadata when collecting entries", () => {
   const entries = collectSourceTableEntries([
     importedTable({ id: "w", name: "One", formula: "1d6", bookId: "western", bookTitle: "Western Source" }),
     importedTable({ id: "c1", name: "Two", formula: "1d6", bookId: "core", bookTitle: "Core Source" }),
     importedTable({ id: "c2", name: "Three", formula: "1d6", bookId: "core", bookTitle: "Core Source" }),
   ]);
 
-  assert.deepEqual(sourceBookOptions(entries), [
-    { id: "core", title: "Core Source" },
-    { id: "western", title: "Western Source" },
-  ]);
+  assert.deepEqual(entries.map(entry => entry.id), ["w", "c2", "c1"]);
+  assert.equal("bookId" in entries[0], false);
+  assert.equal("bookTitle" in entries[0], false);
+  assert.equal("pages" in entries[0], false);
+});
+
+test("Tables tab has no Import / Update control", () => {
+  const html = sourceTablePanelContent([]);
+  assert.doesNotMatch(html, /<header>.*RollTables/is);
+  assert.doesNotMatch(html, /Import \/ Update|data-mk-source-table-book|openImporter/);
+});
+
+test("RollTable folder groups are collapsible", () => {
+  assert.match(runtime, /<details class="mk-gm-source-table-group"/);
+  assert.match(runtime, /<summary class="mk-gm-source-table-group-header"/);
+  assert.doesNotMatch(runtime, /data-folder-path="\$\{escapeHtml\(group\.label\)\}" open/);
 });
 
 test("native Roll action posts the RollTable draw to chat", async () => {
@@ -183,10 +214,10 @@ test("world table resolution supports Foundry collections", () => {
   assert.equal(findWorldTable("missing", tables), null);
 });
 
-test("manifest retains the source importer but excludes its GM Screen browser", () => {
+test("manifest retains existing source importer data and loads the RollTable browser", () => {
   assert.ok(manifest.esmodules.includes("scripts/source-tables/source-table-importer.js"));
-  assert.equal(manifest.esmodules.includes("scripts/gm-screen/source-table-browser.js"), false);
-  assert.equal(manifest.styles.includes("styles/gm-screen-source-tables.css"), false);
+  assert.equal(manifest.esmodules.includes("scripts/gm-screen/source-table-browser.js"), true);
+  assert.doesNotMatch(runtime, /sourceTableFlag|openImporter|Import \/ Update/);
 });
 
 test("browser does not embed proprietary source table entries", () => {

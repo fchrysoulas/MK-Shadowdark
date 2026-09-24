@@ -1,0 +1,140 @@
+.mk-gm-settings-tavern-generator {
+  padding: 14px 15px 17px;
+}
+
+.mk-gm-tavern-generator-tables {
+  display: grid;
+  gap: 11px;
+}
+
+.mk-gm-tavern-generator-heading {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  padding-bottom: 4px;
+}
+
+.mk-gm-tavern-generator-heading > div {
+  display: grid;
+  gap: 4px;
+}
+
+.mk-gm-tavern-generator-heading strong {
+  color: var(--mk-gm-text);
+  font-size: 12px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.mk-gm-tavern-generator-heading span,
+.mk-gm-tavern-generator-status,
+.mk-gm-tavern-generator-description,
+.mk-gm-tavern-generator-drop small {
+  color: var(--mk-gm-muted);
+  font-size: 10px;
+  line-height: 1.45;
+}
+
+.mk-gm-tavern-generator-heading > i {
+  color: #cbbb80;
+  font-size: 17px;
+}
+
+.mk-gm-tavern-generator-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 9px;
+}
+
+.mk-gm-tavern-generator-slot {
+  display: grid;
+  align-content: start;
+  gap: 5px;
+  min-width: 0;
+}
+
+.mk-gm-tavern-generator-label {
+  color: var(--mk-gm-text);
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.mk-gm-tavern-generator-description {
+  min-height: 29px;
+}
+
+.mk-gm-tavern-generator-drop {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 7px;
+  min-height: 58px;
+  padding: 8px 9px;
+  border: 1px dashed var(--mk-gm-border);
+  border-radius: 4px;
+  background: rgba(255, 255, 255, 0.018);
+  color: var(--mk-gm-muted);
+  cursor: copy;
+}
+
+.mk-gm-tavern-generator-slot.is-assigned .mk-gm-tavern-generator-drop {
+  border-style: solid;
+  background: rgba(255, 255, 255, 0.05);
+  color: var(--mk-gm-text);
+}
+
+.mk-gm-tavern-generator-slot.is-dragover .mk-gm-tavern-generator-drop {
+  outline: 2px solid rgba(165, 117, 62, 0.8);
+  outline-offset: -2px;
+  background: rgba(165, 117, 62, 0.18);
+}
+
+.mk-gm-tavern-generator-drop > i {
+  color: #cbbb80;
+  font-size: 11px;
+}
+
+.mk-gm-tavern-generator-drop strong {
+  overflow: hidden;
+  font-size: 11px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.mk-gm-tavern-generator-drop small {
+  grid-column: 2 / -1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.mk-gm-tavern-generator-drop button {
+  display: inline-grid;
+  width: 20px;
+  height: 20px;
+  padding: 0;
+  align-items: center;
+  justify-content: center;
+  border: 0;
+  border-radius: 3px;
+  color: var(--mk-gm-muted);
+  font-size: 10px;
+}
+
+.mk-gm-tavern-generator-drop button:hover:not(:disabled) {
+  background: rgba(165, 117, 62, 0.18);
+  color: var(--mk-gm-text);
+}
+
+@media (max-width: 700px) {
+  .mk-gm-tavern-generator-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .mk-gm-tavern-generator-description {
+    min-height: 0;
+  }
+}

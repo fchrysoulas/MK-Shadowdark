@@ -643,6 +643,97 @@
   border-top: 1px solid var(--mk-encounter-border);
 }
 
+.mk-gm-tavern-journal {
+  --mk-tavern-accent: #9a762e;
+  --mk-tavern-border: #ddd7cb;
+  --mk-tavern-muted: #776f63;
+  max-width: 900px;
+  margin: 0 auto;
+  color: #292724;
+}
+
+.mk-gm-tavern-journal > h1 {
+  margin: 0 0 22px;
+  border: 0;
+  color: #292724 !important;
+  font-size: 1.8rem;
+  line-height: 1.1;
+}
+
+.mk-gm-tavern-journal-section {
+  margin-top: 23px;
+}
+
+.mk-gm-tavern-journal-section > h2 {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  margin: 0 0 13px;
+  padding: 0 0 8px;
+  border: 0;
+  border-bottom: 1px solid var(--mk-tavern-border);
+  color: #292724 !important;
+  font-size: 1.18rem;
+  letter-spacing: 0.045em;
+  text-transform: uppercase;
+}
+
+.mk-gm-tavern-journal-section > h2 i {
+  color: var(--mk-tavern-accent);
+  font-size: 0.92em;
+}
+
+.mk-gm-tavern-journal-card {
+  padding: 16px 16px 14px;
+  border: 1px solid var(--mk-tavern-border);
+  border-radius: 9px;
+  background: #fff;
+  box-shadow: 0 3px 12px rgba(48, 42, 32, 0.05);
+}
+
+.mk-gm-tavern-journal-card p {
+  margin: 0 0 9px;
+}
+
+.mk-gm-tavern-journal-card p:last-child {
+  margin-bottom: 0;
+}
+
+.mk-gm-tavern-journal-card ul {
+  margin: 0;
+  padding-left: 21px;
+}
+
+.mk-gm-tavern-journal-card li + li {
+  margin-top: 6px;
+}
+
+.mk-gm-tavern-journal-card hr {
+  margin: 15px 0;
+  border: 0;
+  border-top: 1px solid var(--mk-tavern-border);
+}
+
+.mk-gm-tavern-journal-card h3 {
+  margin: 0 0 9px;
+  color: #292724 !important;
+  font-size: 0.98rem;
+}
+
+.mk-gm-tavern-journal-menu .mk-gm-tavern-journal-card span {
+  color: var(--mk-tavern-muted);
+}
+
+.mk-gm-tavern-journal-debug .mk-gm-tavern-journal-card {
+  border-color: #d9c99f;
+  background: #fbf7eb;
+}
+
+.mk-gm-tavern-journal-debug .mk-gm-tavern-journal-card > p {
+  color: var(--mk-tavern-muted);
+  font-size: 0.82rem;
+}
+
 @media (max-width: 760px) {
   .mk-journal-sheet-shell {
     grid-template-columns: 210px minmax(0, 1fr);

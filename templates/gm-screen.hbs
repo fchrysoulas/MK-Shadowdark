@@ -43,15 +43,14 @@
   </header>
 
   <section class="mk-gm-pressure-strip">
-    <div><span>Procedure</span><strong>{{procedure}}</strong></div>
-    <div><span>Elapsed</span><strong>{{elapsedLabel}}</strong></div>
+    <div><span>Encounter Zone</span><strong>Select Zone</strong></div>
     <div><span>Terrain</span><strong>{{environment.terrain}}</strong></div>
     <div><span>Danger</span><strong>{{environment.dangerLabel}}</strong></div>
     <div><span>Period</span><strong>{{environment.period}}</strong></div>
-    <div><span>Encounter</span><strong>{{#if environment.encountersDisabled}}No encounter checks{{else}}Every {{environment.intervalTurns}} {{environment.intervalUnit}}{{/if}}</strong></div>
     {{#if combat.active}}
     <div class="is-combat"><span>Combat</span><strong>Round {{combat.round}}</strong></div>
     {{/if}}
+    <div><span>Roll Encounter</span><strong>Manual roll</strong></div>
   </section>
 
   <div class="mk-gm-screen-layout">
@@ -120,18 +119,6 @@
               </div>
             </div>
           </div>
-        </section>
-
-        <section class="mk-gm-workspace" data-workspace-panel="exploration">
-          <article class="mk-gm-panel is-wide">
-            <header><i class="fas fa-dice-d20"></i><span>Encounters</span></header>
-            <div data-mk-exploration-zone-grid>
-              <div class="mk-gm-empty">Loading Encounter Zone…</div>
-            </div>
-            <div data-mk-encounter-auxiliary-tables>
-              <div class="mk-gm-empty">Loading encounter RollTables…</div>
-            </div>
-          </article>
         </section>
 
         <section class="mk-gm-workspace" data-workspace-panel="downtime">

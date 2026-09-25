@@ -15,6 +15,7 @@ test("GM Screen has no generic refresh action or refresh API", () => {
   assert.doesNotMatch(runtime, /refreshGmScreen/);
   assert.doesNotMatch(runtime, /registerRefreshHooks/);
   assert.doesNotMatch(runtime, /refresh:\s*refreshGmScreen/);
+  assert.doesNotMatch(runtime, /actionProcessDueEncounters|pendingDue/);
   assert.doesNotMatch(template, /data-action="refresh"/);
   assert.doesNotMatch(template, /Refresh GM Screen/);
 });

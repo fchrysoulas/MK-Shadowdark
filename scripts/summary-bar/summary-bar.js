@@ -8,20 +8,18 @@ import { getRestMode, onRest } from "../libs/resting.js";
 
   const SETTINGS = Object.freeze({
     ENABLED: "characterSheetTweaksSummaryBar",
-    SHORTCUT_ROW: "characterSheetTweaksSummaryBarShortcutRow",
-    SHORTCUT_COUNT: "characterSheetTweaksSummaryBarShortcutCount",
     ELEMENTS: "characterSheetTweaksBarElements",
     FONT_SCALE: "characterSheetTweaksFontScale",
     VALUE_FONT_SIZE: "characterSheetTweaksBarValueFontSize",
     BUTTON_RADIUS: "characterSheetTweaksBarButtonRadius",
     BUTTON_SCALE: "characterSheetTweaksBarButtonScale",
-    POSITION_X: "characterSheetTweaksBarPositionX",
-    POSITION_Y: "characterSheetTweaksBarPositionY",
     DEBUG: "summaryBarDebug"
   });
 
   const DEFAULT_ELEMENTS = ["HP", "DT", "LUCK", "REST", "|", "STR", "DEX", "CON", "INT", "WIS", "CHA", "SLOTS"];
   const SHORTCUT_FLAG = "summaryBarShortcuts";
+  const SHORTCUT_ROW_FLAG = "summaryBarShortcutRowEnabled";
+  const SHORTCUT_SLOT_COUNT = 12;
   const VALID_ELEMENTS = new Set(["LVL", "HP", "AC", "XP", "LUCK", "REST", "DT", "SLOTS", "STR", "DEX", "CON", "INT", "WIS", "CHA", "|"]);
   const ABILITY_ELEMENTS = new Set(["STR", "DEX", "CON", "INT", "WIS", "CHA"]);
 
@@ -41,6 +39,7 @@ import { getRestMode, onRest } from "../libs/resting.js";
 
     applySummaryBarScope(form, windowEl);
     injectSummaryBar(app, form ?? root, data);
+    injectShortcutRowToggle(app, root, windowEl);
     log("applied", app.actor?.name ?? app.object?.name ?? "unknown actor");
   }
 
@@ -90,6 +89,7 @@ import { getRestMode, onRest } from "../libs/resting.js";
   function cleanupSummaryBar(root, form, windowEl) {
     for (const scope of uniqueElements([root, form, windowEl])) {
       scope.querySelectorAll?.(".mk-character-sheet-bar")?.forEach(element => element.remove());
+      scope.querySelectorAll?.(".mk-summary-bar-shortcut-toggle")?.forEach(element => element.remove());
     }
 
     for (const element of uniqueElements([form, windowEl])) {
@@ -99,14 +99,11 @@ import { getRestMode, onRest } from "../libs/resting.js";
       element.style.removeProperty("--mk-bar-value-font-size");
       element.style.removeProperty("--mk-bar-button-radius");
       element.style.removeProperty("--mk-bar-button-scale");
-      element.style.removeProperty("--mk-bar-position-x");
-      element.style.removeProperty("--mk-bar-position-y");
-      element.style.removeProperty("--mk-bar-shortcut-count");
     }
   }
 
   function applySummaryBarScope(form, windowEl) {
-    const hasShortcuts = Boolean(getSetting(SETTINGS.SHORTCUT_ROW, false));
+    const hasShortcuts = getShortcutRowEnabled();
     for (const element of uniqueElements([form, windowEl])) {
       element.classList.add("mk-summary-bar-in-header");
       element.classList.toggle("mk-summary-bar-has-shortcuts", hasShortcuts);
@@ -119,17 +116,11 @@ import { getRestMode, onRest } from "../libs/resting.js";
     const valueFontSize = clampNumber(Number(getSetting(SETTINGS.VALUE_FONT_SIZE, 13)) || 13, 8, 24);
     const buttonRadius = clampNumber(Number(getSetting(SETTINGS.BUTTON_RADIUS, 8)) || 0, 0, 999);
     const buttonScale = clampNumber(Number(getSetting(SETTINGS.BUTTON_SCALE, 100)) || 100, 70, 140);
-    const positionX = clampNumber(Number(getSetting(SETTINGS.POSITION_X, 20)) || 0, -250, 250);
-    const positionY = clampNumber(Number(getSetting(SETTINGS.POSITION_Y, 8)) || 0, -150, 150);
-    const shortcutCount = getShortcutSlotCount();
 
     element.style.setProperty("--mk-sheet-font-scale", String(fontScale / 100));
     element.style.setProperty("--mk-bar-value-font-size", `${valueFontSize}px`);
     element.style.setProperty("--mk-bar-button-radius", `${buttonRadius}px`);
     element.style.setProperty("--mk-bar-button-scale", String(buttonScale / 100));
-    element.style.setProperty("--mk-bar-position-x", `${positionX}px`);
-    element.style.setProperty("--mk-bar-position-y", `${positionY}px`);
-    element.style.setProperty("--mk-bar-shortcut-count", String(shortcutCount));
   }
 
   function injectSummaryBar(app, root, data) {
@@ -140,13 +131,14 @@ import { getRestMode, onRest } from "../libs/resting.js";
     bar.className = "mk-character-sheet-bar flex0";
     bar.dataset.actorId = actor.id ?? "";
     applySummaryBarVariables(bar);
+    const hasShortcuts = getShortcutRowEnabled();
     bar.innerHTML = `
       <div class="mk-character-sheet-bar__main">
         <div class="mk-character-sheet-bar__chips">
           ${buildSummaryChips(actor, data).map(renderChip).join("")}
         </div>
       </div>
-      ${getSetting(SETTINGS.SHORTCUT_ROW, false) ? renderShortcutRow(actor) : ""}
+      ${hasShortcuts ? renderShortcutRow(actor) : ""}
     `;
 
     insertSummaryBar(root, bar);
@@ -169,7 +161,7 @@ import { getRestMode, onRest } from "../libs/resting.js";
   }
 
   function bindShortcutDragSources(root, actor) {
-    if (!getSetting(SETTINGS.SHORTCUT_ROW, false)) return;
+    if (!getShortcutRowEnabled()) return;
 
     const bindRows = (selector, acceptsItem) => {
       root.querySelectorAll?.(selector).forEach(row => {
@@ -239,14 +231,14 @@ import { getRestMode, onRest } from "../libs/resting.js";
       stored = actor?.flags?.[MODULE_ID]?.[SHORTCUT_FLAG] ?? [];
     }
 
-    return Array.from({ length: getShortcutSlotCount() }, (_unused, index) => {
+    return Array.from({ length: SHORTCUT_SLOT_COUNT }, (_unused, index) => {
       const itemId = Array.isArray(stored) ? stored[index] : "";
       return typeof itemId === "string" ? itemId : "";
     });
   }
 
   async function setShortcutSlot(actor, index, itemId = "") {
-    if (!actor?.setFlag || !Number.isInteger(index) || index < 0 || index >= getShortcutSlotCount()) return;
+    if (!actor?.setFlag || !Number.isInteger(index) || index < 0 || index >= SHORTCUT_SLOT_COUNT) return;
     if (!actor.isOwner && !game.user?.isGM) {
       ui.notifications?.warn("MK-Shadowdark | You do not have permission to update these shortcuts.");
       return;
@@ -255,11 +247,6 @@ import { getRestMode, onRest } from "../libs/resting.js";
     const slots = getShortcutSlots(actor);
     slots[index] = String(itemId ?? "");
     await actor.setFlag(MODULE_ID, SHORTCUT_FLAG, slots);
-  }
-
-  function getShortcutSlotCount() {
-    const value = Number(getSetting(SETTINGS.SHORTCUT_COUNT, 10));
-    return Math.round(clampNumber(Number.isFinite(value) ? value : 10, 1, 16));
   }
 
   function bindShortcutListeners(app, bar, actor) {
@@ -432,6 +419,73 @@ import { getRestMode, onRest } from "../libs/resting.js";
     const nav = root.querySelector?.("nav.SD-nav[data-group='primary'], nav.SD-nav");
     if (nav) nav.before(bar);
     else root.prepend(bar);
+  }
+
+  function injectShortcutRowToggle(app, root, windowEl) {
+    const header = getSummaryBarHeader(root, windowEl);
+    if (!header) return null;
+
+    const button = document.createElement("button");
+    button.type = "button";
+    button.className = "mk-summary-bar-shortcut-toggle";
+    button.innerHTML = '<i class="fa-solid fa-grip-lines" aria-hidden="true"></i>';
+    updateShortcutRowToggle(button, getShortcutRowEnabled());
+    button.addEventListener("click", event => void onShortcutRowToggle(event, app));
+    header.append(button);
+    return button;
+  }
+
+  function getSummaryBarHeader(root, windowEl) {
+    if (root?.matches?.("header.SD-header")) return root;
+    return root?.querySelector?.("header.SD-header")
+      ?? windowEl?.querySelector?.("header.SD-header")
+      ?? null;
+  }
+
+  function updateShortcutRowToggle(button, enabled) {
+    const label = enabled ? "Hide shortcut row" : "Show shortcut row";
+    button.title = label;
+    button.setAttribute("aria-label", label);
+    button.setAttribute("aria-pressed", String(enabled));
+    button.classList.toggle("is-enabled", enabled);
+  }
+
+  async function onShortcutRowToggle(event, app) {
+    event.preventDefault();
+    event.stopPropagation();
+
+    const user = globalThis.game?.user;
+    if (!user?.setFlag) {
+      ui.notifications?.warn("MK-Shadowdark | Your shortcut row preference cannot be saved.");
+      return;
+    }
+
+    const enabled = !getShortcutRowEnabled(user);
+    try {
+      await user.setFlag(MODULE_ID, SHORTCUT_ROW_FLAG, enabled);
+      await app?.render?.(false);
+    } catch (error) {
+      console.error(`${MODULE_ID} v${getModuleVersion()} | ${SUBMODULE} | shortcut row toggle error`, error);
+      ui.notifications?.error("MK-Shadowdark | Could not update the shortcut row.");
+    }
+  }
+
+  function getShortcutRowEnabled(user = globalThis.game?.user) {
+    if (!user) return false;
+
+    let value;
+    try {
+      value = user.getFlag?.(MODULE_ID, SHORTCUT_ROW_FLAG);
+    } catch (_error) {
+      value = undefined;
+    }
+
+    if (value === undefined) {
+      value = user?._source?.flags?.[MODULE_ID]?.[SHORTCUT_ROW_FLAG]
+        ?? user?.flags?.[MODULE_ID]?.[SHORTCUT_ROW_FLAG];
+    }
+
+    return value === true;
   }
 
   function buildSummaryChips(actor, data) {

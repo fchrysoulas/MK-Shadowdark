@@ -83,7 +83,7 @@ test("legacy token immunity migration is version-gated and scene-scoped", () => 
 
 test("intentional morale compatibility surfaces remain supported", () => {
   const runtime = source("scripts/morale/morale.js");
-  const resolver = source("scripts/encounter-engine/resolver.js");
+  const resolver = source("scripts/group-sheet/encounters/resolver.js");
 
   assert.match(runtime, /reset:\s*combat\s*=>\s*resetCombat/);
   assert.match(runtime, /\bsetImmune\b/);

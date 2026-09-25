@@ -11,15 +11,20 @@ const manifestUrl = new URL("../module.json", import.meta.url);
 const runtimeUrl = new URL("../scripts/auto-damage/auto-apply-damage.js", import.meta.url);
 
 test("obsolete Auto Damage settings are explicitly retired", () => {
-  assert.deepEqual(RETIRED_SETTINGS, [
+  const requiredAutoDamageRetiredSettings = [
     "autoDamageGMOnly",
     "autoDamageShowDice3D",
     "detailedWoundsSurvivalTrigger",
     "detailedWoundsSurvivalProfile",
     "enduringWoundsTableUuid",
     "deathTimerMinTurns",
-    "deathTimerTooltip"
-  ]);
+    "deathTimerTooltip",
+  ];
+
+  for (const key of requiredAutoDamageRetiredSettings) {
+    assert.ok(RETIRED_SETTINGS.includes(key), `${key} must remain retired`);
+  }
+  assert.equal(new Set(RETIRED_SETTINGS).size, RETIRED_SETTINGS.length);
 
   const registrations = new Map([
     ["mk-shadowdark.autoDamageGMOnly", { scope: "world" }],

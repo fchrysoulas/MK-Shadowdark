@@ -50,7 +50,7 @@ test("shared feature settings load before their runtime consumers", () => {
     "scripts/corpse-token/corpse-token.js",
     "scripts/initiative/initiative.js",
     "scripts/morale/morale.js",
-    "scripts/encounter-engine/encounter-engine.js"
+    "scripts/group-sheet/group-sheet.js"
   ]) {
     const consumerIndex = modules.indexOf(consumer);
     assert.ok(consumerIndex >= 0, `${consumer} must be loaded by module.json`);

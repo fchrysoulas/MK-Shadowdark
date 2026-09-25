@@ -12,6 +12,14 @@ const environmentRuntime = fs.readFileSync(
   new URL("../scripts/gm-screen/environment-controls.js", import.meta.url),
   "utf8",
 );
+const topContextRuntime = fs.readFileSync(
+  new URL("../scripts/gm-screen/top-context-controls.js", import.meta.url),
+  "utf8",
+);
+const template = fs.readFileSync(
+  new URL("../templates/gm-screen.hbs", import.meta.url),
+  "utf8",
+);
 
 test("Tables workspace contains only RollTables", () => {
   const setup = '<header><span>Encounter Setup</span></header><select name="zoneTableUuid"></select>';
@@ -37,10 +45,15 @@ test("Overview decorator no longer owns or scans Encounter Setup", () => {
   assert.match(environmentRuntime, /data-mk-gm-overview-scene-context/);
 });
 
-test("Encounter Setup changes only stage state until Save Encounter Setup is clicked", () => {
-  assert.match(environmentRuntime, /data-mk-encounter-setup-save/);
-  assert.match(environmentRuntime, /bindEncounterSetupManualSave/);
-  assert.match(environmentRuntime, /saveButton\.addEventListener\("click"/);
-  assert.match(environmentRuntime, /saveEncounterSetup\(application, setup, scene\)/);
-  assert.doesNotMatch(environmentRuntime, /Auto-save/);
+test("Encounter Zone controls use top-context autosave and explicit manual rolls", () => {
+  assert.match(topContextRuntime, /data-mk-gm-encounter-zone-selector/);
+  assert.match(topContextRuntime, /bindTopContextAutosave/);
+  assert.match(topContextRuntime, /saveTopContext\(application, strip, scene\)/);
+  assert.match(topContextRuntime, /data-mk-gm-roll-encounter-zone/);
+  assert.match(template, /<div><span>Encounter Zone<\/span>/);
+  assert.match(template, /data-mk-gm-roll-encounter-zone/);
+  assert.doesNotMatch(environmentRuntime, /data-mk-encounter-setup-save/);
+  assert.doesNotMatch(environmentRuntime, /Save Encounter Setup/);
+  assert.doesNotMatch(environmentRuntime, /bindEncounterSetupManualSave/);
+  assert.doesNotMatch(topContextRuntime, /actionProcessDueEncounters|pendingDue/);
 });

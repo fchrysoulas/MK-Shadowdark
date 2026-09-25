@@ -12,12 +12,14 @@ const manifest = JSON.parse(fs.readFileSync(new URL("../module.json", import.met
 const stylesheet = fs.readFileSync(new URL("../styles/gm-screen.css", import.meta.url), "utf8");
 const dialogPaths = [
   "scripts/gm-screen/gm-screen.js",
-  "scripts/gm-screen/assignment-controls.js",
   "scripts/gm-screen/exploration-creation-controls.js",
-  "scripts/gm-screen/settlement-generator.js",
-  "scripts/gm-screen/morale-controls.js",
-  "scripts/gm-screen/presentation-controls.js",
-  "scripts/encounter-engine/staging.js",
+  "scripts/gm-screen/exploration-zone-grid.js",
+  "scripts/gm-screen/gm-screen-transfer.js",
+  "scripts/gm-screen/magic-item-generator.js",
+  "scripts/gm-screen/monster-generator.js",
+  "scripts/gm-screen/npc-generator.js",
+  "scripts/gm-screen/tavern-shop-generator.js",
+  "scripts/group-sheet/encounters/staging.js",
 ];
 
 function saveGlobals(...names) {

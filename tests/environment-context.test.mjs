@@ -20,7 +20,7 @@ import {
 import {
   getSceneEncounterContext,
   normalizeProfiles,
-} from "../scripts/encounter-engine/helpers.js";
+} from "../scripts/group-sheet/encounters/helpers.js";
 
 const runtime = fs.readFileSync(new URL("../scripts/libs/environment-context.js", import.meta.url), "utf8");
 

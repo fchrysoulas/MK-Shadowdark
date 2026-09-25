@@ -7,7 +7,11 @@ const RETIRED_SETTINGS = Object.freeze([
   "enduringWoundsTableUuid",
   "deathTimerMinTurns",
   "deathTimerTooltip",
-  "encounterEngineAutoTimePasses"
+  "encounterEngineAutoTimePasses",
+  "characterSheetTweaksSummaryBarShortcutRow",
+  "characterSheetTweaksSummaryBarShortcutCount",
+  "characterSheetTweaksBarPositionX",
+  "characterSheetTweaksBarPositionY"
 ]);
 
 function retireSetting(moduleId, key) {

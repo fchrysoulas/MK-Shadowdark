@@ -14,13 +14,13 @@ Guidance for AI agents working in this repository.
 ## Repository And Editing Rules
 
 - Preserve unrelated working-tree changes. Inspect `git status` and the relevant diff before editing or committing.
-- Use browser-compatible JavaScript. Most standalone features use a self-contained IIFE; the Group Sheet and Encounter Engine use explicit ES-module imports.
+- Use browser-compatible JavaScript. Most standalone features use a self-contained IIFE; the Group Sheet and its encounter services use explicit ES-module imports.
 - Follow the existing architecture of the file being changed instead of converting nearby code to a new pattern without a task-specific reason.
 - Keep the manifest version as the only module version source. Runtime logs should read it from `game.modules.get("mk-shadowdark")`; do not add per-file version constants.
 - Use the existing `game.modules.get("mk-shadowdark").api` namespace for public feature APIs.
 - Keep comments for non-obvious rules, compatibility constraints, migrations, hook timing, or load-order requirements. Avoid path-only comments and repeated headers.
 - Add or update localization when a user-facing string belongs in the Shadowdark configuration UI. Existing feature settings currently contain some inline English; do not expand that inconsistency casually.
-- Settings are intentionally hybrid: common feature settings are registered in `scripts/libs/settings.js`, while self-contained systems such as Initiative, Morale, Corpse Token, Detailed Wounds, and Encounter Engine register their own settings. Preserve the local pattern and never register the same key twice.
+- Settings are intentionally hybrid: common feature settings are registered in `scripts/libs/settings.js`, while self-contained systems such as Initiative, Morale, Corpse Token, Detailed Wounds, and Group Encounters register their own settings. Preserve the local pattern and never register the same key twice.
 - Preserve the harmless removed Base Management compatibility stub in `scripts/mk-shadowdark.js` unless the task explicitly removes that legacy API.
 
 ## Foundry And Shadowdark Compatibility
@@ -92,10 +92,11 @@ Guidance for AI agents working in this repository.
 
 ## Validation
 
-- For every changed JavaScript file, run `node --check <path>` when Node is available.
+- For every changed JavaScript file, run `node --check <path>` when Node is available; `npm run syntax` performs the repository-wide syntax check used by CI.
 - Validate edited JSON by parsing it, not only by visual inspection.
+- Run `npm run lint` and `npm test` for the repository's lint and automated Node test stages when the change warrants the full validation pass.
 - Run `git diff --check` and inspect the focused diff before handing off or committing.
-- There is no automated test suite. Use targeted mock scripts only when they exercise the changed behavior meaningfully, then verify sheet, chat, combat, token, settings, or canvas behavior in Foundry in proportion to the risk.
+- The repository has an automated Node test suite under `tests/`, exposed through `npm test` (`node --test`). For changed behavior, add or update focused tests and run the full suite when the change crosses feature boundaries. Keep manual Foundry verification for sheet, chat, combat, token, settings, or canvas behavior that Node mocks cannot adequately cover.
 - Manual compatibility verification targets Foundry v13/v14 with Shadowdark 4.x. Confirm the running Foundry server is serving the changed local module files rather than a cached or older installation.
 - The usual Windows Foundry user-data module path is `%LOCALAPPDATA%\FoundryVTT\Data\modules\mk-shadowdark`. Resolve and verify the exact destination before copying files there.
 

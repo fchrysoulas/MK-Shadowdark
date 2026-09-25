@@ -4,7 +4,7 @@ import test from "node:test";
 
 import { encounterMessage } from "../scripts/gm-screen/encounter-controls.js";
 
-const chat = fs.readFileSync(new URL("../scripts/encounter-engine/chat.js", import.meta.url), "utf8");
+const chat = fs.readFileSync(new URL("../scripts/group-sheet/encounters/chat.js", import.meta.url), "utf8");
 const controls = fs.readFileSync(new URL("../scripts/gm-screen/encounter-controls.js", import.meta.url), "utf8");
 const history = fs.readFileSync(new URL("../scripts/gm-screen/encounter-history.js", import.meta.url), "utf8");
 const template = fs.readFileSync(new URL("../templates/gm-screen.hbs", import.meta.url), "utf8");
@@ -61,8 +61,8 @@ test("Retained encounter inspector exposes canonical fields and actions without 
   assert.doesNotMatch(template, /data-workspace-panel="encounter"/);
 });
 
-test("GM Screen staging shortcuts are excluded while the GM Screen is disabled", () => {
+test("GM Screen loads active encounter actions without legacy workspace shortcuts", () => {
   assert.doesNotMatch(template, /data-action="stageLatestEncounter"/);
-  assert.equal(manifest.esmodules.includes("scripts/gm-screen/encounter-controls.js"), false);
-  assert.equal(manifest.styles.includes("styles/gm-screen-encounter-controls.css"), false);
+  assert.equal(manifest.esmodules.includes("scripts/gm-screen/encounter-controls.js"), true);
+  assert.equal(manifest.styles.includes("styles/gm-screen-encounter-controls.css"), true);
 });

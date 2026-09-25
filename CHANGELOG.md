@@ -67,6 +67,16 @@
 - Moved GM Screen Encounters into the Settings window and removed the Encounters tab from the main GM Screen navigation.
 - Removed the Session Log GM Tools button panel and its unused controls.
 - Simplified the Tables workspace by removing its redundant RollTables header, keeping search fixed at the top, and limiting scrolling to the folder/table list.
+- Fixed the GM Screen RollTable browser to preserve and display contextual source formulas such as `d*` while keeping their native fallback formulas internal and non-rollable.
+- Removed unreachable retired GM Screen and Survival Wound Profile runtime files, and retargeted validation coverage to the active Group Encounter services and 1.9.17 GM Screen.
+- Changed the Summary Bar shortcut row to a per-player preference controlled by a button in the character-sheet header; the row now always contains 12 slots.
+- Set the shortcut-enabled player-sheet header to a fixed 130px minimum while lifting the character name and Summary Bar's main row.
+- Removed Summary Bar Position X and Position Y settings; the Summary Bar is fixed 20px above the navigation and 30px from the sheet's right edge.
+- Removed the gap between the Summary Bar and its shortcut row.
+- Adjusted the Summary Bar to use the tighter fixed header position: `clamp(141px, 10%, 108px)` from the left, 5px from the right, and 10px above the navigation.
+- Hid empty shortcut-slot plus indicators until an item is dragged over a shortcut slot.
+- Removed the shortcut row border and added a 1px top margin.
+- Resized the shortcut-row toggle to 22px by 21px and removed its rounded corners.
 
 ## 1.9.16
 

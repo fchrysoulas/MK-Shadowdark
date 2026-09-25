@@ -10,9 +10,6 @@
   --mk-bar-value-font-size: 13px;
   --mk-bar-button-radius: 8px;
   --mk-bar-button-scale: 1;
-  --mk-bar-position-x: 20px;
-  --mk-bar-position-y: 8px;
-  --mk-bar-shortcut-count: 10;
   --mk-sheet-bar-background: rgba(0, 0, 0, 0.08);
   --mk-sheet-bar-border: rgba(0, 0, 0, 0.28);
   --mk-sheet-chip-background: rgba(0, 0, 0, 0.10);
@@ -133,6 +130,14 @@
 .mk-summary-shortcut.is-empty {
   border-style: dashed;
   color: #d8cba8;
+}
+
+.mk-summary-shortcut.is-empty > .fa-plus {
+  visibility: hidden;
+}
+
+.mk-summary-shortcut.is-empty.is-drag-over > .fa-plus {
+  visibility: visible;
 }
 
 .mk-summary-shortcut.is-lost-spell {
@@ -280,20 +285,57 @@ button.mk-sheet-chip:focus-visible {
 
 .shadowdark.sheet.player.mk-summary-bar-in-header .SD-header {
   position: relative !important;
-  min-height: 132px;
+  min-height: 130px;
   overflow: hidden;
   padding-bottom: 0;
 }
 
+.shadowdark.sheet.player.mk-summary-bar-in-header .SD-header .mk-summary-bar-shortcut-toggle {
+  position: absolute;
+  top: 4px;
+  right: 4px;
+  z-index: 7;
+  display: grid;
+  place-items: center;
+  width: 22px;
+  height: 21px;
+  margin: 0;
+  padding: 3px 0px 1px 5px;
+  border: 1px solid rgba(255, 255, 255, 0.34);
+  border-radius: 0;
+  background: rgba(0, 0, 0, 0.28);
+  color: #d8cba8;
+  cursor: pointer;
+  font-size: 0.78rem;
+  line-height: 1;
+}
+
+.shadowdark.sheet.player.mk-summary-bar-in-header .SD-header .mk-summary-bar-shortcut-toggle:hover,
+.shadowdark.sheet.player.mk-summary-bar-in-header .SD-header .mk-summary-bar-shortcut-toggle:focus-visible,
+.shadowdark.sheet.player.mk-summary-bar-in-header .SD-header .mk-summary-bar-shortcut-toggle.is-enabled {
+  border-color: #e8c96b;
+  background: rgba(232, 201, 107, 0.18);
+  color: #f3d77c;
+  outline: none;
+}
+
 .shadowdark.sheet.player.mk-summary-bar-has-shortcuts .SD-header {
-  min-height: 176px;
+  min-height: 130px;
+}
+
+/* Keep the character name and the Summary Bar's main row in the visual band
+ * above the shortcut row. */
+.shadowdark.sheet.player.mk-summary-bar-has-shortcuts .SD-header .SD-title {
+  position: relative;
+  z-index: 2;
+  transform: translateY(-22px);
 }
 
 .shadowdark.sheet.player.mk-summary-bar-in-header .SD-header .mk-character-sheet-bar.mk-in-header {
   position: absolute;
-  left: clamp(92px, 16%, 128px);
-  right: 38px;
-  bottom: 16px;
+  left: clamp(141px, 10%, 108px);
+  right: 5px;
+  bottom: 10px;
   z-index: 5;
   width: auto;
   max-width: calc(100% - 44px);
@@ -305,7 +347,11 @@ button.mk-sheet-chip:focus-visible {
   box-shadow: 0 1px 5px rgba(0, 0, 0, 0.38);
   pointer-events: auto;
   overflow: hidden;
-  transform: translate(var(--mk-bar-position-x), var(--mk-bar-position-y));
+}
+
+.shadowdark.sheet.player.mk-summary-bar-has-shortcuts .SD-header .mk-character-sheet-bar.mk-in-header {
+  bottom: calc(10px + 2.3rem);
+  overflow: visible;
 }
 
 .shadowdark.sheet.player.mk-summary-bar-in-header .SD-header .mk-character-sheet-bar__main {
@@ -364,6 +410,24 @@ button.mk-sheet-chip:focus-visible {
   min-width: 0;
 }
 
+.shadowdark.sheet.player.mk-summary-bar-has-shortcuts .SD-header .mk-character-sheet-bar__shortcuts {
+  position: absolute;
+  top: 100%;
+  right: 0;
+  left: 0;
+  box-sizing: border-box;
+  width: auto;
+  min-height: 2.3rem;
+  flex-wrap: nowrap;
+  padding: 0.22rem;
+  margin-top: 1px;
+  border: none;
+  border-radius: 5px;
+  background: rgba(0, 0, 0, 0.52);
+  overflow-x: auto;
+  overflow-y: hidden;
+}
+
 .shadowdark.sheet.player.mk-summary-bar-in-header .SD-header .mk-bar-divider {
   height: 1.7rem;
   background: rgba(255, 255, 255, 0.42);
@@ -371,9 +435,9 @@ button.mk-sheet-chip:focus-visible {
 
 @media (max-width: 760px) {
   .shadowdark.sheet.player.mk-summary-bar-in-header .SD-header .mk-character-sheet-bar.mk-in-header {
-    left: 6px;
-    right: 6px;
-    bottom: 6px;
+    left: clamp(141px, 10%, 108px);
+    right: 5px;
+    bottom: 10px;
   }
 }
 

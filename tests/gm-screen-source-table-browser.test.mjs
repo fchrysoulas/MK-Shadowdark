@@ -15,10 +15,6 @@ import {
   sourceTablePanelHtml,
 } from "../scripts/gm-screen/source-table-browser.js";
 import {
-  WORKSPACES,
-  normalizeWorkspace as normalizePresentationWorkspace,
-} from "../scripts/gm-screen/presentation-preferences.js";
-import {
   GM_SCREEN_WORKSPACES,
   normalizeWorkspace as normalizeGmScreenWorkspace,
 } from "../scripts/gm-screen/view-model.js";
@@ -72,9 +68,7 @@ function importedTable({
 
 test("Tables is a permanent zone rather than a workspace tab", () => {
   assert.equal(WORKSPACE_ID, "tables");
-  assert.equal(WORKSPACES.includes("tables"), false);
   assert.deepEqual(GM_SCREEN_WORKSPACES, ["overview"]);
-  assert.equal(normalizePresentationWorkspace("tables"), "overview");
   assert.equal(normalizeGmScreenWorkspace("tables"), "overview");
 });
 
@@ -155,7 +149,7 @@ test("RollTable search covers name and formula", () => {
   assert.deepEqual(filterSourceTableEntries(entries, { query: "western" }).map(entry => entry.id), []);
 });
 
-test("RollTable browser ignores source metadata when collecting entries", () => {
+test("RollTable browser does not expose unrelated source metadata", () => {
   const entries = collectSourceTableEntries([
     importedTable({ id: "w", name: "One", formula: "1d6", bookId: "western", bookTitle: "Western Source" }),
     importedTable({ id: "c1", name: "Two", formula: "1d6", bookId: "core", bookTitle: "Core Source" }),

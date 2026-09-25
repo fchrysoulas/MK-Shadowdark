@@ -11,7 +11,7 @@ import {
   normalizeStagingOptions,
   resolveEncounterStagingActor,
   tokenDispositionValue,
-} from "../scripts/encounter-engine/staging.js";
+} from "../scripts/group-sheet/encounters/staging.js";
 
 function makeTokenPrototype({ width = 1, height = 1 } = {}) {
   return {

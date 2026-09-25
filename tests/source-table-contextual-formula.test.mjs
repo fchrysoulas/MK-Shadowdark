@@ -8,7 +8,7 @@ import {
   sourceTableRowHtml,
 } from "../scripts/gm-screen/source-table-browser.js";
 
-function sourceTable({ formula = "d*", formulaRaw = formula, draw = async () => null } = {}) {
+function sourceTable({ formula = "1d12", formulaRaw = "d*", draw = async () => null } = {}) {
   const metadata = {
     key: "synthetic:dynamic",
     bookId: "shadowdark-core-v4.9",
@@ -40,20 +40,22 @@ function restoreGlobal(key, value) {
   else globalThis[key] = value;
 }
 
-test("contextual source formulas are identified from the collected table formula", () => {
+test("contextual source formulas are identified from imported source metadata", () => {
   assert.equal(isContextualSourceFormula("d*"), true);
   assert.equal(isContextualSourceFormula("1d12"), false);
 
   const [entry] = collectSourceTableEntries([sourceTable()]);
-  assert.equal(entry.formula, "d*");
+  assert.equal(entry.formula, "1d12");
+  assert.equal(entry.formulaRaw, "d*");
   assert.equal(entry.contextualFormula, true);
 });
 
-test("contextual source table rows hide formula metadata and disable generic Roll", () => {
+test("contextual source table rows display the source formula and disable generic Roll", () => {
   const [entry] = collectSourceTableEntries([sourceTable()]);
   const html = sourceTableRowHtml(entry);
-  assert.doesNotMatch(html, /mk-gm-source-table-meta|d\*/);
+  assert.doesNotMatch(html, /mk-gm-source-table-meta/);
   assert.match(html, /Contextual/);
+  assert.match(html, /d\*/);
   assert.match(html, /disabled/);
   assert.doesNotMatch(html, /data-mk-source-table-action="roll"/);
 });

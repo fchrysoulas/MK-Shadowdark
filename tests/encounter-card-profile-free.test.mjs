@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
-import { renderEncounterCard } from "../scripts/encounter-engine/chat.js";
+import { renderEncounterCard } from "../scripts/group-sheet/encounters/chat.js";
 
 function encounterData(overrides = {}) {
   return {

@@ -12,7 +12,7 @@ import {
   encounterOccurs,
   getEncounterServiceContext,
   resolveEncounterService,
-} from "../scripts/encounter-engine/service.js";
+} from "../scripts/group-sheet/encounters/service.js";
 
 function makeScene(context = {}) {
   return {

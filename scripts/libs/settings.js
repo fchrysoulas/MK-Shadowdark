@@ -117,10 +117,10 @@
       hint: "Configure the independent character summary bar, its contents, appearance, position, and diagnostics.",
       icon: "fas fa-chart-simple",
       settings: [
-        "characterSheetTweaksSummaryBar", "characterSheetTweaksSummaryBarShortcutRow", "characterSheetTweaksSummaryBarShortcutCount", "characterSheetTweaksBarElements", "characterSheetTweaksRestMode",
+        "characterSheetTweaksSummaryBar", "characterSheetTweaksBarElements", "characterSheetTweaksRestMode",
         "characterSheetTweaksFontScale",
         "characterSheetTweaksBarValueFontSize", "characterSheetTweaksBarButtonRadius", "characterSheetTweaksBarButtonScale",
-        "characterSheetTweaksBarPositionX", "characterSheetTweaksBarPositionY", "summaryBarDebug"
+        "summaryBarDebug"
       ]
     },
     {
@@ -988,31 +988,6 @@
       onChange: refreshOpenActorSheets
     });
 
-    registerSetting("characterSheetTweaksSummaryBarShortcutRow", {
-      name: "Summary Bar | Enable Shortcut Row",
-      hint: "Adds a second row of per-character shortcut slots. Drag an ability, attack, or spell from the character sheet onto a slot; right-click a filled slot to clear it.",
-      scope: "world",
-      config: true,
-      type: Boolean,
-      default: false,
-      onChange: refreshOpenActorSheets
-    });
-
-    registerSetting("characterSheetTweaksSummaryBarShortcutCount", {
-      name: "Summary Bar | Shortcut Slots",
-      hint: "Number of buttons displayed in the shortcut row. Default 10.",
-      scope: "world",
-      config: true,
-      type: Number,
-      default: 10,
-      range: {
-        min: 1,
-        max: 16,
-        step: 1
-      },
-      onChange: refreshOpenActorSheets
-    });
-
     registerSetting("characterSheetTweaksBarElements", {
       name: "Summary Bar | Elements",
       hint: "Comma-separated list of bar elements, in display order. Available: LVL, HP, DT, AC, XP, LUCK, REST, SLOTS, STR, DEX, CON, INT, WIS, CHA. DT is the Death Timer and appears only at 0 HP. Use | to add a vertical divider.",
@@ -1152,36 +1127,6 @@
         min: 70,
         max: 140,
         step: 5
-      },
-      onChange: refreshOpenActorSheets
-    });
-
-    registerSetting("characterSheetTweaksBarPositionX", {
-      name: "Summary Bar | Position X",
-      hint: "Horizontal offset in pixels for the Summary Bar. Negative moves left, positive moves right.",
-      scope: "world",
-      config: true,
-      type: Number,
-      default: 20,
-      range: {
-        min: -250,
-        max: 250,
-        step: 1
-      },
-      onChange: refreshOpenActorSheets
-    });
-
-    registerSetting("characterSheetTweaksBarPositionY", {
-      name: "Summary Bar | Position Y",
-      hint: "Vertical offset in pixels for the Summary Bar. Negative moves up, positive moves down.",
-      scope: "world",
-      config: true,
-      type: Number,
-      default: 8,
-      range: {
-        min: -150,
-        max: 150,
-        step: 1
       },
       onChange: refreshOpenActorSheets
     });

@@ -1,6 +1,19 @@
 const GM_SCREEN_APP_ID = "mk-shadowdark-gm-screen";
 const WORKSPACE_ID = "tables";
 
+function sourceFormulaForTable(table) {
+  let metadata = null;
+  try {
+    metadata = table?.getFlag?.("mk-shadowdark", "sourceTable") ?? null;
+  } catch (_error) {
+    // Fall through to raw flags for tests and partially hydrated documents.
+  }
+  metadata ??= table?.flags?.["mk-shadowdark"]?.sourceTable ?? null;
+
+  const nativeFormula = String(table?.formula ?? "").trim();
+  return String(metadata?.formulaRaw ?? nativeFormula).trim() || nativeFormula;
+}
+
 function collectionValues(collection) {
   if (!collection) return [];
   if (Array.isArray(collection)) return collection;
@@ -71,17 +84,20 @@ function collectSourceTableEntries(
   return collectionValues(tables)
     .map(table => {
       const formula = String(table?.formula ?? "").trim();
+      const formulaRaw = sourceFormulaForTable(table);
       if (!table?.id && !table?._id) return null;
       return {
         id: String(table?.id ?? table?._id ?? ""),
         uuid: String(table?.uuid ?? ""),
         name: String(table?.name ?? "RollTable"),
         formula,
-        contextualFormula: isContextualSourceFormula(formula),
+        formulaRaw,
+        contextualFormula: isContextualSourceFormula(formulaRaw),
         img: String(table?.img ?? table?.icon ?? "").trim(),
         folderPath: folderPathForTable(table, folders),
         searchText: [
           table?.name,
+          formulaRaw,
           table?.formula,
         ].filter(Boolean).join(" ").toLowerCase(),
       };
@@ -152,8 +168,9 @@ function sourceTablePanelHtml(entries = []) {
 }
 
 function sourceTableRowHtml(entry) {
+  const sourceFormula = escapeHtml(entry.formulaRaw || entry.formula);
   const rollAction = entry.contextualFormula
-    ? '<button type="button" disabled title="This RollTable uses a contextual dice formula. Roll it through the relevant generator."><i class="fas fa-dice"></i> Contextual</button>'
+    ? `<button type="button" disabled title="This RollTable uses a contextual dice formula. Roll it through the relevant generator."><i class="fas fa-dice"></i> Contextual <code>${sourceFormula}</code></button>`
     : `<button type="button" data-mk-source-table-action="roll" data-table-id="${escapeHtml(entry.id)}" title="Roll ${escapeHtml(entry.name)}"><i class="fas fa-dice-d20"></i> Roll</button>`;
   const icon = entry.img
     ? `<img src="${escapeHtml(entry.img)}" alt="" loading="lazy">`
@@ -226,7 +243,7 @@ async function rollSourceTable(table) {
     globalThis.ui?.notifications?.warn?.("The selected RollTable is unavailable.");
     return null;
   }
-  if (isContextualSourceFormula(table.formula)) {
+  if (isContextualSourceFormula(sourceFormulaForTable(table))) {
     globalThis.ui?.notifications?.warn?.("This RollTable uses a contextual dice formula. Roll it through the relevant generator.");
     return null;
   }
@@ -303,6 +320,7 @@ export {
   escapeHtml,
   gmScreenApplication,
   isContextualSourceFormula,
+  sourceFormulaForTable,
   collectSourceTableEntries,
   folderPathForTable,
   filterSourceTableEntries,

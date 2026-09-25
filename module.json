@@ -7,6 +7,15 @@
     "minimum": "13",
     "verified": "14"
   },
+  "documentTypes": {
+    "Actor": {
+      "bastion": {
+        "htmlFields": [
+          "notes"
+        ]
+      }
+    }
+  },
   "flags": {
     "mk-module-hub": {
       "schemaVersion": 1,
@@ -86,6 +95,7 @@
     "scripts/editable-quantity/editable-qty.js",
     "scripts/equipment-hands/equipment-hands.js",
     "scripts/token-equipment-display/token-equipment-display.js",
+    "scripts/bastion-sheet/bastion-sheet.js",
     "scripts/group-sheet/group-sheet.js",
     "scripts/quickdraw/quickdraw-icons.js",
     "scripts/sheet-style-editor/sheet-style-editor.js",
@@ -136,6 +146,7 @@
     "styles/chat-reporting.css",
     "styles/group-sheet.css",
     "styles/group-sheet-dashboard.css",
+    "styles/bastion-sheet.css",
     "styles/quickdraw-icons.css",
     "styles/group-encounters.css",
     "styles/gm-screen.css",

@@ -120,7 +120,7 @@
 
 .mk-group-nav {
   display: grid;
-  grid-template-columns: repeat(5, 1fr);
+  grid-template-columns: repeat(5, minmax(0, 1fr));
   min-height: 42px;
   border-bottom: 1px solid rgba(255, 255, 255, 0.12);
   background: rgba(0, 0, 0, 0.32);
@@ -128,14 +128,17 @@
 
 .mk-group-nav .item {
   display: flex;
+  min-width: 0;
   align-items: center;
   justify-content: center;
   gap: 8px;
+  padding-inline: 8px;
   border-right: 1px solid rgba(255, 255, 255, 0.08);
   color: var(--mk-group-muted);
-  font-size: 15px;
+  font-size: 13px;
   font-weight: 800;
   letter-spacing: 0.04em;
+  white-space: nowrap;
   text-transform: uppercase;
 }
 

@@ -674,9 +674,32 @@
   .mk-group-dashboard-enabled .mk-group-workspace .mk-travel-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
+
+  .mk-group-dashboard-enabled .mk-group-nav {
+    display: flex;
+    overflow-x: auto;
+    scrollbar-color: rgba(255, 255, 255, 0.24) transparent;
+    scrollbar-width: thin;
+  }
+
+  .mk-group-dashboard-enabled .mk-group-nav .item {
+    flex: 0 0 112px;
+    min-width: 112px;
+  }
 }
 
 @container (max-width: 560px) {
+  .mk-group-dashboard-enabled .mk-group-nav {
+    display: grid;
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+    overflow-x: visible;
+  }
+
+  .mk-group-dashboard-enabled .mk-group-nav .item {
+    min-width: 0;
+    padding-inline: 4px;
+  }
+
   .mk-group-dashboard-enabled .mk-group-workspace .mk-travel-grid,
   .mk-group-dashboard-enabled .mk-inventory-layout,
   .mk-group-dashboard-enabled .mk-camping-info {

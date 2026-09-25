@@ -69,7 +69,7 @@ const GM_SCREEN_SETTINGS_TABS = Object.freeze([
     group: "GM Screen",
     overviewTool: "magic-item-generator",
     homeTitle: "Magic Item Generator",
-    homeDescription: "Choose the RollTables used to build magic item names, bonuses, benefits, curses, and personalities for this Scene.",
+    homeDescription: "Choose the RollTables used to build magic item types, qualities, and personalities for this Scene.",
   }),
   Object.freeze({
     id: "tavern-generator",

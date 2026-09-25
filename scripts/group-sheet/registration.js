@@ -11,6 +11,9 @@ import {
   SHEET_ID,
   SUBMODULE,
 } from "./constants.js";
+import { BASTION_ACTOR_TYPE } from "../bastion-sheet/constants.js";
+import { registerBastionSheet } from "../bastion-sheet/registration.js";
+import { createBastionActor } from "../bastion-sheet/sheet.js";
 import {
   canUserControlActor,
   ensureGroupActorHpDefaults,
@@ -83,6 +86,7 @@ function getActorDocumentTypes() {
 
 function getActorTypeLabel(type) {
   if (type === GROUP_ACTOR_DIALOG_TYPE) return "Group";
+  if (type === BASTION_ACTOR_TYPE) return "Bastion";
 
   const label = CONFIG.Actor?.typeLabels?.[type];
   if (label) return game.i18n.localize(label);
@@ -94,6 +98,7 @@ function getActorTypeLabel(type) {
 
 function getDefaultActorName(type) {
   if (type === GROUP_ACTOR_DIALOG_TYPE) return "New Group";
+  if (type === BASTION_ACTOR_TYPE) return "New Bastion";
 
   const typeLabel = getActorTypeLabel(type || "Actor") || "Actor";
   const localized = game.i18n.format("DOCUMENT.New", { type: typeLabel });
@@ -155,7 +160,11 @@ function shouldOfferGroupActorType() {
 
 function buildActorCreateDialogContent(data = {}) {
   const selectedType = data.type || getActorDocumentTypes()[0] || "Player";
-  const typeOptions = [...new Set([...getActorDocumentTypes(), GROUP_ACTOR_DIALOG_TYPE])]
+  const typeOptions = [...new Set([
+    ...getActorDocumentTypes(),
+    GROUP_ACTOR_DIALOG_TYPE,
+    BASTION_ACTOR_TYPE,
+  ])]
     .map(type => `
       <option value="${escapeHtml(type)}" ${type === selectedType ? "selected" : ""}>
         ${escapeHtml(getActorTypeLabel(type))}
@@ -187,6 +196,13 @@ async function handleActorCreateDialog(actorClass, data, html) {
 
   if (actorType === GROUP_ACTOR_DIALOG_TYPE) {
     return createGroupActor({
+      name: actorName,
+      folder: formData.folder || getFolderId(data.folder),
+    });
+  }
+
+  if (actorType === BASTION_ACTOR_TYPE) {
+    return createBastionActor({
       name: actorName,
       folder: formData.folder || getFolderId(data.folder),
     });
@@ -451,6 +467,8 @@ function registerGroupSheet() {
   if (groupSheetRegistered) return;
   groupSheetRegistered = true;
   registerGroupSheetSocket();
+
+  registerBastionSheet();
 
   const ActorsCollection = globalThis.foundry?.documents?.collections?.Actors;
 

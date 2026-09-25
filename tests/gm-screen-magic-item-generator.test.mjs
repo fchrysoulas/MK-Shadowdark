@@ -22,12 +22,10 @@ function generatedStatus() {
   };
 }
 
-test("Magic Item Generator rolls all five linked fields", async () => {
+test("Magic Item Generator rolls all three linked fields", async () => {
   const values = {
-    name: "Name: Moonlit Key",
-    bonus: "Bonus: +1 to checks",
-    benefit: "Benefit: Opens sealed doors",
-    curse: "Curse: Whispers at night",
+    type: "Type: Weapon",
+    qualities: "Qualities: Opens sealed doors",
     personality: "Personality: Curious",
   };
   let index = 0;
@@ -45,28 +43,22 @@ test("Magic Item Generator rolls all five linked fields", async () => {
 
   assert.equal(result.mode, "generated");
   assert.deepEqual(result.results, {
-    name: "Moonlit Key",
-    bonus: "+1 to checks",
-    benefit: "Opens sealed doors",
-    curse: "Whispers at night",
+    type: "Weapon",
+    qualities: "Opens sealed doors",
     personality: "Curious",
   });
   assert.deepEqual(result.rolls, {
-    name: 1,
-    bonus: 2,
-    benefit: 3,
-    curse: 4,
-    personality: 5,
+    type: 1,
+    qualities: 2,
+    personality: 3,
   });
 });
 
 test("Magic Item preview and native Basic Item data include every assigned field", () => {
   const result = {
     results: {
-      name: "Moonlit Key",
-      bonus: "+1 to checks",
-      benefit: "Opens sealed doors",
-      curse: "Whispers at night",
+      type: "Weapon",
+      qualities: "Opens sealed doors",
       personality: "Curious",
     },
     name: "Moonlit Key",

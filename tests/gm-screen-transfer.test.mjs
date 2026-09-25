@@ -125,10 +125,8 @@ test("GM Screen export captures Scene-owned configuration and table references",
       mutation3: "RollTable.monster-mutation-3",
     },
     magicItemGeneratorTables: {
-      name: "RollTable.magic-item-name",
-      bonus: "RollTable.magic-item-bonus",
-      benefit: "RollTable.magic-item-benefit",
-      curse: "RollTable.magic-item-curse",
+      type: "RollTable.magic-item-type",
+      qualities: "RollTable.magic-item-qualities",
       personality: "RollTable.magic-item-personality",
     },
     encounterZoneTableUuid: "RollTable.legacy",
@@ -174,10 +172,8 @@ test("GM Screen export captures Scene-owned configuration and table references",
     table("RollTable.monster-mutation-1", "Monster Mutation 1"),
     table("RollTable.monster-mutation-2", "Monster Mutation 2"),
     table("RollTable.monster-mutation-3", "Monster Mutation 3"),
-    table("RollTable.magic-item-name", "Magic Item Names"),
-    table("RollTable.magic-item-bonus", "Magic Item Bonuses"),
-    table("RollTable.magic-item-benefit", "Magic Item Benefits"),
-    table("RollTable.magic-item-curse", "Magic Item Curses"),
+    table("RollTable.magic-item-type", "Magic Item Types"),
+    table("RollTable.magic-item-qualities", "Magic Item Qualities"),
     table("RollTable.magic-item-personality", "Magic Item Personalities"),
     table("RollTable.legacy", "Legacy"),
   ];
@@ -204,7 +200,8 @@ test("GM Screen export captures Scene-owned configuration and table references",
   assert.equal(exported.configuration.locationGenerator.tables.feature, "RollTable.location-feature");
   assert.equal(exported.configuration.monsterGenerator.tables.combat, "RollTable.monster-combat");
   assert.equal(exported.configuration.monsterGenerator.tables.mutation3, "RollTable.monster-mutation-3");
-  assert.equal(exported.configuration.magicItemGenerator.tables.name, "RollTable.magic-item-name");
+  assert.equal(exported.configuration.magicItemGenerator.tables.type, "RollTable.magic-item-type");
+  assert.equal(exported.configuration.magicItemGenerator.tables.qualities, "RollTable.magic-item-qualities");
   assert.equal(exported.configuration.magicItemGenerator.tables.personality, "RollTable.magic-item-personality");
   assert.ok(exported.tableReferences.some(reference => reference.name === "Forest Encounter"));
   assert.deepEqual(collectConfiguredTableUuids(exported.configuration).includes("RollTable.feature"), true);
@@ -214,7 +211,7 @@ test("GM Screen export captures Scene-owned configuration and table references",
   assert.deepEqual(collectConfiguredTableUuids(exported.configuration).includes("RollTable.shop-second"), true);
   assert.deepEqual(collectConfiguredTableUuids(exported.configuration).includes("RollTable.location-type"), true);
   assert.deepEqual(collectConfiguredTableUuids(exported.configuration).includes("RollTable.monster-weakness"), true);
-  assert.deepEqual(collectConfiguredTableUuids(exported.configuration).includes("RollTable.magic-item-benefit"), true);
+  assert.deepEqual(collectConfiguredTableUuids(exported.configuration).includes("RollTable.magic-item-qualities"), true);
 });
 
 test("GM Screen import remaps missing UUIDs by unique RollTable name", async () => {
@@ -228,7 +225,7 @@ test("GM Screen import remaps missing UUIDs by unique RollTable name", async () 
     table("RollTable.destination-shop", "Standard Shops"),
     table("RollTable.destination-location-descriptor", "Location Descriptors"),
     table("RollTable.destination-monster-combat", "Monster Combat"),
-    table("RollTable.destination-magic-item-name", "Magic Item Names"),
+    table("RollTable.destination-magic-item-type", "Magic Item Types"),
   ];
   const payload = {
     format: TRANSFER_FORMAT,
@@ -243,7 +240,7 @@ test("GM Screen import remaps missing UUIDs by unique RollTable name", async () 
       { uuid: "World.other.RollTable.old-shop", name: "Standard Shops" },
       { uuid: "World.other.RollTable.old-location-descriptor", name: "Location Descriptors" },
       { uuid: "World.other.RollTable.old-monster-combat", name: "Monster Combat" },
-      { uuid: "World.other.RollTable.old-magic-item-name", name: "Magic Item Names" },
+      { uuid: "World.other.RollTable.old-magic-item-type", name: "Magic Item Types" },
     ],
     configuration: {
       environmentContext: { terrain: "Forest", dangerLevel: "unsafe", period: "day", tableUuid: "" },
@@ -321,10 +318,8 @@ test("GM Screen import remaps missing UUIDs by unique RollTable name", async () 
       },
       magicItemGenerator: {
         tables: {
-          name: "World.other.RollTable.old-magic-item-name",
-          bonus: "",
-          benefit: "",
-          curse: "",
+          type: "World.other.RollTable.old-magic-item-type",
+          qualities: "",
           personality: "",
         },
       },
@@ -373,8 +368,8 @@ test("GM Screen import remaps missing UUIDs by unique RollTable name", async () 
     "RollTable.destination-monster-combat",
   );
   assert.equal(
-    destination._source.flags["mk-shadowdark"].magicItemGeneratorTables.name,
-    "RollTable.destination-magic-item-name",
+    destination._source.flags["mk-shadowdark"].magicItemGeneratorTables.type,
+    "RollTable.destination-magic-item-type",
   );
 });
 

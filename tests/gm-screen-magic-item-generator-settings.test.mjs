@@ -22,7 +22,7 @@ function mockTable(id, name = id) {
   };
 }
 
-test("Magic Item Generator assignments normalize to five Scene-owned table slots", () => {
+test("Magic Item Generator assignments normalize to three Scene-owned table slots", () => {
   assert.deepEqual(normalizeMagicItemGeneratorTables({
     itemName: { uuid: "RollTable.name" },
     bonus: "RollTable.bonus",
@@ -30,30 +30,26 @@ test("Magic Item Generator assignments normalize to five Scene-owned table slots
     curse: "RollTable.curse",
     personality: "RollTable.personality",
   }), {
-    schema: 1,
-    name: "RollTable.name",
-    bonus: "RollTable.bonus",
-    benefit: "RollTable.benefit",
-    curse: "RollTable.curse",
+    schema: 2,
+    type: "RollTable.name",
+    qualities: "",
     personality: "RollTable.personality",
   });
-  assert.deepEqual(MAGIC_ITEM_GENERATOR_TABLE_KEYS, ["name", "bonus", "benefit", "curse", "personality"]);
+  assert.deepEqual(MAGIC_ITEM_GENERATOR_TABLE_KEYS, ["type", "qualities", "personality"]);
 });
 
 test("Magic Item Generator status reports incomplete and unavailable linked assignments", () => {
   const status = magicItemGeneratorTableStatus({
-    name: "RollTable.name",
-    bonus: "RollTable.bonus",
-    benefit: "RollTable.benefit",
-    curse: "",
+    type: "RollTable.type",
+    qualities: "",
     personality: "RollTable.personality",
-  }, [mockTable("name"), mockTable("benefit")]);
+  }, [mockTable("type")]);
 
   assert.equal(status.configured, true);
   assert.equal(status.available, false);
-  assert.deepEqual(status.missing, ["Curse"]);
-  assert.deepEqual(status.unavailable, ["Bonus", "Personality"]);
-  assert.equal(status.tables.name.name, "name");
+  assert.deepEqual(status.missing, ["Qualities"]);
+  assert.deepEqual(status.unavailable, ["Personality"]);
+  assert.equal(status.tables.type.name, "type");
 });
 
 test("Magic Item Generator settings render one Title | Description | RollTable row per assignment", () => {
@@ -65,21 +61,20 @@ test("Magic Item Generator settings render one Title | Description | RollTable r
     table: mockTable(key, `${key} table`),
   })));
 
-  assert.equal((html.match(/data-mk-magic-item-generator-slot=/g) ?? []).length, 5);
-  assert.equal((html.match(/mk-gm-rolltable-assignment-row/g) ?? []).length, 5);
+  assert.equal((html.match(/data-mk-magic-item-generator-slot=/g) ?? []).length, 3);
+  assert.equal((html.match(/mk-gm-rolltable-assignment-row/g) ?? []).length, 3);
   assert.match(html, /mk-gm-rolltable-assignment-grid/);
-  assert.match(html, /name table/);
+  assert.match(html, /type table/);
+  assert.match(html, /qualities table/);
   assert.match(html, /personality table/);
   assert.match(html, /data-mk-magic-item-generator-clear/);
-  assert.match(html, /requires all five linked tables/);
+  assert.match(html, /requires all three linked tables/);
 });
 
 test("Magic Item Generator assignments read, write, and resolve active Scene tables", async () => {
   let stored = {
-    name: "RollTable.name",
-    bonus: "RollTable.bonus",
-    benefit: "RollTable.benefit",
-    curse: "",
+    type: "RollTable.type",
+    qualities: "",
     personality: "",
   };
   const scene = {
@@ -96,27 +91,21 @@ test("Magic Item Generator assignments read, write, and resolve active Scene tab
   };
 
   assert.deepEqual(getSceneMagicItemGeneratorTables(scene), {
-    schema: 1,
-    name: "RollTable.name",
-    bonus: "RollTable.bonus",
-    benefit: "RollTable.benefit",
-    curse: "",
+    schema: 2,
+    type: "RollTable.type",
+    qualities: "",
     personality: "",
   });
-  await setSceneMagicItemGeneratorTable("curse", "RollTable.curse", scene, { user: { isGM: true } });
-  assert.equal(stored.curse, "RollTable.curse");
+  await setSceneMagicItemGeneratorTable("qualities", "RollTable.qualities", scene, { user: { isGM: true } });
+  assert.equal(stored.qualities, "RollTable.qualities");
 
   const entries = await resolveMagicItemGeneratorEntries(scene, [
-    mockTable("name", "Name"),
-    mockTable("bonus", "Bonus"),
-    mockTable("benefit", "Benefit"),
-    mockTable("curse", "Curse"),
+    mockTable("type", "Type"),
+    mockTable("qualities", "Qualities"),
   ]);
   assert.deepEqual(entries.map(entry => entry.table?.name ?? ""), [
-    "Name",
-    "Bonus",
-    "Benefit",
-    "Curse",
+    "Type",
+    "Qualities",
     "",
   ]);
 });

@@ -2,6 +2,20 @@
 
 ## 1.9.17
 
+- Updated the GM Screen Magic Item Generator to use Type, Qualities, and Personality RollTables.
+- Added a standalone Bastion Actor sheet with bastion rules, types, construction costs, build times, and upgrades.
+- Added a Bastion Defenses tab that accepts NPC actor drag-and-drop for siege weapons and warbands.
+- Redesigned Bastion upgrades as icon cards with install states and costs.
+- Installed Bastion upgrades now use a green checkmark control.
+- Available Bastion upgrades now use a grey checkmark control instead of an Install label.
+- Added a conditional 100-slot Vault tab when the Vault upgrade is installed.
+- Added a drag-and-drop Vault item grid that stores Items against the Bastion and tracks gear-slot capacity.
+- Vault items dragged onto another character sheet now transfer there and are removed from the Bastion.
+- Items dragged from a character sheet into the Vault now transfer there and are removed from the character.
+- Replaced per-item Vault trash buttons with a bottom trash drop area for discarding stored Items.
+- Redesigned the Group Sheet tab rail to keep its five operational tabs on the desktop row, scroll cleanly at medium widths, and collapse to icon-only tabs when narrow.
+- Reduced Group Sheet tab title sizing for a tighter five-tab desktop rail.
+
 - Added the selectable Character Dashboard and dashboard-styled Item sheets.
 - Added independent world-level runtime switches for the Journal Sheet, Character Dashboard, Quickdraw, GM Screen, Group Sheet and Group Encounters, Targeting and Spell Automation, Chat Reporting, Torch Attack, Source Tables, and Automated Animations compatibility; disabled features preserve their existing data.
 - Improved Focus Tracker, Auto Damage, Death Timer, Corpse Token, Character Sheet Tweaks, Summary Bar, Targeting Assistant, and Detailed Wounds presentation and reliability.

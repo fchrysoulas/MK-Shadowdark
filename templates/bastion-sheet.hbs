@@ -1,0 +1,277 @@
+<form class="mk-bastion-sheet {{cssClass}}" autocomplete="off">
+  <header class="mk-bastion-header">
+    <img class="mk-bastion-image" src="{{actor.img}}" data-edit="img" title="{{actor.name}}" alt="{{actor.name}}">
+
+    <div class="mk-bastion-title-block">
+      <input class="mk-bastion-name" name="name" type="text" value="{{actor.name}}" placeholder="Bastion Name">
+
+      <label class="mk-bastion-location">
+        <i class="fas fa-location-dot" aria-hidden="true"></i>
+        <span>Location</span>
+        <input name="system.location" type="text" value="{{mk.bastion.location}}" placeholder="Where is this bastion?">
+      </label>
+
+      <div class="mk-bastion-stats">
+        <span><i class="fas fa-landmark"></i> Type <strong>{{mk.bastion.type.name}}</strong></span>
+        <span><i class="fas fa-shield-halved"></i> AC <strong>{{mk.bastion.ac}}</strong></span>
+        <span><i class="fas fa-heart"></i> HP <strong>{{mk.bastion.hp.value}}/{{mk.bastion.hp.max}}</strong></span>
+        <span><i class="fas fa-hammer"></i> Upgrades <strong>{{mk.bastion.installedCount}}/{{mk.bastion.upgradeLimit}}</strong></span>
+      </div>
+    </div>
+  </header>
+
+  <nav class="mk-bastion-nav tabs {{#if mk.bastion.hasVault}}has-vault{{/if}}" data-group="primary">
+    <a class="item active" data-tab="overview"><i class="fas fa-landmark"></i> Overview</a>
+    <a class="item" data-tab="upgrades"><i class="fas fa-hammer"></i> Upgrades <span class="mk-bastion-tab-count">{{mk.bastion.installedCount}}/{{mk.bastion.upgradeLimit}}</span></a>
+    <a class="item" data-tab="defenses"><i class="fas fa-shield-halved"></i> Defenses <span class="mk-bastion-tab-count">{{mk.bastion.defenseCount}}</span></a>
+    {{#if mk.bastion.hasVault}}<a class="item" data-tab="vault"><i class="fas fa-vault"></i> Vault</a>{{/if}}
+  </nav>
+
+  <section class="mk-bastion-content">
+    <div class="tab mk-bastion-tab-body active" data-group="primary" data-tab="overview">
+      <section class="mk-bastion-type-control">
+        <div>
+          <h2><i class="fas fa-chess-rook" aria-hidden="true"></i> Bastion Type</h2>
+          <p>Choose the structure that defines this bastion's AC, HP, upgrade limit, and build time.</p>
+        </div>
+        <label class="mk-bastion-type-field">
+          <span class="mk-bastion-field-label">Type</span>
+          <select class="mk-bastion-type-select" data-action="change-bastion-type" {{#unless mk.canEditBastion}}disabled{{/unless}}>
+            {{#each mk.bastion.types}}
+            <option value="{{key}}" {{#if selected}}selected{{/if}}>{{name}} — {{cost}}</option>
+            {{/each}}
+          </select>
+        </label>
+      </section>
+
+      <div class="mk-bastion-overview-grid">
+        <section class="mk-bastion-card mk-bastion-rules" aria-label="Bastion rules">
+          <h3><i class="fas fa-scroll" aria-hidden="true"></i> Bastion Rules</h3>
+          <p><strong>AC and HP.</strong> Bastions have an AC and HP. At 0 HP, the bastion's walls are breached. Ordinary weapons can't damage bastions, but siege weapons, destructive elements like fire, and huge creatures (such as giants) can.</p>
+          <p><strong>Repair.</strong> Repairing damage to a bastion takes 1 week and costs 1 gp per HP restored.</p>
+          <p><strong>Upgrade.</strong> PCs can add an upgrade to a bastion by paying its cost. Each upgrade takes a week to build. Limit one of each upgrade per bastion.</p>
+          <p><strong>Safety.</strong> Bastions provide safe shelter from the weather, climate, and random encounters.</p>
+        </section>
+
+        <section class="mk-bastion-card" aria-label="Bastion types">
+          <h3><i class="fas fa-chess-rook" aria-hidden="true"></i> Bastion Types</h3>
+          <div class="mk-bastion-type-notes">
+            {{#each mk.bastion.types}}
+            <p><strong>{{name}}.</strong> {{description}}</p>
+            {{/each}}
+          </div>
+          <div class="mk-bastion-table-scroll">
+            <table class="mk-bastion-table mk-bastion-types-table" aria-label="Bastion types and construction costs">
+              <thead>
+                <tr>
+                  <th scope="col">Type</th>
+                  <th scope="col">Cost</th>
+                  <th scope="col">AC</th>
+                  <th scope="col">HP</th>
+                  <th scope="col">Upgrades</th>
+                  <th scope="col">Build Time</th>
+                </tr>
+              </thead>
+              <tbody>
+                {{#each mk.bastion.types}}
+                <tr>
+                  <th scope="row">{{name}}</th>
+                  <td>{{cost}}</td>
+                  <td>{{ac}}</td>
+                  <td>{{hp}}</td>
+                  <td>{{upgrades}}</td>
+                  <td>{{buildTime}}</td>
+                </tr>
+                {{/each}}
+              </tbody>
+            </table>
+          </div>
+        </section>
+      </div>
+    </div>
+
+    <div class="tab mk-bastion-tab-body" data-group="primary" data-tab="upgrades">
+      <section class="mk-bastion-card mk-bastion-upgrades-panel">
+        <header class="mk-bastion-section-header">
+          <div>
+            <h2><i class="fas fa-hammer" aria-hidden="true"></i> Bastion Upgrades</h2>
+            <p>Install one of each upgrade until this bastion reaches its upgrade limit.</p>
+          </div>
+          <strong class="mk-bastion-upgrade-count">{{mk.bastion.installedCount}} / {{mk.bastion.upgradeLimit}}</strong>
+        </header>
+
+        <div class="mk-bastion-upgrade-grid" role="list" aria-label="Bastion upgrades">
+          {{#each mk.bastion.upgrades}}
+          <article class="mk-bastion-upgrade-box {{#if installed}}is-installed{{/if}} {{#unless canInstall}}is-unavailable{{/unless}}" role="listitem">
+            <div class="mk-bastion-upgrade-icon" aria-hidden="true">
+              <i class="{{icon}}"></i>
+            </div>
+            <div class="mk-bastion-upgrade-content">
+              <div class="mk-bastion-upgrade-heading">
+                <h3>{{name}}</h3>
+                <span class="mk-bastion-upgrade-cost">{{cost}}</span>
+              </div>
+              <p>{{description}}</p>
+              <button
+                type="button"
+                class="mk-bastion-upgrade-toggle {{#if installed}}is-installed{{/if}}"
+                data-action="toggle-bastion-upgrade"
+                data-upgrade-key="{{key}}"
+                aria-label="{{#if installed}}Installed: {{name}}{{else}}Install {{name}}{{/if}}"
+                title="{{#if installed}}Installed: {{name}}{{else}}Install {{name}}{{/if}}"
+                {{#unless canInstall}}disabled{{/unless}}
+              >
+                <i class="fas fa-check" aria-hidden="true"></i>
+              </button>
+            </div>
+          </article>
+          {{/each}}
+        </div>
+      </section>
+    </div>
+
+    <div class="tab mk-bastion-tab-body" data-group="primary" data-tab="defenses">
+      <div class="mk-bastion-defenses-grid">
+        <section class="mk-bastion-card mk-bastion-defense-card" data-defense-dropzone="true" data-defense-kind="siegeWeapons" aria-label="Siege weapons">
+          <header class="mk-bastion-section-header">
+            <div>
+              <h2><i class="fas fa-crosshairs" aria-hidden="true"></i> Siege Weapons</h2>
+              <p>Drag NPC siege weapons here to position them at this bastion.</p>
+            </div>
+          </header>
+
+          <div class="mk-bastion-defense-list">
+            {{#each mk.bastion.defenses.siegeWeapons}}
+            <div class="mk-bastion-defense-row {{#unless actorExists}}is-missing{{/unless}}">
+              {{#if actorExists}}
+              <button type="button" class="mk-bastion-defense-actor" data-action="open-defense-actor" data-defense-uuid="{{actorUuid}}" title="Open {{name}}">
+                <img src="{{img}}" alt="" aria-hidden="true">
+                <span class="mk-bastion-defense-actor-main">
+                  <span class="mk-bastion-defense-actor-name">{{name}}</span>
+                  {{#if hasHp}}
+                  <span class="mk-bastion-defense-actor-hp">
+                    <span class="mk-bastion-defense-hp-track" role="progressbar" aria-label="Hit points" aria-valuenow="{{hp.value}}" aria-valuemin="0" aria-valuemax="{{hp.max}}">
+                      <span class="mk-bastion-defense-hp-fill" style="width: {{hp.percent}}%;"></span>
+                    </span>
+                    <small>HP {{hp.value}}/{{hp.max}}</small>
+                  </span>
+                  {{/if}}
+                </span>
+              </button>
+              {{else}}
+              <span class="mk-bastion-defense-actor mk-bastion-defense-actor-missing">
+                <i class="fas fa-triangle-exclamation" aria-hidden="true"></i>
+                <span>{{name}}</span>
+              </span>
+              {{/if}}
+              <label class="mk-bastion-defense-quantity">
+                <span>Qty</span>
+                <input type="number" min="1" step="1" value="{{quantity}}" aria-label="Quantity" data-action="update-defense" data-defense-kind="siegeWeapons" data-defense-id="{{id}}" data-defense-field="quantity" {{#unless ../mk.canEditBastion}}disabled{{/unless}}>
+              </label>
+              <button type="button" class="mk-bastion-remove-button" data-action="remove-defense" data-defense-kind="siegeWeapons" data-defense-id="{{id}}" title="Remove siege weapon" aria-label="Remove siege weapon" {{#unless ../mk.canEditBastion}}disabled{{/unless}}><i class="fas fa-trash"></i></button>
+              <textarea rows="2" placeholder="Notes" data-action="update-defense" data-defense-kind="siegeWeapons" data-defense-id="{{id}}" data-defense-field="notes" {{#unless ../mk.canEditBastion}}disabled{{/unless}}>{{notes}}</textarea>
+            </div>
+            {{else}}
+            <p class="mk-bastion-defense-empty">No siege weapons added.</p>
+            {{/each}}
+          </div>
+        </section>
+
+        <section class="mk-bastion-card mk-bastion-defense-card" data-defense-dropzone="true" data-defense-kind="warbands" aria-label="Warbands">
+          <header class="mk-bastion-section-header">
+            <div>
+              <h2><i class="fas fa-users" aria-hidden="true"></i> Warbands</h2>
+              <p>Drag NPC warbands here to station or muster them at this bastion.</p>
+            </div>
+          </header>
+
+          <div class="mk-bastion-defense-list">
+            {{#each mk.bastion.defenses.warbands}}
+            <div class="mk-bastion-defense-row {{#unless actorExists}}is-missing{{/unless}}">
+              {{#if actorExists}}
+              <button type="button" class="mk-bastion-defense-actor" data-action="open-defense-actor" data-defense-uuid="{{actorUuid}}" title="Open {{name}}">
+                <img src="{{img}}" alt="" aria-hidden="true">
+                <span class="mk-bastion-defense-actor-main">
+                  <span class="mk-bastion-defense-actor-name">{{name}}</span>
+                  {{#if hasHp}}
+                  <span class="mk-bastion-defense-actor-hp">
+                    <span class="mk-bastion-defense-hp-track" role="progressbar" aria-label="Hit points" aria-valuenow="{{hp.value}}" aria-valuemin="0" aria-valuemax="{{hp.max}}">
+                      <span class="mk-bastion-defense-hp-fill" style="width: {{hp.percent}}%;"></span>
+                    </span>
+                    <small>HP {{hp.value}}/{{hp.max}}</small>
+                  </span>
+                  {{/if}}
+                </span>
+              </button>
+              {{else}}
+              <span class="mk-bastion-defense-actor mk-bastion-defense-actor-missing">
+                <i class="fas fa-triangle-exclamation" aria-hidden="true"></i>
+                <span>{{name}}</span>
+              </span>
+              {{/if}}
+              <label class="mk-bastion-defense-quantity">
+                <span>Qty</span>
+                <input type="number" min="1" step="1" value="{{quantity}}" aria-label="Quantity" data-action="update-defense" data-defense-kind="warbands" data-defense-id="{{id}}" data-defense-field="quantity" {{#unless ../mk.canEditBastion}}disabled{{/unless}}>
+              </label>
+              <button type="button" class="mk-bastion-remove-button" data-action="remove-defense" data-defense-kind="warbands" data-defense-id="{{id}}" title="Remove warband" aria-label="Remove warband" {{#unless ../mk.canEditBastion}}disabled{{/unless}}><i class="fas fa-trash"></i></button>
+            </div>
+            {{else}}
+            <p class="mk-bastion-defense-empty">No warbands added.</p>
+            {{/each}}
+          </div>
+        </section>
+      </div>
+    </div>
+
+    {{#if mk.bastion.hasVault}}
+    <div class="tab mk-bastion-tab-body" data-group="primary" data-tab="vault">
+      <section class="mk-bastion-card mk-bastion-vault-panel">
+        <header class="mk-bastion-section-header">
+          <div>
+            <h2><i class="fas fa-vault" aria-hidden="true"></i> Vault</h2>
+            <p>Drag Items here to move them into the bastion; world Items are copied.</p>
+          </div>
+          <strong class="mk-bastion-vault-capacity"><i class="fas fa-weight-hanging" aria-hidden="true"></i> {{mk.bastion.vault.used}} / {{mk.bastion.vault.capacity}} slots</strong>
+        </header>
+
+        <div class="mk-bastion-vault-grid" data-vault-dropzone="true" aria-label="Vault items">
+          {{#each mk.bastion.vault.items}}
+          <article class="mk-bastion-vault-item" data-vault-item-id="{{id}}" draggable="true" title="Drag to move {{name}} to another character sheet">
+            <button type="button" class="mk-bastion-vault-item-main" data-action="open-vault-item" data-vault-item-id="{{id}}" title="Open {{name}}">
+              <img src="{{img}}" alt="" aria-hidden="true">
+              <span class="mk-bastion-vault-item-name">{{name}}</span>
+              <span class="mk-bastion-vault-item-meta">{{type}} · {{slots}} slot{{#unless (eq slots 1)}}s{{/unless}}</span>
+              <span class="mk-bastion-vault-item-quantity">Qty {{quantity}}</span>
+            </button>
+          </article>
+          {{else}}
+          <div class="mk-bastion-vault-empty">
+            <i class="fas fa-box-open" aria-hidden="true"></i>
+            <strong>Drop Items here</strong>
+            <span>Drag Items from an Actor, the Items directory, or a compendium into this grid.</span>
+          </div>
+            {{/each}}
+        </div>
+
+        <div class="mk-bastion-vault-footer">
+          <article class="mk-bastion-vault-item mk-bastion-vault-gold" data-vault-fixed="gold" draggable="false" title="Gold stored in the Vault">
+            <div class="mk-bastion-vault-item-main">
+              <span class="mk-bastion-vault-gold-icon" aria-hidden="true"><i class="fas fa-coins"></i></span>
+              <span class="mk-bastion-vault-item-name">Gold Stack</span>
+              <label class="mk-bastion-vault-gold-amount">
+                <input type="number" name="system.coins.gp" value="{{mk.bastion.vault.gold}}" min="0" step="1" data-action="update-vault-gold" aria-label="Gold stored in Vault" {{#unless mk.canEditBastion}}disabled{{/unless}}>
+                <span>gp</span>
+              </label>
+            </div>
+          </article>
+          <div class="mk-bastion-vault-trash" data-vault-trash-dropzone="true" aria-label="Vault trash" title="Drag a stored Vault Item here to delete it">
+            <i class="fas fa-trash" aria-hidden="true"></i>
+            <strong>Discard</strong>
+            <span>Drag a Vault Item here</span>
+          </div>
+        </div>
+      </section>
+    </div>
+    {{/if}}
+  </section>
+</form>

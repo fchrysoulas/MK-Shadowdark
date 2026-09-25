@@ -7,6 +7,7 @@ import {
   isStashed,
   isWeapon
 } from "../libs/equipment.js";
+import { isVaultTransferData, transferVaultItemToActor } from "../libs/bastion-vault-transfer.js";
 
 (() => {
   const MODULE_ID = "mk-shadowdark";
@@ -1087,6 +1088,16 @@ import {
     const nativeEvent = event.originalEvent ?? event;
     const data = getDropEventData(nativeEvent);
     if (!data) return null;
+
+    if (isVaultTransferData(data)) {
+      try {
+        return await transferVaultItemToActor(actor, data);
+      } catch (error) {
+        console.error(MODULE_ID + " | Unable to move a Vault item onto the character sheet.", error);
+        ui.notifications?.error?.("The Item could not be moved out of the Vault.");
+      }
+      return null;
+    }
 
     const itemId = data?.id ?? data?._id ?? data?.itemId ?? data?.data?._id ?? data?.data?.id;
     const embedded = itemId

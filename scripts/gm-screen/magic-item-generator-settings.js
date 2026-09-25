@@ -8,29 +8,23 @@ import {
 
 const MODULE_ID = "mk-shadowdark";
 const MAGIC_ITEM_GENERATOR_TABLE_FLAG = "magicItemGeneratorTables";
-const MAGIC_ITEM_GENERATOR_TABLE_SCHEMA = 1;
+const MAGIC_ITEM_GENERATOR_TABLE_SCHEMA = 2;
 
 const MAGIC_ITEM_GENERATOR_TABLE_KEYS = Object.freeze([
-  "name",
-  "bonus",
-  "benefit",
-  "curse",
+  "type",
+  "qualities",
   "personality",
 ]);
 
 const MAGIC_ITEM_GENERATOR_TABLE_LABELS = Object.freeze({
-  name: "Name",
-  bonus: "Bonus",
-  benefit: "Benefit",
-  curse: "Curse",
+  type: "Type",
+  qualities: "Qualities",
   personality: "Personality",
 });
 
 const MAGIC_ITEM_GENERATOR_TABLE_DESCRIPTIONS = Object.freeze({
-  name: "Rolls the magic item's name.",
-  bonus: "Rolls the item's bonus or special modifier.",
-  benefit: "Rolls the item's supernatural benefit.",
-  curse: "Rolls the item's curse or drawback.",
+  type: "Rolls the magic item's type.",
+  qualities: "Rolls the item's qualities, benefits, drawbacks, or special properties.",
   personality: "Rolls the item's personality or quirk.",
 });
 
@@ -50,12 +44,16 @@ function getSceneFlag(scene, key, fallback = undefined) {
 
 function normalizeMagicItemGeneratorTables(value) {
   const source = value && typeof value === "object" && !Array.isArray(value) ? value : {};
+  // Schema 1 used Name, Bonus, Benefit, Curse, and Personality. Reuse the
+  // old Name assignment as the closest equivalent for Type and leave
+  // Qualities empty so the GM can choose one of the new tables.
+  const type = source.type ?? source.itemType ?? source.name ?? source.itemName;
+  const qualities = source.qualities ?? source.quality;
+
   return {
     schema: MAGIC_ITEM_GENERATOR_TABLE_SCHEMA,
-    name: normalizeTableUuid(source.name ?? source.itemName),
-    bonus: normalizeTableUuid(source.bonus),
-    benefit: normalizeTableUuid(source.benefit),
-    curse: normalizeTableUuid(source.curse),
+    type: normalizeTableUuid(type),
+    qualities: normalizeTableUuid(qualities),
     personality: normalizeTableUuid(source.personality),
   };
 }
@@ -223,7 +221,7 @@ function renderMagicItemGeneratorSetup(entries = []) {
     '<div class="mk-gm-magic-item-generator-grid mk-gm-rolltable-assignment-grid">',
     slots,
     "</div>",
-    '<small class="mk-gm-magic-item-generator-status">Assignments are stored on the active Scene. Magic item generation requires all five linked tables.</small>',
+    '<small class="mk-gm-magic-item-generator-status">Assignments are stored on the active Scene. Magic item generation requires all three linked tables.</small>',
     "</section>",
   ].join("");
 }

@@ -104,9 +104,7 @@ async function rollMagicItemFromSource({
 }
 
 function magicItemGeneratorDialogContent(result) {
-  const rows = MAGIC_ITEM_GENERATOR_TABLE_KEYS
-    .filter(key => key !== "name")
-    .map(key => `
+  const rows = MAGIC_ITEM_GENERATOR_TABLE_KEYS.map(key => `
         <div><dt>${escapeHtml(MAGIC_ITEM_GENERATOR_TABLE_LABELS[key])}</dt><dd>${escapeHtml(result?.results?.[key] || "Not available")}</dd></div>
   `).join("");
   return `
@@ -184,9 +182,7 @@ async function promptForGeneratedMagicItem({
 }
 
 function magicItemDescription(result, name) {
-  const rows = MAGIC_ITEM_GENERATOR_TABLE_KEYS
-    .filter(key => key !== "name")
-    .map(key => (
+  const rows = MAGIC_ITEM_GENERATOR_TABLE_KEYS.map(key => (
       `<li><strong>${escapeHtml(MAGIC_ITEM_GENERATOR_TABLE_LABELS[key])}:</strong> ${escapeHtml(result?.results?.[key] || "Not available")}</li>`
     )).join("");
 

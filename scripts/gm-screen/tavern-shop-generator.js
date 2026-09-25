@@ -9,6 +9,7 @@ import {
   tavernSourceStatus,
 } from "./tavern-shop-source-tables.js";
 import { currentScene } from "./tavern-generator-settings.js";
+import { pinDocument } from "./pinned-documents.js";
 
 const MODULE_ID = "mk-shadowdark";
 const DEFAULT_TAVERN_NAME = "New Tavern";
@@ -118,6 +119,7 @@ function qualityDialogContent(kind, selected = "poor") {
 }
 
 async function promptForQuality(kind, { selected = "poor" } = {}) {
+  if (kind === "shop") return null;
   const label = kind === "shop" ? "Shop" : "Tavern";
   const result = await waitForGmDialog({
     title: `Create Shadowdark ${label}`,
@@ -196,7 +198,18 @@ function tavernGeneratorDialogContent(result) {
 }
 
 function shopGeneratorDialogContent(result) {
+  const qualityFormula = sourceRollFormula(result, "quality", "1d3");
   const typeFormula = result?.sources?.shopType?.formulaRaw || "die";
+  const identityRows = result?.sourceMode === "linked"
+    ? [
+      `<div><dt>First Part · ${escapeHtml(sourceRollFormula(result, "firstPart"))} ${escapeHtml(result?.rolls?.firstPart)}</dt><dd>${escapeHtml(result?.nameParts?.first)}</dd></div>`,
+      `<div><dt>Second Part · ${escapeHtml(sourceRollFormula(result, "secondPart"))} ${escapeHtml(result?.rolls?.secondPart)}</dt><dd>${escapeHtml(result?.nameParts?.second)}</dd></div>`,
+      `<div><dt>Known For · ${escapeHtml(sourceRollFormula(result, "knownFor"))} ${escapeHtml(result?.rolls?.knownFor)}</dt><dd>${escapeHtml(result?.knownFor)}</dd></div>`,
+    ].join("")
+    : [
+      `<div><dt>Identity · d20 ${escapeHtml(result?.rolls?.identity)}</dt><dd>${escapeHtml(result?.name)}</dd></div>`,
+      `<div><dt>Known For · same d20</dt><dd>${escapeHtml(result?.knownFor)}</dd></div>`,
+    ].join("");
   return `
     <div class="mk-gm-create-document-form mk-gm-shop-generator-form">
       <div class="form-group">
@@ -205,10 +218,9 @@ function shopGeneratorDialogContent(result) {
       </div>
       <p class="mk-gm-secondary">${sourceLabel(result)}</p>
       <dl class="mk-gm-data-list">
-        <div><dt>Quality</dt><dd>${escapeHtml(result?.qualityLabel)}</dd></div>
+        <div><dt>Quality · ${escapeHtml(qualityFormula)} ${escapeHtml(result?.rolls?.quality)}</dt><dd>${escapeHtml(result?.qualityLabel)}</dd></div>
         <div><dt>Shop Type · ${escapeHtml(typeFormula)} ${escapeHtml(result?.rolls?.shopType)}</dt><dd>${escapeHtml(result?.shopType)}</dd></div>
-        <div><dt>Identity · d20 ${escapeHtml(result?.rolls?.identity)}</dt><dd>${escapeHtml(result?.name)}</dd></div>
-        <div><dt>Known For · same d20</dt><dd>${escapeHtml(result?.knownFor)}</dd></div>
+        ${identityRows}
         <div><dt>Interesting Customer · d4 ${escapeHtml(result?.rolls?.customerRow)}, d4 ${escapeHtml(result?.rolls?.customerColumn)}</dt><dd>${escapeHtml(result?.customer)}</dd></div>
       </dl>
     </div>
@@ -446,16 +458,26 @@ function tavernPageContent(result, name, { debug = tavernDebugEnabled() } = {}) 
 function shopPageContent(result, name) {
   if (!result) return "<h2>GM Notes</h2><p></p>";
   const pages = sourcePages(result);
+  const qualityFormula = sourceRollFormula(result, "quality", "1d3");
   const typeFormula = result.sources?.shopType?.formulaRaw || "die";
+  const identityRows = result.sourceMode === "linked"
+    ? [
+      `<li><strong>First Part:</strong> ${escapeHtml(sourceRollFormula(result, "firstPart"))} ${escapeHtml(result.rolls?.firstPart)} — ${escapeHtml(result.nameParts?.first)}</li>`,
+      `<li><strong>Second Part:</strong> ${escapeHtml(sourceRollFormula(result, "secondPart"))} ${escapeHtml(result.rolls?.secondPart)} — ${escapeHtml(result.nameParts?.second)}</li>`,
+      `<li><strong>Known For:</strong> ${escapeHtml(sourceRollFormula(result, "knownFor"))} ${escapeHtml(result.rolls?.knownFor)} — ${escapeHtml(result.knownFor)}</li>`,
+    ].join("")
+    : [
+      `<li><strong>Identity:</strong> d20 ${escapeHtml(result.rolls?.identity)} — ${escapeHtml(result.name)}</li>`,
+      `<li><strong>Known For:</strong> same d20 — ${escapeHtml(result.knownFor)}</li>`,
+    ].join("");
   return `
     <h1>${escapeHtml(name)}</h1>
     <p><strong>Source:</strong> ${escapeHtml(result.sourceBookTitle || CORE_BOOK_TITLE)}${pages.length ? ` · PDF p. ${escapeHtml(pages.join(", "))}` : ""}</p>
     <h2>Shadowdark Shop</h2>
     <ul>
-      <li><strong>Quality:</strong> ${escapeHtml(result.qualityLabel)}</li>
+      <li><strong>Quality:</strong> ${escapeHtml(qualityFormula)} ${escapeHtml(result.rolls?.quality)} — ${escapeHtml(result.qualityLabel)}</li>
       <li><strong>Shop Type:</strong> ${escapeHtml(typeFormula)} ${escapeHtml(result.rolls.shopType)} — ${escapeHtml(result.shopType)}</li>
-      <li><strong>Identity:</strong> d20 ${escapeHtml(result.rolls.identity)} — ${escapeHtml(result.name)}</li>
-      <li><strong>Known For:</strong> ${escapeHtml(result.knownFor)}</li>
+      ${identityRows}
       <li><strong>Interesting Customer:</strong> d4 ${escapeHtml(result.rolls.customerRow)}, d4 ${escapeHtml(result.rolls.customerColumn)} — ${escapeHtml(result.customer)}</li>
     </ul>
     <h2>GM Notes</h2>
@@ -495,6 +517,7 @@ async function createEstablishmentJournal({ kind, name, result = null } = {}) {
     result,
     htmlFormat,
   }));
+  await pinDocument(journal);
   journal?.sheet?.render?.(true);
   return journal ?? null;
 }
@@ -516,9 +539,9 @@ async function createSourceDrivenEstablishment(kind, {
   }
 
   const statusFor = isShop ? shopSourceStatus : tavernSourceStatus;
-  let status = isShop ? statusFor(tables) : statusFor(tables, { scene });
-  if (!status.available && !isShop && status.mode === "linked") {
-    globalThis.ui?.notifications?.warn?.("Assign all Tavern Generator RollTables in GM Screen Settings.");
+  let status = statusFor(tables, { scene });
+  if (!status.available && status.mode === "linked") {
+    globalThis.ui?.notifications?.warn?.(`Assign all ${label} Generator RollTables in GM Screen Settings.`);
     return null;
   }
   if (!status.available) {
@@ -529,19 +552,17 @@ async function createSourceDrivenEstablishment(kind, {
       return name ? createEstablishmentJournal({ kind, name }) : null;
     }
     await importSources();
-    status = isShop
-      ? statusFor(globalThis.game?.tables ?? tables)
-      : statusFor(globalThis.game?.tables ?? tables, { scene });
+    status = statusFor(globalThis.game?.tables ?? tables, { scene });
     if (!status.available) {
       globalThis.ui?.notifications?.warn?.(`Required Core ${label} RollTables are still unavailable after import.`);
       return null;
     }
   }
 
-  const quality = !isShop && status.mode === "linked"
-    ? null
-    : await promptQuality(kind);
-  if ((isShop || status.mode !== "linked") && !quality) return null;
+  const quality = !isShop && status.mode !== "linked"
+    ? await promptQuality(kind)
+    : null;
+  if (!isShop && status.mode !== "linked" && !quality) return null;
   const generated = await promptGenerated({
     kind,
     quality,

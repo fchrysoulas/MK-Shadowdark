@@ -87,8 +87,7 @@ The old **MK-Shadowdark GM Screen Mock** prototype is not a dependency and is no
 - **Shared Scene Context** — terrain, danger, and day/night period belong to the active Scene context.
 - **Marching / Role Context** — Front, Middle, Rear, Scout, Light Bearer, and ordered camp watches.
 - **Encounter Staging** — preview-first deployment into the Scene with optional Foundry Combat handoff.
-- **GM Member Status** — compact GM-only status affordance for HP/AC/death/wounds/Focus/light/effects.
-- **Time Passes** — a standalone GM 1d6/2d6/3d6 public roll with synchronized v1.6 visual cues and no encounter automation.
+- **Time Passes** — a standalone GM public roll with synchronized v1.6 visual cues and no encounter automation; the action opens its existing dice-choice flow.
 
 ## GM Screen
 
@@ -96,43 +95,48 @@ The GM Screen is available to GMs through its shield button in the Token Scene C
 
 The GM Screen implementation is a native Foundry ApplicationV2 surface. It is not a replacement for the Group Sheet and it does not own duplicate gameplay state.
 
-The **GM Screen | Encounter Roll Debug Mode** setting is disabled by default. Roll Encounter Journal pages use a readable encounter-report layout with the selected table and supporting tables separated into category groups, including Danger Level, Starting Distance, Activity, one group for all Trap tables, and another for all Hazard tables. When enabled, the report includes dice formulas, roll totals, and result numbers; otherwise it retains the encounter context and all table result text, including Trap and Hazard results, while hiding dice, roll details, and result numbers.
+The **GM Screen | Encounter Roll Debug Mode** setting is disabled by default. Roll Encounter Journal pages use a readable encounter-report layout with the selected table and its three encounter supporting tables separated into category groups: Danger Level, Starting Distance, and Activity. When enabled, the report includes dice formulas, roll totals, and result numbers; otherwise it retains the encounter context and table result text while hiding dice, roll details, and result numbers. Trap and Hazard generator tables are independent and are never rolled by Roll Encounter.
 
 The **GM Screen | Tavern Generator Debug Mode** setting is disabled by default. Tavern Journal pages show a tidy Tavern Overview, distinct food and drinks lists, and editable GM Notes without source tables, dice formulas, or roll totals. When enabled, the page adds the source and full roll details for troubleshooting.
 
-The GM Screen is intentionally a **manual-update surface** for outside changes. It does not subscribe to ambient Actor, Scene, Combat, or MK workflow changes in order to force background rerenders, and it does not expose a generic Refresh button. Direct GM Screen actions rerender when they complete. Group/workspace selection is kept only in the currently open application and is not silently persisted as a presentation preference. The former Hide/Show Active Party rail and Reset GM Screen Presentation controls are retired.
+The GM Screen is intentionally a **manual-update surface** for outside changes. It does not subscribe to ambient Scene, Combat, or MK workflow changes in order to force background rerenders, and it does not expose a generic Refresh button. The Active Party is a narrow exception: member HP and active light/torch changes rerender the open screen after a short debounce. Direct GM Screen actions rerender when they complete. The former Hide/Show Active Party rail and Reset GM Screen Presentation controls are retired.
 
 Its production layout contains:
 
 - a persistent active-party/status rail
-- a persistent Scene Context strip
+- a persistent Scene Context strip within the darker header
 - **Encounter Zone, Terrain, Danger, and Period selectors in the top strip**
-- a direct **Roll Encounter** control in its own final header box
+- the active Group selector in the **Active Party** zone
+- standalone **Time Passes** and **Roll Encounter** actions in the top strip
 - a gear button that opens **GM Screen Settings** in a separate window
-- a central contextual workspace
+- four permanent main-screen zones: **Active Party**, **Quick Actions**, **Pinned Documents**, and **Tables**
 
-Terrain, Danger, and Period **save immediately when their dropdown changes**. There is no Save Context button. The saved Scene Context then rerenders the GM Screen once so all workspaces use the new values.
+Terrain, Danger, and Period **save immediately when their dropdown changes**. There is no Save Context button. The saved Scene Context then rerenders the GM Screen once so all four zones use the new values.
 
-The top strip selects the Scene's Encounter Zone, Terrain, Danger, and Period for the manual **Roll Encounter** action. The module does not maintain a Group elapsed-time clock or a GM Screen turn counter; Foundry world time and Foundry Combat remain the authoritative time/round surfaces.
+The top strip selects the Scene's Encounter Zone, Terrain, Danger, and Period for the manual **Roll Encounter** action. Roll Encounter uses **1d6** for Unsafe, **2d6** for Risky, and **3d6** for Deadly; other danger values retain the configured Encounter Zone grid fallback. The module does not maintain a Group elapsed-time clock or a GM Screen turn counter; Foundry world time and Foundry Combat remain the authoritative time/round surfaces.
 
-Available workspaces, in order, are:
+The main screen always shows these four zones from left to right:
 
-- **Overview** — a per-GM shortcut dashboard. Drag normal Foundry documents such as Journal entries/pages, Actors, Items, RollTables, and other UUID-backed documents onto Overview to pin them. The GM Screen Settings Home tab provides draggable **Encounters**, **NPC Generator**, and **Tavern Generator** actions at the end of their matching configuration cards; dropping one onto Overview pins an executable button. Clicking a pinned shortcut opens the original document, while clicking **Encounters** rolls the selected Encounter Zone, **NPC Generator** opens the existing generation flow, and **Tavern Generator** starts tavern generation; removing a pin deletes only that shortcut.
-- **Downtime** — settlement-facing generators only, including **Create Tavern**, **Create Shop**, **NPC Generator (Create NPC)**, and **Create Location**. NPC generation is configured in **GM Screen Settings -> NPC Generator**. Resting/Camp status and controls are intentionally absent from this workspace.
-- **GM Screen Settings** — a separate gear-button window with left-side tabs. **Encounters** contains one or more named, collapsible Encounter Zone grids with eight default rows plus five optional RollTable drop areas for Danger Level, Starting Distance, Activity, Trap, and Hazard. In Edit mode, edit each zone name, add or remove zones, and drag RollTables from Foundry onto zone cells or the encounter detail boxes; Trap and Hazard accept multiple tables and roll each assigned table. In View mode, expand a zone and use its Roll Zone action or click an assigned cell. **Roll Encounter** uses the selected terrain and zone, and records every configured encounter detail table in a GM-only Journal Entry page. **NPC Generator** contains the Scene-owned RollTable assignments for generated NPC names and traits. Name parts use **Prefix**, one or more **Possible Syllables** tables, **Suffix**, and an optional **NPC Identifier** table rolled as the second name part. Trait assignments cover **Ancestry**, **Age**, **Alignment**, **Wealth**, multiple **NPC Features**, and **Occupation**. Linked tables are rolled when available; missing entries remain blank, and only the NPC name is required. The configurable **Two-syllable chance** decides whether one or two syllable tables are rolled. Every generated NPC also receives six ordered 3d6 ability rolls; the rolls and modifiers are recorded in the description and the native NPC ability modifiers are populated on the sheet. **Tavern Generator** contains Scene-owned drag-and-drop assignments for **First Part**, **Second Part**, **Known For**, **Wealth**, **Poor Food**, **Standard Food**, **Wealthy Food**, **Poor Drinks**, **Standard Drinks**, and **Wealthy Drinks** RollTables. The Wealth result is randomly rolled as Poor, Standard, or Wealthy; it determines the complete procedure: Poor rolls 2 times on Poor Drinks and 3 Poor Food entries, Standard rolls 3 times on Standard Drinks plus 1 Poor Food and 2 Standard Food entries, and Wealthy rolls 4 times on Wealthy Drinks plus 2 Standard Food and 2 Wealthy Food entries. Food prices remain tier-specific: 1d4 cp for Poor, 1d6 sp for Standard, and 1d8 gp for Wealthy. Food and drink results are rerolled when they duplicate an earlier result in the same tavern, so each generated list contains distinct options; generation reports an error if the assigned tables cannot provide enough unique results. The first two name rolls are joined to form the tavern name, and Known For supplies the tavern's distinguishing result. When any Tavern assignment is configured, those linked tables are used by **Create Tavern**; otherwise existing imported source tables remain available for legacy scenes.
-- **Tables** — existing world RollTables with a fixed search control, rolling, native sheet access, independently collapsible Foundry folder grouping that starts collapsed, and document icons. Only the folder/table list scrolls. The browser does not import or update tables or infer source metadata; existing imported RollTables remain usable like any other world table.
-- **GM Screen transfer** — use the header **Export** and **Import** controls to save or restore the active Scene's Encounter Zones, supporting encounter RollTables, environment context, NPC Compositions, and Tavern Generator assignments. RollTable references include names for unique-name remapping; unavailable references remain visible as unavailable. Journals, Actors, global settings, and temporary workspace presentation state are not included.
-- **Session Log** — session metadata plus recent legacy Group encounter records with inspection, staging, reveal, and reroll actions.
+- **Active Party** — a Group selector listing every available Group, followed by the selected Group's members with HP, AC, and compact status indicators. There is no separate GM Status inspect button or dialog.
+- **Quick Actions** — Encounters, Trap Generator, Hazard Generator, NPC Generator, Monster Generator, Magic Item Generator, Tavern Generator, Shop Generator, and Create Location. These actions run their generators directly, and the Settings Home checkboxes control which actions are visible on the main GM Screen. Encounters, Trap, Hazard, Monster, and Magic Item preview their generated results in a GM dialog with **Create**, **Reroll**, and **Cancel** before creating their Journal Entries, NPC Actors, or Items.
+- **Pinned Documents** — a per-GM workspace for Journal entries/pages, Actors, Items, RollTables, and other UUID-backed Foundry documents. Drag a document into the zone to pin it; removing a pin deletes only that shortcut.
+- **Tables** — existing world RollTables with a fixed search control, rolling, native sheet access, independently collapsible Foundry folder grouping that starts collapsed, and document icons. The entire Tables zone can be collapsed into a right-side rail when more room is needed for the other zones. Only the folder/table list scrolls. The browser does not import or update tables or infer source metadata; existing imported RollTables remain usable like any other world table.
 
-Session Log includes a free-text **Starting date and time** field and **Start Session**. Start Session stores the entered label and history boundary as Group session metadata. It also records the current Foundry world-time value as metadata, but it does **not** rewrite the world's calendar/time and does not start a module timer.
+Every GM Screen Settings feature card on Home provides a **Show in Quick Actions** checkbox for **Encounters**, **Trap Generator**, **Hazard Generator**, **NPC Generator**, **Monster Generator**, **Magic Item Generator**, **Tavern Generator**, **Shop Generator**, and **Create Location**. These visibility choices are stored per GM and update the main screen immediately. NPC generation is configured in **GM Screen Settings -> NPC Generator**, Monster generation in **GM Screen Settings -> Monster Generator**, and magic item generation in **GM Screen Settings -> Magic Item Generator**.
+- **GM Screen Settings** — a separate gear-button window with left-side tabs. **Encounters** contains one or more named, collapsible Encounter Zone grids with eight default rows plus three optional RollTable drop areas for Danger Level, Starting Distance, and Activity. In Edit mode, edit each zone name, add or remove zones, and drag RollTables from Foundry onto zone cells or the encounter detail boxes. **Trap Generator** and **Hazard Generator** each provide exactly three Scene-owned RollTable assignments; these assignments are independent from Roll Encounter. In View mode, expand a zone and use its Roll Zone action or click an assigned cell. **Roll Encounter** uses the selected terrain and zone, and records the configured encounter detail tables in a GM-only Journal Entry page. **NPC Generator** contains the Scene-owned RollTable assignments for generated NPC names and traits. Name parts use **Prefix**, one or more **Possible Syllables** tables, **Suffix**, and an optional **NPC Identifier** table rolled as the second name part. Trait assignments cover **Ancestry**, **Age**, **Alignment**, **Wealth**, multiple **NPC Features**, and **Occupation**. Linked tables are rolled when available; missing entries remain blank, and only the NPC name is required. The configurable **Second syllable chance** and **Third syllable chance** decide whether one, two, or three syllable tables are rolled; they default to 33% each. Every generated NPC also receives six ordered 3d6 ability rolls; the rolls and modifiers are recorded in the description and the native NPC ability modifiers are populated on the sheet. **Tavern Generator** contains Scene-owned drag-and-drop assignments for **First Part**, **Second Part**, **Known For**, **Wealth**, **Poor Food**, **Standard Food**, **Wealthy Food**, **Poor Drinks**, **Standard Drinks**, and **Wealthy Drinks** RollTables. The Wealth result is randomly rolled as Poor, Standard, or Wealthy; it determines the complete procedure: Poor rolls 2 times on Poor Drinks and 3 Poor Food entries, Standard rolls 3 times on Standard Drinks plus 1 Poor Food and 2 Standard Food entries, and Wealthy rolls 4 times on Wealthy Drinks plus 2 Standard Food and 2 Wealthy Food entries. Food prices remain tier-specific: 1d4 cp for Poor, 1d6 sp for Standard, and 1d8 gp for Wealthy. Food and drink results are rerolled when they duplicate an earlier result in the same tavern, so each generated list contains distinct options; generation reports an error if the assigned tables cannot provide enough unique results. The first two name rolls are joined to form the tavern name, and Known For supplies the tavern's distinguishing result. When any Tavern assignment is configured, those linked tables are used by **Create Tavern**; otherwise existing imported source tables remain available for legacy scenes.
+- **Shop Generator** contains eight Scene-owned drag-and-drop assignments: **Quality**, **First Part**, **Second Part**, **Known For**, **Poor Shop**, **Standard Shop**, **Wealthy Shop**, and **Interesting Customer**. Quality is rolled as Poor, Standard, or Wealthy and chooses the matching shop table; the GM does not select it. When any Shop assignment is configured, **Create Shop** uses only those linked tables; incomplete assignments are reported to the GM. With no linked assignments, imported Core source tables remain available for legacy scenes, with quality rolled on 1d3.
+- **Location Generator** contains three Scene-owned drag-and-drop assignments: **Descriptor**, **Location**, and **Feature**. **Create Location** requires all three linked tables; incomplete or unavailable assignments are reported to the GM and no legacy source/import or blank-journal fallback is offered. Location generation previews all three independent results before creating and pinning the Journal.
+- **Monster Generator** contains seven Scene-owned drag-and-drop assignments: **Combat**, **Quality**, **Strength**, **Weakness**, **Mutation 1**, **Mutation 2**, and **Mutation 3**. Monster generation requires all seven linked tables, previews every result with **Create**, **Reroll**, and **Cancel**, then creates and pins a native Shadowdark NPC Actor. The active party's average character level is the PL; the NPC AC is PL + 10, the Combat result supplies both attack bonus and level, the attack count is rolled on 1d4, and its attack deals 1d8 damage.
+- **Magic Item Generator** contains five Scene-owned linked RollTable assignments: **Name**, **Bonus**, **Benefit**, **Curse**, and **Personality**. It previews every result with **Create**, **Reroll**, and **Cancel**, then creates and pins a native Shadowdark **Basic** Item with `magicItem` enabled and the rolled attributes recorded in its description.
+- **GM Screen transfer** — use the GM Screen Settings Home **Export** and **Import** controls to save or restore the active Scene's Encounter Zones, supporting encounter RollTables, environment context, NPC Compositions, Tavern Generator assignments, Shop Generator assignments, Location Generator assignments, Monster Generator assignments, and Magic Item Generator assignments. RollTable references include names for unique-name remapping; unavailable references remain visible as unavailable. Journals, Actors, global settings, and temporary workspace presentation state are not included.
 
-Overview pins are presentation-only state stored on the current GM user as document UUIDs. They do not copy Journal/Actor/Item content and do not become Scene, Group, encounter, combat, morale, wound, or Focus state. Pinning or removing a shortcut updates the Overview canvas directly and does not force a full GM Screen rerender.
+Pinned Documents are presentation-only state stored on the current GM user as document UUIDs. They do not copy Journal/Actor/Item content and do not become Scene, Group, encounter, combat, morale, wound, or Focus state. Journals and NPC Actors created by the GM Screen generators are automatically pinned for the current GM. Pinning or removing a shortcut updates the Pinned Documents zone directly and does not force a full GM Screen rerender.
 
-The Settings **Encounters** tab and main **Downtime** workspace use distinct tints. The former dedicated Encounter, Environment, Resting, Rules, Tools, and Combat workspaces are not part of the production navigation. Encounter history lives in Session Log, while Encounter Zone, Terrain, Danger, and Period are selected from the persistent top strip. **Roll Encounter** rolls the selected zone's terrain die, the assigned terrain cell's RollTable, and each configured Danger Level, Starting Distance, Activity, Trap, and Hazard RollTable; every assigned Trap or Hazard table is rolled into a new GM-only Journal Entry page.
+The Settings **Encounters**, **Trap Generator**, and **Hazard Generator** tabs use distinct tints. Encounter Zones display collapsed by default; expand a zone when you need to inspect or edit its grid. The main screen has no Settlement or Session Log tabs; it always shows Active Party, Quick Actions, Pinned Documents, and Tables. Encounter Zone, Terrain, Danger, and Period are selected from the persistent top strip. **Roll Encounter** rolls the selected zone's terrain die, the assigned terrain cell's RollTable, and each configured Danger Level, Starting Distance, and Activity RollTable. Trap and Hazard assignments are not included in encounter rolls.
 
-The GM Screen reads canonical state from Group, Scene Context, internal encounter services, Encounter Staging, Foundry Combat, Morale, and the prepared GM member-status model. It does not store a second party, procedure clock, encounter, combat, morale, wound, or Focus model.
+The GM Screen reads canonical state from Group, Scene Context, internal encounter services, Encounter Staging, Foundry Combat, Morale, and the prepared Active Party status model. It does not store a second party, procedure clock, encounter, combat, morale, wound, or Focus model.
 
-The header **Export** button saves a versioned JSON configuration for the active Scene through Foundry's native file-save workflow. **Import** opens the standard JSON file chooser, validates the file, and asks for confirmation before replacing the current Scene's GM Screen configuration. Imported RollTable UUIDs are reused when available, or remapped by an exact unique table name; ambiguous or missing tables are left unresolved and reported to the GM.
+The GM Screen Settings Home **Export** button saves a versioned JSON configuration for the active Scene through Foundry's native file-save workflow. **Import** opens the standard JSON file chooser, validates the file, and asks for confirmation before replacing the current Scene's GM Screen configuration. Imported RollTable UUIDs are reused when available, or remapped by an exact unique table name; ambiguous or missing tables are left unresolved and reported to the GM.
 
 ## Journal Entries
 
@@ -142,7 +146,7 @@ The **Journal Sheet | Use as Default** world setting is enabled by default. When
 
 # RollTable Browser
 
-The **Tables** workspace lists the RollTables that already exist in the world. Use the fixed search field to find a table, **Roll** to draw from it, or open its native Foundry sheet for editing. Foundry folder paths are retained as independently collapsible grouping headings that start collapsed, and each table displays its document icon. Only the folder/table list scrolls beneath the search area. Existing imported RollTables remain available, but the workspace does not expose an Import / Update procedure and does not infer source books or source metadata.
+The **Tables** zone lists the RollTables that already exist in the world. Use the fixed search field to find a table, **Roll** to draw from it, or open its native Foundry sheet for editing. Foundry folder paths are retained as independently collapsible grouping headings that start collapsed, and each table displays its document icon. Only the folder/table list scrolls beneath the search area. Existing imported RollTables remain available, but the zone does not expose an Import / Update procedure and does not infer source books or source metadata.
 
 ---
 
@@ -208,7 +212,7 @@ Important invariants:
 
 # Manual Encounter Zone Rolls
 
-Encounter timing is no longer advanced by a module clock. The GM decides when to roll from the selected Scene terrain and Encounter Zone using the **Roll Encounter** button in the top strip or the GM Screen Settings Encounters tab.
+Encounter timing is no longer advanced by a module clock. The GM decides when to roll from the selected Scene terrain and Encounter Zone using the **Roll Encounter** button in the top strip or the **Encounters** Quick Action. The Quick Action previews the result and offers **Create**, **Reroll**, and **Cancel** before creating its Journal Entry. The **Trap Generator** and **Hazard Generator** Quick Actions use their own three assigned RollTables and offer the same preview controls before creating their Journal Entries.
 
 There is no encounter cadence, due-check queue, or Group turn counter.
 
@@ -216,10 +220,10 @@ The roll sequence is:
 
 1. Roll the selected terrain's Encounter Zone die.
 2. Use that result to select the terrain row's RollTable and roll it.
-3. Roll each configured Danger Level, Starting Distance, Activity, Trap, and Hazard table.
+3. Roll each configured Danger Level, Starting Distance, and Activity table.
 4. Write one GM-only Journal Entry page containing the encounter context and results.
 
-Trap and Hazard assignments may contain multiple RollTables. The debug setting controls only dice formulas, roll totals, and result numbers; table result text remains visible to the GM.
+Trap and Hazard generators have separate settings tabs with three RollTable assignments each. The debug setting controls only dice formulas, roll totals, and result numbers; table result text remains visible to the GM.
 
 ---
 
@@ -303,31 +307,6 @@ When **Add to Combat** is selected, the created TokenDocuments enter Foundry Com
 To resume rest, use the Group Management rest workflow.
 
 ---
-
-# GM Member Status
-
-The permanent Group member-card layout remains effectively unchanged apart from one compact **GM-only status affordance**.
-
-The same prepared member-status model is used by the production GM Screen party rail.
-
-It summarizes:
-
-- current/max HP
-- AC
-- native Dead state
-- MK Death Timer turns
-- Detailed Wounds totals/severity
-- active Focus sessions and pending Focus loss
-- active Shadowdark light sources
-- active, non-suppressed Actor effects/statuses
-
-Presentation severity:
-
-- **Normal** — no notable warning state
-- **Attention** — ordinary wounds, Focus, or effects worth reviewing
-- **Critical** — 0 HP, Dead/death timer, Critical/Destroyed wound, or pending Focus loss
-
-No copy of this character state is persisted on the Group or GM Screen.
 
 ---
 
@@ -439,7 +418,7 @@ The public API is available at:
 game.modules.get("mk-shadowdark").api.focus
 ```
 
-The Group/GM member-status model consumes canonical Focus state rather than storing another copy.
+The Group/GM Active Party model consumes canonical Focus state rather than storing another copy.
 
 ---
 
@@ -466,7 +445,6 @@ Current service surfaces include, among others:
 ```js
 mk.environment
 mk.groupAssignments
-mk.groupMemberStatus
 mk.groupEncounters
 mk.timePasses
 mk.focus
@@ -505,25 +483,21 @@ The shield button is available to GMs in the Token Scene Controls. If it is miss
 
 Select a Scene terrain and Encounter Zone, then configure one or more named Encounter Zone grids and supporting RollTables in **GM Screen -> gear -> Encounters**. Press **Roll Encounter** to roll the selected zone. There is no pending encounter-check queue or elapsed-time trigger to process.
 
-## Scene Context changes do not affect the other GM Screen workspaces
+## Scene Context changes do not affect the other GM Screen zones
 
-Terrain, Danger, and Period auto-save when their top-strip dropdown changes and then perform one explicit GM Screen rerender. There is no Save Context button. The Tables workspace is reserved for browsing imported source RollTables and existing world RollTables.
+Terrain, Danger, and Period auto-save when their top-strip dropdown changes and then perform one explicit GM Screen rerender. There is no Save Context button. The Tables zone is reserved for browsing imported source RollTables and existing world RollTables.
 
 ## I cannot select Terrain
 
-Terrain choices in the top strip come from the active Scene's configured Encounter Zone columns. The Tables workspace browses existing world RollTables and does not determine terrain sources.
+Terrain choices in the top strip come from the active Scene's configured Encounter Zone columns. The Tables zone browses existing world RollTables and does not determine terrain sources.
 
-## An Overview shortcut disappeared from the source document
+## A Pinned Document shortcut disappeared from the source document
 
-Overview stores only the document UUID as a per-GM shortcut. It does not copy the source document. If the original Actor, Journal, Item, RollTable, or other document is deleted, the shortcut can no longer open it and may be removed from Overview.
+Pinned Documents stores only the document UUID as a per-GM shortcut. It does not copy the source document. If the original Actor, Journal, Item, RollTable, or other document is deleted, the shortcut can no longer open it and may be removed from Pinned Documents.
 
-## The GM Screen does not update after an external Actor, Scene, or Combat change
+## The GM Screen does not update after a general external Actor, Scene, or Combat change
 
-This is intentional. The GM Screen has no ambient live-refresh mechanism. Use an explicit GM Screen action, change a top context dropdown, switch workspaces, or reopen the screen when you want the surface rebuilt.
-
-## I need to record the start of a session
-
-Enter your campaign date/time text in **Session Log -> Starting date and time**, then press **Start Session**. This stores the label and starts the Session Log history boundary; it does not overwrite Foundry world time or start a module timer.
+This is intentional for general outside changes. The Active Party has a narrow live-refresh path for member HP and active light/torch status; use an explicit GM Screen action, change a top context dropdown, or reopen the screen when you want the rest of the four-zone surface rebuilt.
 
 ## Stage Encounter cannot deploy
 

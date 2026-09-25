@@ -116,12 +116,10 @@ function installEncounterZoneSelector(cell, {
 
 function installEncounterRollControl(cell, { disabled = false, title = "" } = {}) {
   if (!cell) return null;
-  const label = String(cell.querySelector?.("span")?.textContent ?? "Roll Encounter").trim() || "Roll Encounter";
   cell.dataset.mkEncounterRollControl = "true";
   cell.innerHTML = `
-    <span>${label}</span>
-    <button type="button" class="mk-gm-encounter-roll" data-mk-gm-roll-encounter-zone ${disabled ? "disabled" : ""} ${title ? `title="${title}"` : ""}>
-      <i class="fas fa-dice-d20"></i> Roll Encounter
+    <button type="button" class="mk-gm-encounter-roll mk-gm-context-action" data-mk-gm-roll-encounter-zone ${disabled ? "disabled" : ""} ${title ? `title="${title}"` : ""}>
+      <i class="fas fa-swords"></i> Roll Encounter
     </button>
   `;
   return cell.querySelector("[data-mk-gm-roll-encounter-zone]");
@@ -229,7 +227,10 @@ function bindEncounterRollButton(button, strip, scene) {
     try {
       const context = readTopContext(strip);
       const zoneId = readEncounterZoneSelection(strip);
-      await rollEncounterZone(context?.terrain ?? "", scene, { zoneId });
+      await rollEncounterZone(context?.terrain ?? "", scene, {
+        zoneId,
+        dangerLevel: context?.dangerLevel,
+      });
     } catch (error) {
       console.error("mk-shadowdark | GM Screen Encounter Zone | Roll failed", error);
       globalThis.ui?.notifications?.error?.(`Encounter Zone roll failed: ${error.message}`);

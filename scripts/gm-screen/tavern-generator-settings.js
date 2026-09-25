@@ -44,6 +44,42 @@ const TAVERN_GENERATOR_TABLE_DESCRIPTIONS = Object.freeze({
   drinksWealthy: "Rolls the drink entries for a Wealthy tavern.",
 });
 
+const SHOP_GENERATOR_TABLE_FLAG = "shopGeneratorTables";
+const SHOP_GENERATOR_TABLE_SCHEMA = 3;
+
+const SHOP_GENERATOR_TABLE_KEYS = Object.freeze([
+  "quality",
+  "firstPart",
+  "secondPart",
+  "knownFor",
+  "poorShop",
+  "standardShop",
+  "wealthyShop",
+  "customer",
+]);
+
+const SHOP_GENERATOR_TABLE_LABELS = Object.freeze({
+  quality: "Quality",
+  firstPart: "First Part",
+  secondPart: "Second Part",
+  knownFor: "Known For",
+  poorShop: "Poor Shop",
+  standardShop: "Standard Shop",
+  wealthyShop: "Wealthy Shop",
+  customer: "Interesting Customer",
+});
+
+const SHOP_GENERATOR_TABLE_DESCRIPTIONS = Object.freeze({
+  quality: "Rolls Poor, Standard, or Wealthy for the shop.",
+  firstPart: "Rolls the first part of the shop name.",
+  secondPart: "Rolls the second part of the shop name.",
+  knownFor: "Rolls what the shop is known for.",
+  poorShop: "Rolls the shop type for a Poor shop.",
+  standardShop: "Rolls the shop type for a Standard shop.",
+  wealthyShop: "Rolls the shop type for a Wealthy shop.",
+  customer: "Rolls the Interesting Customer result.",
+});
+
 function currentScene() {
   return globalThis.canvas?.scene ?? globalThis.game?.scenes?.current ?? null;
 }
@@ -175,6 +211,76 @@ async function setSceneTavernGeneratorTable(key, tableUuid, scene = currentScene
   return next;
 }
 
+function normalizeShopGeneratorTables(value) {
+  const source = value && typeof value === "object" && !Array.isArray(value) ? value : {};
+  const legacyGenerator = normalizeTableUuid(source.generator ?? source.shopGenerator);
+  return {
+    schema: SHOP_GENERATOR_TABLE_SCHEMA,
+    quality: normalizeTableUuid(source.quality),
+    firstPart: normalizeTableUuid(source.firstPart ?? legacyGenerator),
+    secondPart: normalizeTableUuid(source.secondPart ?? legacyGenerator),
+    knownFor: normalizeTableUuid(source.knownFor),
+    poorShop: normalizeTableUuid(source.poorShop ?? source.poor),
+    standardShop: normalizeTableUuid(source.standardShop ?? source.standard),
+    wealthyShop: normalizeTableUuid(source.wealthyShop ?? source.wealthy),
+    customer: normalizeTableUuid(source.customer ?? source.interestingCustomer),
+  };
+}
+
+function getSceneShopGeneratorTables(scene = currentScene()) {
+  return normalizeShopGeneratorTables(getSceneFlag(scene, SHOP_GENERATOR_TABLE_FLAG, null));
+}
+
+function shopGeneratorTableStatus(value, tables = globalThis.game?.tables) {
+  const assignments = normalizeShopGeneratorTables(value);
+  const resolvedTables = Object.fromEntries(
+    SHOP_GENERATOR_TABLE_KEYS.map(key => [key, tableForUuid(assignments[key], tables)]),
+  );
+  const missing = SHOP_GENERATOR_TABLE_KEYS
+    .filter(key => !assignments[key])
+    .map(key => SHOP_GENERATOR_TABLE_LABELS[key]);
+  const unavailable = SHOP_GENERATOR_TABLE_KEYS
+    .filter(key => assignments[key] && !resolvedTables[key])
+    .map(key => SHOP_GENERATOR_TABLE_LABELS[key]);
+
+  return {
+    available: missing.length === 0 && unavailable.length === 0,
+    configured: SHOP_GENERATOR_TABLE_KEYS.some(key => Boolean(assignments[key])),
+    assignments,
+    missing,
+    unavailable,
+    tables: resolvedTables,
+  };
+}
+
+async function resolveShopGeneratorEntries(scene = currentScene(), tables = globalThis.game?.tables) {
+  const assignments = getSceneShopGeneratorTables(scene);
+  return Promise.all(SHOP_GENERATOR_TABLE_KEYS.map(async key => ({
+    key,
+    label: SHOP_GENERATOR_TABLE_LABELS[key],
+    description: SHOP_GENERATOR_TABLE_DESCRIPTIONS[key],
+    uuid: assignments[key],
+    table: assignments[key] ? await resolveRollTable(assignments[key], tables) : null,
+  })));
+}
+
+async function setSceneShopGeneratorTable(key, tableUuid, scene = currentScene(), {
+  user = globalThis.game?.user,
+} = {}) {
+  const normalizedKey = String(key ?? "").trim();
+  if (!SHOP_GENERATOR_TABLE_KEYS.includes(normalizedKey)) return null;
+  if (!scene?.setFlag) return null;
+  if (!user?.isGM) {
+    globalThis.ui?.notifications?.warn?.("Only the GM can change Shop Generator RollTables.");
+    return null;
+  }
+
+  const next = normalizeShopGeneratorTables(getSceneFlag(scene, SHOP_GENERATOR_TABLE_FLAG, null));
+  next[normalizedKey] = normalizeTableUuid(tableUuid);
+  await scene.setFlag(MODULE_ID, SHOP_GENERATOR_TABLE_FLAG, next);
+  return next;
+}
+
 function escapeHtml(value) {
   return String(value ?? "").replace(/[&<>"']/g, character => ({
     "&": "&amp;",
@@ -198,18 +304,18 @@ function renderTavernGeneratorSetup(entries = []) {
     const assigned = Boolean(entry.uuid);
     const tableName = entry.table?.name ?? (assigned ? "Unavailable RollTable" : "Drop RollTable here");
     return [
-      '<article class="mk-gm-tavern-generator-slot ',
+      '<article class="mk-gm-tavern-generator-slot mk-gm-rolltable-assignment-row ',
       assigned ? "is-assigned" : "is-empty",
       '" data-mk-tavern-generator-slot="',
       escapeHtml(key),
       '">',
-      '<span class="mk-gm-tavern-generator-label">',
+      '<span class="mk-gm-tavern-generator-label mk-gm-rolltable-assignment-title">',
       escapeHtml(entry.label),
       "</span>",
-      '<span class="mk-gm-tavern-generator-description">',
+      '<span class="mk-gm-tavern-generator-description mk-gm-rolltable-assignment-description">',
       escapeHtml(entry.description),
       "</span>",
-      '<div class="mk-gm-tavern-generator-drop" data-mk-tavern-generator-drop>',
+      '<div class="mk-gm-tavern-generator-drop mk-gm-rolltable-assignment-table" data-mk-tavern-generator-drop>',
       '<i class="fas ',
       assigned ? "fa-table-list" : "fa-arrow-down",
       '" aria-hidden="true"></i>',
@@ -240,10 +346,73 @@ function renderTavernGeneratorSetup(entries = []) {
     "</div>",
     '<i class="fas fa-beer-mug-empty" aria-hidden="true"></i>',
     "</header>",
-    '<div class="mk-gm-tavern-generator-grid">',
+    '<div class="mk-gm-tavern-generator-grid mk-gm-rolltable-assignment-grid">',
     slots,
     "</div>",
     '<small class="mk-gm-tavern-generator-status">Assignments are stored on the active Scene. Tavern generation uses these linked tables when any assignment is present; otherwise the existing imported source tables remain available.</small>',
+    "</section>",
+  ].join("");
+}
+
+function renderShopGeneratorSetup(entries = []) {
+  const byKey = new Map((entries ?? []).map(entry => [entry.key, entry]));
+  const slots = SHOP_GENERATOR_TABLE_KEYS.map(key => {
+    const entry = byKey.get(key) ?? {
+      key,
+      label: SHOP_GENERATOR_TABLE_LABELS[key],
+      description: SHOP_GENERATOR_TABLE_DESCRIPTIONS[key],
+      uuid: "",
+      table: null,
+    };
+    const assigned = Boolean(entry.uuid);
+    const tableName = entry.table?.name ?? (assigned ? "Unavailable RollTable" : "Drop RollTable here");
+    return [
+      '<article class="mk-gm-shop-generator-slot mk-gm-rolltable-assignment-row ',
+      assigned ? "is-assigned" : "is-empty",
+      '" data-mk-shop-generator-slot="',
+      escapeHtml(key),
+      '">',
+      '<span class="mk-gm-shop-generator-label mk-gm-rolltable-assignment-title">',
+      escapeHtml(entry.label),
+      "</span>",
+      '<span class="mk-gm-shop-generator-description mk-gm-rolltable-assignment-description">',
+      escapeHtml(entry.description),
+      "</span>",
+      '<div class="mk-gm-shop-generator-drop mk-gm-rolltable-assignment-table" data-mk-shop-generator-drop>',
+      '<i class="fas ',
+      assigned ? "fa-table-list" : "fa-arrow-down",
+      '" aria-hidden="true"></i>',
+      "<strong>",
+      escapeHtml(tableName),
+      "</strong>",
+      assigned && !entry.table
+        ? "<small>" + escapeHtml(entry.uuid) + "</small>"
+        : "",
+      assigned
+        ? '<button type="button" data-mk-shop-generator-clear title="Clear '
+          + escapeHtml(entry.label)
+          + ' RollTable" aria-label="Clear '
+          + escapeHtml(entry.label)
+          + ' RollTable"><i class="fas fa-xmark"></i></button>'
+        : "",
+      "</div>",
+      "</article>",
+    ].join("");
+  }).join("");
+
+  return [
+    '<section class="mk-gm-shop-generator-tables" data-mk-shop-generator-tables>',
+    '<header class="mk-gm-shop-generator-heading">',
+    "<div>",
+    "<strong>Shop Generator RollTables</strong>",
+    "<span>Drop the RollTables used by the shop procedure into their assignments.</span>",
+    "</div>",
+    '<i class="fas fa-store" aria-hidden="true"></i>',
+    "</header>",
+    '<div class="mk-gm-shop-generator-grid mk-gm-rolltable-assignment-grid">',
+    slots,
+    "</div>",
+    '<small class="mk-gm-shop-generator-status">Assignments are stored on the active Scene. Shop generation uses these linked tables when any assignment is present; otherwise the existing imported source tables remain available.</small>',
     "</section>",
   ].join("");
 }
@@ -340,6 +509,64 @@ function bindTavernGeneratorTables(application, root, scene) {
   return true;
 }
 
+function bindShopGeneratorTables(application, root, scene) {
+  root?.querySelectorAll?.("[data-mk-shop-generator-slot]")?.forEach(slot => {
+    const key = String(slot.dataset?.mkShopGeneratorSlot ?? "");
+    const drop = slot.querySelector?.("[data-mk-shop-generator-drop]");
+    if (!drop) return;
+
+    drop.addEventListener("dragenter", event => {
+      event.preventDefault();
+      slot.classList.add("is-dragover");
+    });
+    drop.addEventListener("dragover", event => {
+      event.preventDefault();
+      if (event.dataTransfer) event.dataTransfer.dropEffect = "copy";
+      slot.classList.add("is-dragover");
+    });
+    drop.addEventListener("dragleave", event => {
+      if (event.relatedTarget && drop.contains?.(event.relatedTarget)) return;
+      slot.classList.remove("is-dragover");
+    });
+    drop.addEventListener("drop", async event => {
+      event.preventDefault();
+      event.stopPropagation();
+      slot.classList.remove("is-dragover");
+      const uuid = dragDataUuid(dragEventData(event));
+      const table = await resolveRollTable(uuid);
+      if (!table) {
+        globalThis.ui?.notifications?.warn?.("Drop a RollTable onto the Shop Generator assignment.");
+        return;
+      }
+
+      try {
+        await setSceneShopGeneratorTable(key, table.uuid ?? uuid, scene);
+        await application?.render?.({ force: true });
+      } catch (error) {
+        console.error("mk-shadowdark | Shop Generator | Assignment failed", error);
+        globalThis.ui?.notifications?.error?.("Shop Generator assignment failed: " + error.message);
+      }
+    });
+
+    drop.querySelectorAll?.("[data-mk-shop-generator-clear]")?.forEach(button => {
+      button.addEventListener("click", async event => {
+        event.preventDefault();
+        event.stopPropagation();
+        button.disabled = true;
+        try {
+          await setSceneShopGeneratorTable(key, "", scene);
+          await application?.render?.({ force: true });
+        } catch (error) {
+          console.error("mk-shadowdark | Shop Generator | Clear failed", error);
+          globalThis.ui?.notifications?.error?.("Shop Generator clear failed: " + error.message);
+          button.disabled = false;
+        }
+      });
+    });
+  });
+  return true;
+}
+
 function gmScreenApplication(application) {
   return Boolean(
     application
@@ -376,9 +603,32 @@ async function decorateTavernGeneratorSettings(application, element) {
   return true;
 }
 
+async function decorateShopGeneratorSettings(application, element) {
+  if (!gmScreenApplication(application) || !globalThis.game?.user?.isGM) return false;
+  const root = element?.querySelector
+    ? element
+    : element?.[0]?.querySelector
+      ? element[0]
+      : null;
+  const target = root?.querySelector?.("[data-mk-shop-generator-tables]");
+  if (!target) return false;
+
+  const scene = currentScene();
+  if (!scene) {
+    target.innerHTML = '<div class="mk-gm-empty">No active Scene.</div>';
+    return true;
+  }
+
+  const entries = await resolveShopGeneratorEntries(scene);
+  target.innerHTML = renderShopGeneratorSetup(entries);
+  bindShopGeneratorTables(application, target, scene);
+  return true;
+}
+
 function registerTavernGeneratorSettings() {
   const render = (application, element) => {
     void decorateTavernGeneratorSettings(application, element);
+    void decorateShopGeneratorSettings(application, element);
   };
   globalThis.Hooks?.on?.("renderApplicationV2", render);
   globalThis.Hooks?.on?.("renderApplication", render);
@@ -405,5 +655,18 @@ export {
   renderTavernGeneratorSetup,
   bindTavernGeneratorTables,
   decorateTavernGeneratorSettings,
+  SHOP_GENERATOR_TABLE_FLAG,
+  SHOP_GENERATOR_TABLE_SCHEMA,
+  SHOP_GENERATOR_TABLE_KEYS,
+  SHOP_GENERATOR_TABLE_LABELS,
+  SHOP_GENERATOR_TABLE_DESCRIPTIONS,
+  normalizeShopGeneratorTables,
+  getSceneShopGeneratorTables,
+  shopGeneratorTableStatus,
+  resolveShopGeneratorEntries,
+  setSceneShopGeneratorTable,
+  renderShopGeneratorSetup,
+  bindShopGeneratorTables,
+  decorateShopGeneratorSettings,
   registerTavernGeneratorSettings,
 };

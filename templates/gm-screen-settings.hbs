@@ -53,50 +53,38 @@
       <article class="mk-gm-settings-card">
         <h2>Configure your GM tools</h2>
         <p>Use the settings tabs on the left to configure Scene-owned generators and RollTable assignments.</p>
-        <p>The main GM Screen keeps the live session controls in view, while configuration stays here out of the way.</p>
+        <p>Use each feature card's checkbox to choose which Quick Actions appear on the main GM Screen.</p>
       </article>
 
-      <article class="mk-gm-settings-card mk-gm-settings-card-accent">
+      <article class="mk-gm-settings-card mk-gm-settings-transfer" data-mk-gm-screen-transfer>
         <div>
-          <h2>Encounter Zones</h2>
-          <p>Configure named terrain grids and the supporting RollTables used by Roll Encounter.</p>
+          <h2>Scene Configuration</h2>
+          <p>Export or import this Scene's GM Screen configuration, including encounter zones, generators, environment context, and RollTable assignments.</p>
         </div>
-        <div class="mk-gm-settings-overview-tools">
-          <button type="button" draggable="true" data-mk-gm-overview-tool="encounters" title="Drag Encounters action to Overview">
-            <i class="fas fa-dice-d20" aria-hidden="true"></i>
-            <span>Drag Encounters to Overview</span>
-            <i class="fas fa-grip-lines" aria-hidden="true"></i>
-          </button>
-        </div>
+        <div class="mk-gm-settings-transfer-actions" data-mk-gm-screen-transfer-actions></div>
       </article>
 
-      <article class="mk-gm-settings-card mk-gm-settings-card-accent">
+      {{#each homeFeatures}}
+      <article class="mk-gm-settings-card mk-gm-settings-card-accent" data-mk-gm-home-feature="{{id}}">
         <div>
-          <h2>NPC Generator</h2>
-          <p>Choose the RollTables used to build NPC names, identifiers, and traits for this Scene.</p>
+          <h2>{{homeTitle}}</h2>
+          <p>{{homeDescription}}</p>
         </div>
-        <div class="mk-gm-settings-overview-tools">
-          <button type="button" draggable="true" data-mk-gm-overview-tool="npc-generator" title="Drag NPC Generator action to Overview">
-            <i class="fas fa-font" aria-hidden="true"></i>
-            <span>Drag NPC Generator to Overview</span>
-            <i class="fas fa-grip-lines" aria-hidden="true"></i>
-          </button>
+        <div class="mk-gm-settings-quick-action-control">
+          <label class="mk-gm-settings-quick-action-toggle" title="Show or hide {{label}} in Quick Actions">
+            <input
+              type="checkbox"
+              data-mk-gm-quick-action-toggle="{{overviewTool}}"
+              {{#if quickActionEnabled}}checked{{/if}}
+            >
+            <span>
+              <strong>Show in Quick Actions</strong>
+              <small>{{#if quickActionEnabled}}Visible on the GM Screen{{else}}Hidden from the GM Screen{{/if}}</small>
+            </span>
+          </label>
         </div>
       </article>
-
-      <article class="mk-gm-settings-card mk-gm-settings-card-accent">
-        <div>
-          <h2>Tavern Generator</h2>
-          <p>Choose the RollTables used to build the tavern name, Wealth, Known For result, and the Poor, Standard, and Wealthy food and drink lists for this Scene.</p>
-        </div>
-        <div class="mk-gm-settings-overview-tools">
-          <button type="button" draggable="true" data-mk-gm-overview-tool="tavern-generator" title="Drag Tavern Generator action to Overview">
-            <i class="fas fa-beer-mug-empty" aria-hidden="true"></i>
-            <span>Drag Tavern Generator to Overview</span>
-            <i class="fas fa-grip-lines" aria-hidden="true"></i>
-          </button>
-        </div>
-      </article>
+      {{/each}}
     </section>
     {{/if}}
 
@@ -119,13 +107,51 @@
     </section>
     {{/if}}
 
+    {{#if (eq activeTab "shop-generator")}}
+    <section class="mk-gm-settings-page" data-settings-page="shop-generator" role="tabpanel">
+      <header class="mk-gm-settings-page-heading">
+        <div>
+          <span class="mk-gm-settings-eyebrow">GM Screen / Settings</span>
+          <h1>Shop Generator</h1>
+      <p>Scene-owned RollTables used to roll shop quality, generate names, Known For results, and Interesting Customers.</p>
+        </div>
+        <i class="fas fa-store" aria-hidden="true"></i>
+      </header>
+
+      <section class="mk-gm-settings-card mk-gm-settings-shop-generator" data-mk-shop-generator>
+        <div data-mk-shop-generator-tables>
+          <div class="mk-gm-empty">Loading Shop Generator tables…</div>
+        </div>
+      </section>
+    </section>
+    {{/if}}
+
+    {{#if (eq activeTab "location-generator")}}
+    <section class="mk-gm-settings-page" data-settings-page="location-generator" role="tabpanel">
+      <header class="mk-gm-settings-page-heading">
+        <div>
+          <span class="mk-gm-settings-eyebrow">GM Screen / Settings</span>
+          <h1>Location Generator</h1>
+          <p>Scene-owned RollTables used to generate location Descriptors, Locations, and Features.</p>
+        </div>
+        <i class="fas fa-map-location-dot" aria-hidden="true"></i>
+      </header>
+
+      <section class="mk-gm-settings-card mk-gm-settings-location-generator" data-mk-location-generator>
+        <div data-mk-location-generator-tables>
+          <div class="mk-gm-empty">Loading Location Generator tables…</div>
+        </div>
+      </section>
+    </section>
+    {{/if}}
+
     {{#if (eq activeTab "encounters")}}
     <section class="mk-gm-settings-page" data-settings-page="encounters" role="tabpanel">
       <header class="mk-gm-settings-page-heading">
         <div>
           <span class="mk-gm-settings-eyebrow">GM Screen / Settings</span>
           <h1>Encounters</h1>
-          <p>Configure Encounter Zones and the supporting RollTables used by Roll Encounter.</p>
+          <p>Configure Encounter Zones and the three supporting RollTables used by Roll Encounter. Trap and Hazard generators are independent.</p>
         </div>
         <i class="fas fa-dice-d20" aria-hidden="true"></i>
       </header>
@@ -136,6 +162,44 @@
         </div>
         <div data-mk-encounter-auxiliary-tables>
           <div class="mk-gm-empty">Loading encounter RollTables…</div>
+        </div>
+      </section>
+    </section>
+    {{/if}}
+
+    {{#if (eq activeTab "trap-generator")}}
+    <section class="mk-gm-settings-page" data-settings-page="trap-generator" role="tabpanel">
+      <header class="mk-gm-settings-page-heading">
+        <div>
+          <span class="mk-gm-settings-eyebrow">GM Screen / Settings</span>
+          <h1>Trap Generator</h1>
+          <p>Assign three Scene-owned RollTables for generating trap results independently from normal encounters.</p>
+        </div>
+        <i class="fas fa-spider" aria-hidden="true"></i>
+      </header>
+
+      <section class="mk-gm-settings-card mk-gm-settings-generator" data-mk-gm-generator="trap">
+        <div data-mk-encounter-generator-target="trap">
+          <div class="mk-gm-empty">Loading Trap Generator tables…</div>
+        </div>
+      </section>
+    </section>
+    {{/if}}
+
+    {{#if (eq activeTab "hazard-generator")}}
+    <section class="mk-gm-settings-page" data-settings-page="hazard-generator" role="tabpanel">
+      <header class="mk-gm-settings-page-heading">
+        <div>
+          <span class="mk-gm-settings-eyebrow">GM Screen / Settings</span>
+          <h1>Hazard Generator</h1>
+          <p>Assign three Scene-owned RollTables for generating hazard results independently from normal encounters.</p>
+        </div>
+        <i class="fas fa-triangle-exclamation" aria-hidden="true"></i>
+      </header>
+
+      <section class="mk-gm-settings-card mk-gm-settings-generator" data-mk-gm-generator="hazard">
+        <div data-mk-encounter-generator-target="hazard">
+          <div class="mk-gm-empty">Loading Hazard Generator tables…</div>
         </div>
       </section>
     </section>
@@ -158,6 +222,44 @@
         </div>
         <div data-mk-npc-trait-tables>
           <div class="mk-gm-empty">Loading NPC trait tables…</div>
+        </div>
+      </section>
+    </section>
+    {{/if}}
+
+    {{#if (eq activeTab "monster-generator")}}
+    <section class="mk-gm-settings-page" data-settings-page="monster-generator" role="tabpanel">
+      <header class="mk-gm-settings-page-heading">
+        <div>
+          <span class="mk-gm-settings-eyebrow">GM Screen / Settings</span>
+          <h1>Monster Generator</h1>
+          <p>Scene-owned RollTables used to generate combat traits, quality, strengths, weaknesses, and mutations.</p>
+        </div>
+        <i class="fas fa-skull-crossbones" aria-hidden="true"></i>
+      </header>
+
+      <section class="mk-gm-settings-card mk-gm-settings-generator mk-gm-settings-monster-generator" data-mk-gm-monster-generator>
+        <div data-mk-monster-generator-tables>
+          <div class="mk-gm-empty">Loading Monster Generator tables…</div>
+        </div>
+      </section>
+    </section>
+    {{/if}}
+
+    {{#if (eq activeTab "magic-item-generator")}}
+    <section class="mk-gm-settings-page" data-settings-page="magic-item-generator" role="tabpanel">
+      <header class="mk-gm-settings-page-heading">
+        <div>
+          <span class="mk-gm-settings-eyebrow">GM Screen / Settings</span>
+          <h1>Magic Item Generator</h1>
+          <p>Scene-owned RollTables used to generate magic item names, bonuses, benefits, curses, and personalities.</p>
+        </div>
+        <i class="fas fa-wand-sparkles" aria-hidden="true"></i>
+      </header>
+
+      <section class="mk-gm-settings-card mk-gm-settings-generator mk-gm-settings-magic-item-generator" data-mk-gm-magic-item-generator>
+        <div data-mk-magic-item-generator-tables>
+          <div class="mk-gm-empty">Loading Magic Item Generator tables…</div>
         </div>
       </section>
     </section>

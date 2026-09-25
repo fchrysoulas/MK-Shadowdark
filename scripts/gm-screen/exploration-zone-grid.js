@@ -1,6 +1,8 @@
 import { getSceneEnvironmentContext, setSceneEnvironmentContext } from "../libs/environment-context.js";
+import { waitForGmDialog } from "../libs/dialog-v2.js";
 import { sourceTableFlag } from "../source-tables/source-table-importer.js";
 import { APP_ID, SETTINGS_APP_ID } from "./gm-screen.js";
+import { pinDocument } from "./pinned-documents.js";
 
 const MODULE_ID = "mk-shadowdark";
 const GRID_FLAG = "encounterZoneGrid";
@@ -18,6 +20,19 @@ const AUXILIARY_TABLE_KEYS = Object.freeze([
   "trap",
   "hazard",
 ]);
+
+const ENCOUNTER_AUXILIARY_TABLE_KEYS = Object.freeze([
+  "distance",
+  "activity",
+  "danger",
+]);
+
+const GENERATOR_TABLE_KEYS = Object.freeze([
+  "trap",
+  "hazard",
+]);
+
+const GENERATOR_ASSIGNMENT_COUNT = 3;
 
 const AUXILIARY_MULTI_TABLE_KEYS = Object.freeze([
   "trap",
@@ -309,11 +324,19 @@ function normalizeAuxiliaryTableList(value) {
     .filter(Boolean);
 }
 
+function normalizeGeneratorTableList(value) {
+  const values = Array.isArray(value) ? value : [value];
+  return Array.from({ length: GENERATOR_ASSIGNMENT_COUNT }, (_value, index) => (
+    String(values[index] ?? "").trim()
+  ));
+}
+
 function normalizeAuxiliaryTables(value) {
   const source = value && typeof value === "object" && !Array.isArray(value) ? value : {};
   return Object.fromEntries(AUXILIARY_TABLE_KEYS.map(key => {
-    const tableUuids = normalizeAuxiliaryTableList(source[key]);
-    return [key, AUXILIARY_MULTI_TABLE_KEYS.includes(key) ? tableUuids : (tableUuids[0] ?? "")];
+    return [key, AUXILIARY_MULTI_TABLE_KEYS.includes(key)
+      ? normalizeGeneratorTableList(source[key])
+      : (normalizeAuxiliaryTableList(source[key])[0] ?? "")];
   }));
 }
 
@@ -337,14 +360,21 @@ async function setSceneEncounterZoneAuxiliaryTable(key, tableUuid, scene = curre
   const next = getSceneEncounterZoneAuxiliaryTables(scene);
   const normalizedUuid = String(tableUuid ?? "").trim();
   if (AUXILIARY_MULTI_TABLE_KEYS.includes(normalizedKey)) {
-    const tableUuids = normalizeAuxiliaryTableList(next[normalizedKey]);
-    if (Number.isInteger(index) && index >= 0 && index < tableUuids.length) {
-      tableUuids.splice(index, 1);
+    const tableUuids = normalizeGeneratorTableList(next[normalizedKey]);
+    if (Number.isInteger(index) && index >= 0 && index < GENERATOR_ASSIGNMENT_COUNT) {
+      tableUuids[index] = normalizedUuid;
       next[normalizedKey] = tableUuids;
     } else if (normalizedUuid) {
-      next[normalizedKey] = append ? [...tableUuids, normalizedUuid] : [normalizedUuid];
+      const emptyIndex = tableUuids.findIndex(uuid => !uuid);
+      if (emptyIndex < 0 && append) {
+        globalThis.ui?.notifications?.warn?.(`${AUXILIARY_TABLE_LABELS[normalizedKey]} Generator already has ${GENERATOR_ASSIGNMENT_COUNT} RollTables assigned.`);
+        return next;
+      }
+      next[normalizedKey] = append
+        ? tableUuids.map((uuid, tableIndex) => tableIndex === Math.max(0, emptyIndex) ? normalizedUuid : uuid)
+        : [normalizedUuid, "", ""];
     } else {
-      next[normalizedKey] = [];
+      next[normalizedKey] = Array.from({ length: GENERATOR_ASSIGNMENT_COUNT }, () => "");
     }
   } else {
     next[normalizedKey] = normalizedUuid;
@@ -357,7 +387,10 @@ function gridColumnLabels(grid) {
   return normalizeGrid(grid).columns.map(column => column.label).filter(Boolean);
 }
 
-function encounterZoneDieFormula(grid) {
+function encounterZoneDieFormula(grid, dangerLevel = "") {
+  const dangerFormula = encounterDangerDieFormula(dangerLevel);
+  if (dangerFormula) return dangerFormula;
+
   const normalized = normalizeGrid(grid);
   const match = String(normalized.rowHeader ?? "").match(/(\d*)d(\d+)/i);
   if (match) {
@@ -371,6 +404,21 @@ function encounterZoneDieFormula(grid) {
     return Math.max(highest, ...(values.length ? values : [index + 1]));
   }, 1);
   return `1d${highestRow}`;
+}
+
+function encounterDangerDieFormula(dangerLevel) {
+  const values = typeof dangerLevel === "object" && dangerLevel !== null
+    ? [dangerLevel.id, dangerLevel.key, dangerLevel.value, dangerLevel.label]
+    : [dangerLevel];
+
+  for (const value of values) {
+    const normalized = String(value ?? "").trim().toLowerCase().replace(/[^a-z0-9]+/g, "");
+    if (normalized.includes("unsafe")) return "1d6";
+    if (normalized.includes("risky") || normalized === "risk") return "2d6";
+    if (normalized.includes("deadly")) return "3d6";
+  }
+
+  return "";
 }
 
 function encounterZoneRowRange(row, index) {
@@ -533,17 +581,18 @@ async function resolveRollTable(uuid) {
   return table;
 }
 
-async function resolveAuxiliaryTableEntries(scene = currentScene()) {
+async function resolveAuxiliaryTableEntries(scene = currentScene(), keys = AUXILIARY_TABLE_KEYS) {
   const assignments = getSceneEncounterZoneAuxiliaryTables(scene);
-  return Promise.all(AUXILIARY_TABLE_KEYS.map(async key => {
+  const requestedKeys = Array.isArray(keys) && keys.length ? keys : AUXILIARY_TABLE_KEYS;
+  return Promise.all(requestedKeys.map(async key => {
     if (AUXILIARY_MULTI_TABLE_KEYS.includes(key)) {
-      const uuids = normalizeAuxiliaryTableList(assignments[key]);
+      const uuids = normalizeGeneratorTableList(assignments[key]);
       return {
         key,
         label: AUXILIARY_TABLE_LABELS[key],
         multiple: true,
         uuids,
-        tables: await Promise.all(uuids.map(uuid => resolveRollTable(uuid))),
+        tables: await Promise.all(uuids.map(uuid => uuid ? resolveRollTable(uuid) : null)),
       };
     }
 
@@ -557,20 +606,25 @@ async function resolveAuxiliaryTableEntries(scene = currentScene()) {
   }));
 }
 
-function renderEncounterAuxiliaryTableSetup(entries = []) {
+function renderEncounterAuxiliaryTableSetup(entries = [], {
+  tableKeys = ENCOUNTER_AUXILIARY_TABLE_KEYS,
+  title = "Encounter RollTables",
+  description = "Optional tables rolled with each Roll Zone encounter.",
+  status = "Drag a RollTable from the sidebar onto a box. Empty boxes are skipped.",
+} = {}) {
   const byKey = new Map((entries ?? []).map(entry => [entry.key, entry]));
+  const keys = tableKeys.filter(key => AUXILIARY_TABLE_KEYS.includes(key));
   return `
     <section class="mk-gm-encounter-auxiliary-tables" data-mk-encounter-auxiliary-tables>
       <header class="mk-gm-encounter-auxiliary-heading">
         <div>
-          <strong>Encounter RollTables</strong>
-          <span>Optional tables rolled with each Roll Zone encounter.</span>
+          <strong>${escapeHtml(title)}</strong>
+          <span>${escapeHtml(description)}</span>
         </div>
         <i class="fas fa-table-list" aria-hidden="true"></i>
       </header>
       <div class="mk-gm-encounter-auxiliary-grid">
-        ${AUXILIARY_TABLE_KEYS.map(key => {
-          const multiple = AUXILIARY_MULTI_TABLE_KEYS.includes(key);
+        ${keys.map(key => {
           const entry = byKey.get(key) ?? {
             key,
             label: AUXILIARY_TABLE_LABELS[key],
@@ -579,46 +633,70 @@ function renderEncounterAuxiliaryTableSetup(entries = []) {
             uuids: [],
             tables: [],
           };
-          const tableUuids = normalizeAuxiliaryTableList(multiple ? (entry.uuids ?? entry.uuid) : entry.uuid);
-          const tables = multiple
-            ? (Array.isArray(entry.tables) ? entry.tables : (entry.table ? [entry.table] : []))
-            : [entry.table];
+          const tableUuids = normalizeAuxiliaryTableList(entry.uuid);
+          const tables = [entry.table];
           const assigned = tableUuids.length > 0;
-          const tableName = tableUuids[0]
+          const tableName = assigned
             ? String(safeDocumentField(tables[0], "name", "Unavailable RollTable"))
             : "Drop RollTable here";
-          const tableItems = multiple
-            ? tableUuids.map((uuid, index) => {
-              const table = tables[index];
-              const name = table
-                ? String(safeDocumentField(table, "name", uuid))
-                : "Unavailable RollTable";
-              return `
-                <div class="mk-gm-encounter-auxiliary-entry">
-                  <i class="fas fa-table-list" aria-hidden="true"></i>
-                  <strong>${escapeHtml(name)}</strong>
-                  ${table ? "" : `<small>${escapeHtml(uuid)}</small>`}
-                  <button type="button" data-mk-encounter-auxiliary-clear data-mk-encounter-auxiliary-index="${index}" title="Clear ${escapeHtml(entry.label)} table ${index + 1}" aria-label="Clear ${escapeHtml(entry.label)} table ${index + 1}"><i class="fas fa-xmark"></i></button>
-                </div>
-              `;
-            }).join("")
-            : "";
           return `
-            <article class="mk-gm-encounter-auxiliary-slot ${assigned ? "is-assigned" : "is-empty"}" data-mk-encounter-auxiliary-slot="${key}"${multiple ? " data-mk-encounter-auxiliary-multiple" : ""}>
+            <article class="mk-gm-encounter-auxiliary-slot ${assigned ? "is-assigned" : "is-empty"}" data-mk-encounter-auxiliary-slot="${key}">
               <span class="mk-gm-encounter-auxiliary-label">${escapeHtml(entry.label)}</span>
-              <div class="mk-gm-encounter-auxiliary-drop${multiple ? " is-multiple" : ""}" data-mk-encounter-auxiliary-drop>
-                ${multiple
-                  ? `${tableItems ? `<div class="mk-gm-encounter-auxiliary-list">${tableItems}</div>` : `<div class="mk-gm-encounter-auxiliary-empty"><i class="fas fa-arrow-down" aria-hidden="true"></i><strong>Drop RollTable here</strong></div>`}<div class="mk-gm-encounter-auxiliary-add"><i class="fas fa-plus" aria-hidden="true"></i><span>Drop ${assigned ? "another " : "a "}RollTable</span></div>`
-                  : `<i class="fas ${assigned ? "fa-table-list" : "fa-arrow-down"}" aria-hidden="true"></i>
-                     <strong>${escapeHtml(tableName)}</strong>
-                     ${tableUuids[0] && !tables[0] ? `<small>${escapeHtml(tableUuids[0])}</small>` : ""}
-                     ${tableUuids[0] ? `<button type="button" data-mk-encounter-auxiliary-clear title="Clear ${escapeHtml(entry.label)} RollTable" aria-label="Clear ${escapeHtml(entry.label)} RollTable"><i class="fas fa-xmark"></i></button>` : ""}`}
+              <div class="mk-gm-encounter-auxiliary-drop" data-mk-encounter-auxiliary-drop>
+                <i class="fas ${assigned ? "fa-table-list" : "fa-arrow-down"}" aria-hidden="true"></i>
+                <strong>${escapeHtml(tableName)}</strong>
+                ${tableUuids[0] && !tables[0] ? `<small>${escapeHtml(tableUuids[0])}</small>` : ""}
+                ${tableUuids[0] ? `<button type="button" data-mk-encounter-auxiliary-clear title="Clear ${escapeHtml(entry.label)} RollTable" aria-label="Clear ${escapeHtml(entry.label)} RollTable"><i class="fas fa-xmark"></i></button>` : ""}
               </div>
             </article>
           `;
         }).join("")}
       </div>
-      <small class="mk-gm-encounter-auxiliary-status">Drag a RollTable from the sidebar onto a box. Trap and Hazard accept multiple tables; empty boxes are skipped.</small>
+      <small class="mk-gm-encounter-auxiliary-status">${escapeHtml(status)}</small>
+    </section>
+  `;
+}
+
+function renderEncounterGeneratorSetup(entry = {}) {
+  const key = String(entry.key ?? "").trim();
+  if (!GENERATOR_TABLE_KEYS.includes(key)) return "";
+
+  const label = AUXILIARY_TABLE_LABELS[key] ?? key;
+  const uuids = normalizeGeneratorTableList(entry.uuids ?? entry.uuid);
+  const tables = Array.isArray(entry.tables) ? entry.tables : [];
+  return `
+    <section class="mk-gm-encounter-auxiliary-tables mk-gm-encounter-generator" data-mk-encounter-generator-tables="${escapeHtml(key)}">
+      <header class="mk-gm-encounter-auxiliary-heading">
+        <div>
+          <strong>${escapeHtml(label)} Generator RollTables</strong>
+          <span>Assign three RollTables for this generator. Roll Encounter never rolls these tables.</span>
+        </div>
+        <i class="fas ${key === "trap" ? "fa-spider" : "fa-triangle-exclamation"}" aria-hidden="true"></i>
+      </header>
+      <div class="mk-gm-encounter-auxiliary-grid mk-gm-encounter-generator-grid mk-gm-rolltable-assignment-grid">
+        ${Array.from({ length: GENERATOR_ASSIGNMENT_COUNT }, (_value, index) => {
+          const uuid = uuids[index];
+          const table = tables[index];
+          const assigned = Boolean(uuid);
+          const tableName = assigned
+            ? String(safeDocumentField(table, "name", "Unavailable RollTable"))
+            : "Drop RollTable here";
+          const ordinal = ["first", "second", "third"][index] ?? `number ${index + 1}`;
+          return `
+            <article class="mk-gm-encounter-auxiliary-slot mk-gm-rolltable-assignment-row ${assigned ? "is-assigned" : "is-empty"}" data-mk-encounter-auxiliary-slot="${escapeHtml(key)}" data-mk-encounter-auxiliary-index="${index}">
+              <span class="mk-gm-encounter-auxiliary-label mk-gm-rolltable-assignment-title">${escapeHtml(label)} Table ${index + 1}</span>
+              <span class="mk-gm-rolltable-assignment-description">Rolls the ${escapeHtml(ordinal)} ${escapeHtml(label.toLowerCase())} table.</span>
+              <div class="mk-gm-encounter-auxiliary-drop mk-gm-rolltable-assignment-table" data-mk-encounter-auxiliary-drop>
+                <i class="fas ${assigned ? "fa-table-list" : "fa-arrow-down"}" aria-hidden="true"></i>
+                <strong>${escapeHtml(tableName)}</strong>
+                ${assigned && !table ? `<small>${escapeHtml(uuid)}</small>` : ""}
+                ${assigned ? `<button type="button" data-mk-encounter-auxiliary-clear data-mk-encounter-auxiliary-index="${index}" title="Clear ${escapeHtml(label)} table ${index + 1}" aria-label="Clear ${escapeHtml(label)} table ${index + 1}"><i class="fas fa-xmark"></i></button>` : ""}
+              </div>
+            </article>
+          `;
+        }).join("")}
+      </div>
+      <small class="mk-gm-encounter-auxiliary-status">Drag a RollTable from the sidebar onto each assignment. Empty assignments are skipped.</small>
     </section>
   `;
 }
@@ -627,6 +705,8 @@ function bindEncounterAuxiliaryTables(application, root, scene) {
   root?.querySelectorAll?.("[data-mk-encounter-auxiliary-slot]")?.forEach(slot => {
     const key = String(slot.dataset.mkEncounterAuxiliarySlot ?? "");
     const multiple = AUXILIARY_MULTI_TABLE_KEYS.includes(key);
+    const rawSlotIndex = slot.dataset.mkEncounterAuxiliaryIndex;
+    const slotIndex = multiple && rawSlotIndex !== undefined ? Number(rawSlotIndex) : null;
     const drop = slot.querySelector?.("[data-mk-encounter-auxiliary-drop]");
     if (!drop) return;
 
@@ -655,7 +735,10 @@ function bindEncounterAuxiliaryTables(application, root, scene) {
       }
 
       try {
-        await setSceneEncounterZoneAuxiliaryTable(key, table.uuid ?? uuid, scene, { append: multiple });
+        await setSceneEncounterZoneAuxiliaryTable(key, table.uuid ?? uuid, scene, {
+          append: multiple,
+          index: Number.isInteger(slotIndex) ? slotIndex : null,
+        });
         await application?.render?.({ force: true });
       } catch (error) {
         console.error("mk-shadowdark | GM Screen Encounter RollTables | Assignment failed", error);
@@ -668,7 +751,7 @@ function bindEncounterAuxiliaryTables(application, root, scene) {
         event.preventDefault();
         event.stopPropagation();
         button.disabled = true;
-        const rawIndex = button.dataset.mkEncounterAuxiliaryIndex;
+        const rawIndex = button.dataset.mkEncounterAuxiliaryIndex ?? rawSlotIndex;
         const index = multiple && rawIndex !== undefined ? Number(rawIndex) : null;
         try {
           await setSceneEncounterZoneAuxiliaryTable(key, "", scene, {
@@ -761,7 +844,7 @@ async function rollEncounterAuxiliaryTables(scene = currentScene()) {
   const assignments = getSceneEncounterZoneAuxiliaryTables(scene);
   const rolls = [];
 
-  for (const key of AUXILIARY_TABLE_KEYS) {
+  for (const key of ENCOUNTER_AUXILIARY_TABLE_KEYS) {
     const tableUuids = normalizeAuxiliaryTableList(assignments[key]);
     if (!tableUuids.length) {
       rolls.push({
@@ -815,6 +898,71 @@ async function rollEncounterAuxiliaryTables(scene = currentScene()) {
   }
 
   return rolls;
+}
+
+async function rollEncounterGenerator(key, scene = currentScene(), {
+  user = globalThis.game?.user,
+} = {}) {
+  const generatorKey = String(key ?? "").trim();
+  if (!GENERATOR_TABLE_KEYS.includes(generatorKey)) return null;
+  if (!user?.isGM) {
+    globalThis.ui?.notifications?.warn?.("Only the GM can resolve Trap or Hazard generators.");
+    return null;
+  }
+
+  const assignments = normalizeGeneratorTableList(
+    getSceneEncounterZoneAuxiliaryTables(scene)[generatorKey],
+  );
+  if (!assignments.some(Boolean)) {
+    globalThis.ui?.notifications?.warn?.(`Assign at least one ${AUXILIARY_TABLE_LABELS[generatorKey]} Generator RollTable in GM Screen Settings.`);
+    return null;
+  }
+
+  const rolls = [];
+  for (const [index, tableUuid] of assignments.entries()) {
+    const base = {
+      key: generatorKey,
+      label: AUXILIARY_TABLE_LABELS[generatorKey],
+      tableUuid,
+      tableName: "Not configured",
+      configured: Boolean(tableUuid),
+      tableIndex: index + 1,
+      tableCount: GENERATOR_ASSIGNMENT_COUNT,
+      roll: { formula: "", total: null },
+      results: [],
+    };
+    if (!tableUuid) {
+      rolls.push(base);
+      continue;
+    }
+
+    const table = await resolveRollTable(tableUuid);
+    if (!table) {
+      rolls.push({ ...base, tableName: "Unavailable RollTable", error: "Assigned RollTable is unavailable." });
+      continue;
+    }
+
+    try {
+      const draw = await drawRollTable(table, { displayChat: false });
+      rolls.push({
+        ...base,
+        tableName: String(safeDocumentField(table, "name", tableUuid)),
+        ...tableRollSummary(draw),
+      });
+    } catch (error) {
+      rolls.push({
+        ...base,
+        tableName: String(safeDocumentField(table, "name", tableUuid)),
+        error: String(error?.message ?? error),
+      });
+    }
+  }
+
+  return {
+    key: generatorKey,
+    label: AUXILIARY_TABLE_LABELS[generatorKey],
+    rolls,
+  };
 }
 
 function renderTableResultDetails(results = [], { showResultNumber = true } = {}) {
@@ -1008,6 +1156,189 @@ function encounterZoneJournalName(data = {}) {
   return `Encounter — ${terrain} — ${rowLabel}`;
 }
 
+function encounterPreviewResultText(results = []) {
+  const text = results
+    .map(result => String(result?.text ?? "").trim())
+    .filter(Boolean);
+  return text.length ? text.join(" · ") : "No result text was returned.";
+}
+
+function encounterGeneratorDialogContent(data = {}, { showRollDetails = encounterDebugEnabled() } = {}) {
+  const tableRoll = data.tableRoll ?? {};
+  const auxiliaryRolls = Array.isArray(data.auxiliaryRolls) ? data.auxiliaryRolls : [];
+  const configuredAuxiliaryRolls = auxiliaryRolls.filter(roll => roll && (roll.configured !== false || roll.error));
+  const auxiliaryRows = configuredAuxiliaryRolls.map(roll => {
+    const label = roll.tableCount > 1 && roll.tableIndex
+      ? `${roll.label ?? "Supporting table"} ${roll.tableIndex} of ${roll.tableCount}`
+      : String(roll.label ?? "Supporting table");
+    const result = roll.error
+      ? roll.error
+      : `${roll.tableName ?? "RollTable"} — ${encounterPreviewResultText(roll.results)}`;
+    return `<div><dt>${escapeHtml(label)}</dt><dd>${escapeHtml(result)}</dd></div>`;
+  }).join("");
+  const rollDetails = showRollDetails
+    ? `
+        <div><dt>Zone Roll</dt><dd>${escapeHtml(`${data.zoneRoll?.formula || "—"} → ${data.zoneRoll?.total ?? "—"}`)}</dd></div>
+        <div><dt>Encounter Roll</dt><dd>${escapeHtml(`${tableRoll.roll?.formula || "—"} → ${tableRoll.roll?.total ?? "—"}`)}</dd></div>
+      `
+    : "";
+
+  return `
+    <div class="mk-gm-create-document-form mk-gm-encounter-generator-form">
+      <p class="mk-gm-secondary">${escapeHtml(data.terrain ?? "Unknown")} · Zone ${escapeHtml(data.rowLabel ?? "Unknown")}</p>
+      <dl class="mk-gm-data-list">
+        <div><dt>Primary Encounter</dt><dd>${escapeHtml(data.tableName ?? "RollTable")}</dd></div>
+        <div><dt>Result</dt><dd>${escapeHtml(encounterPreviewResultText(tableRoll.results))}</dd></div>
+        ${auxiliaryRows}
+        ${rollDetails}
+      </dl>
+      ${configuredAuxiliaryRolls.length ? "" : '<p class="hint">No supporting encounter tables were configured for this roll.</p>'}
+    </div>
+  `;
+}
+
+function generatorResultRows(data = {}, { showRollDetails = encounterDebugEnabled() } = {}) {
+  const rolls = Array.isArray(data.rolls) ? data.rolls : [];
+  return rolls
+    .filter(roll => roll && (roll.configured !== false || roll.error))
+    .map(roll => {
+      const label = `${data.label ?? "Generator"} Table ${roll.tableIndex ?? ""}`.trim();
+      const result = roll.error
+        ? roll.error
+        : `${roll.tableName ?? "RollTable"} — ${encounterPreviewResultText(roll.results)}`;
+      const detail = showRollDetails
+        ? ` <small>${escapeHtml(`(${roll.roll?.formula || "—"} → ${roll.roll?.total ?? "—"})`)}</small>`
+        : "";
+      return `<div><dt>${escapeHtml(label)}</dt><dd>${escapeHtml(result)}${detail}</dd></div>`;
+    }).join("");
+}
+
+function generatorDialogContent(data = {}, { showRollDetails = encounterDebugEnabled() } = {}) {
+  const label = String(data.label ?? "Generator");
+  const configured = (data.rolls ?? []).filter(roll => roll?.configured !== false || roll?.error).length;
+  return `
+    <div class="mk-gm-create-document-form mk-gm-encounter-generator-form">
+      <p class="mk-gm-secondary">${escapeHtml(label)} Generator · ${configured} assigned table${configured === 1 ? "" : "s"}</p>
+      <dl class="mk-gm-data-list">
+        ${generatorResultRows(data, { showRollDetails })}
+      </dl>
+      <p class="hint">Reroll generates a fresh result from every assigned ${escapeHtml(label.toLowerCase())} table.</p>
+    </div>
+  `;
+}
+
+function generatorJournalContent(data = {}, { showRollDetails = encounterDebugEnabled() } = {}) {
+  const label = String(data.label ?? "Generator");
+  const rows = (data.rolls ?? [])
+    .filter(roll => roll?.configured !== false || roll?.error)
+    .map(roll => {
+      const result = roll.error
+        ? roll.error
+        : `${roll.tableName ?? "RollTable"} — ${encounterPreviewResultText(roll.results)}`;
+      const detail = showRollDetails
+        ? ` (${roll.roll?.formula || "—"} → ${roll.roll?.total ?? "—"})`
+        : "";
+      return `<li><strong>${escapeHtml(`${label} Table ${roll.tableIndex ?? ""}`).trim()}:</strong> ${escapeHtml(result)}${escapeHtml(detail)}</li>`;
+    }).join("");
+  return `
+    <div class="mk-gm-encounter-generator-journal">
+      <h1>${escapeHtml(label)} Generator</h1>
+      <p><strong>${escapeHtml(label)}</strong> results generated from the assigned Scene RollTables.</p>
+      <ul>${rows || "<li>No configured RollTables.</li>"}</ul>
+    </div>
+  `.trim();
+}
+
+function encounterGeneratorJournalName(data = {}) {
+  return `${String(data.label ?? "Encounter").trim() || "Encounter"} Generator Result`;
+}
+
+async function createEncounterGeneratorJournal(data = {}) {
+  const JournalEntryClass = configuredDocumentClass(globalThis.JournalEntry);
+  if (!JournalEntryClass?.create) {
+    globalThis.ui?.notifications?.error?.("Foundry Journal creation is unavailable.");
+    return null;
+  }
+
+  const htmlFormat = globalThis.CONST?.JOURNAL_ENTRY_PAGE_FORMATS?.HTML ?? 1;
+  const journal = await JournalEntryClass.create({
+    name: encounterGeneratorJournalName(data),
+    ownership: {
+      default: globalThis.CONST?.DOCUMENT_OWNERSHIP_LEVELS?.NONE ?? 0,
+    },
+    pages: [
+      {
+        name: `${data.label ?? "Generator"} Result`,
+        type: "text",
+        text: {
+          content: generatorJournalContent(data),
+          format: Number(htmlFormat) || 1,
+        },
+      },
+    ],
+    flags: {
+      [MODULE_ID]: {
+        encounterGenerator: data,
+      },
+    },
+  });
+  await pinDocument(journal);
+  journal?.sheet?.render?.(true);
+  return journal ?? null;
+}
+
+async function promptForEncounterGenerator(key, scene = currentScene(), {
+  user = globalThis.game?.user,
+  roll = rollEncounterGenerator,
+  prompt = waitForGmDialog,
+  createJournal = createEncounterGeneratorJournal,
+} = {}) {
+  let generated = await roll(key, scene, { user });
+  if (!generated) return null;
+
+  while (true) {
+    const choice = await prompt({
+      title: `Create ${generated.label} Journal`,
+      content: generatorDialogContent(generated),
+      buttons: [
+        {
+          action: "create",
+          icon: '<i class="fas fa-plus"></i>',
+          label: "Create",
+          default: true,
+          callback: () => ({ action: "create" }),
+        },
+        {
+          action: "reroll",
+          icon: '<i class="fas fa-dice-d20"></i>',
+          label: "Reroll",
+          callback: () => ({ action: "reroll" }),
+        },
+        {
+          action: "cancel",
+          icon: '<i class="fas fa-xmark"></i>',
+          label: "Cancel",
+          callback: () => ({ action: "cancel" }),
+        },
+      ],
+      close: () => ({ action: "cancel" }),
+    });
+
+    if (!choice || choice.action === "cancel") return null;
+    if (choice.action === "reroll") {
+      generated = await roll(key, scene, { user });
+      if (!generated) return null;
+      continue;
+    }
+
+    const journal = await createJournal(generated);
+    return {
+      ...generated,
+      journal,
+    };
+  }
+}
+
 async function createEncounterZoneRollJournal(data = {}) {
   const JournalEntryClass = configuredDocumentClass(globalThis.JournalEntry);
   if (!JournalEntryClass?.create) {
@@ -1038,6 +1369,7 @@ async function createEncounterZoneRollJournal(data = {}) {
       },
     },
   });
+  await pinDocument(journal);
   journal?.sheet?.render?.(true);
   return journal ?? null;
 }
@@ -1045,6 +1377,8 @@ async function createEncounterZoneRollJournal(data = {}) {
 async function rollEncounterZone(terrain, scene = currentScene(), {
   user = globalThis.game?.user,
   zoneId = "",
+  dangerLevel = "",
+  createJournal = true,
 } = {}) {
   if (!user?.isGM) {
     globalThis.ui?.notifications?.warn?.("Only the GM can roll an Encounter Zone.");
@@ -1065,7 +1399,7 @@ async function rollEncounterZone(terrain, scene = currentScene(), {
       String(column?.label ?? "").trim().toLowerCase() === terrainKey
     )))
     ?? zones[0];
-  const formula = encounterZoneDieFormula(grid);
+  const formula = encounterZoneDieFormula(grid, dangerLevel);
   const RollClass = globalThis.Roll ?? globalThis.foundry?.dice?.Roll;
   if (!RollClass) {
     globalThis.ui?.notifications?.error?.("Foundry's Roll API is unavailable.");
@@ -1105,7 +1439,7 @@ async function rollEncounterZone(terrain, scene = currentScene(), {
     tableRoll: tableRollSummary(tableRoll),
     auxiliaryRolls,
   };
-  const journal = await createEncounterZoneRollJournal(detail);
+  const journal = createJournal ? await createEncounterZoneRollJournal(detail) : null;
   return {
     formula,
     total,
@@ -1118,6 +1452,70 @@ async function rollEncounterZone(terrain, scene = currentScene(), {
     journal,
     detail,
   };
+}
+
+async function promptForEncounterZone(terrain, scene = currentScene(), {
+  user = globalThis.game?.user,
+  zoneId = "",
+  dangerLevel = "",
+  roll = rollEncounterZone,
+  prompt = waitForGmDialog,
+  createJournal = createEncounterZoneRollJournal,
+} = {}) {
+  let generated = await roll(terrain, scene, {
+    user,
+    zoneId,
+    dangerLevel,
+    createJournal: false,
+  });
+  if (!generated) return null;
+
+  while (true) {
+    const choice = await prompt({
+      title: "Create Encounter Journal",
+      content: encounterGeneratorDialogContent(generated.detail),
+      buttons: [
+        {
+          action: "create",
+          icon: '<i class="fas fa-plus"></i>',
+          label: "Create",
+          default: true,
+          callback: () => ({ action: "create" }),
+        },
+        {
+          action: "reroll",
+          icon: '<i class="fas fa-dice-d20"></i>',
+          label: "Reroll",
+          callback: () => ({ action: "reroll" }),
+        },
+        {
+          action: "cancel",
+          icon: '<i class="fas fa-xmark"></i>',
+          label: "Cancel",
+          callback: () => ({ action: "cancel" }),
+        },
+      ],
+      close: () => ({ action: "cancel" }),
+    });
+
+    if (!choice || choice.action === "cancel") return null;
+    if (choice.action === "reroll") {
+      generated = await roll(terrain, scene, {
+        user,
+        zoneId,
+        dangerLevel,
+        createJournal: false,
+      });
+      if (!generated) return null;
+      continue;
+    }
+
+    const journal = await createJournal(generated.detail);
+    return {
+      ...generated,
+      journal,
+    };
+  }
 }
 
 function renderGridView(grid, { sourceTable = null, zoneId = "" } = {}) {
@@ -1265,7 +1663,7 @@ function renderEncounterZoneGroups(grids, {
   const zones = normalizeEncounterZoneGrids(grids);
   const expanded = openZoneIds instanceof Set
     ? openZoneIds
-    : new Set(zones.map(zone => zone.id));
+    : new Set();
 
   return `
     <div class="mk-gm-encounter-zone-groups" data-mk-encounter-zone-groups data-grid-mode="${escapeHtml(mode)}">
@@ -1581,7 +1979,7 @@ function bindEncounterZoneGroups(application, target, scene, baseline) {
       const current = readEncounterZoneEditors(groupsRoot);
       const next = [...current, nextEncounterZone(current)];
       await saveSceneEncounterZoneGrids(next, scene);
-      application.encounterZoneOpenIds = new Set(next.map(zone => zone.id));
+      application.encounterZoneOpenIds = new Set();
       await application?.render?.({ force: true });
     } catch (error) {
       console.error("mk-shadowdark | GM Screen Encounter Zone | Add failed", error);
@@ -1638,15 +2036,16 @@ function decorateExplorationZoneGrid(application, element) {
   const root = element?.querySelector ? element : null;
   const target = root?.querySelector?.("[data-mk-exploration-zone-grid]");
   const auxiliaryTarget = root?.querySelector?.("[data-mk-encounter-auxiliary-tables]");
+  const generatorTargets = root?.querySelectorAll?.("[data-mk-encounter-generator-target]") ?? [];
   const scene = currentScene();
-  if ((!target && !auxiliaryTarget) || !scene) return false;
+  if ((!target && !auxiliaryTarget && !generatorTargets.length) || !scene) return false;
 
   if (target) {
     const grids = getSceneEncounterZoneGrids(scene);
     const storedGrid = getSceneFlag(scene, GRID_COLLECTION_FLAG, null) ?? getSceneFlag(scene, GRID_FLAG, null);
     const sourceTable = storedGrid ? null : sourceTableForScene(scene);
     const mode = application.encounterZoneGridEditMode === true ? "edit" : "view";
-    application.encounterZoneOpenIds ??= new Set(grids.map(zone => zone.id));
+    application.encounterZoneOpenIds ??= new Set();
     target.innerHTML = renderEncounterZoneGroups(grids, {
       sourceTable,
       mode,
@@ -1656,11 +2055,20 @@ function decorateExplorationZoneGrid(application, element) {
   }
 
   if (auxiliaryTarget) {
-    void resolveAuxiliaryTableEntries(scene).then(entries => {
+    void resolveAuxiliaryTableEntries(scene, ENCOUNTER_AUXILIARY_TABLE_KEYS).then(entries => {
       auxiliaryTarget.innerHTML = renderEncounterAuxiliaryTableSetup(entries);
       bindEncounterAuxiliaryTables(application, auxiliaryTarget, scene);
     });
   }
+
+  generatorTargets.forEach(targetElement => {
+    const key = String(targetElement.dataset?.mkEncounterGeneratorTarget ?? "").trim();
+    if (!GENERATOR_TABLE_KEYS.includes(key)) return;
+    void resolveAuxiliaryTableEntries(scene, [key]).then(([entry]) => {
+      targetElement.innerHTML = renderEncounterGeneratorSetup(entry ?? { key });
+      bindEncounterAuxiliaryTables(application, targetElement, scene);
+    });
+  });
   return true;
 }
 
@@ -1679,6 +2087,9 @@ export {
   ENCOUNTER_ZONE_FLAG,
   AUXILIARY_TABLE_FLAG,
   AUXILIARY_TABLE_KEYS,
+  ENCOUNTER_AUXILIARY_TABLE_KEYS,
+  GENERATOR_TABLE_KEYS,
+  GENERATOR_ASSIGNMENT_COUNT,
   AUXILIARY_MULTI_TABLE_KEYS,
   AUXILIARY_TABLE_LABELS,
   DEFAULT_ROW_COUNT,
@@ -1691,11 +2102,13 @@ export {
   gridFromZoneTable,
   getSceneEncounterZoneGrids,
   getSceneEncounterZoneGrid,
+  normalizeGeneratorTableList,
   normalizeAuxiliaryTables,
   getSceneEncounterZoneAuxiliaryTables,
   setSceneEncounterZoneAuxiliaryTable,
   gridColumnLabels,
   encounterZoneDieFormula,
+  encounterDangerDieFormula,
   encounterZoneRowRange,
   findEncounterZoneCell,
   saveSceneEncounterZoneGrids,
@@ -1703,9 +2116,16 @@ export {
   tableResultSummary,
   tableRollSummary,
   renderEncounterAuxiliaryTableSetup,
+  renderEncounterGeneratorSetup,
+  rollEncounterGenerator,
+  generatorDialogContent,
+  generatorJournalContent,
+  createEncounterGeneratorJournal,
+  promptForEncounterGenerator,
   bindEncounterAuxiliaryTables,
   rollEncounterAuxiliaryTables,
   renderEncounterZoneRollCard,
+  encounterGeneratorDialogContent,
   createEncounterZoneRollJournal,
   saveSceneEncounterZoneGrid,
   removeSceneEncounterZone,
@@ -1721,6 +2141,7 @@ export {
   bindGridModeToggle,
   bindGridRollControls,
   rollEncounterZone,
+  promptForEncounterZone,
   bindGridDropTargets,
   decorateExplorationZoneGrid,
   registerExplorationZoneGrid,

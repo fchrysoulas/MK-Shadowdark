@@ -359,25 +359,36 @@
 
 .mk-gm-npc-name-composition-chance {
   display: grid;
-  grid-template-columns: auto auto minmax(0, 1fr);
-  align-items: center;
   gap: 6px;
   padding-top: 2px;
 }
 
-.mk-gm-npc-name-composition-chance label {
+.mk-gm-npc-name-composition-chance-fields {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 6px 12px;
+}
+
+.mk-gm-npc-name-composition-chance-field {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 6px;
+}
+
+.mk-gm-npc-name-composition-chance-field label {
   color: var(--mk-gm-text);
   font-size: 10px;
   font-weight: 700;
 }
 
-.mk-gm-npc-name-composition-chance > div {
+.mk-gm-npc-name-composition-chance-field > div {
   display: flex;
   align-items: center;
   gap: 3px;
 }
 
-.mk-gm-npc-name-composition-chance input {
+.mk-gm-npc-name-composition-chance-field input {
   width: 52px;
   padding: 2px 4px;
   color: var(--mk-gm-text);
@@ -385,7 +396,7 @@
   text-align: right;
 }
 
-.mk-gm-npc-name-composition-chance span,
+.mk-gm-npc-name-composition-chance-field span,
 .mk-gm-npc-name-composition-chance small {
   color: var(--mk-gm-muted);
   font-size: 10px;
@@ -401,12 +412,8 @@
     transform: rotate(90deg);
   }
 
-  .mk-gm-npc-name-composition-chance {
-    grid-template-columns: auto auto;
-  }
-
-  .mk-gm-npc-name-composition-chance small {
-    grid-column: 1 / -1;
+  .mk-gm-npc-name-composition-chance-fields {
+    grid-template-columns: 1fr;
   }
 
   .mk-gm-npc-trait-grid {

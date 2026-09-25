@@ -10,6 +10,8 @@ import {
   currentScene,
   getSceneTavernGeneratorTables,
   tavernGeneratorTableStatus,
+  getSceneShopGeneratorTables,
+  shopGeneratorTableStatus,
 } from "./tavern-generator-settings.js";
 
 const CORE_BOOK_ID = "shadowdark-core-v4.9";
@@ -149,7 +151,18 @@ function tavernSourceStatus(tables = globalThis.game?.tables, {
   };
 }
 
-function shopSourceStatus(tables = globalThis.game?.tables) {
+function shopSourceStatus(tables = globalThis.game?.tables, {
+  scene = currentScene(),
+} = {}) {
+  const assignments = getSceneShopGeneratorTables(scene);
+  if (Object.entries(assignments)
+    .some(([key, value]) => key !== "schema" && Boolean(value))) {
+    return {
+      ...shopGeneratorTableStatus(assignments, tables),
+      mode: "linked",
+    };
+  }
+
   const resolved = {
     poor: findPoorShopTable(tables),
     standard: findStandardShopTable(tables),
@@ -165,7 +178,15 @@ function shopSourceStatus(tables = globalThis.game?.tables) {
     customer: "Interesting Customer",
   };
   const missing = Object.entries(resolved).filter(([, table]) => !table).map(([key]) => labels[key]);
-  return { available: missing.length === 0, missing, tables: resolved };
+  return {
+    available: missing.length === 0,
+    configured: false,
+    mode: "legacy",
+    missing,
+    unavailable: [],
+    assignments,
+    tables: resolved,
+  };
 }
 
 function resultRange(result) {
@@ -217,6 +238,16 @@ function pairedGeneratorResult(draw) {
 function normalizeQuality(value, allowed = TAVERN_QUALITIES) {
   const key = normalize(value);
   return allowed[key] ? key : "poor";
+}
+
+function normalizeShopQuality(value) {
+  const key = normalize(value);
+  if (SHOP_QUALITIES[key]) return key;
+  return ["poor", "standard", "wealthy"].find(quality => key.includes(quality)) ?? "";
+}
+
+function shopQualityFromRoll(total) {
+  return ["poor", "standard", "wealthy"][Number(total) - 1] ?? "";
 }
 
 function normalizeTavernWealth(value) {
@@ -471,51 +502,94 @@ async function rollTavernFromSource({
 }
 
 async function rollShopFromSource({
-  quality = "poor",
   tables = globalThis.game?.tables,
+  scene = currentScene(),
   status = null,
   rollTable = rollImportedSourceTable,
   rollDice = rollFormula,
 } = {}) {
-  const source = status ?? shopSourceStatus(tables);
+  const source = status ?? shopSourceStatus(tables, { scene });
   if (!source.available) return null;
-  const qualityKey = normalizeQuality(quality, SHOP_QUALITIES);
+  const linked = source.mode === "linked";
+  const rolls = {};
+  const sources = {};
+  let qualityKey = "";
+  if (linked) {
+    const qualityDraw = await rollTable(source.tables.quality);
+    qualityKey = normalizeShopQuality(generatorTextValue(qualityDraw, ["Quality", "Shop Quality", "Wealth"]));
+    if (!qualityKey) throw new Error("The linked Shop Quality RollTable must resolve to Poor, Standard, or Wealthy.");
+    rolls.quality = qualityDraw.total;
+    sources.quality = tableProvenance(source.tables.quality);
+  } else {
+    const qualityDraw = await rollDice("1d3");
+    qualityKey = shopQualityFromRoll(qualityDraw.total);
+    if (!qualityKey) throw new Error("The Shop Quality roll must resolve to 1, 2, or 3.");
+    rolls.quality = qualityDraw.total;
+    sources.quality = {
+      formula: qualityDraw.formula ?? "1d3",
+      formulaRaw: qualityDraw.formula ?? "1d3",
+      pages: [],
+    };
+  }
   const config = SHOP_QUALITIES[qualityKey];
-
-  const typeDraw = await rollTable(source.tables[qualityKey]);
+  const shopTypeKey = linked ? `${qualityKey}Shop` : qualityKey;
+  const typeDraw = await rollTable(source.tables[shopTypeKey]);
   const shopType = resultField(typeDraw.result, "Shop") || tableResultText(typeDraw.result);
 
-  const identityDraw = await rollTable(source.tables.generator);
-  const identity = pairedGeneratorResult(identityDraw);
+  rolls.shopType = typeDraw.total;
+  sources.shopType = tableProvenance(source.tables[shopTypeKey]);
+  let name = "";
+  let knownFor = "";
+  let nameParts = null;
+  if (linked) {
+    const firstPartDraw = await rollTable(source.tables.firstPart);
+    const secondPartDraw = await rollTable(source.tables.secondPart);
+    const knownForDraw = await rollTable(source.tables.knownFor);
+    const firstPart = generatorTextValue(firstPartDraw, ["First Part", "Name"]);
+    const secondPart = generatorTextValue(secondPartDraw, ["Second Part", "Name"]);
+    knownFor = generatorTextValue(knownForDraw, ["Known For"]);
+    name = [firstPart, secondPart].filter(Boolean).join(" ");
+    nameParts = { first: firstPart, second: secondPart };
+    rolls.firstPart = firstPartDraw.total;
+    rolls.secondPart = secondPartDraw.total;
+    rolls.knownFor = knownForDraw.total;
+    sources.firstPart = tableProvenance(source.tables.firstPart);
+    sources.secondPart = tableProvenance(source.tables.secondPart);
+    sources.knownFor = tableProvenance(source.tables.knownFor);
+  } else {
+    const identityDraw = await rollTable(source.tables.generator);
+    const identity = pairedGeneratorResult(identityDraw);
+    name = identity.name;
+    knownFor = identity.knownFor;
+    rolls.identity = identityDraw.total;
+    sources.generator = tableProvenance(source.tables.generator);
+  }
 
   const customerRow = await rollTable(source.tables.customer);
   const customerColumnRoll = await rollDice("1d4");
   const customer = resultField(customerRow.result, String(customerColumnRoll.total));
 
-  if (!shopType || !identity.name || !identity.knownFor || !customer) {
-    throw new Error("The imported Core Shop tables could not resolve a complete shop.");
+  if (!shopType || !name || !knownFor || !customer) {
+    throw new Error(`The ${linked ? "linked Shop Generator" : "imported Core Shop"} tables could not resolve a complete shop.`);
   }
+
+  rolls.customerRow = customerRow.total;
+  rolls.customerColumn = customerColumnRoll.total;
+  sources.customer = tableProvenance(source.tables.customer);
 
   return {
     kind: "shop",
     quality: qualityKey,
     qualityLabel: config.label,
-    name: identity.name,
+    name,
+    nameParts,
     shopType,
-    knownFor: identity.knownFor,
+    knownFor,
     customer,
-    rolls: {
-      shopType: typeDraw.total,
-      identity: identityDraw.total,
-      customerRow: customerRow.total,
-      customerColumn: customerColumnRoll.total,
-    },
-    sources: {
-      shopType: tableProvenance(source.tables[qualityKey]),
-      generator: tableProvenance(source.tables.generator),
-      customer: tableProvenance(source.tables.customer),
-    },
-    sourceBookTitle: CORE_BOOK_TITLE,
+    rolls,
+    sources,
+    sourceBookTitle: linked ? "Scene-linked Shop Generator RollTables" : CORE_BOOK_TITLE,
+    sourceMode: source.mode ?? "legacy",
   };
 }
 

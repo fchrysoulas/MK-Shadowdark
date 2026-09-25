@@ -133,8 +133,20 @@ function sourceTablePanelContent(entries = []) {
 
 function sourceTablePanelHtml(entries = []) {
   return `
-    <section class="mk-gm-workspace mk-gm-source-tables-workspace" data-workspace-panel="${WORKSPACE_ID}">
-      ${sourceTablePanelContent(entries)}
+    <section class="mk-gm-screen-zone mk-gm-tables-zone" data-mk-gm-tables-zone>
+      <div class="mk-gm-screen-zone-header">
+        <div>
+          <strong>Tables</strong>
+          <span>Search and roll any world RollTable.</span>
+        </div>
+        <button type="button" class="mk-gm-zone-collapse-toggle" data-action="toggleTables" aria-expanded="true" aria-label="Collapse Tables" title="Toggle Tables panel">
+          <i class="fas fa-angles-right" aria-hidden="true"></i>
+        </button>
+        <i class="fas fa-table-list" aria-hidden="true"></i>
+      </div>
+      <div class="mk-gm-screen-zone-body">
+        ${sourceTablePanelContent(entries)}
+      </div>
     </section>
   `;
 }
@@ -151,9 +163,6 @@ function sourceTableRowHtml(entry) {
       <div class="mk-gm-source-table-main">
         <span class="mk-gm-source-table-icon" aria-hidden="true">${icon}</span>
         <strong title="${escapeHtml(entry.name)}">${escapeHtml(entry.name)}</strong>
-      </div>
-      <div class="mk-gm-source-table-meta">
-        <span title="Roll formula"><i class="fas fa-dice"></i> ${escapeHtml(entry.formula || "—")}</span>
       </div>
       <div class="mk-gm-source-table-actions">
         ${rollAction}
@@ -238,25 +247,9 @@ async function openSourceTable(table) {
   return table;
 }
 
-function activateTablesWorkspace(application, root, navButton) {
-  application.workspace = WORKSPACE_ID;
-  root.dataset.workspace = WORKSPACE_ID;
-  root.querySelectorAll(".mk-gm-workspace-nav button").forEach(button => {
-    button.classList.toggle("is-active", button === navButton);
-  });
-}
-
-function findTablesNavButton(nav) {
-  if (!nav?.querySelector) return null;
-  const canonical = nav.querySelector(`[data-action="workspace"][data-workspace="${WORKSPACE_ID}"]`);
-  const legacy = nav.querySelector('[data-mk-source-tables-nav="true"]');
-  if (canonical && legacy && canonical !== legacy) legacy.remove?.();
-  return canonical ?? legacy ?? null;
-}
-
 function bindSourceTableBrowser(root, entries) {
   const search = root.querySelector("[data-mk-source-table-search]");
-  const panel = root.querySelector('[data-workspace-panel="tables"]');
+  const panel = root.querySelector("[data-mk-gm-source-tables-panel]");
   if (!panel || !search) return false;
 
   const currentFilters = () => ({ query: search.value ?? "" });
@@ -285,51 +278,11 @@ async function decorateSourceTableBrowser(application, element) {
   const root = element?.querySelector ? element : null;
   if (!root?.querySelector) return false;
 
-  const nav = root.querySelector(".mk-gm-workspace-nav");
-  const body = root.querySelector(".mk-gm-workspace-body");
-  if (!nav || !body) return false;
-
   const entries = collectSourceTableEntries();
+  const panel = root.querySelector("[data-mk-gm-source-tables-panel]");
+  if (!panel) return false;
 
-  let button = findTablesNavButton(nav);
-  let canonicalNavigation = button?.dataset?.action === "workspace";
-  if (!button) {
-    button = globalThis.document?.createElement?.("button");
-    if (!button) return false;
-    button.type = "button";
-    button.dataset.mkSourceTablesNav = "true";
-    button.dataset.workspace = WORKSPACE_ID;
-    button.textContent = "Tables";
-    nav.append(button);
-    canonicalNavigation = false;
-  }
-
-  let panel = body.querySelector('[data-workspace-panel="tables"]');
-  if (!panel) {
-    const wrapper = globalThis.document?.createElement?.("div");
-    if (!wrapper) return false;
-    wrapper.innerHTML = sourceTablePanelHtml(entries).trim();
-    panel = wrapper.firstElementChild;
-    if (!panel) return false;
-    body.append(panel);
-  } else {
-    panel.innerHTML = sourceTablePanelContent(entries).trim();
-  }
-
-  if (!canonicalNavigation) {
-    button.addEventListener("click", event => {
-      event.preventDefault();
-      event.stopPropagation();
-      activateTablesWorkspace(application, root, button);
-    });
-  }
-
-  if (String(application.workspace ?? "") === WORKSPACE_ID) {
-    root.dataset.workspace = WORKSPACE_ID;
-    root.querySelectorAll(".mk-gm-workspace-nav button").forEach(candidate => {
-      candidate.classList.toggle("is-active", candidate === button);
-    });
-  }
+  panel.outerHTML = sourceTablePanelContent(entries).trim();
 
   bindSourceTableBrowser(root, entries);
   return true;
@@ -361,8 +314,6 @@ export {
   findWorldTable,
   rollSourceTable,
   openSourceTable,
-  activateTablesWorkspace,
-  findTablesNavButton,
   bindSourceTableBrowser,
   decorateSourceTableBrowser,
   registerSourceTableBrowser,

@@ -7,23 +7,14 @@ import { encounterMessageData as readEncounterMessageData } from "../group-sheet
 
 const GM_SCREEN_WORKSPACES = Object.freeze([
   "overview",
-  "downtime",
-  "tables",
-  "session-log",
 ]);
 
 const GM_SCREEN_WORKSPACE_LABELS = Object.freeze({
   overview: "Overview",
-  downtime: "Downtime",
-  tables: "Tables",
-  "session-log": "Session Log",
 });
 
 const GM_SCREEN_WORKSPACE_ICONS = Object.freeze({
   overview: "fa-compass",
-  downtime: "fa-coins",
-  tables: "fa-table-list",
-  "session-log": "fa-book-open",
 });
 
 function collectionValues(collection) {
@@ -39,9 +30,10 @@ function collectionValues(collection) {
 }
 
 function normalizeWorkspace(value) {
-  const rawWorkspace = String(value ?? "overview").trim().toLowerCase();
-  const workspace = rawWorkspace === "resting" ? "downtime" : rawWorkspace;
-  return GM_SCREEN_WORKSPACES.includes(workspace) ? workspace : "overview";
+  // The main screen is a permanent four-zone surface; retain this function as
+  // a compatibility boundary for callers that still pass a legacy workspace.
+  void value;
+  return "overview";
 }
 
 function getGroupActors(actors = globalThis.game?.actors) {
@@ -144,23 +136,6 @@ function buildAssignmentsView(groupActor) {
   };
 }
 
-function buildCombatView(combat = globalThis.game?.combat) {
-  if (!combat) {
-    return {
-      active: false,
-      name: "No active combat",
-      round: 0,
-    };
-  }
-
-  return {
-    active: true,
-    id: String(combat.id ?? ""),
-    name: String(combat.name ?? "Combat"),
-    round: Math.max(0, Number(combat.round ?? 0) || 0),
-  };
-}
-
 function messageEncounterData(message) {
   return readEncounterMessageData(message);
 }
@@ -204,25 +179,14 @@ function buildLatestEncounterView(groupActor, messages = globalThis.game?.messag
 
 async function buildGmScreenViewModel({
   groupActorUuid = "",
-  workspace = "overview",
   scene = globalThis.canvas?.scene ?? globalThis.game?.scenes?.current ?? null,
-  combat = globalThis.game?.combat ?? null,
   messages = globalThis.game?.messages,
 } = {}) {
   const groups = getGroupActors();
   const groupActor = await resolveGmScreenGroup(groupActorUuid, groups);
-  const resolvedWorkspace = normalizeWorkspace(workspace);
   const environment = resolveSceneEnvironmentContext(scene);
-  const combatView = buildCombatView(combat);
 
   const base = {
-    workspace: resolvedWorkspace,
-    workspaces: GM_SCREEN_WORKSPACES.map(id => ({
-      id,
-      label: GM_SCREEN_WORKSPACE_LABELS[id] ?? id,
-      icon: GM_SCREEN_WORKSPACE_ICONS[id] ?? "fa-square",
-      active: id === resolvedWorkspace,
-    })),
     groups: groups.map(group => ({
       uuid: String(group.uuid ?? group.id ?? ""),
       name: String(group.name ?? "Group"),
@@ -242,7 +206,6 @@ async function buildGmScreenViewModel({
       dangerLabel: String(environment?.danger?.label ?? environment?.dangerLevel ?? "Unsafe"),
       period: String(environment?.period ?? "day"),
     },
-    combat: combatView,
     party: [],
     assignments: buildAssignmentsView(groupActor),
     latestEncounter: null,
@@ -269,7 +232,6 @@ export {
   resolveGmScreenGroup,
   buildPartyView,
   buildAssignmentsView,
-  buildCombatView,
   messageEncounterData,
   findLatestEncounterMessage,
   buildLatestEncounterView,

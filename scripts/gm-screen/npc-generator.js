@@ -10,6 +10,7 @@ import {
   getSceneNpcNameComposition,
   getSceneNpcTraitTables,
 } from "./npc-name-compositions.js";
+import { pinDocument } from "./pinned-documents.js";
 
 const DEFAULT_NPC_NAME = "New NPC";
 const NPC_PROFILE_NAME = "NPC Profile";
@@ -232,6 +233,7 @@ async function createNpcActor({ name, profile = null } = {}) {
   }
 
   const actor = await ActorClass.create(buildNpcActorData(name, profile));
+  await pinDocument(actor);
   actor?.sheet?.render?.(true);
   return actor ?? null;
 }

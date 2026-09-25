@@ -1,6 +1,5 @@
 import { registerEnvironmentContextService } from "../libs/environment-context.js";
 import { registerGroupAssignmentsService } from "./assignments.js";
-import { registerGroupMemberStatus } from "./member-status.js";
 import { registerGroupSheet } from "./registration.js";
 import { registerGroupProcedureService } from "./procedure.js";
 import "./encounters/registration.js";
@@ -28,7 +27,6 @@ export {
 } from "./assignments.js";
 export {
   buildGroupMemberStatus,
-  openGroupMemberStatus,
 } from "./member-status.js";
 export { registerGroupSheet };
 
@@ -36,4 +34,3 @@ Hooks.once("init", registerGroupSheet);
 registerGroupProcedureService();
 registerEnvironmentContextService();
 registerGroupAssignmentsService();
-registerGroupMemberStatus();

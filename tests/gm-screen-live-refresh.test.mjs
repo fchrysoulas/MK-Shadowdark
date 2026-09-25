@@ -9,9 +9,12 @@ test("GM Screen no longer loads the live-refresh service", () => {
   assert.ok(!manifest.esmodules.includes("scripts/gm-screen/live-refresh.js"));
 });
 
-test("GM Screen does not subscribe to Actor, Scene, Combat, or workflow changes for rerendering", () => {
+test("GM Screen subscribes only to Active Party HP and light-status document changes", () => {
+  for (const hook of ["updateActor", "updateToken", "createItem", "updateItem", "deleteItem"]) {
+    assert.match(gmScreen, new RegExp(`\\.on\\(\\"${hook}\\"`));
+  }
+
   for (const hook of [
-    "updateActor",
     "updateScene",
     "canvasReady",
     "combatStart",
@@ -29,6 +32,10 @@ test("GM Screen does not subscribe to Actor, Scene, Combat, or workflow changes 
   ]) {
     assert.doesNotMatch(gmScreen, new RegExp(`"${hook}"`));
   }
+
+  assert.match(gmScreen, /system\.attributes\.hp/);
+  assert.match(gmScreen, /system\.light/);
+  assert.match(gmScreen, /ACTIVE_PARTY_STATUS_RENDER_DELAY/);
 });
 
 test("GM Screen runtime exposes no general refresh entry point", () => {

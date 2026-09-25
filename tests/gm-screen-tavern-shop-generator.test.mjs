@@ -252,6 +252,97 @@ test("linked Tavern Generator assignments take precedence over legacy source dis
   ]);
 });
 
+test("linked Shop Generator assignments take precedence over legacy source discovery", async () => {
+  const tables = syntheticTables();
+  tables.push(
+    mockTable({
+      id: "shop-quality",
+      name: "Shops — QUALITY",
+      formula: "1d3",
+      columns: ["d3", "Quality"],
+      results: numberedResults(3, value => ["Poor", "Standard", "Wealthy"][value - 1]),
+      totals: [2],
+      pages: [203],
+    }),
+    mockTable({
+      id: "shop-first",
+      name: "Shops — FIRST PART",
+      formula: "1d6",
+      columns: ["d6", "First Part"],
+      results: numberedResults(6, value => `First Part ${value}`),
+      totals: [2],
+      pages: [203],
+    }),
+    mockTable({
+      id: "shop-second",
+      name: "Shops — SECOND PART",
+      formula: "1d6",
+      columns: ["d6", "Second Part"],
+      results: numberedResults(6, value => `Second Part ${value}`),
+      totals: [3],
+      pages: [203],
+    }),
+    mockTable({
+      id: "shop-known-for",
+      name: "Shops — KNOWN FOR",
+      formula: "1d6",
+      columns: ["d6", "Known For"],
+      results: numberedResults(6, value => `Known For ${value}`),
+      totals: [4],
+      pages: [203],
+    }),
+  );
+  const scene = {
+    getFlag() {
+      return {
+        quality: "RollTable.shop-quality",
+        firstPart: "RollTable.shop-first",
+        secondPart: "RollTable.shop-second",
+        knownFor: "RollTable.shop-known-for",
+        poorShop: "RollTable.poor-shop",
+        standardShop: "RollTable.standard-shop",
+        wealthyShop: "RollTable.wealthy-shop",
+        customer: "RollTable.interesting-customer",
+      };
+    },
+  };
+  const status = shopSourceStatus(tables, { scene });
+
+  assert.equal(status.mode, "linked");
+  assert.equal(status.configured, true);
+  assert.equal(status.available, true);
+  assert.equal(status.tables.standardShop.name, "Shops — STANDARD SHOP");
+
+  const result = await rollShopFromSource({
+    quality: "standard",
+    status,
+    tables,
+    scene,
+    rollDice: diceRecorder().roll,
+  });
+
+  assert.equal(result.sourceMode, "linked");
+  assert.equal(result.sourceBookTitle, "Scene-linked Shop Generator RollTables");
+  assert.equal(result.quality, "standard");
+  assert.equal(result.qualityLabel, "Standard");
+  assert.equal(result.rolls.quality, 2);
+  assert.equal(result.sources.quality.tableName, "Shops — QUALITY");
+  assert.equal(result.shopType, "Standard Type 3");
+  assert.equal(result.name, "First Part 2 Second Part 3");
+  assert.deepEqual(result.nameParts, { first: "First Part 2", second: "Second Part 3" });
+  assert.equal(result.knownFor, "Known For 4");
+  assert.equal(result.customer, "Customer 3.2");
+  assert.equal(result.sources.shopType.tableName, "Shops — STANDARD SHOP");
+  assert.equal(result.sources.firstPart.tableName, "Shops — FIRST PART");
+  assert.equal(result.sources.secondPart.tableName, "Shops — SECOND PART");
+  assert.equal(result.sources.knownFor.tableName, "Shops — KNOWN FOR");
+  assert.equal(result.sources.customer.tableName, "Shops — INTERESTING CUSTOMER");
+  const journalHtml = shopPageContent(result, "First Part 2 Second Part 3");
+  assert.match(journalHtml, /First Part/);
+  assert.match(journalHtml, /Second Part/);
+  assert.match(journalHtml, /Known For/);
+});
+
 test("linked Tavern Generator rolls Wealth, First Part, Second Part, and Known For separately", async () => {
   const tables = syntheticTables();
   tables.push(
@@ -411,21 +502,24 @@ test("Tavern Food records source roll, source-derived price formula, and price r
   assert.equal(result.foods[1].currency, "sp");
 });
 
-test("Shop quality selects its own source table and customer uses two independent d4 rolls", async () => {
-  for (const [quality, expectedType] of Object.entries({
-    poor: "Poor Type 2",
-    standard: "Standard Type 3",
-    wealthy: "Wealthy Type 4",
-  })) {
+test("Shop quality is rolled before selecting its source table and customer uses two independent d4 rolls", async () => {
+  for (const [qualityRoll, expected] of [
+    [1, { quality: "poor", shopType: "Poor Type 2" }],
+    [2, { quality: "standard", shopType: "Standard Type 3" }],
+    [3, { quality: "wealthy", shopType: "Wealthy Type 4" }],
+  ]) {
     const tables = syntheticTables();
     const dice = diceRecorder();
     const result = await rollShopFromSource({
-      quality,
       status: shopSourceStatus(tables),
       tables,
-      rollDice: dice.roll,
+      rollDice: async formula => formula === "1d3"
+        ? { formula, total: qualityRoll }
+        : dice.roll(formula),
     });
-    assert.equal(result.shopType, expectedType);
+    assert.equal(result.quality, expected.quality);
+    assert.equal(result.rolls.quality, qualityRoll);
+    assert.equal(result.shopType, expected.shopType);
     assert.equal(result.rolls.customerRow, 3);
     assert.equal(result.rolls.customerColumn, 2);
     assert.equal(result.customer, "Customer 3.2");
@@ -552,6 +646,7 @@ test("Import / Update retries Shop source status before generated creation", asy
   const saved = saveGlobals("game", "JournalEntry", "CONST", "ui");
   let created = null;
   let imports = 0;
+  let qualityPrompts = 0;
   const tables = syntheticTables();
   const generatedResult = {
     kind: "shop",
@@ -590,11 +685,15 @@ test("Import / Update retries Shop source status before generated creation", asy
         imports += 1;
         globalThis.game.tables = tables;
       },
-      promptQuality: async () => "standard",
+      promptQuality: async () => {
+        qualityPrompts += 1;
+        return "standard";
+      },
       promptGenerated: async () => ({ mode: "generated", name: "Imported Test Shop", result: generatedResult }),
     });
 
     assert.equal(imports, 1);
+    assert.equal(qualityPrompts, 0);
     assert.equal(created.name, "Imported Test Shop");
     assert.match(created.pages[0].text.content, /Synthetic Customer/);
   } finally {

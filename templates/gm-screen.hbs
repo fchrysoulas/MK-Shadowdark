@@ -4,7 +4,7 @@
   <strong>GM access required.</strong>
 </div>
 {{else}}
-<div class="mk-gm-screen" data-workspace="{{workspace}}">
+<div class="mk-gm-screen">
   <header class="mk-gm-screen-header">
     <div class="mk-gm-screen-title">
       <i class="fas fa-shield-halved"></i>
@@ -14,50 +14,41 @@
       </div>
     </div>
 
-    <div class="mk-gm-group-selector" aria-label="Active Group">
-      {{#if hasGroups}}
-        {{#each groups}}
-        <button type="button" data-action="selectGroup" data-group-uuid="{{uuid}}" class="{{#if selected}}is-active{{/if}}">
-          <i class="fas fa-users"></i> {{name}}
-        </button>
-        {{/each}}
-      {{else}}
-        <span class="mk-gm-empty-inline">No MK-Shadowdark Group</span>
-      {{/if}}
-    </div>
-
-    <div class="mk-gm-header-actions">
-      <div class="mk-gm-time-passes" aria-label="Time Passes dice roll">
-        <label for="mk-gm-time-passes-dice">Dice</label>
-        <select id="mk-gm-time-passes-dice" data-time-passes-dice title="Number of d6 to roll">
-          <option value="1">1d6</option>
-          <option value="2">2d6</option>
-          <option value="3">3d6</option>
-        </select>
-        <button type="button" data-action="timePasses" title="Show Time Passes and roll the selected dice">
+    <section class="mk-gm-pressure-strip">
+      <div><span>Encounter Zone</span><strong>Select Zone</strong></div>
+      <div><span>Terrain</span><strong>{{environment.terrain}}</strong></div>
+      <div><span>Danger</span><strong>{{environment.dangerLabel}}</strong></div>
+      <div><span>Period</span><strong>{{environment.period}}</strong></div>
+      <div class="mk-gm-context-action-cell">
+        <span>Time Passes</span>
+        <button type="button" class="mk-gm-time-passes mk-gm-context-action" data-action="timePasses" title="Show Time Passes">
           <i class="fas fa-hourglass-half"></i> Time Passes
         </button>
       </div>
-      <button type="button" data-action="openGroup" {{#unless hasGroups}}disabled{{/unless}}><i class="fas fa-users-gear"></i> Group Management</button>
+      <div class="mk-gm-context-action-cell">
+        <span>Roll Encounter</span>
+        <button type="button" class="mk-gm-encounter-roll mk-gm-context-action" data-mk-gm-roll-encounter-zone title="Roll the selected Encounter Zone terrain">
+          <i class="fas fa-swords"></i> Roll Encounter
+        </button>
+      </div>
+    </section>
+
+    <div class="mk-gm-header-actions">
     </div>
   </header>
 
-  <section class="mk-gm-pressure-strip">
-    <div><span>Encounter Zone</span><strong>Select Zone</strong></div>
-    <div><span>Terrain</span><strong>{{environment.terrain}}</strong></div>
-    <div><span>Danger</span><strong>{{environment.dangerLabel}}</strong></div>
-    <div><span>Period</span><strong>{{environment.period}}</strong></div>
-    {{#if combat.active}}
-    <div class="is-combat"><span>Combat</span><strong>Round {{combat.round}}</strong></div>
-    {{/if}}
-    <div><span>Roll Encounter</span><strong>Manual roll</strong></div>
-  </section>
-
-  <div class="mk-gm-screen-layout">
+  <main class="mk-gm-screen-layout{{#if tablesCollapsed}} is-tables-collapsed{{/if}}" aria-label="GM Screen zones">
     <aside class="mk-gm-party-rail">
       <div class="mk-gm-rail-heading">
-        <span>Active Party</span>
-        <strong>{{party.length}}</strong>
+        <select class="mk-gm-active-group-select" data-mk-gm-active-group aria-label="Select active party group" {{#unless hasGroups}}disabled{{/unless}}>
+          {{#if hasGroups}}
+            {{#each groups}}
+            <option value="{{uuid}}" {{#if selected}}selected{{/if}}>{{name}}</option>
+            {{/each}}
+          {{else}}
+            <option value="">No Groups Available</option>
+          {{/if}}
+        </select>
       </div>
 
       <div class="mk-gm-party-list">
@@ -69,21 +60,18 @@
           <div class="mk-gm-member-body">
             <div class="mk-gm-member-name-row">
               <button type="button" data-action="openMember" data-actor-uuid="{{actorUuid}}">{{name}}</button>
-              <button type="button" class="mk-gm-member-status" data-action="inspectMember" data-actor-uuid="{{actorUuid}}" title="Inspect GM status">
-                <i class="fas fa-circle-info"></i>
-              </button>
             </div>
             <div class="mk-gm-member-hp"><span style="--mk-gm-hp: {{hpPct}}%"></span></div>
             <div class="mk-gm-member-stats">
               <span>HP <strong>{{hp}}/{{hpMax}}</strong></span>
               <span>AC <strong>{{ac}}</strong></span>
+              {{#if wounds.total}}<span><i class="fas fa-droplet"></i> {{wounds.total}}</span>{{/if}}
+              {{#if light.total}}<span><i class="fas fa-fire-flame-simple"></i> {{light.total}}</span>{{/if}}
             </div>
             <div class="mk-gm-member-flags">
               {{#if dead}}<span class="is-critical"><i class="fas fa-skull"></i> Dead</span>{{/if}}
               {{#if deathTimer.active}}<span class="is-critical"><i class="fas fa-hourglass-half"></i> {{deathTimer.turns}}</span>{{/if}}
-              {{#if wounds.total}}<span><i class="fas fa-droplet"></i> {{wounds.total}}</span>{{/if}}
               {{#if focus.total}}<span><i class="fas fa-bullseye"></i> {{focus.total}}</span>{{/if}}
-              {{#if light.total}}<span><i class="fas fa-fire-flame-simple"></i> {{light.total}}</span>{{/if}}
               {{#if effectCount}}<span><i class="fas fa-wand-magic-sparkles"></i> {{effectCount}}</span>{{/if}}
             </div>
           </div>
@@ -94,56 +82,66 @@
       </div>
     </aside>
 
-    <main class="mk-gm-workspace-shell">
-      <nav class="mk-gm-workspace-nav" aria-label="GM Screen workspace">
-        {{#each workspaces}}
-        <button type="button" data-action="workspace" data-workspace="{{id}}" class="{{#if active}}is-active{{/if}}"><i class="fas {{icon}}" aria-hidden="true"></i><span>{{#if (eq id "downtime")}}Settlement{{else}}{{label}}{{/if}}</span></button>
-        {{/each}}
-      </nav>
-
-      <div class="mk-gm-workspace-body">
-        <section class="mk-gm-workspace" data-workspace-panel="overview">
-          <div class="mk-gm-overview-shortcuts" data-mk-overview-shortcuts>
-            <div class="mk-gm-overview-shortcuts-head">
-              <div>
-                <strong>Overview</strong>
-                <span>Drop Journals, Actors, Items, RollTables, or other Foundry documents here to keep quick links.</span>
-              </div>
-              <i class="fas fa-thumbtack"></i>
-            </div>
-            <div class="mk-gm-overview-link-list" data-mk-overview-link-list>
-              <div class="mk-gm-overview-drop-empty">
-                <i class="fas fa-arrow-down"></i>
-                <strong>Drop documents here</strong>
-                <span>Drag from a Journal, Actor sheet, sidebar directory, or another Foundry document source.</span>
-              </div>
-            </div>
+    <section class="mk-gm-screen-zone mk-gm-quick-actions-zone" data-mk-gm-quick-actions>
+      <div class="mk-gm-overview-shortcuts" data-mk-quick-actions-surface>
+        <div class="mk-gm-overview-shortcuts-head">
+          <div>
+            <strong>Quick Actions</strong>
+            <span>Common generators and encounter actions are always ready here.</span>
           </div>
-        </section>
-
-        <section class="mk-gm-workspace" data-workspace-panel="downtime">
-          <article class="mk-gm-panel is-wide">
-            <header><i class="fas fa-coins"></i><span>Settlement</span></header>
-            <p class="mk-gm-secondary">Settlement-facing generators and tools.</p>
-            <div class="mk-gm-panel-actions"></div>
-          </article>
-        </section>
-
-        <section class="mk-gm-workspace mk-gm-source-tables-workspace" data-workspace-panel="tables">
-          <article class="mk-gm-panel is-wide" data-mk-gm-source-tables-panel>
-            <header><i class="fas fa-table-list"></i><span>Source Tables</span></header>
-            <div class="mk-gm-empty">Loading imported source tables…</div>
-          </article>
-        </section>
-
-        <section class="mk-gm-workspace" data-workspace-panel="session-log">
-          <article class="mk-gm-panel is-wide">
-            <header><i class="fas fa-book-open"></i><span>Session Log</span></header>
-            <div class="mk-gm-empty">No session records yet.</div>
-          </article>
-        </section>
+          <i class="fas fa-bolt"></i>
+        </div>
+        <div class="mk-gm-quick-action-list" data-mk-quick-action-list>
+          <div class="mk-gm-overview-drop-empty">
+            <i class="fas fa-spinner fa-spin"></i>
+            <strong>Loading quick actions</strong>
+          </div>
+        </div>
       </div>
-    </main>
-  </div>
+    </section>
+
+    <section class="mk-gm-screen-zone mk-gm-pinned-documents-zone" data-mk-gm-pinned-documents>
+      <div class="mk-gm-overview-shortcuts" data-mk-overview-shortcuts>
+        <div class="mk-gm-overview-shortcuts-head">
+          <div>
+            <strong>Pinned Documents</strong>
+            <span>Drop Foundry documents here to keep them close at the table.</span>
+          </div>
+          <i class="fas fa-thumbtack"></i>
+        </div>
+        <div class="mk-gm-overview-link-list" data-mk-overview-link-list>
+          <div class="mk-gm-overview-drop-empty">
+            <i class="fas fa-arrow-down"></i>
+            <strong>Drop documents here</strong>
+            <span>Drag from a Journal, Actor, Item, RollTable, or another Foundry document source.</span>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="mk-gm-screen-zone mk-gm-tables-zone{{#if tablesCollapsed}} is-collapsed{{/if}}" data-mk-gm-tables-zone>
+      <div class="mk-gm-screen-zone-header">
+        <div>
+          <strong>Tables</strong>
+          <span>Search and roll any world RollTable.</span>
+        </div>
+        <button
+          type="button"
+          class="mk-gm-zone-collapse-toggle"
+          data-action="toggleTables"
+          aria-expanded="{{#if tablesCollapsed}}false{{else}}true{{/if}}"
+          aria-label="{{#if tablesCollapsed}}Expand Tables{{else}}Collapse Tables{{/if}}"
+          title="Toggle Tables panel">
+          <i class="fas {{#if tablesCollapsed}}fa-angles-left{{else}}fa-angles-right{{/if}}" aria-hidden="true"></i>
+        </button>
+        <i class="fas fa-table-list" aria-hidden="true"></i>
+      </div>
+      <div class="mk-gm-screen-zone-body">
+        <article class="mk-gm-panel is-wide" data-mk-gm-source-tables-panel>
+          <div class="mk-gm-empty">Loading RollTables…</div>
+        </article>
+      </div>
+    </section>
+  </main>
 </div>
 {{/if}}

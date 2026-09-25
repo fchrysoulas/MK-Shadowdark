@@ -4,7 +4,7 @@ import {
   setSceneEnvironmentContext,
 } from "../libs/environment-context.js";
 import { confirmGmDialog } from "../libs/dialog-v2.js";
-import { APP_ID } from "./gm-screen.js";
+import { APP_ID, SETTINGS_APP_ID } from "./gm-screen.js";
 import {
   AUXILIARY_TABLE_FLAG,
   ENCOUNTER_ZONE_FLAG,
@@ -29,7 +29,29 @@ import {
   TAVERN_GENERATOR_TABLE_FLAG,
   getSceneTavernGeneratorTables,
   normalizeTavernGeneratorTables,
+  SHOP_GENERATOR_TABLE_KEYS,
+  SHOP_GENERATOR_TABLE_FLAG,
+  getSceneShopGeneratorTables,
+  normalizeShopGeneratorTables,
 } from "./tavern-generator-settings.js";
+import {
+  LOCATION_GENERATOR_TABLE_KEYS,
+  LOCATION_GENERATOR_TABLE_FLAG,
+  getSceneLocationGeneratorTables,
+  normalizeLocationGeneratorTables,
+} from "./location-generator-settings.js";
+import {
+  MONSTER_GENERATOR_TABLE_KEYS,
+  MONSTER_GENERATOR_TABLE_FLAG,
+  getSceneMonsterGeneratorTables,
+  normalizeMonsterGeneratorTables,
+} from "./monster-generator-settings.js";
+import {
+  MAGIC_ITEM_GENERATOR_TABLE_KEYS,
+  MAGIC_ITEM_GENERATOR_TABLE_FLAG,
+  getSceneMagicItemGeneratorTables,
+  normalizeMagicItemGeneratorTables,
+} from "./magic-item-generator-settings.js";
 
 const MODULE_ID = "mk-shadowdark";
 const TRANSFER_FORMAT = "mk-shadowdark.gm-screen";
@@ -140,6 +162,18 @@ function collectConfiguredTableUuids(configuration = {}) {
   const tavernTables = configuration.tavernGenerator?.tables ?? {};
   for (const key of TAVERN_GENERATOR_TABLE_KEYS) add(tavernTables[key]);
 
+  const shopTables = configuration.shopGenerator?.tables ?? {};
+  for (const key of SHOP_GENERATOR_TABLE_KEYS) add(shopTables[key]);
+
+  const locationTables = configuration.locationGenerator?.tables ?? {};
+  for (const key of LOCATION_GENERATOR_TABLE_KEYS) add(locationTables[key]);
+
+  const monsterTables = configuration.monsterGenerator?.tables ?? {};
+  for (const key of MONSTER_GENERATOR_TABLE_KEYS) add(monsterTables[key]);
+
+  const magicItemTables = configuration.magicItemGenerator?.tables ?? {};
+  for (const key of MAGIC_ITEM_GENERATOR_TABLE_KEYS) add(magicItemTables[key]);
+
   return uuids;
 }
 
@@ -166,6 +200,18 @@ function exportConfiguration(scene = currentScene(), {
     },
     tavernGenerator: {
       tables: deepClone(getSceneTavernGeneratorTables(scene)),
+    },
+    shopGenerator: {
+      tables: deepClone(getSceneShopGeneratorTables(scene)),
+    },
+    locationGenerator: {
+      tables: deepClone(getSceneLocationGeneratorTables(scene)),
+    },
+    monsterGenerator: {
+      tables: deepClone(getSceneMonsterGeneratorTables(scene)),
+    },
+    magicItemGenerator: {
+      tables: deepClone(getSceneMagicItemGeneratorTables(scene)),
     },
   };
 
@@ -204,6 +250,10 @@ function normalizeTransferConfiguration(rawConfiguration = {}) {
   const encounter = rawConfiguration.encounter ?? {};
   const compositions = rawConfiguration.compositions ?? {};
   const tavernGenerator = rawConfiguration.tavernGenerator ?? {};
+  const shopGenerator = rawConfiguration.shopGenerator ?? {};
+  const locationGenerator = rawConfiguration.locationGenerator ?? {};
+  const monsterGenerator = rawConfiguration.monsterGenerator ?? {};
+  const magicItemGenerator = rawConfiguration.magicItemGenerator ?? {};
   return {
     environmentContext: deepClone(rawConfiguration.environmentContext ?? {}),
     encounter: {
@@ -217,6 +267,18 @@ function normalizeTransferConfiguration(rawConfiguration = {}) {
     },
     tavernGenerator: {
       tables: normalizeTavernGeneratorTables(tavernGenerator.tables ?? tavernGenerator),
+    },
+    shopGenerator: {
+      tables: normalizeShopGeneratorTables(shopGenerator.tables ?? shopGenerator),
+    },
+    locationGenerator: {
+      tables: normalizeLocationGeneratorTables(locationGenerator.tables ?? locationGenerator),
+    },
+    monsterGenerator: {
+      tables: normalizeMonsterGeneratorTables(monsterGenerator.tables ?? monsterGenerator),
+    },
+    magicItemGenerator: {
+      tables: normalizeMagicItemGeneratorTables(magicItemGenerator.tables ?? magicItemGenerator),
     },
   };
 }
@@ -288,6 +350,23 @@ function remapConfiguration(configuration, references = [], tables = globalThis.
   for (const key of TAVERN_GENERATOR_TABLE_KEYS) {
     tavernTables[key] = remapTableUuid(tavernTables[key], references, tables);
   }
+
+  const shopTables = next.shopGenerator.tables;
+  for (const key of SHOP_GENERATOR_TABLE_KEYS) {
+    shopTables[key] = remapTableUuid(shopTables[key], references, tables);
+  }
+  const locationTables = next.locationGenerator.tables;
+  for (const key of LOCATION_GENERATOR_TABLE_KEYS) {
+    locationTables[key] = remapTableUuid(locationTables[key], references, tables);
+  }
+  const monsterTables = next.monsterGenerator.tables;
+  for (const key of MONSTER_GENERATOR_TABLE_KEYS) {
+    monsterTables[key] = remapTableUuid(monsterTables[key], references, tables);
+  }
+  const magicItemTables = next.magicItemGenerator.tables;
+  for (const key of MAGIC_ITEM_GENERATOR_TABLE_KEYS) {
+    magicItemTables[key] = remapTableUuid(magicItemTables[key], references, tables);
+  }
   return next;
 }
 
@@ -341,6 +420,10 @@ async function importConfiguration(payload, {
   await scene.setFlag(MODULE_ID, NPC_NAME_COMPOSITION_FLAG, configuration.compositions.nameComposition);
   await scene.setFlag(MODULE_ID, NPC_TRAIT_TABLE_FLAG, configuration.compositions.traitTables);
   await scene.setFlag(MODULE_ID, TAVERN_GENERATOR_TABLE_FLAG, configuration.tavernGenerator.tables);
+  await scene.setFlag(MODULE_ID, SHOP_GENERATOR_TABLE_FLAG, configuration.shopGenerator.tables);
+  await scene.setFlag(MODULE_ID, LOCATION_GENERATOR_TABLE_FLAG, configuration.locationGenerator.tables);
+  await scene.setFlag(MODULE_ID, MONSTER_GENERATOR_TABLE_FLAG, configuration.monsterGenerator.tables);
+  await scene.setFlag(MODULE_ID, MAGIC_ITEM_GENERATOR_TABLE_FLAG, configuration.magicItemGenerator.tables);
   globalThis.Hooks?.callAll?.(ENVIRONMENT_CHANGED_HOOK, scene, configuration.environmentContext);
 
   return {
@@ -427,9 +510,20 @@ function gmScreenApplication(application) {
   );
 }
 
+function gmScreenSettingsApplication(application) {
+  return Boolean(
+    application
+    && (
+      application.id === SETTINGS_APP_ID
+      || application.options?.id === SETTINGS_APP_ID
+      || application.constructor?.DEFAULT_OPTIONS?.id === SETTINGS_APP_ID
+    )
+  );
+}
+
 function bindTransferControls(application, root) {
-  if (!gmScreenApplication(application) || !globalThis.game?.user?.isGM) return false;
-  const actions = root?.querySelector?.(".mk-gm-header-actions");
+  if (!gmScreenSettingsApplication(application) || !globalThis.game?.user?.isGM) return false;
+  const actions = root?.querySelector?.("[data-mk-gm-screen-transfer-actions]");
   if (!actions || actions.querySelector?.("[data-mk-gm-screen-transfer]")) return false;
 
   const exportButton = createTransferButton({

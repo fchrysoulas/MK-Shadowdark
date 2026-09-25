@@ -20,8 +20,8 @@ test("GM Screen has no generic refresh action or refresh API", () => {
 });
 
 test("explicit GM Screen actions may rerender only after the user invokes them", () => {
-  assert.match(runtime, /actionWorkspace/);
   assert.match(runtime, /actionSelectGroup/);
-  assert.match(runtime, /actionProcessDueEncounters/);
+  assert.match(runtime, /actionTimePasses/);
+  assert.doesNotMatch(runtime, /actionWorkspace/);
   assert.match(runtime, /this\.render\(\{ force: true \}\)/);
 });

@@ -6,13 +6,13 @@ import {
   WORKSPACE_ID,
   collectSourceTableEntries,
   filterSourceTableEntries,
-  findTablesNavButton,
   findWorldTable,
   groupSourceTableEntries,
   openSourceTable,
   rollSourceTable,
   sourceTableRowHtml,
   sourceTablePanelContent,
+  sourceTablePanelHtml,
 } from "../scripts/gm-screen/source-table-browser.js";
 import {
   WORKSPACES,
@@ -26,6 +26,10 @@ import {
 const manifest = JSON.parse(fs.readFileSync(new URL("../module.json", import.meta.url), "utf8"));
 const runtime = fs.readFileSync(
   new URL("../scripts/gm-screen/source-table-browser.js", import.meta.url),
+  "utf8",
+);
+const stylesheet = fs.readFileSync(
+  new URL("../styles/gm-screen-source-tables.css", import.meta.url),
   "utf8",
 );
 
@@ -66,28 +70,24 @@ function importedTable({
   };
 }
 
-test("Tables is canonical in both GM Screen and presentation workspace normalization", () => {
+test("Tables is a permanent zone rather than a workspace tab", () => {
   assert.equal(WORKSPACE_ID, "tables");
-  assert.ok(WORKSPACES.includes("tables"));
-  assert.ok(GM_SCREEN_WORKSPACES.includes("tables"));
-  assert.equal(normalizePresentationWorkspace("tables"), "tables");
-  assert.equal(normalizeGmScreenWorkspace("tables"), "tables");
+  assert.equal(WORKSPACES.includes("tables"), false);
+  assert.deepEqual(GM_SCREEN_WORKSPACES, ["overview"]);
+  assert.equal(normalizePresentationWorkspace("tables"), "overview");
+  assert.equal(normalizeGmScreenWorkspace("tables"), "overview");
 });
 
-test("source table browser reuses the canonical Tables nav entry and removes a legacy duplicate", () => {
-  let removed = 0;
-  const canonical = { dataset: { action: "workspace", workspace: "tables" } };
-  const legacy = { remove() { removed += 1; } };
-  const nav = {
-    querySelector(selector) {
-      if (selector.includes('data-action="workspace"')) return canonical;
-      if (selector.includes("data-mk-source-tables-nav")) return legacy;
-      return null;
-    },
-  };
+test("source table browser renders the permanent Tables zone without navigation hooks", () => {
+  assert.match(runtime, /data-mk-gm-source-tables-panel/);
+  assert.match(runtime, /panel\.outerHTML = sourceTablePanelContent/);
+  assert.doesNotMatch(runtime, /mk-gm-workspace-nav|findTablesNavButton|activateTablesWorkspace/);
+});
 
-  assert.equal(findTablesNavButton(nav), canonical);
-  assert.equal(removed, 1);
+test("Tables content is top-aligned, naturally sized, and centered in its column", () => {
+  assert.match(stylesheet, /\.mk-gm-tables-zone \.mk-gm-screen-zone-body\s*\{[\s\S]*align-items: center;[\s\S]*overflow: hidden;/);
+  assert.match(stylesheet, /\.mk-gm-tables-zone \[data-mk-gm-source-tables-panel\]\s*\{[\s\S]*flex: 0 1 auto;[\s\S]*width: 100%;[\s\S]*max-width: 520px;[\s\S]*max-height: 100%;/);
+  assert.match(stylesheet, /\.mk-gm-source-table-list\s*\{[\s\S]*flex: 0 1 auto;[\s\S]*align-content: start;/);
 });
 
 test("RollTable browser includes existing imported and ordinary RollTables", () => {
@@ -139,7 +139,9 @@ test("RollTable browser preserves native folder paths and groups", () => {
   assert.deepEqual(entries.find(entry => entry.id === "unfiled").folderPath, []);
   assert.deepEqual(entries.find(entry => entry.id === "npc-name").folderPath, ["Encounters", "NPC"]);
   assert.deepEqual(groupSourceTableEntries(entries).map(group => group.label), ["Unfiled", "Encounters / NPC"]);
-  assert.match(sourceTableRowHtml(entries.find(entry => entry.id === "npc-name")), /icons\/svg\/d20\.svg/);
+  const row = sourceTableRowHtml(entries.find(entry => entry.id === "npc-name"));
+  assert.match(row, /icons\/svg\/d20\.svg/);
+  assert.doesNotMatch(row, /mk-gm-source-table-meta|1d20/);
 });
 
 test("RollTable search covers name and formula", () => {
@@ -170,6 +172,13 @@ test("Tables tab has no Import / Update control", () => {
   const html = sourceTablePanelContent([]);
   assert.doesNotMatch(html, /<header>.*RollTables/is);
   assert.doesNotMatch(html, /Import \/ Update|data-mk-source-table-book|openImporter/);
+});
+
+test("Tables zone exposes a right-side collapse action", () => {
+  const html = sourceTablePanelHtml([]);
+  assert.match(html, /data-action="toggleTables"/);
+  assert.match(html, /aria-label="Collapse Tables"/);
+  assert.match(html, /fa-angles-right/);
 });
 
 test("RollTable folder groups are collapsible", () => {

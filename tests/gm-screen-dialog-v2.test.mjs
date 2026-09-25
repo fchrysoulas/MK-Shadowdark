@@ -17,7 +17,6 @@ const dialogPaths = [
   "scripts/gm-screen/settlement-generator.js",
   "scripts/gm-screen/morale-controls.js",
   "scripts/gm-screen/presentation-controls.js",
-  "scripts/group-sheet/member-status.js",
   "scripts/encounter-engine/staging.js",
 ];
 

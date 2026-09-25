@@ -1,17 +1,14 @@
 import { resolveActorFromUuid } from "../group-sheet/actors.js";
-import { openGroupMemberStatus } from "../group-sheet/member-status.js";
-import {
-  buildGmScreenViewModel,
-  normalizeWorkspace,
-  resolveGmScreenGroup,
-} from "./view-model.js";
+import { buildGmScreenViewModel } from "./view-model.js";
 
 const MODULE_ID = "mk-shadowdark";
 const APP_ID = "mk-shadowdark-gm-screen";
 const SETTINGS_APP_ID = "mk-shadowdark-gm-screen-settings";
 const CONTROL_TOOL_ID = "mk-shadowdark-gm-screen";
+const ACTIVE_PARTY_STATUS_RENDER_DELAY = 50;
 
 let gmScreen = null;
+let activePartyStatusRenderTimer = null;
 
 function notifyGmOnly() {
   globalThis.ui?.notifications?.warn?.("The MK-Shadowdark GM Screen is available to GMs only.");
@@ -21,33 +18,157 @@ function canUseGmScreen() {
   return Boolean(globalThis.game?.user?.isGM);
 }
 
-function notifyNoGroup() {
-  globalThis.ui?.notifications?.warn?.("No MK-Shadowdark Group is available.");
+function changesTouchPath(changes, path) {
+  const targetPath = String(path ?? "").trim();
+  if (!targetPath || !changes || typeof changes !== "object") return false;
+
+  return Object.keys(changes).some(key => {
+    const changedPath = String(key ?? "").trim();
+    return changedPath === targetPath
+      || changedPath.startsWith(`${targetPath}.`)
+      || targetPath.startsWith(`${changedPath}.`);
+  });
 }
 
-async function selectedGroup(app) {
-  return resolveGmScreenGroup(app?.groupActorUuid ?? "");
+function actorUuidCandidates(actor) {
+  return [
+    actor?.uuid,
+    actor?.baseActor?.uuid,
+    actor?.parent?.uuid,
+    actor?.id ? `Actor.${actor.id}` : "",
+  ]
+    .map(value => String(value ?? "").trim())
+    .filter(Boolean);
 }
 
-async function actionWorkspace(_event, target) {
-  this.workspace = normalizeWorkspace(target?.dataset?.workspace);
-  return this.render({ force: true });
+function activePartyActorUuids(application = gmScreen) {
+  const root = application?.element;
+  const cards = root?.querySelectorAll?.("[data-actor-uuid]") ?? [];
+  return new Set(Array.from(cards)
+    .map(card => String(card?.dataset?.actorUuid ?? "").trim())
+    .filter(Boolean));
+}
+
+function isActivePartyActor(actor, application = gmScreen) {
+  const partyUuids = activePartyActorUuids(application);
+  return actorUuidCandidates(actor).some(uuid => partyUuids.has(uuid));
+}
+
+function isLightSourceItem(item) {
+  const light = item?.system?.light;
+  return Boolean(light?.isSource === true && light?.active === true);
+}
+
+function itemActor(item) {
+  return item?.actor ?? item?.parent ?? null;
+}
+
+function shouldRenderForActorUpdate(actor, changes, application = gmScreen) {
+  return isActivePartyActor(actor, application)
+    && changesTouchPath(changes, "system.attributes.hp");
+}
+
+function shouldRenderForTokenUpdate(token, changes, application = gmScreen) {
+  const touchesHp = [
+    "delta.system.attributes.hp",
+    "actorData.system.attributes.hp",
+    "system.attributes.hp",
+  ].some(path => changesTouchPath(changes, path));
+
+  return touchesHp && isActivePartyActor(token?.actor, application);
+}
+
+function shouldRenderForItemUpdate(item, changes, application = gmScreen) {
+  return isActivePartyActor(itemActor(item), application)
+    && changesTouchPath(changes, "system.light");
+}
+
+function shouldRenderForItemLifecycle(item, application = gmScreen) {
+  return isActivePartyActor(itemActor(item), application)
+    && isLightSourceItem(item);
+}
+
+function scheduleActivePartyStatusRender(application = gmScreen) {
+  if (!application?.rendered || typeof application.render !== "function") return false;
+  if (activePartyStatusRenderTimer !== null) return true;
+
+  const schedule = globalThis.setTimeout;
+  if (typeof schedule !== "function") {
+    void application.render({ force: true });
+    return true;
+  }
+
+  activePartyStatusRenderTimer = schedule(() => {
+    activePartyStatusRenderTimer = null;
+    if (!application.rendered) return;
+    void Promise.resolve()
+      .then(() => application.render({ force: true }))
+      .catch(error => {
+        console.error("mk-shadowdark | GM Screen | Active Party status refresh failed", error);
+      });
+  }, ACTIVE_PARTY_STATUS_RENDER_DELAY);
+  return true;
+}
+
+function clearActivePartyStatusRenderTimer() {
+  if (activePartyStatusRenderTimer === null) return;
+  globalThis.clearTimeout?.(activePartyStatusRenderTimer);
+  activePartyStatusRenderTimer = null;
+}
+
+function registerActivePartyStatusRefresh() {
+  const hooks = globalThis.Hooks;
+  if (typeof hooks?.on !== "function") return false;
+
+  hooks.on("updateActor", (actor, changes) => {
+    if (shouldRenderForActorUpdate(actor, changes)) scheduleActivePartyStatusRender();
+  });
+
+  hooks.on("updateToken", (token, changes) => {
+    if (shouldRenderForTokenUpdate(token, changes)) scheduleActivePartyStatusRender();
+  });
+
+  hooks.on("createItem", item => {
+    if (shouldRenderForItemLifecycle(item)) scheduleActivePartyStatusRender();
+  });
+
+  hooks.on("updateItem", (item, changes) => {
+    if (shouldRenderForItemUpdate(item, changes)) scheduleActivePartyStatusRender();
+  });
+
+  hooks.on("deleteItem", item => {
+    if (shouldRenderForItemLifecycle(item)) scheduleActivePartyStatusRender();
+  });
+
+  return true;
 }
 
 async function actionSelectGroup(_event, target) {
-  this.groupActorUuid = String(target?.dataset?.groupUuid ?? "");
-  this.workspace = "overview";
+  const groupActorUuid = String(target?.value ?? target?.dataset?.groupUuid ?? "").trim();
+  if (!groupActorUuid || groupActorUuid === this.groupActorUuid) return this;
+  this.groupActorUuid = groupActorUuid;
   return this.render({ force: true });
 }
 
-async function actionOpenGroup() {
-  const group = await selectedGroup(this);
-  if (!group) {
-    notifyNoGroup();
+async function actionCreateGroup() {
+  if (!canUseGmScreen()) {
+    notifyGmOnly();
     return null;
   }
-  group.sheet?.render?.(true);
-  return group;
+
+  const createGroup = globalThis.game?.mkShadowdark?.createGroupActor
+    ?? globalThis.game?.shadowdarkExtras?.createGroupActor;
+  if (typeof createGroup !== "function") {
+    globalThis.ui?.notifications?.warn?.("Group creation is unavailable.");
+    return null;
+  }
+
+  const actor = await createGroup();
+  if (actor) {
+    this.groupActorUuid = String(actor.uuid ?? actor.id ?? "");
+    await this.render?.({ force: true });
+  }
+  return actor ?? null;
 }
 
 async function actionOpenMember(_event, target) {
@@ -57,14 +178,7 @@ async function actionOpenMember(_event, target) {
   return actor;
 }
 
-async function actionInspectMember(_event, target) {
-  return openGroupMemberStatus(String(target?.dataset?.actorUuid ?? ""));
-}
-
 async function actionTimePasses(_event, target) {
-  const selector = target?.closest?.(".mk-gm-time-passes")
-    ?.querySelector?.("[data-time-passes-dice]");
-  const diceCount = Math.min(3, Math.max(1, Number(selector?.value) || 1));
   const api = globalThis.game?.modules?.get?.(MODULE_ID)?.api?.timePasses;
   const rollTimePasses = api?.roll ?? api?.timePasses;
 
@@ -73,7 +187,27 @@ async function actionTimePasses(_event, target) {
     return null;
   }
 
-  return rollTimePasses({ diceCount });
+  return rollTimePasses();
+}
+
+async function actionToggleTables() {
+  this.tablesCollapsed = !this.tablesCollapsed;
+  await this.render?.({ force: true });
+  return this.tablesCollapsed;
+}
+
+function bindActiveGroupSelector(application) {
+  const select = application?.element?.querySelector?.("[data-mk-gm-active-group]");
+  if (!select || select.dataset.mkGmActiveGroupBound === "true") return false;
+
+  select.dataset.mkGmActiveGroupBound = "true";
+  select.addEventListener("change", event => {
+    void actionSelectGroup.call(application, event, select).catch(error => {
+      console.error("mk-shadowdark | GM Screen | Active Group selection failed", error);
+      globalThis.ui?.notifications?.error?.("Active Group selection failed: " + error.message);
+    });
+  });
+  return true;
 }
 
 function applicationClasses() {
@@ -103,12 +237,11 @@ class MKGMscreen extends ApplicationBase {
       resizable: true,
     },
     actions: {
-      workspace: actionWorkspace,
       selectGroup: actionSelectGroup,
-      openGroup: actionOpenGroup,
+      createGroup: actionCreateGroup,
       openMember: actionOpenMember,
-      inspectMember: actionInspectMember,
       timePasses: actionTimePasses,
+      toggleTables: actionToggleTables,
     },
   };
 
@@ -122,7 +255,7 @@ class MKGMscreen extends ApplicationBase {
     super(options);
     this.groupActorUuid = String(options.groupActorUuid ?? "");
     this.encounterZoneId = String(options.encounterZoneId ?? "");
-    this.workspace = normalizeWorkspace(options.workspace ?? "overview");
+    this.tablesCollapsed = false;
   }
 
   async _prepareContext(options) {
@@ -134,21 +267,21 @@ class MKGMscreen extends ApplicationBase {
 
     const view = await buildGmScreenViewModel({
       groupActorUuid: this.groupActorUuid,
-      workspace: this.workspace,
     });
 
     this.groupActorUuid = view.groupActorUuid;
-    this.workspace = view.workspace;
 
     return {
       ...context,
       ...view,
+      tablesCollapsed: this.tablesCollapsed,
       denied: false,
     };
   }
 
   _onRender(context, options) {
     super._onRender?.(context, options);
+    bindActiveGroupSelector(this);
   }
 }
 
@@ -156,7 +289,7 @@ function getGmScreen() {
   return gmScreen;
 }
 
-function openGmScreen({ groupActorUuid = "", workspace = "overview" } = {}) {
+function openGmScreen({ groupActorUuid = "" } = {}) {
   if (!canUseGmScreen()) {
     notifyGmOnly();
     return null;
@@ -168,10 +301,9 @@ function openGmScreen({ groupActorUuid = "", workspace = "overview" } = {}) {
   }
 
   if (!gmScreen) {
-    gmScreen = new MKGMscreen({ groupActorUuid, workspace });
+    gmScreen = new MKGMscreen({ groupActorUuid });
   } else {
     if (groupActorUuid) gmScreen.groupActorUuid = String(groupActorUuid);
-    gmScreen.workspace = normalizeWorkspace(workspace ?? gmScreen.workspace);
   }
 
   gmScreen.render({ force: true });
@@ -180,6 +312,7 @@ function openGmScreen({ groupActorUuid = "", workspace = "overview" } = {}) {
 
 async function closeGmScreen() {
   if (!gmScreen) return null;
+  clearActivePartyStatusRenderTimer();
   if (gmScreen.rendered && typeof gmScreen.close === "function") {
     await gmScreen.close();
   }
@@ -247,6 +380,17 @@ function registerGmScreen() {
 }
 
 registerGmScreen();
+registerActivePartyStatusRefresh();
+
+export {
+  changesTouchPath,
+  isActivePartyActor,
+  isLightSourceItem,
+  shouldRenderForActorUpdate,
+  shouldRenderForItemLifecycle,
+  shouldRenderForItemUpdate,
+  shouldRenderForTokenUpdate,
+};
 
 export {
   MODULE_ID,

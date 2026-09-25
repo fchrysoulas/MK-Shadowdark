@@ -5,9 +5,11 @@ import {
   canUseGmScreen,
 } from "./gm-screen.js";
 import {
-  overviewToolUuid,
+  isQuickActionEnabled,
+  setQuickActionEnabled,
 } from "./overview-links.js";
 
+// Every non-home feature tab declares its Home card and Quick Action toggle here so new settings features cannot omit visibility controls.
 const GM_SCREEN_SETTINGS_TABS = Object.freeze([
   Object.freeze({
     id: "home",
@@ -20,18 +22,81 @@ const GM_SCREEN_SETTINGS_TABS = Object.freeze([
     label: "Encounters",
     icon: "fa-dice-d20",
     group: "GM Screen",
+    overviewTool: "encounters",
+    homeTitle: "Encounter Zones",
+    homeDescription: "Configure named terrain grids and the three supporting RollTables used by Roll Encounter. Trap and Hazard tables are configured separately.",
+  }),
+  Object.freeze({
+    id: "trap-generator",
+    label: "Trap Generator",
+    icon: "fa-spider",
+    group: "GM Screen",
+    overviewTool: "trap-generator",
+    homeTitle: "Trap Generator",
+    homeDescription: "Assign three Scene-owned RollTables for generating trap results independently from normal encounters.",
+  }),
+  Object.freeze({
+    id: "hazard-generator",
+    label: "Hazard Generator",
+    icon: "fa-triangle-exclamation",
+    group: "GM Screen",
+    overviewTool: "hazard-generator",
+    homeTitle: "Hazard Generator",
+    homeDescription: "Assign three Scene-owned RollTables for generating hazard results independently from normal encounters.",
   }),
   Object.freeze({
     id: "compositions",
     label: "NPC Generator",
     icon: "fa-font",
     group: "GM Screen",
+    overviewTool: "npc-generator",
+    homeTitle: "NPC Generator",
+    homeDescription: "Choose the RollTables used to build NPC names, identifiers, and traits for this Scene.",
+  }),
+  Object.freeze({
+    id: "monster-generator",
+    label: "Monster Generator",
+    icon: "fa-skull-crossbones",
+    group: "GM Screen",
+    overviewTool: "monster-generator",
+    homeTitle: "Monster Generator",
+    homeDescription: "Choose the RollTables used to build monster combat traits, strengths, weaknesses, and mutations for this Scene.",
+  }),
+  Object.freeze({
+    id: "magic-item-generator",
+    label: "Magic Item Generator",
+    icon: "fa-wand-sparkles",
+    group: "GM Screen",
+    overviewTool: "magic-item-generator",
+    homeTitle: "Magic Item Generator",
+    homeDescription: "Choose the RollTables used to build magic item names, bonuses, benefits, curses, and personalities for this Scene.",
   }),
   Object.freeze({
     id: "tavern-generator",
     label: "Tavern Generator",
     icon: "fa-beer-mug-empty",
     group: "GM Screen",
+    overviewTool: "tavern-generator",
+    homeTitle: "Tavern Generator",
+    homeDescription: "Choose the RollTables used to build the tavern name, Wealth, Known For result, and tiered food and drink lists for this Scene.",
+  }),
+  Object.freeze({
+    id: "shop-generator",
+    label: "Shop Generator",
+    icon: "fa-store",
+    group: "GM Screen",
+    overviewTool: "shop-generator",
+    homeTitle: "Shop Generator",
+    homeDescription: "Choose the RollTables used to roll shop quality, names, Known For results, and Interesting Customer results for this Scene.",
+  }),
+  Object.freeze({
+    id: "location-generator",
+    label: "Location Generator",
+    icon: "fa-map-location-dot",
+    group: "GM Screen",
+    overviewTool: "location-generator",
+    homeTitle: "Create Location",
+    homeDescription: "Choose the RollTables used to build the Descriptor, Location, and Feature results for this Scene.",
   }),
 ]);
 
@@ -42,7 +107,7 @@ function normalizeSettingsTab(value) {
   return GM_SCREEN_SETTINGS_TABS.some(entry => entry.id === tab) ? tab : "home";
 }
 
-function buildSettingsViewModel(activeTab = "home") {
+function buildSettingsViewModel(activeTab = "home", user = globalThis.game?.user) {
   const resolvedTab = normalizeSettingsTab(activeTab);
   return {
     activeTab: resolvedTab,
@@ -50,6 +115,12 @@ function buildSettingsViewModel(activeTab = "home") {
       ...tab,
       active: tab.id === resolvedTab,
     })),
+    homeFeatures: GM_SCREEN_SETTINGS_TABS
+      .filter(tab => tab.id !== "home" && tab.overviewTool)
+      .map(tab => ({
+        ...tab,
+        quickActionEnabled: isQuickActionEnabled(tab.overviewTool, user),
+      })),
   };
 }
 
@@ -109,7 +180,7 @@ class MKGMscreenSettings extends ApplicationBase {
 
     return {
       ...context,
-      ...buildSettingsViewModel(this.settingsTab),
+      ...buildSettingsViewModel(this.settingsTab, globalThis.game?.user),
       denied: false,
     };
   }
@@ -186,32 +257,35 @@ function isGmScreenSettingsApplication(application) {
   );
 }
 
-function bindOverviewToolSources(_application, element) {
-  if (!canUseGmScreen()) return false;
+function bindQuickActionToggles(application, element) {
+  if (!isGmScreenSettingsApplication(application) || !canUseGmScreen()) return false;
 
   const root = element?.querySelector || element?.querySelectorAll
     ? element
     : element?.[0]?.querySelector
       ? element[0]
       : null;
-  const buttons = root?.querySelectorAll?.("[data-mk-gm-overview-tool]") ?? [];
-  buttons.forEach(button => {
-    if (button.dataset.mkGmOverviewToolBound === "true") return;
-    button.dataset.mkGmOverviewToolBound = "true";
-    button.addEventListener("dragstart", event => {
-      const uuid = overviewToolUuid(button.dataset.mkGmOverviewTool);
-      if (!uuid || !event.dataTransfer) return;
-      const payload = JSON.stringify({
-        uuid,
-        type: "mk-shadowdark.gm-screen-tool",
-      });
-      event.dataTransfer.effectAllowed = "copy";
-      event.dataTransfer.setData("text/plain", payload);
-      event.dataTransfer.setData("application/json", payload);
-      event.dataTransfer.setData("text/uri-list", uuid);
+  const toggles = root?.querySelectorAll?.("[data-mk-gm-quick-action-toggle]") ?? [];
+  toggles.forEach(toggle => {
+    if (toggle.dataset.mkGmQuickActionToggleBound === "true") return;
+    toggle.dataset.mkGmQuickActionToggleBound = "true";
+    toggle.addEventListener("change", async event => {
+      const input = event.currentTarget ?? event.target;
+      const id = String(input?.dataset?.mkGmQuickActionToggle ?? "").trim();
+      const enabled = Boolean(input?.checked);
+      if (!id) return;
+      input.disabled = true;
+      try {
+        await setQuickActionEnabled(id, enabled);
+      } catch (error) {
+        input.checked = !enabled;
+        globalThis.ui?.notifications?.error?.(`Quick Action visibility could not be saved: ${error.message}`);
+      } finally {
+        input.disabled = false;
+      }
     });
   });
-  return buttons.length > 0;
+  return toggles.length > 0;
 }
 
 function bindSettingsLauncher(application, element) {
@@ -258,7 +332,7 @@ function exposeGmScreenSettingsApi() {
 function registerGmScreenSettings() {
   const bindRenderedSettings = (application, element) => {
     bindSettingsLauncher(application, element);
-    bindOverviewToolSources(application, element);
+    bindQuickActionToggles(application, element);
   };
   globalThis.Hooks?.on?.("renderApplicationV2", bindRenderedSettings);
   globalThis.Hooks?.on?.("renderApplication", bindRenderedSettings);
@@ -282,7 +356,7 @@ export {
   toggleGmScreenSettings,
   isGmScreenApplication,
   isGmScreenSettingsApplication,
-  bindOverviewToolSources,
+  bindQuickActionToggles,
   bindSettingsLauncher,
   exposeGmScreenSettingsApi,
   registerGmScreenSettings,

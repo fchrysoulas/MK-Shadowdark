@@ -419,8 +419,12 @@
 
 .mk-gm-encounter-auxiliary-grid {
   display: grid;
-  grid-template-columns: repeat(5, minmax(0, 1fr));
+  grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 7px;
+}
+
+.mk-gm-encounter-generator-grid {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
 }
 
 .mk-gm-encounter-auxiliary-slot {

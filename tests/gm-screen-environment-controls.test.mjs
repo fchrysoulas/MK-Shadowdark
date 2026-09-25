@@ -133,7 +133,7 @@ test("visible Scene Context editing is owned by the top strip rather than Overvi
   assert.match(topRuntime, /encounterZoneTerrains/);
   assert.match(topRuntime, /Scene terrain available in the selected Encounter Zone/);
   assert.doesNotMatch(topRuntime, /Save Context|data-mk-context-save/);
-  assert.match(overviewRuntime, /overview\.innerHTML = overviewShellHtml\(\)/);
+  assert.match(overviewRuntime, /pinnedDocuments\.innerHTML = overviewShellHtml\(\)/);
   assert.doesNotMatch(overviewRuntime, /mk-gm-overview-summary|buildOverviewSummary|overviewSummaryHtml/);
   assert.doesNotMatch(overviewRuntime, /Scene Context/);
   assert.doesNotMatch(overviewRuntime, /Encounter Pressure/);

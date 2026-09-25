@@ -7,7 +7,10 @@ import { APP_ID, SETTINGS_APP_ID } from "./gm-screen.js";
 
 const MODULE_ID = "mk-shadowdark";
 const NPC_NAME_COMPOSITION_FLAG = "npcNameCompositionTables";
-const NPC_NAME_COMPOSITION_SCHEMA = 1;
+const NPC_NAME_COMPOSITION_SCHEMA = 2;
+const NPC_NAME_COMPOSITION_DEFAULT_SECOND_SYLLABLE_CHANCE = 33;
+const NPC_NAME_COMPOSITION_DEFAULT_THIRD_SYLLABLE_CHANCE = 33;
+// Kept for legacy imports and callers that still provide the former setting.
 const NPC_NAME_COMPOSITION_DEFAULT_TWO_SYLLABLE_CHANCE = 50;
 
 const NPC_NAME_COMPOSITION_KEYS = Object.freeze([
@@ -29,7 +32,15 @@ const NPC_NAME_COMPOSITION_LABELS = Object.freeze({
   identifier: "NPC Identifier",
 });
 
+const NPC_NAME_COMPOSITION_DESCRIPTIONS = Object.freeze({
+  prefix: "Rolls the first part of the NPC name.",
+  syllables: "Rolls a possible syllable for the NPC name.",
+  suffix: "Rolls the final part of the NPC name.",
+  identifier: "Rolls an optional NPC identifier.",
+});
+
 const NPC_NAME_COMPOSITION_MULTI_KEYS = Object.freeze(["syllables"]);
+const NPC_NAME_COMPOSITION_MULTI_COUNTS = Object.freeze({ syllables: 2 });
 
 const NPC_TRAIT_TABLE_FLAG = "npcTraitTables";
 const NPC_TRAIT_TABLE_SCHEMA = 1;
@@ -49,7 +60,16 @@ const NPC_TRAIT_TABLE_LABELS = Object.freeze({
   features: "NPC Features",
   occupation: "Occupation",
 });
+const NPC_TRAIT_TABLE_DESCRIPTIONS = Object.freeze({
+  ancestry: "Rolls the NPC ancestry.",
+  age: "Rolls the NPC age.",
+  alignment: "Rolls the NPC alignment.",
+  wealth: "Rolls the NPC wealth.",
+  features: "Rolls an NPC feature.",
+  occupation: "Rolls the NPC occupation.",
+});
 const NPC_TRAIT_TABLE_MULTI_KEYS = Object.freeze(["features"]);
+const NPC_TRAIT_TABLE_MULTI_COUNTS = Object.freeze({ features: 3 });
 
 function currentScene() {
   return globalThis.canvas?.scene ?? globalThis.game?.scenes?.current ?? null;
@@ -81,21 +101,44 @@ function normalizeTableUuidList(value) {
   return values.map(normalizeTableUuid).filter(Boolean);
 }
 
-function normalizeChance(value) {
+function normalizeChance(value, fallback = NPC_NAME_COMPOSITION_DEFAULT_SECOND_SYLLABLE_CHANCE) {
   const numeric = Number(value);
-  if (!Number.isFinite(numeric)) return NPC_NAME_COMPOSITION_DEFAULT_TWO_SYLLABLE_CHANCE;
+  if (!Number.isFinite(numeric)) return fallback;
   return Math.min(100, Math.max(0, Math.round(numeric)));
+}
+
+function normalizeSyllableChances(secondSyllableChance, thirdSyllableChance) {
+  const second = normalizeChance(
+    secondSyllableChance,
+    NPC_NAME_COMPOSITION_DEFAULT_SECOND_SYLLABLE_CHANCE,
+  );
+  const third = Math.min(
+    normalizeChance(thirdSyllableChance, NPC_NAME_COMPOSITION_DEFAULT_THIRD_SYLLABLE_CHANCE),
+    Math.max(0, 100 - second),
+  );
+  return {
+    secondSyllableChance: second,
+    thirdSyllableChance: third,
+  };
 }
 
 function normalizeNpcNameComposition(value) {
   const source = value && typeof value === "object" && !Array.isArray(value) ? value : {};
+  const hasLegacyChance = source.twoSyllableChance !== undefined;
+  const legacyChance = hasLegacyChance
+    ? normalizeChance(source.twoSyllableChance, NPC_NAME_COMPOSITION_DEFAULT_TWO_SYLLABLE_CHANCE)
+    : undefined;
+  const chances = normalizeSyllableChances(
+    source.secondSyllableChance ?? legacyChance ?? NPC_NAME_COMPOSITION_DEFAULT_SECOND_SYLLABLE_CHANCE,
+    source.thirdSyllableChance ?? (hasLegacyChance ? 0 : NPC_NAME_COMPOSITION_DEFAULT_THIRD_SYLLABLE_CHANCE),
+  );
   return {
     schema: NPC_NAME_COMPOSITION_SCHEMA,
     prefix: normalizeTableUuid(source.prefix),
     syllables: normalizeTableUuidList(source.syllables),
     suffix: normalizeTableUuid(source.suffix),
     identifier: normalizeTableUuid(source.identifier),
-    twoSyllableChance: normalizeChance(source.twoSyllableChance),
+    ...chances,
   };
 }
 
@@ -191,6 +234,7 @@ function npcNameCompositionStatus(value, tables = globalThis.game?.tables) {
 async function setSceneNpcNameCompositionTable(key, tableUuid, scene = currentScene(), {
   user = globalThis.game?.user,
   index = null,
+  replace = false,
 } = {}) {
   const normalizedKey = String(key ?? "").trim();
   if (!NPC_NAME_COMPOSITION_DISPLAY_KEYS.includes(normalizedKey)) return null;
@@ -204,8 +248,18 @@ async function setSceneNpcNameCompositionTable(key, tableUuid, scene = currentSc
   if (NPC_NAME_COMPOSITION_MULTI_KEYS.includes(normalizedKey)) {
     const tableUuids = normalizeTableUuidList(next[normalizedKey]);
     const normalizedUuid = normalizeTableUuid(tableUuid);
-    if (Number.isInteger(index) && index >= 0 && index < tableUuids.length) {
-      tableUuids.splice(index, 1);
+    if (Number.isInteger(index) && index >= 0) {
+      if (normalizedUuid && replace) {
+        const targetIndex = Math.min(index, tableUuids.length);
+        if (targetIndex < tableUuids.length) tableUuids[targetIndex] = normalizedUuid;
+        else tableUuids.push(normalizedUuid);
+      } else if (index < tableUuids.length) {
+        tableUuids.splice(index, 1);
+      } else if (normalizedUuid) {
+        tableUuids.push(normalizedUuid);
+      } else {
+        tableUuids.length = 0;
+      }
     } else if (normalizedUuid) {
       tableUuids.push(normalizedUuid);
     } else {
@@ -219,7 +273,7 @@ async function setSceneNpcNameCompositionTable(key, tableUuid, scene = currentSc
   return next;
 }
 
-async function setSceneNpcNameCompositionChance(chance, scene = currentScene(), {
+async function setSceneNpcNameCompositionChances(secondSyllableChance, thirdSyllableChance, scene = currentScene(), {
   user = globalThis.game?.user,
 } = {}) {
   if (!scene?.setFlag) return null;
@@ -229,14 +283,21 @@ async function setSceneNpcNameCompositionChance(chance, scene = currentScene(), 
   }
 
   const next = normalizeNpcNameComposition(getSceneFlag(scene, NPC_NAME_COMPOSITION_FLAG, null));
-  next.twoSyllableChance = normalizeChance(chance);
+  const chances = normalizeSyllableChances(secondSyllableChance, thirdSyllableChance);
+  next.secondSyllableChance = chances.secondSyllableChance;
+  next.thirdSyllableChance = chances.thirdSyllableChance;
   await scene.setFlag(MODULE_ID, NPC_NAME_COMPOSITION_FLAG, next);
   return next;
+}
+
+async function setSceneNpcNameCompositionChance(chance, scene = currentScene(), options = {}) {
+  return setSceneNpcNameCompositionChances(chance, 0, scene, options);
 }
 
 async function setSceneNpcTraitTable(key, tableUuid, scene = currentScene(), {
   user = globalThis.game?.user,
   index = null,
+  replace = false,
 } = {}) {
   const normalizedKey = String(key ?? "").trim();
   if (!NPC_TRAIT_TABLE_KEYS.includes(normalizedKey)) return null;
@@ -250,8 +311,18 @@ async function setSceneNpcTraitTable(key, tableUuid, scene = currentScene(), {
   if (NPC_TRAIT_TABLE_MULTI_KEYS.includes(normalizedKey)) {
     const tableUuids = normalizeTableUuidList(next[normalizedKey]);
     const normalizedUuid = normalizeTableUuid(tableUuid);
-    if (Number.isInteger(index) && index >= 0 && index < tableUuids.length) {
-      tableUuids.splice(index, 1);
+    if (Number.isInteger(index) && index >= 0) {
+      if (normalizedUuid && replace) {
+        const targetIndex = Math.min(index, tableUuids.length);
+        if (targetIndex < tableUuids.length) tableUuids[targetIndex] = normalizedUuid;
+        else tableUuids.push(normalizedUuid);
+      } else if (index < tableUuids.length) {
+        tableUuids.splice(index, 1);
+      } else if (normalizedUuid) {
+        tableUuids.push(normalizedUuid);
+      } else {
+        tableUuids.length = 0;
+      }
     } else if (normalizedUuid) {
       tableUuids.push(normalizedUuid);
     } else {
@@ -362,67 +433,133 @@ function escapeHtml(value) {
   })[character]);
 }
 
-function renderNpcNameCompositionSetup(entries = [], {
-  twoSyllableChance = NPC_NAME_COMPOSITION_DEFAULT_TWO_SYLLABLE_CHANCE,
+function assignmentOrdinal(index) {
+  return ["first", "second", "third"][index] ?? `number ${index + 1}`;
+}
+
+function renderNpcNameAssignmentRow({
+  key,
+  label,
+  description,
+  uuid = "",
+  table = null,
+  multiple = false,
+  index = 0,
 } = {}) {
+  const assigned = Boolean(uuid);
+  const rowLabel = multiple ? `${label} ${index + 1}` : label;
+  const tableName = table?.name ?? (assigned ? "Unavailable RollTable" : "Drop RollTable here");
+  const slotIndex = multiple ? ` data-mk-npc-name-composition-index="${index}"` : "";
+  const clearIndex = multiple ? ` data-mk-npc-name-composition-index="${index}"` : "";
+  return `
+    <article class="mk-gm-npc-name-composition-slot mk-gm-rolltable-assignment-row ${assigned ? "is-assigned" : "is-empty"}" data-mk-npc-name-composition-slot="${escapeHtml(key)}"${multiple ? ` data-mk-npc-name-composition-multiple${slotIndex}` : ""}>
+      <span class="mk-gm-npc-name-composition-label mk-gm-rolltable-assignment-title">${escapeHtml(rowLabel)}</span>
+      <span class="mk-gm-rolltable-assignment-description">${escapeHtml(description)}</span>
+      <div class="mk-gm-npc-name-composition-drop mk-gm-rolltable-assignment-table" data-mk-npc-name-composition-drop>
+        <i class="fas ${assigned ? "fa-table-list" : "fa-arrow-down"}" aria-hidden="true"></i>
+        <strong>${escapeHtml(tableName)}</strong>
+        ${assigned && !table ? `<small>${escapeHtml(uuid)}</small>` : ""}
+        ${assigned ? `<button type="button" data-mk-npc-name-composition-clear${clearIndex} title="Clear ${escapeHtml(rowLabel)} RollTable" aria-label="Clear ${escapeHtml(rowLabel)} RollTable"><i class="fas fa-xmark"></i></button>` : ""}
+      </div>
+    </article>
+  `;
+}
+
+function renderNpcTraitAssignmentRow({
+  key,
+  label,
+  description,
+  uuid = "",
+  table = null,
+  multiple = false,
+  index = 0,
+} = {}) {
+  const assigned = Boolean(uuid);
+  const rowLabel = multiple ? `${label} ${index + 1}` : label;
+  const rowDescription = multiple
+    ? `Rolls the ${assignmentOrdinal(index)} NPC feature.`
+    : description;
+  const tableName = table?.name ?? (assigned ? "Unavailable RollTable" : "Drop RollTable here");
+  const slotIndex = multiple ? ` data-mk-npc-trait-index="${index}"` : "";
+  const clearIndex = multiple ? ` data-mk-npc-trait-index="${index}"` : "";
+  return `
+    <article class="mk-gm-npc-trait-slot mk-gm-rolltable-assignment-row ${assigned ? "is-assigned" : "is-empty"}" data-mk-npc-trait-slot="${escapeHtml(key)}"${multiple ? ` data-mk-npc-trait-multiple${slotIndex}` : ""}>
+      <span class="mk-gm-npc-trait-label mk-gm-rolltable-assignment-title">${escapeHtml(rowLabel)}</span>
+      <span class="mk-gm-rolltable-assignment-description">${escapeHtml(rowDescription)}</span>
+      <div class="mk-gm-npc-trait-drop mk-gm-rolltable-assignment-table" data-mk-npc-trait-drop>
+        <i class="fas ${assigned ? "fa-table-list" : "fa-arrow-down"}" aria-hidden="true"></i>
+        <strong>${escapeHtml(tableName)}</strong>
+        ${assigned && !table ? `<small>${escapeHtml(uuid)}</small>` : ""}
+        ${assigned ? `<button type="button" data-mk-npc-trait-clear${clearIndex} title="Clear ${escapeHtml(rowLabel)} RollTable" aria-label="Clear ${escapeHtml(rowLabel)} RollTable"><i class="fas fa-xmark"></i></button>` : ""}
+      </div>
+    </article>
+  `;
+}
+
+function renderNpcNameCompositionSetup(entries = [], options = {}) {
+  const legacyChance = options.twoSyllableChance;
+  const chances = normalizeSyllableChances(
+    options.secondSyllableChance ?? legacyChance ?? NPC_NAME_COMPOSITION_DEFAULT_SECOND_SYLLABLE_CHANCE,
+    options.thirdSyllableChance ?? (legacyChance === undefined
+      ? NPC_NAME_COMPOSITION_DEFAULT_THIRD_SYLLABLE_CHANCE
+      : 0),
+  );
   const byKey = new Map((entries ?? []).map(entry => [entry.key, entry]));
+  const rows = NPC_NAME_COMPOSITION_DISPLAY_KEYS.map(key => {
+    const entry = byKey.get(key) ?? (NPC_NAME_COMPOSITION_MULTI_KEYS.includes(key)
+      ? { key, label: tableLabel(key), uuids: [], tables: [] }
+      : { key, label: tableLabel(key), uuid: "", table: null });
+    const multiple = NPC_NAME_COMPOSITION_MULTI_KEYS.includes(key);
+    const uuids = multiple ? normalizeTableUuidList(entry.uuids ?? entry.uuid) : [entry.uuid].filter(Boolean);
+    const tables = multiple
+      ? (Array.isArray(entry.tables) ? entry.tables : [])
+      : [entry.table];
+    const count = multiple
+      ? Math.max(NPC_NAME_COMPOSITION_MULTI_COUNTS[key] ?? 1, uuids.length)
+      : 1;
+    return Array.from({ length: count }, (_value, index) => renderNpcNameAssignmentRow({
+      key,
+      label: entry.label,
+      description: multiple
+        ? `Rolls the ${assignmentOrdinal(index)} possible syllable.`
+        : NPC_NAME_COMPOSITION_DESCRIPTIONS[key] ?? "Rolls this NPC name component.",
+      uuid: multiple ? (uuids[index] ?? "") : entry.uuid,
+      table: multiple ? (tables[index] ?? null) : entry.table,
+      multiple,
+      index,
+    })).join("");
+  }).join("");
+
   return `
     <section class="mk-gm-npc-name-composition" data-mk-npc-name-composition>
       <header class="mk-gm-npc-name-composition-heading">
         <div>
           <strong>NPC Name Composition</strong>
-          <span>Drop RollTables into the boxes. Names are built left to right; Possible Syllables can use more than one table.</span>
+          <span>Assign the RollTables used to build the NPC name. Possible Syllables are split into two assignments.</span>
         </div>
         <i class="fas fa-font" aria-hidden="true"></i>
       </header>
-      <div class="mk-gm-npc-name-composition-flow">
-        ${NPC_NAME_COMPOSITION_DISPLAY_KEYS.map((key, index) => {
-          const entry = byKey.get(key) ?? (NPC_NAME_COMPOSITION_MULTI_KEYS.includes(key)
-            ? { key, label: tableLabel(key), uuids: [], tables: [] }
-            : { key, label: tableLabel(key), uuid: "", table: null });
-          const multiple = NPC_NAME_COMPOSITION_MULTI_KEYS.includes(key);
-          const uuids = multiple ? normalizeTableUuidList(entry.uuids ?? entry.uuid) : [entry.uuid].filter(Boolean);
-          const tables = multiple
-            ? (Array.isArray(entry.tables) ? entry.tables : [])
-            : [entry.table];
-          const assigned = uuids.length > 0;
-          const tableName = tables[0]?.name ?? (assigned ? "Unavailable RollTable" : "Drop RollTable here");
-          const tableItems = multiple
-            ? uuids.map((uuid, tableIndex) => {
-              const table = tables[tableIndex];
-              return `
-                <div class="mk-gm-npc-name-composition-entry">
-                  <i class="fas fa-table-list" aria-hidden="true"></i>
-                  <strong>${escapeHtml(table?.name ?? "Unavailable RollTable")}</strong>
-                  ${table ? "" : `<small>${escapeHtml(uuid)}</small>`}
-                  <button type="button" data-mk-npc-name-composition-clear data-mk-npc-name-composition-index="${tableIndex}" title="Clear ${escapeHtml(entry.label)} table ${tableIndex + 1}" aria-label="Clear ${escapeHtml(entry.label)} table ${tableIndex + 1}"><i class="fas fa-xmark"></i></button>
-                </div>
-              `;
-            }).join("")
-            : "";
-          return `
-            ${index ? '<span class="mk-gm-npc-name-composition-arrow" aria-hidden="true"><i class="fas fa-arrow-right"></i></span>' : ""}
-            <article class="mk-gm-npc-name-composition-slot ${assigned ? "is-assigned" : "is-empty"}" data-mk-npc-name-composition-slot="${escapeHtml(key)}"${multiple ? " data-mk-npc-name-composition-multiple" : ""}>
-              <span class="mk-gm-npc-name-composition-label">${escapeHtml(entry.label)}</span>
-              <div class="mk-gm-npc-name-composition-drop${multiple ? " is-multiple" : ""}" data-mk-npc-name-composition-drop>
-                ${multiple
-                  ? `${tableItems ? `<div class="mk-gm-npc-name-composition-list">${tableItems}</div>` : `<div class="mk-gm-npc-name-composition-empty"><i class="fas fa-arrow-down" aria-hidden="true"></i><strong>Drop RollTable here</strong></div>`}<div class="mk-gm-npc-name-composition-add"><i class="fas fa-plus" aria-hidden="true"></i><span>Drop ${assigned ? "another " : "a "}RollTable</span></div>`
-                  : `<i class="fas ${assigned ? "fa-table-list" : "fa-arrow-down"}" aria-hidden="true"></i>
-                     <strong>${escapeHtml(tableName)}</strong>
-                     ${assigned && !tables[0] ? `<small>${escapeHtml(entry.uuid)}</small>` : ""}
-                     ${assigned ? `<button type="button" data-mk-npc-name-composition-clear title="Clear ${escapeHtml(entry.label)} RollTable" aria-label="Clear ${escapeHtml(entry.label)} RollTable"><i class="fas fa-xmark"></i></button>` : ""}`}
-              </div>
-            </article>
-          `;
-        }).join("")}
+      <div class="mk-gm-npc-name-composition-flow mk-gm-rolltable-assignment-grid">
+        ${rows}
       </div>
       <div class="mk-gm-npc-name-composition-chance">
-        <label for="mk-gm-npc-name-two-syllable-chance">Two-syllable chance</label>
-        <div>
-          <input id="mk-gm-npc-name-two-syllable-chance" type="number" min="0" max="100" step="1" value="${normalizeChance(twoSyllableChance)}" data-mk-npc-name-composition-two-syllable-chance>
-          <span>%</span>
+        <div class="mk-gm-npc-name-composition-chance-fields">
+          <div class="mk-gm-npc-name-composition-chance-field">
+            <label for="mk-gm-npc-name-second-syllable-chance">Second syllable chance</label>
+            <div>
+              <input id="mk-gm-npc-name-second-syllable-chance" type="number" min="0" max="100" step="1" value="${chances.secondSyllableChance}" data-mk-npc-name-composition-second-syllable-chance>
+              <span>%</span>
+            </div>
+          </div>
+          <div class="mk-gm-npc-name-composition-chance-field">
+            <label for="mk-gm-npc-name-third-syllable-chance">Third syllable chance</label>
+            <div>
+              <input id="mk-gm-npc-name-third-syllable-chance" type="number" min="0" max="100" step="1" value="${chances.thirdSyllableChance}" data-mk-npc-name-composition-third-syllable-chance>
+              <span>%</span>
+            </div>
+          </div>
         </div>
-        <small>At this percentage, two syllable tables are rolled; otherwise one is rolled.</small>
+        <small>Each chance adds one more syllable in order; the remaining percentage uses one syllable.</small>
       </div>
       <small class="mk-gm-npc-name-composition-status">Prefix + Possible Syllables + Suffix. An assigned NPC Identifier is rolled as the second name part. Assignments are stored on the active Scene.</small>
     </section>
@@ -431,51 +568,40 @@ function renderNpcNameCompositionSetup(entries = [], {
 
 function renderNpcTraitTableSetup(entries = []) {
   const byKey = new Map((entries ?? []).map(entry => [entry.key, entry]));
+  const rows = NPC_TRAIT_TABLE_KEYS.map(key => {
+    const entry = byKey.get(key) ?? (NPC_TRAIT_TABLE_MULTI_KEYS.includes(key)
+      ? { key, label: npcTraitTableLabel(key), uuids: [], tables: [] }
+      : { key, label: npcTraitTableLabel(key), uuid: "", table: null });
+    const multiple = NPC_TRAIT_TABLE_MULTI_KEYS.includes(key);
+    const uuids = multiple ? normalizeTableUuidList(entry.uuids ?? entry.uuid) : [entry.uuid].filter(Boolean);
+    const tables = multiple
+      ? (Array.isArray(entry.tables) ? entry.tables : [])
+      : [entry.table];
+    const count = multiple
+      ? Math.max(NPC_TRAIT_TABLE_MULTI_COUNTS[key] ?? 1, uuids.length)
+      : 1;
+    return Array.from({ length: count }, (_value, index) => renderNpcTraitAssignmentRow({
+      key,
+      label: entry.label,
+      description: NPC_TRAIT_TABLE_DESCRIPTIONS[key] ?? "Rolls this NPC trait.",
+      uuid: multiple ? (uuids[index] ?? "") : entry.uuid,
+      table: multiple ? (tables[index] ?? null) : entry.table,
+      multiple,
+      index,
+    })).join("");
+  }).join("");
+
   return `
     <section class="mk-gm-npc-trait-tables" data-mk-npc-trait-tables>
       <header class="mk-gm-npc-trait-heading">
         <div>
           <strong>NPC Traits</strong>
-          <span>Link RollTables for the generated NPC profile. NPC Features can use multiple tables.</span>
+          <span>Link RollTables for the generated NPC profile. NPC Features are split into three assignments.</span>
         </div>
         <i class="fas fa-list-check" aria-hidden="true"></i>
       </header>
-      <div class="mk-gm-npc-trait-grid">
-        ${NPC_TRAIT_TABLE_KEYS.map(key => {
-          const entry = byKey.get(key) ?? (NPC_TRAIT_TABLE_MULTI_KEYS.includes(key)
-            ? { key, label: npcTraitTableLabel(key), uuids: [], tables: [] }
-            : { key, label: npcTraitTableLabel(key), uuid: "", table: null });
-          const multiple = NPC_TRAIT_TABLE_MULTI_KEYS.includes(key);
-          const uuids = multiple ? normalizeTableUuidList(entry.uuids ?? entry.uuid) : [entry.uuid].filter(Boolean);
-          const tables = multiple
-            ? (Array.isArray(entry.tables) ? entry.tables : [])
-            : [entry.table];
-          const assigned = uuids.length > 0;
-          const tableName = tables[0]?.name ?? (assigned ? "Unavailable RollTable" : "Drop RollTable here");
-          const tableItems = multiple
-            ? uuids.map((uuid, index) => `
-                <div class="mk-gm-npc-trait-entry">
-                  <i class="fas fa-table-list" aria-hidden="true"></i>
-                  <strong>${escapeHtml(tables[index]?.name ?? "Unavailable RollTable")}</strong>
-                  ${tables[index] ? "" : `<small>${escapeHtml(uuid)}</small>`}
-                  <button type="button" data-mk-npc-trait-clear data-mk-npc-trait-index="${index}" title="Clear ${escapeHtml(entry.label)} table ${index + 1}" aria-label="Clear ${escapeHtml(entry.label)} table ${index + 1}"><i class="fas fa-xmark"></i></button>
-                </div>
-              `).join("")
-            : "";
-          return `
-            <article class="mk-gm-npc-trait-slot ${assigned ? "is-assigned" : "is-empty"}" data-mk-npc-trait-slot="${escapeHtml(key)}"${multiple ? " data-mk-npc-trait-multiple" : ""}>
-              <span class="mk-gm-npc-trait-label">${escapeHtml(entry.label)}</span>
-              <div class="mk-gm-npc-trait-drop${multiple ? " is-multiple" : ""}" data-mk-npc-trait-drop>
-                ${multiple
-                  ? `${tableItems ? `<div class="mk-gm-npc-trait-list">${tableItems}</div>` : `<div class="mk-gm-npc-trait-empty"><i class="fas fa-arrow-down" aria-hidden="true"></i><strong>Drop RollTable here</strong></div>`}<div class="mk-gm-npc-trait-add"><i class="fas fa-plus" aria-hidden="true"></i><span>Drop ${assigned ? "another " : "a "}RollTable</span></div>`
-                  : `<i class="fas ${assigned ? "fa-table-list" : "fa-arrow-down"}" aria-hidden="true"></i>
-                     <strong>${escapeHtml(tableName)}</strong>
-                     ${assigned && !tables[0] ? `<small>${escapeHtml(entry.uuid)}</small>` : ""}
-                     ${assigned ? `<button type="button" data-mk-npc-trait-clear title="Clear ${escapeHtml(entry.label)} RollTable" aria-label="Clear ${escapeHtml(entry.label)} RollTable"><i class="fas fa-xmark"></i></button>` : ""}`}
-              </div>
-            </article>
-          `;
-        }).join("")}
+      <div class="mk-gm-npc-trait-grid mk-gm-rolltable-assignment-grid">
+        ${rows}
       </div>
       <small class="mk-gm-npc-trait-status">Ancestry, Age, Alignment, Wealth, NPC Features, and Occupation are rolled from these linked assignments when available. Missing tables leave their profile entries blank; only the NPC name is required.</small>
     </section>
@@ -530,6 +656,8 @@ function bindRollTableDropSlots(application, root, scene, {
   root?.querySelectorAll?.(slotSelector)?.forEach(slot => {
     const key = String(slot.dataset?.[keyDataset] ?? "");
     const multiple = slot.dataset?.[multipleDataset] !== undefined;
+    const rawSlotIndex = slot.dataset?.[clearIndexDataset];
+    const slotIndex = multiple && rawSlotIndex !== undefined ? Number(rawSlotIndex) : null;
     const drop = slot.querySelector?.(dropSelector);
     if (!drop) return;
 
@@ -558,7 +686,12 @@ function bindRollTableDropSlots(application, root, scene, {
       }
 
       try {
-        await setTable(key, table.uuid ?? uuid, scene);
+        await setTable(
+          key,
+          table.uuid ?? uuid,
+          scene,
+          multiple && Number.isInteger(slotIndex) ? { index: slotIndex, replace: true } : {},
+        );
         await application?.render?.({ force: true });
       } catch (error) {
         console.error(`mk-shadowdark | ${errorLabel} | Assignment failed`, error);
@@ -603,19 +736,26 @@ function bindNpcNameComposition(application, root, scene) {
     errorLabel: "NPC Name Composition",
   });
 
-  const chanceInput = root?.querySelector?.("[data-mk-npc-name-composition-two-syllable-chance]");
-  chanceInput?.addEventListener?.("change", async event => {
-    const input = event.currentTarget;
-    input.disabled = true;
+  const chanceInputs = Array.from(root?.querySelectorAll?.(
+    "[data-mk-npc-name-composition-second-syllable-chance], [data-mk-npc-name-composition-third-syllable-chance]",
+  ) ?? []);
+  chanceInputs.forEach(input => input.addEventListener("change", async () => {
+    chanceInputs.forEach(chanceInput => {
+      chanceInput.disabled = true;
+    });
     try {
-      await setSceneNpcNameCompositionChance(input.value, scene);
+      const secondInput = root?.querySelector?.("[data-mk-npc-name-composition-second-syllable-chance]");
+      const thirdInput = root?.querySelector?.("[data-mk-npc-name-composition-third-syllable-chance]");
+      await setSceneNpcNameCompositionChances(secondInput?.value, thirdInput?.value, scene);
       await application?.render?.({ force: true });
     } catch (error) {
       console.error("mk-shadowdark | NPC Name Composition | Chance update failed", error);
       globalThis.ui?.notifications?.error?.(`NPC name composition chance update failed: ${error.message}`);
-      input.disabled = false;
+      chanceInputs.forEach(chanceInput => {
+        chanceInput.disabled = false;
+      });
     }
-  });
+  }));
   return true;
 }
 
@@ -692,11 +832,16 @@ async function rollNpcNameComposition(value, {
   const prefixTable = status.tables.prefix;
   const suffixTable = status.tables.suffix;
   const syllableTables = status.tables.syllables.filter(Boolean);
-  const twoSyllableChance = status.composition.twoSyllableChance;
+  const secondSyllableChance = status.composition.secondSyllableChance;
+  const thirdSyllableChance = status.composition.thirdSyllableChance;
   const syllableCountRoll = syllableTables.length ? await rollDie("1d100") : null;
-  const syllableCount = syllableTables.length
-    ? (syllableCountRoll <= twoSyllableChance ? 2 : 1)
-    : 0;
+  const syllableCount = syllableTables.length === 0
+    ? 0
+    : syllableCountRoll <= secondSyllableChance
+      ? 2
+      : syllableCountRoll <= secondSyllableChance + thirdSyllableChance
+        ? 3
+        : 1;
 
   const rollFragment = async (key, table, { compact = true } = {}) => {
     const draw = await rollTable(table);
@@ -762,7 +907,8 @@ async function rollNpcNameComposition(value, {
     sources.identifier = null;
   }
 
-  rolls.twoSyllableChance = twoSyllableChance;
+  rolls.secondSyllableChance = secondSyllableChance;
+  rolls.thirdSyllableChance = thirdSyllableChance;
   rolls.syllableCountRoll = syllableCountRoll;
   rolls.syllableCount = syllableCount;
   rolls.syllableTableSelections = syllableTableSelections;
@@ -795,7 +941,8 @@ async function decorateNpcNameComposition(application, element) {
   if (target) {
     const entries = await resolveNpcNameCompositionEntries(scene);
     target.innerHTML = renderNpcNameCompositionSetup(entries, {
-      twoSyllableChance: composition.twoSyllableChance,
+      secondSyllableChance: composition.secondSyllableChance,
+      thirdSyllableChance: composition.thirdSyllableChance,
     });
     bindNpcNameComposition(application, target, scene);
   }
@@ -833,6 +980,8 @@ export {
   MODULE_ID,
   NPC_NAME_COMPOSITION_FLAG,
   NPC_NAME_COMPOSITION_SCHEMA,
+  NPC_NAME_COMPOSITION_DEFAULT_SECOND_SYLLABLE_CHANCE,
+  NPC_NAME_COMPOSITION_DEFAULT_THIRD_SYLLABLE_CHANCE,
   NPC_NAME_COMPOSITION_DEFAULT_TWO_SYLLABLE_CHANCE,
   NPC_NAME_COMPOSITION_KEYS,
   NPC_NAME_COMPOSITION_LABELS,
@@ -853,6 +1002,7 @@ export {
   npcTraitTableStatus,
   resolveNpcNameCompositionStatus,
   setSceneNpcNameCompositionTable,
+  setSceneNpcNameCompositionChances,
   setSceneNpcNameCompositionChance,
   setSceneNpcTraitTable,
   resolveNpcNameCompositionEntries,

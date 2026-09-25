@@ -127,14 +127,14 @@ test("Roll Again awaits and replaces the whole source-driven point of interest",
   }
 });
 
-test("missing source is reported distinctly from user cancellation", async () => {
+test("missing linked Location tables are reported before the preview opens", async () => {
   const result = await promptForShadowdarkLocation({
     rollPointOfInterest: async () => null,
   });
-  assert.deepEqual(result, { mode: "missing-source" });
+  assert.deepEqual(result, { mode: "missing-linked-tables" });
 });
 
-test("Create Location uses the current imported combination and opens the Journal", async () => {
+test("Create Location uses the current linked combination and opens the Journal", async () => {
   const saved = saveGlobals("game", "foundry", "JournalEntry", "CONST", "ui");
   let createdData = null;
   let rendered = false;
@@ -167,67 +167,64 @@ test("Create Location uses the current imported combination and opens the Journa
   }
 });
 
-test("missing Points of Interest source can create a blank Location without source data", async () => {
+test("missing linked Location tables do not create a blank Location", async () => {
   const saved = saveGlobals("game", "foundry", "JournalEntry", "CONST", "ui");
-  let createdData = null;
-  const responses = ["Blank Waystation"];
+  let createCalls = 0;
+  const warnings = [];
 
   try {
     globalThis.game = { user: { isGM: true } };
-    mockDialogV2(async () => responses.shift());
-    globalThis.CONST = { JOURNAL_ENTRY_PAGE_FORMATS: { HTML: 1 } };
+    mockDialogV2(async () => {
+      throw new Error("The legacy fallback dialog must not open.");
+    });
     globalThis.JournalEntry = {
       implementation: {
-        create: async data => {
-          createdData = data;
-          return { sheet: { render() {} } };
+        create: async () => {
+          createCalls += 1;
+          return null;
         },
+      },
+    };
+    globalThis.ui = { notifications: { warn: message => warnings.push(message) } };
+
+    const result = await createExplorationLocation({
+      rollPointOfInterest: async () => null,
+    });
+
+    assert.equal(result, null);
+    assert.equal(createCalls, 0);
+    assert.match(warnings[0], /Assign all Location Generator RollTables/);
+  } finally {
+    restoreGlobals(saved);
+  }
+});
+
+test("missing linked Location tables do not open an import or blank-location fallback", async () => {
+  const saved = saveGlobals("game", "foundry", "JournalEntry", "CONST", "ui");
+  let fallbackCalls = 0;
+
+  try {
+    globalThis.game = { user: { isGM: true } };
+    mockDialogV2(async () => ({ action: "cancel" }));
+    globalThis.JournalEntry = {
+      implementation: {
+        create: async () => ({ sheet: { render() {} } }),
       },
     };
     globalThis.ui = { notifications: {} };
 
     await createExplorationLocation({
       rollPointOfInterest: async () => null,
-      promptMissingSource: async () => "blank",
-    });
-
-    assert.equal(createdData.name, "Blank Waystation");
-    assert.equal(createdData.pages[0].text.content, "");
-  } finally {
-    restoreGlobals(saved);
-  }
-});
-
-test("Import / Update retries source-driven Location generation after importing", async () => {
-  const saved = saveGlobals("game", "foundry", "JournalEntry", "CONST", "ui");
-  let rolls = 0;
-  let imports = 0;
-  let createdData = null;
-  const point = syntheticPoint();
-
-  try {
-    globalThis.game = { user: { isGM: true } };
-    mockDialogV2(async () => ({ action: "create", name: "Imported Shrine" }));
-    globalThis.CONST = { JOURNAL_ENTRY_PAGE_FORMATS: { HTML: 1 } };
-    globalThis.JournalEntry = {
-      implementation: {
-        create: async data => {
-          createdData = data;
-          return { sheet: { render() {} } };
-        },
+      promptMissingSource: async () => {
+        fallbackCalls += 1;
+        return "blank";
       },
-    };
-    globalThis.ui = { notifications: {} };
-
-    await createExplorationLocation({
-      rollPointOfInterest: async () => (++rolls === 1 ? null : point),
-      promptMissingSource: async () => "import",
-      importSources: async () => { imports += 1; },
+      importSources: async () => {
+        fallbackCalls += 1;
+      },
     });
 
-    assert.equal(imports, 1);
-    assert.equal(rolls, 2);
-    assert.equal(createdData.name, "Imported Shrine");
+    assert.equal(fallbackCalls, 0);
   } finally {
     restoreGlobals(saved);
   }
@@ -276,7 +273,8 @@ test("Create Location no longer embeds verbatim Points of Interest arrays", () =
   assert.doesNotMatch(runtime, /SHADOWDARK_POI_LOCATIONS/);
   assert.doesNotMatch(runtime, /SHADOWDARK_POI_FEATURES/);
   assert.match(runtime, /rollShadowdarkPointOfInterestFromSource/);
-  assert.match(runtime, /Import \/ Update Source Tables/);
+  assert.match(runtime, /Assign all Location Generator RollTables/);
+  assert.doesNotMatch(runtime, /Import \/ Update Source Tables|Create Blank Location|promptForMissingLocationSource|openSourceTableImporter|createBlankLocation|missing-source/);
 });
 
 test("GM Screen creation controllers load for the Settlement workspace", () => {

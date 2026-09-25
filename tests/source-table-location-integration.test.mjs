@@ -8,12 +8,11 @@ import {
   parseSupportedSourceTables,
 } from "../scripts/source-tables/source-parser.js";
 import {
-  findImportedSourceTable,
   parseLabeledResultText,
   rollImportedSourceTableField,
 } from "../scripts/source-tables/source-table-service.js";
 import {
-  findPointsOfInterestSourceTable,
+  locationSourceStatus,
   rollShadowdarkPointOfInterestFromSource,
 } from "../scripts/gm-screen/location-source-table.js";
 import {
@@ -102,32 +101,6 @@ function mockSourceTable({ rolls = [] } = {}) {
   };
 }
 
-test("Points of Interest lookup requires canonical Cursed Scroll source metadata and columns", () => {
-  const table = mockSourceTable({
-    rolls: [{ total: 1, text: "Descriptor: Mossy | Location: Shrine | Feature: Unstable" }],
-  });
-  const unrelated = {
-    ...table,
-    id: "other",
-    name: "Other Table",
-    flags: {
-      "mk-shadowdark": {
-        sourceTable: {
-          ...table.flags["mk-shadowdark"].sourceTable,
-          bookId: "shadowdark-core-v4.9",
-        },
-      },
-    },
-  };
-
-  assert.equal(findPointsOfInterestSourceTable([unrelated, table]), table);
-  assert.equal(findImportedSourceTable({
-    bookId: CURSED_SCROLL_4_BOOK.id,
-    requiredColumns: ["Descriptor", "Location", "Feature"],
-    tables: [unrelated, table],
-  }), table);
-});
-
 test("field roll uses RollTable.roll without chat and extracts requested labeled field", async () => {
   const table = mockSourceTable({
     rolls: [{ total: 12, text: "Descriptor: Sunken | Location: Vault | Feature: Echoing" }],
@@ -146,25 +119,25 @@ test("Location generation performs three independent RollTable rolls and preserv
     ],
   });
 
-  const point = await rollShadowdarkPointOfInterestFromSource({ table });
-  assert.equal(table.rollCalls, 3);
-  assert.deepEqual(point, {
-    descriptorRoll: 3,
-    descriptor: "Mossy",
-    locationRoll: 14,
-    location: "Shrine",
-    featureRoll: 19,
-    feature: "Unstable",
-    source: {
-      tableId: "poi-table",
-      tableUuid: "RollTable.poi-table",
-      tableName: "Points of Interest — POINTS OF INTEREST",
-      bookId: CURSED_SCROLL_4_BOOK.id,
-      bookTitle: CURSED_SCROLL_4_BOOK.title,
-      key: `${CURSED_SCROLL_4_BOOK.id}:points-of-interest:1d20`,
-      pages: [27],
+  const scene = {
+    getFlag() {
+      return {
+        descriptor: table.uuid,
+        location: table.uuid,
+        feature: table.uuid,
+      };
     },
-  });
+  };
+  const point = await rollShadowdarkPointOfInterestFromSource({ tables: [table], scene });
+  assert.equal(table.rollCalls, 3);
+  assert.equal(point.descriptorRoll, 3);
+  assert.equal(point.descriptor, "Mossy");
+  assert.equal(point.locationRoll, 14);
+  assert.equal(point.location, "Shrine");
+  assert.equal(point.featureRoll, 19);
+  assert.equal(point.feature, "Unstable");
+  assert.deepEqual(Object.keys(point.sources), ["descriptor", "location", "feature"]);
+  assert.equal(point.source.tableUuid, table.uuid);
 });
 
 test("Location generation honors separate table selections for each value", async () => {
@@ -184,19 +157,85 @@ test("Location generation honors separate table selections for each value", asyn
   featureTable.id = "feature-table";
   featureTable.uuid = "RollTable.feature-table";
 
-  const point = await rollShadowdarkPointOfInterestFromSource({
-    tables: [descriptorTable, locationTable, featureTable],
-    tableUuids: {
+  const scene = {
+    getFlag() {
+      return {
       descriptor: descriptorTable.uuid,
       location: locationTable.uuid,
       feature: featureTable.uuid,
+      };
     },
+  };
+  const point = await rollShadowdarkPointOfInterestFromSource({
+    tables: [descriptorTable, locationTable, featureTable],
+    scene,
   });
 
   assert.equal(point.descriptor, "Mossy");
   assert.equal(point.location, "Shrine");
   assert.equal(point.feature, "Unstable");
   assert.deepEqual(Object.keys(point.sources), ["descriptor", "location", "feature"]);
+});
+
+test("Scene-linked Location Generator assignments drive every location result", async () => {
+  const descriptorTable = mockSourceTable({
+    rolls: [{ total: 4, text: "Descriptor: Mossy | Location: Ignored | Feature: Ignored" }],
+  });
+  descriptorTable.id = "linked-descriptor";
+  descriptorTable.uuid = "RollTable.linked-descriptor";
+  const locationTable = mockSourceTable({
+    rolls: [{ total: 12, text: "Descriptor: Ignored | Location: Shrine | Feature: Ignored" }],
+  });
+  locationTable.id = "linked-location";
+  locationTable.uuid = "RollTable.linked-location";
+  const featureTable = mockSourceTable({
+    rolls: [{ total: 19, text: "Descriptor: Ignored | Location: Ignored | Feature: Unstable" }],
+  });
+  featureTable.id = "linked-feature";
+  featureTable.uuid = "RollTable.linked-feature";
+  const tables = [descriptorTable, locationTable, featureTable];
+  const scene = {
+    getFlag() {
+      return {
+        descriptor: descriptorTable.uuid,
+        location: locationTable.uuid,
+        feature: featureTable.uuid,
+      };
+    },
+  };
+
+  const status = locationSourceStatus(tables, { scene });
+  assert.equal(status.mode, "linked");
+  assert.equal(status.available, true);
+
+  const point = await rollShadowdarkPointOfInterestFromSource({ tables, scene });
+  assert.equal(point.descriptor, "Mossy");
+  assert.equal(point.location, "Shrine");
+  assert.equal(point.feature, "Unstable");
+  assert.deepEqual(Object.keys(point.sources), ["descriptor", "location", "feature"]);
+});
+
+test("Location generation does not fall back to an imported source table", async () => {
+  const sourceTable = mockSourceTable({
+    rolls: [{ total: 1, text: "Descriptor: Mossy | Location: Shrine | Feature: Unstable" }],
+  });
+  const scene = { getFlag() { return null; } };
+
+  const status = locationSourceStatus([sourceTable], { scene });
+  assert.equal(status.mode, "linked");
+  assert.equal(status.available, false);
+  assert.deepEqual(status.missing, ["Descriptor", "Location", "Feature"]);
+
+  const result = await rollShadowdarkPointOfInterestFromSource({
+    tables: [sourceTable],
+    scene,
+  });
+  assert.deepEqual(result, {
+    mode: "missing-linked-tables",
+    missing: ["Descriptor", "Location", "Feature"],
+    unavailable: [],
+  });
+  assert.equal(sourceTable.rollCalls, 0);
 });
 
 test("public Location runtime does not contain the former sourcebook table arrays", () => {

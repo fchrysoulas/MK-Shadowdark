@@ -1,11 +1,23 @@
 import { APP_ID } from "./gm-screen.js";
 import { getSceneEnvironmentContext } from "../libs/environment-context.js";
-import { rollEncounterZone } from "./exploration-zone-grid.js";
+import {
+  promptForEncounterGenerator,
+  promptForEncounterZone,
+} from "./exploration-zone-grid.js";
+import { createExplorationLocation } from "./exploration-creation-controls.js";
 import { createSourceDrivenNpc } from "./npc-generator.js";
-import { createSourceDrivenTavern } from "./tavern-shop-generator.js";
+import {
+  createSourceDrivenShop,
+  createSourceDrivenTavern,
+} from "./tavern-shop-generator.js";
+import { createSourceDrivenMonster } from "./monster-generator.js";
+import { createSourceDrivenMagicItem } from "./magic-item-generator.js";
+import { PINNED_DOCUMENTS_REFRESH_HOOK } from "./pinned-documents.js";
 
 const MODULE_ID = "mk-shadowdark";
 const OVERVIEW_LINKS_FLAG = "gmScreenOverviewLinks";
+const QUICK_ACTIONS_FLAG = "gmScreenQuickActions";
+const QUICK_ACTIONS_REFRESH_HOOK = "mk-shadowdark.gm-screen-quick-actions-changed";
 const MAX_OVERVIEW_LINKS = 100;
 const OVERVIEW_TOOL_PREFIX = "mk-shadowdark.gm-screen-tool:";
 const OVERVIEW_TOOL_DEFINITIONS = Object.freeze([
@@ -18,12 +30,44 @@ const OVERVIEW_TOOL_DEFINITIONS = Object.freeze([
     action: "roll-encounter",
   }),
   Object.freeze({
+    id: "trap-generator",
+    uuid: `${OVERVIEW_TOOL_PREFIX}trap-generator`,
+    label: "Trap Generator",
+    type: "GM Screen",
+    icon: "fa-spider",
+    action: "generate-trap",
+  }),
+  Object.freeze({
+    id: "hazard-generator",
+    uuid: `${OVERVIEW_TOOL_PREFIX}hazard-generator`,
+    label: "Hazard Generator",
+    type: "GM Screen",
+    icon: "fa-triangle-exclamation",
+    action: "generate-hazard",
+  }),
+  Object.freeze({
     id: "npc-generator",
     uuid: `${OVERVIEW_TOOL_PREFIX}npc-generator`,
     label: "NPC Generator",
     type: "GM Screen",
     icon: "fa-font",
     action: "generate-npc",
+  }),
+  Object.freeze({
+    id: "monster-generator",
+    uuid: `${OVERVIEW_TOOL_PREFIX}monster-generator`,
+    label: "Monster Generator",
+    type: "GM Screen",
+    icon: "fa-skull-crossbones",
+    action: "generate-monster",
+  }),
+  Object.freeze({
+    id: "magic-item-generator",
+    uuid: `${OVERVIEW_TOOL_PREFIX}magic-item-generator`,
+    label: "Magic Item Generator",
+    type: "GM Screen",
+    icon: "fa-wand-sparkles",
+    action: "generate-magic-item",
   }),
   Object.freeze({
     id: "tavern-generator",
@@ -33,8 +77,25 @@ const OVERVIEW_TOOL_DEFINITIONS = Object.freeze([
     icon: "fa-beer-mug-empty",
     action: "generate-tavern",
   }),
+  Object.freeze({
+    id: "shop-generator",
+    uuid: `${OVERVIEW_TOOL_PREFIX}shop-generator`,
+    label: "Shop Generator",
+    type: "GM Screen",
+    icon: "fa-store",
+    action: "generate-shop",
+  }),
+  Object.freeze({
+    id: "location-generator",
+    uuid: `${OVERVIEW_TOOL_PREFIX}location-generator`,
+    label: "Create Location",
+    type: "GM Screen",
+    icon: "fa-map-location-dot",
+    action: "create-location",
+  }),
 ]);
 const OVERVIEW_TOOLS_BY_UUID = new Map(OVERVIEW_TOOL_DEFINITIONS.map(tool => [tool.uuid, tool]));
+const DEFAULT_QUICK_ACTION_IDS = Object.freeze(OVERVIEW_TOOL_DEFINITIONS.map(tool => tool.id));
 
 function gmScreenApplication(application) {
   return Boolean(
@@ -70,9 +131,20 @@ function overviewToolForUuid(value) {
   return OVERVIEW_TOOLS_BY_UUID.get(String(value ?? "").trim()) ?? null;
 }
 
-function rawUserFlag(user) {
-  return user?._source?.flags?.[MODULE_ID]?.[OVERVIEW_LINKS_FLAG]
-    ?? user?.flags?.[MODULE_ID]?.[OVERVIEW_LINKS_FLAG];
+function pinnedDocumentUuids(values) {
+  return normalizeOverviewLinkUuids(values)
+    .filter(uuid => !overviewToolForUuid(uuid));
+}
+
+function normalizeQuickActionIds(values) {
+  const requested = new Set((Array.isArray(values) ? values : [])
+    .map(value => String(value ?? "").trim()));
+  return DEFAULT_QUICK_ACTION_IDS.filter(id => requested.has(id));
+}
+
+function rawUserFlag(user, key = OVERVIEW_LINKS_FLAG) {
+  return user?._source?.flags?.[MODULE_ID]?.[key]
+    ?? user?.flags?.[MODULE_ID]?.[key];
 }
 
 function getOverviewLinkUuids(user = globalThis.game?.user) {
@@ -87,11 +159,48 @@ function getOverviewLinkUuids(user = globalThis.game?.user) {
   return normalizeOverviewLinkUuids(value);
 }
 
+function getQuickActionIds(user = globalThis.game?.user) {
+  if (!user) return [...DEFAULT_QUICK_ACTION_IDS];
+  let value;
+  try {
+    value = user.getFlag?.(MODULE_ID, QUICK_ACTIONS_FLAG);
+  } catch (_error) {
+    value = undefined;
+  }
+  if (value === undefined) value = rawUserFlag(user, QUICK_ACTIONS_FLAG);
+  return Array.isArray(value)
+    ? normalizeQuickActionIds(value)
+    : [...DEFAULT_QUICK_ACTION_IDS];
+}
+
 async function setOverviewLinkUuids(values, user = globalThis.game?.user) {
   const normalized = normalizeOverviewLinkUuids(values);
   if (!user?.setFlag) return normalized;
   await user.setFlag(MODULE_ID, OVERVIEW_LINKS_FLAG, normalized);
   return normalized;
+}
+
+async function setQuickActionIds(values, user = globalThis.game?.user) {
+  const normalized = normalizeQuickActionIds(values);
+  if (user?.setFlag) {
+    await user.setFlag(MODULE_ID, QUICK_ACTIONS_FLAG, normalized);
+  }
+  globalThis.Hooks?.callAll?.(QUICK_ACTIONS_REFRESH_HOOK, normalized, user);
+  return normalized;
+}
+
+function isQuickActionEnabled(id, user = globalThis.game?.user) {
+  return getQuickActionIds(user).includes(String(id ?? "").trim());
+}
+
+async function setQuickActionEnabled(id, enabled, user = globalThis.game?.user) {
+  const normalizedId = String(id ?? "").trim();
+  if (!DEFAULT_QUICK_ACTION_IDS.includes(normalizedId)) return getQuickActionIds(user);
+
+  const current = new Set(getQuickActionIds(user));
+  if (enabled) current.add(normalizedId);
+  else current.delete(normalizedId);
+  return setQuickActionIds([...current], user);
 }
 
 function dragEventData(event) {
@@ -223,13 +332,40 @@ function overviewLinkHtml({ uuid, document }) {
   `;
 }
 
+function quickActionHtml(tool) {
+  return `
+    <button type="button" class="mk-gm-quick-action" data-mk-quick-action="${escapeHtml(tool.uuid)}" title="Execute ${escapeHtml(tool.label)}">
+      <span class="mk-gm-quick-action-visual"><i class="fas ${escapeHtml(tool.icon)}" aria-hidden="true"></i></span>
+      <span class="mk-gm-quick-action-copy">
+        <strong>${escapeHtml(tool.label)}</strong>
+        <small>${escapeHtml(tool.type)}</small>
+      </span>
+    </button>
+  `;
+}
+
+function quickActionsShellHtml() {
+  return `
+    <div class="mk-gm-overview-shortcuts" data-mk-quick-actions-surface>
+      <div class="mk-gm-overview-shortcuts-head">
+        <div>
+          <strong>Quick Actions</strong>
+          <span>Choose which generators and encounter actions stay visible in GM Screen Settings.</span>
+        </div>
+        <i class="fas fa-bolt"></i>
+      </div>
+      <div class="mk-gm-quick-action-list" data-mk-quick-action-list></div>
+    </div>
+  `;
+}
+
 function overviewShellHtml() {
   return `
     <div class="mk-gm-overview-shortcuts" data-mk-overview-shortcuts>
       <div class="mk-gm-overview-shortcuts-head">
         <div>
-          <strong>Pinned Documents &amp; Actions</strong>
-          <span>Drop Foundry documents or Settings actions here to keep quick access buttons.</span>
+          <strong>Pinned Documents</strong>
+          <span>Drop Foundry documents here to keep them close at the table.</span>
         </div>
         <i class="fas fa-thumbtack"></i>
       </div>
@@ -242,13 +378,13 @@ async function renderOverviewLinks(surface, uuids = getOverviewLinkUuids()) {
   const list = surface?.querySelector?.("[data-mk-overview-link-list]");
   if (!list) return [];
 
-  const normalized = normalizeOverviewLinkUuids(uuids);
+  const normalized = pinnedDocumentUuids(uuids);
   if (!normalized.length) {
     list.innerHTML = `
       <div class="mk-gm-overview-drop-empty">
         <i class="fas fa-arrow-down"></i>
-        <strong>Drop documents or Settings actions here</strong>
-        <span>Drag from a Foundry document source or the GM Screen Settings Home tab.</span>
+        <strong>Drop documents here</strong>
+        <span>Drag from a Foundry document source to pin it here.</span>
       </div>
     `;
     return [];
@@ -260,6 +396,23 @@ async function renderOverviewLinks(surface, uuids = getOverviewLinkUuids()) {
   })));
   list.innerHTML = entries.map(overviewLinkHtml).join("");
   return entries;
+}
+
+function renderQuickActions(surface, user = globalThis.game?.user) {
+  const list = surface?.querySelector?.("[data-mk-quick-action-list]");
+  if (!list) return [];
+  const enabled = new Set(getQuickActionIds(user));
+  const tools = OVERVIEW_TOOL_DEFINITIONS.filter(tool => enabled.has(tool.id));
+  list.innerHTML = tools.length
+    ? tools.map(quickActionHtml).join("")
+    : `
+        <div class="mk-gm-quick-action-empty">
+          <i class="fas fa-eye-slash" aria-hidden="true"></i>
+          <strong>No Quick Actions enabled</strong>
+          <span>Enable actions from GM Screen Settings.</span>
+        </div>
+      `;
+  return [...tools];
 }
 
 function currentScene() {
@@ -274,11 +427,29 @@ async function executeOverviewTool(tool) {
     const context = getSceneEnvironmentContext(scene);
     const application = globalThis.game?.modules?.get?.(MODULE_ID)?.api?.gmScreen?.application;
     const zoneId = String(application?.encounterZoneId ?? "");
-    return rollEncounterZone(context?.terrain ?? "", scene, { zoneId });
+    return promptForEncounterZone(context?.terrain ?? "", scene, {
+      zoneId,
+      dangerLevel: context?.dangerLevel,
+    });
   }
 
+  if (tool.action === "open-settings") {
+    const settings = globalThis.game?.modules?.get?.(MODULE_ID)?.api?.gmScreen?.settings;
+    if (typeof settings?.open !== "function") {
+      globalThis.ui?.notifications?.warn?.("GM Screen Settings are unavailable.");
+      return null;
+    }
+    return settings.open({ settingsTab: tool.settingsTab });
+  }
+
+  if (tool.action === "generate-trap") return promptForEncounterGenerator("trap");
+  if (tool.action === "generate-hazard") return promptForEncounterGenerator("hazard");
   if (tool.action === "generate-npc") return createSourceDrivenNpc();
+  if (tool.action === "generate-monster") return createSourceDrivenMonster();
+  if (tool.action === "generate-magic-item") return createSourceDrivenMagicItem();
   if (tool.action === "generate-tavern") return createSourceDrivenTavern();
+  if (tool.action === "generate-shop") return createSourceDrivenShop();
+  if (tool.action === "create-location") return createExplorationLocation();
   return null;
 }
 
@@ -324,6 +495,11 @@ async function addOverviewLink(uuid, surface, user = globalThis.game?.user) {
   if (!normalizedUuid) return getOverviewLinkUuids(user);
 
   const tool = overviewToolForUuid(normalizedUuid);
+  if (tool) {
+    globalThis.ui?.notifications?.info?.(`${tool.label} is already available in Quick Actions.`);
+    await renderOverviewLinks(surface, getOverviewLinkUuids(user));
+    return getOverviewLinkUuids(user);
+  }
   const document = tool ? null : await resolveUuid(normalizedUuid);
   if (!document && !tool) {
     globalThis.ui?.notifications?.warn?.("The dropped data does not resolve to a Foundry document.");
@@ -370,7 +546,7 @@ function bindOverviewLinks(surface, user = globalThis.game?.user) {
     surface.classList?.remove?.("is-dragover");
     const uuid = dragDataUuid(dragEventData(event));
     if (!uuid) {
-      globalThis.ui?.notifications?.warn?.("Drop a Foundry document with a UUID to pin it on Overview.");
+      globalThis.ui?.notifications?.warn?.("Drop a Foundry document with a UUID to pin it here.");
       return;
     }
     void addOverviewLink(uuid, surface, user);
@@ -396,18 +572,37 @@ function bindOverviewLinks(surface, user = globalThis.game?.user) {
   return true;
 }
 
+function bindQuickActions(surface) {
+  if (!surface) return false;
+
+  surface.addEventListener?.("click", event => {
+    const button = event.target?.closest?.("[data-mk-quick-action]");
+    if (!button) return;
+    event.preventDefault();
+    event.stopPropagation();
+    void openOverviewDocument(button.dataset.mkQuickAction);
+  });
+  return true;
+}
+
 async function decorateOverviewLinks(application, element) {
   if (!gmScreenApplication(application) || !globalThis.game?.user?.isGM) return false;
   const root = rootElement(element);
-  const overview = root?.querySelector?.('[data-workspace-panel="overview"]');
-  if (!overview) return false;
+  const quickActions = root?.querySelector?.("[data-mk-gm-quick-actions]");
+  const pinnedDocuments = root?.querySelector?.("[data-mk-gm-pinned-documents]");
+  if (!quickActions || !pinnedDocuments) return false;
 
-  overview.innerHTML = overviewShellHtml();
-  const surface = overview.querySelector("[data-mk-overview-shortcuts]");
-  if (!surface) return false;
+  quickActions.innerHTML = quickActionsShellHtml();
+  const quickSurface = quickActions.querySelector("[data-mk-quick-actions-surface]");
+  if (!quickSurface) return false;
+  renderQuickActions(quickSurface);
+  bindQuickActions(quickSurface);
 
-  await renderOverviewLinks(surface, getOverviewLinkUuids());
-  bindOverviewLinks(surface);
+  pinnedDocuments.innerHTML = overviewShellHtml();
+  const pinnedSurface = pinnedDocuments.querySelector("[data-mk-overview-shortcuts]");
+  if (!pinnedSurface) return false;
+  await renderOverviewLinks(pinnedSurface, getOverviewLinkUuids());
+  bindOverviewLinks(pinnedSurface);
   return true;
 }
 
@@ -417,6 +612,14 @@ function registerOverviewLinks() {
   };
   globalThis.Hooks?.on?.("renderApplicationV2", decorateRenderedOverview);
   globalThis.Hooks?.on?.("renderApplication", decorateRenderedOverview);
+  globalThis.Hooks?.on?.(PINNED_DOCUMENTS_REFRESH_HOOK, () => {
+    const surface = globalThis.document?.querySelector?.("[data-mk-gm-pinned-documents] [data-mk-overview-shortcuts]");
+    if (surface) void renderOverviewLinks(surface, getOverviewLinkUuids());
+  });
+  globalThis.Hooks?.on?.(QUICK_ACTIONS_REFRESH_HOOK, () => {
+    const surface = globalThis.document?.querySelector?.("[data-mk-gm-quick-actions] [data-mk-quick-actions-surface]");
+    if (surface) renderQuickActions(surface);
+  });
 }
 
 registerOverviewLinks();
@@ -424,6 +627,8 @@ registerOverviewLinks();
 export {
   MODULE_ID,
   OVERVIEW_LINKS_FLAG,
+  QUICK_ACTIONS_FLAG,
+  QUICK_ACTIONS_REFRESH_HOOK,
   MAX_OVERVIEW_LINKS,
   OVERVIEW_TOOL_PREFIX,
   OVERVIEW_TOOL_DEFINITIONS,
@@ -432,10 +637,16 @@ export {
   normalizeOverviewLinkUuids,
   overviewToolUuid,
   overviewToolForUuid,
+  pinnedDocumentUuids,
   currentScene,
   executeOverviewTool,
   getOverviewLinkUuids,
+  getQuickActionIds,
+  isQuickActionEnabled,
   setOverviewLinkUuids,
+  setQuickActionIds,
+  setQuickActionEnabled,
+  normalizeQuickActionIds,
   dragEventData,
   dragDataUuid,
   resolveUuid,
@@ -443,12 +654,16 @@ export {
   documentIcon,
   documentImage,
   overviewLinkHtml,
+  quickActionHtml,
+  quickActionsShellHtml,
   overviewShellHtml,
   renderOverviewLinks,
+  renderQuickActions,
   openOverviewDocument,
   addOverviewLink,
   removeOverviewLink,
   bindOverviewLinks,
+  bindQuickActions,
   decorateOverviewLinks,
   registerOverviewLinks,
 };

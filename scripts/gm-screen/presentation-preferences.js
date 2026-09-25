@@ -2,11 +2,6 @@ const MODULE_ID = "mk-shadowdark";
 const SETTING_KEY = "gmScreenPresentationPreferences";
 const WORKSPACES = Object.freeze([
   "overview",
-  "exploration",
-  "combat",
-  "downtime",
-  "tables",
-  "session-log",
 ]);
 const DEFAULT_PREFERENCES = Object.freeze({
   groupActorUuid: "",
@@ -15,9 +10,8 @@ const DEFAULT_PREFERENCES = Object.freeze({
 });
 
 function normalizeWorkspace(value) {
-  const rawWorkspace = String(value ?? "overview").trim().toLowerCase();
-  const workspace = rawWorkspace === "resting" ? "downtime" : rawWorkspace;
-  return WORKSPACES.includes(workspace) ? workspace : "overview";
+  void value;
+  return "overview";
 }
 
 function normalizePreferences(value) {

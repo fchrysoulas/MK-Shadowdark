@@ -7,7 +7,7 @@ const core = fs.readFileSync(new URL("../styles/gm-screen.css", import.meta.url)
 const template = fs.readFileSync(new URL("../templates/gm-screen.hbs", import.meta.url), "utf8");
 
 test("Active Party rail is compacted without reintroducing hide/collapse controls", () => {
-  assert.match(refactor, /\.mk-gm-screen-layout\s*\{[\s\S]*grid-template-columns: 225px minmax\(0, 1fr\)/);
+  assert.match(refactor, /\.mk-gm-screen-layout\s*\{[\s\S]*grid-template-columns: 175px 175px minmax\(230px, 1fr\) 300px/);
   assert.match(refactor, /\.mk-gm-party-member\s*\{[\s\S]*grid-template-columns: 40px minmax\(0, 1fr\)/);
   assert.match(refactor, /\.mk-gm-member-open\s*\{[\s\S]*width: 40px !important;[\s\S]*height: 40px/);
   assert.doesNotMatch(template, /Hide Active Party|Show Active Party|togglePartyRail/);
@@ -23,5 +23,17 @@ test("compact rail preserves critical character information in the template", ()
   assert.match(template, /focus\.total/);
   assert.match(template, /light\.total/);
   assert.match(template, /effectCount/);
-  assert.match(template, /data-action="inspectMember"/);
+  assert.doesNotMatch(template, /data-action="inspectMember"/);
+  assert.doesNotMatch(template, /Inspect GM status/);
+
+  const statsStart = template.indexOf('<div class="mk-gm-member-stats">');
+  const flagsStart = template.indexOf('<div class="mk-gm-member-flags">', statsStart);
+  assert.ok(statsStart >= 0 && flagsStart > statsStart);
+  const stats = template.slice(statsStart, flagsStart);
+  assert.match(stats, /wounds\.total[\s\S]*light\.total/);
+  assert.doesNotMatch(template.slice(flagsStart), /wounds\.total|light\.total/);
+});
+
+test("Pinned Documents supports a two-column layout", () => {
+  assert.match(refactor, /\.mk-gm-pinned-documents-zone \.mk-gm-overview-link-list\s*\{[\s\S]*grid-template-columns: repeat\(2, minmax\(0, 1fr\)\)/);
 });

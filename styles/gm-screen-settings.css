@@ -24,6 +24,24 @@
   min-height: 0;
   background: var(--mk-gm-bg);
   color: var(--mk-gm-text);
+  font-family: var(--font-primary, "Signika", "Segoe UI", sans-serif);
+}
+
+.mk-gm-settings h1,
+.mk-gm-settings h2,
+.mk-gm-settings h3,
+.mk-gm-settings h4,
+.mk-gm-settings p,
+.mk-gm-settings span,
+.mk-gm-settings strong,
+.mk-gm-settings small,
+.mk-gm-settings label,
+.mk-gm-settings button,
+.mk-gm-settings input,
+.mk-gm-settings select,
+.mk-gm-settings textarea,
+.mk-gm-settings option {
+  font-family: inherit;
 }
 
 .mk-gm-settings button,
@@ -221,44 +239,71 @@
   line-height: 1.55;
 }
 
-.mk-gm-settings-overview-tools {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 7px;
+.mk-gm-settings-transfer {
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
 }
 
-.mk-gm-settings-overview-tools button {
+.mk-gm-settings-transfer-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 6px;
+}
+
+.mk-gm-settings-transfer-actions button {
+  min-height: 30px;
+  padding: 5px 9px;
+  font-size: 11px;
+  font-weight: 800;
+}
+
+.mk-gm-settings-quick-action-control {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+}
+
+.mk-gm-settings-quick-action-toggle {
   display: flex;
   align-items: center;
   gap: 8px;
   min-height: 36px;
   padding: 7px 9px;
-  border-style: dashed;
+  border: 1px solid var(--mk-gm-border);
+  border-radius: 4px;
+  background: rgba(255, 255, 255, 0.035);
   color: var(--mk-gm-text);
-  cursor: grab;
-  text-align: left;
+  cursor: pointer;
 }
 
-.mk-gm-settings-overview-tools button:active {
-  cursor: grabbing;
+.mk-gm-settings-quick-action-toggle:hover {
+  border-color: rgba(255, 255, 255, 0.3);
+  background: rgba(255, 255, 255, 0.08);
 }
 
-.mk-gm-settings-overview-tools button > i:first-child {
-  width: 16px;
-  color: #cbbb80;
-  text-align: center;
+.mk-gm-settings-quick-action-toggle input {
+  flex: 0 0 auto;
+  width: 15px;
+  height: 15px;
+  margin: 0;
+  accent-color: #c33c54;
 }
 
-.mk-gm-settings-overview-tools button > span {
+.mk-gm-settings-quick-action-toggle span {
+  display: grid;
+  gap: 2px;
   min-width: 0;
-  flex: 1;
+}
+
+.mk-gm-settings-quick-action-toggle strong {
   font-size: 11px;
   font-weight: 700;
 }
 
-.mk-gm-settings-overview-tools button > i:last-child {
+.mk-gm-settings-quick-action-toggle small {
   color: var(--mk-gm-muted);
-  font-size: 11px;
+  font-size: 9px;
 }
 
 .mk-gm-settings-card-accent {
@@ -266,15 +311,6 @@
   align-items: center;
   border-color: rgba(165, 117, 62, 0.52);
   background: rgba(165, 117, 62, 0.08);
-}
-
-.mk-gm-settings-card-accent button {
-  min-height: 31px;
-  padding: 5px 10px;
-}
-
-.mk-gm-settings-card-accent button i {
-  color: #cbbb80;
 }
 
 .mk-gm-settings-compositions {
@@ -320,8 +356,20 @@
     grid-template-columns: 1fr;
   }
 
-  .mk-gm-settings-overview-tools {
+  .mk-gm-settings-transfer {
     grid-template-columns: 1fr;
+  }
+
+  .mk-gm-settings-transfer-actions {
+    justify-content: flex-start;
+  }
+
+  .mk-gm-settings-quick-action-control {
+    justify-content: stretch;
+  }
+
+  .mk-gm-settings-quick-action-toggle {
+    width: 100%;
   }
 }
 

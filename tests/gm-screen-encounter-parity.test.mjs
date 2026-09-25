@@ -42,7 +42,7 @@ test("GM Screen encounter actions resolve the exact rendered source message", ()
   assert.match(controls, /context\?\.latestEncounter\?\.messageId/);
 });
 
-test("Session Log inspector exposes canonical encounter fields and actions without Profile", () => {
+test("Retained encounter inspector exposes canonical fields and actions without a Session Log tab", () => {
   for (const field of ["number", "encounter", "distance", "activity", "reaction", "treasure"]) {
     assert.match(history, new RegExp(`fieldRow\\([^\\n]*["']${field}["']`));
   }
@@ -57,7 +57,7 @@ test("Session Log inspector exposes canonical encounter fields and actions witho
   assert.match(history, /data-mk-encounter-action="reveal"/);
   assert.match(history, /data-mk-encounter-action="reroll-all"/);
   assert.match(history, /data-mk-encounter-action="stage"/);
-  assert.match(template, /data-workspace-panel="session-log"/);
+  assert.doesNotMatch(template, /Session Log|data-workspace-panel="session-log"/);
   assert.doesNotMatch(template, /data-workspace-panel="encounter"/);
 });
 

@@ -8,7 +8,6 @@ import {
   deathTimerSummary,
   focusSummary,
   nativeDeadState,
-  renderGroupMemberStatus,
   woundsSummary,
 } from "../scripts/group-sheet/member-status.js";
 
@@ -121,7 +120,6 @@ test("Detailed Wounds summary counts only affected canonical locations", () => {
     { locationId: "leftArm", level: "destroyed", damage: 8 },
   ]);
 });
-
 test("Detailed Wounds summary recognizes canonical status/result records and ignores scars", () => {
   const actor = makeActor({
     flags: {
@@ -351,23 +349,6 @@ test("status extraction is read-only and creates no Group-side duplicate state",
     assert.equal(status.actorUuid, actor.uuid);
     assert.deepEqual(actor.flags, before);
     assert.equal(Object.prototype.hasOwnProperty.call(status, "groupState"), false);
-  } finally {
-    runtime.restore();
-  }
-});
-
-test("dialog rendering escapes member and feature names", () => {
-  const runtime = installRuntime();
-  const actor = makeActor({
-    name: '<Hero & "GM">',
-    effects: [{ id: "fx", name: "<script>alert(1)</script>", statuses: new Set() }],
-  });
-
-  try {
-    const html = renderGroupMemberStatus(buildGroupMemberStatus(actor));
-    assert.equal(html.includes('<script>alert(1)</script>'), false);
-    assert.match(html, /&lt;script&gt;alert\(1\)&lt;\/script&gt;/);
-    assert.match(html, /&lt;Hero &amp; &quot;GM&quot;&gt;/);
   } finally {
     runtime.restore();
   }

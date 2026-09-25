@@ -8,7 +8,7 @@ import {
   sourceTableRowHtml,
 } from "../scripts/gm-screen/source-table-browser.js";
 
-function sourceTable({ formula = "1d12", formulaRaw = "d*", draw = async () => null } = {}) {
+function sourceTable({ formula = "d*", formulaRaw = formula, draw = async () => null } = {}) {
   const metadata = {
     key: "synthetic:dynamic",
     bookId: "shadowdark-core-v4.9",
@@ -40,7 +40,7 @@ function restoreGlobal(key, value) {
   else globalThis[key] = value;
 }
 
-test("contextual source formulas are identified by the source formula, not the native fallback", () => {
+test("contextual source formulas are identified from the collected table formula", () => {
   assert.equal(isContextualSourceFormula("d*"), true);
   assert.equal(isContextualSourceFormula("1d12"), false);
 
@@ -49,10 +49,10 @@ test("contextual source formulas are identified by the source formula, not the n
   assert.equal(entry.contextualFormula, true);
 });
 
-test("contextual source table rows show source d* and disable generic Roll", () => {
+test("contextual source table rows hide formula metadata and disable generic Roll", () => {
   const [entry] = collectSourceTableEntries([sourceTable()]);
   const html = sourceTableRowHtml(entry);
-  assert.match(html, /> d\*</);
+  assert.doesNotMatch(html, /mk-gm-source-table-meta|d\*/);
   assert.match(html, /Contextual/);
   assert.match(html, /disabled/);
   assert.doesNotMatch(html, /data-mk-source-table-action="roll"/);
@@ -89,7 +89,7 @@ test("ordinary imported source tables retain native chat rolling", async () => {
       },
     });
     const [entry] = collectSourceTableEntries([table]);
-    assert.equal(entry.formula, "d20");
+    assert.equal(entry.formula, "1d20");
     assert.equal(entry.contextualFormula, false);
     assert.match(sourceTableRowHtml(entry), /data-mk-source-table-action="roll"/);
     assert.deepEqual(await rollSourceTable(table), { synthetic: true });

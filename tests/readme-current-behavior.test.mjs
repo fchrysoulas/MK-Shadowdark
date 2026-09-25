@@ -28,7 +28,8 @@ test("README documents manual encounter rolls without a module encounter clock",
   assert.match(readme, /does not maintain a Group elapsed-time clock or a GM Screen turn counter/i);
   assert.match(readme, /no encounter cadence, due-check queue, or Group turn counter/i);
   assert.match(readme, /Manual Encounter Zone Rolls/);
-  assert.match(readme, /Danger Level, Starting Distance, Activity, Trap, and Hazard/i);
+  assert.match(readme, /Danger Level, Starting Distance, and Activity/i);
+  assert.match(readme, /Trap and Hazard generators have separate settings tabs/i);
   assert.doesNotMatch(readme, /Every encounter interval means/i);
 });
 
@@ -54,14 +55,14 @@ test("README documents standalone Time Passes dice without encounter automation"
   assert.doesNotMatch(readme, /Automatic Time Passes encounter resolution/i);
 });
 
-test("README documents manual encounter rolls, staging, morale, and GM status", async () => {
+test("README documents manual encounter rolls, staging, and morale", async () => {
   const readme = await readReadme();
 
   assert.match(readme, /# Manual Encounter Zone Rolls/);
   assert.doesNotMatch(readme, /# Group Exploration Encounters/);
   assert.doesNotMatch(readme, /# Group Resting/);
   assert.match(readme, /# Encounter Staging/);
-  assert.match(readme, /# GM Member Status/);
+  assert.doesNotMatch(readme, /# GM Member Status/);
   assert.match(readme, /# Morale Automation/);
   assert.match(readme, /Resume Rest.*Group Management/i);
   assert.match(readme, /Encounter card -> Options -> Preview -> Deploy/);
@@ -90,33 +91,30 @@ test("README documents auto-saving top context and source-only Tables", async ()
   assert.doesNotMatch(readme, /Procedure dropdown changes the canonical Group procedure/i);
   assert.match(readme, /save immediately when their dropdown changes/i);
   assert.match(readme, /There is no Save Context button/i);
-  assert.match(readme, /Tables workspace is reserved for browsing imported source RollTables/i);
+  assert.match(readme, /Tables.*existing world RollTables.*fixed search control/is);
   assert.doesNotMatch(readme, /Tables -> Encounter Setup/);
   assert.match(readme, /Marching order and exploration-role editing remain in Group Management/i);
   assert.match(readme, /production GM Screen no longer edits watches or starts\/resumes rests/i);
 });
 
-test("README documents Overview shortcuts without NPC macros", async () => {
+test("README documents Quick Actions and Pinned Documents without NPC macros", async () => {
   const readme = await readReadme();
 
-  assert.match(readme, /Overview.*per-GM shortcut dashboard/is);
+  assert.match(readme, /Quick Actions.*Encounters.*Trap Generator.*Hazard Generator.*NPC Generator.*Tavern Generator/is);
+  assert.match(readme, /Pinned Documents.*per-GM (?:drop area|workspace)/is);
   assert.doesNotMatch(readme, /macros\/create-npc\.js|npcGenerator/is);
   assert.match(readme, /Journal entries\/pages, Actors, Items, RollTables/i);
-  assert.match(readme, /Clicking a pinned shortcut opens the original document/i);
+  assert.match(readme, /Removing a pin deletes only that shortcut/i);
   assert.match(readme, /presentation-only state stored on the current GM user as document UUIDs/i);
   assert.match(readme, /does not force a full GM Screen rerender/i);
 });
 
-test("README documents Downtime and Session Log responsibilities", async () => {
+test("README documents the permanent four-zone screen without Settlement or Session Log tabs", async () => {
   const readme = await readReadme();
 
-  assert.match(readme, /Downtime.*Create Tavern.*Create Shop.*Create NPC.*Create Location/is);
-  assert.match(readme, /Resting\/Camp status and controls are intentionally absent/i);
-  assert.doesNotMatch(readme, /\*\*Tools\*\*|manual generator|Create Journal/i);
-  assert.match(readme, /Starting date and time/i);
-  assert.match(readme, /Start Session/);
-  assert.doesNotMatch(readme, /Reset Timer/);
-  assert.match(readme, /does not.*rewrite the world's calendar\/time/is);
+  assert.match(readme, /four permanent main-screen zones:.*Active Party.*Quick Actions.*Pinned Documents.*Tables/is);
+  assert.match(readme, /Shop Generator.*Create Location/is);
+  assert.doesNotMatch(readme, /Available workspaces, in order|^- \*\*Downtime\*\*|^- \*\*Session Log\*\*/m);
 });
 
 test("README does not require the retired GM Screen Mock", async () => {

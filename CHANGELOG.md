@@ -6,12 +6,47 @@
 - Improved Focus Tracker, Auto Damage, Death Timer, Corpse Token, Character Sheet Tweaks, Summary Bar, Targeting Assistant, and Detailed Wounds presentation and reliability.
 - Removed the Survival Wound Profile feature and the standalone Encounter Engine surface.
 - Added the production GM Screen with a Scene-owned Encounter Zone editor, manual Roll Encounter workflow, Danger Level and supporting RollTable slots, GM-only Journal reports, and optional roll debug details.
+- Split Trap and Hazard configuration into separate GM Screen generator tabs with three Scene-owned RollTable assignments each; normal Encounter rolls no longer include Trap or Hazard tables.
+- Made GM Screen Settings Home feature cards data-driven with consistent typography and per-GM Quick Action visibility controls for every generator/settings feature, including Trap and Hazard.
+- Replaced the GM Screen Settlement and Session Log tabs with a permanent four-zone layout: Active Party, Quick Actions, Pinned Documents, and Tables.
+- Added an Encounters Quick Action preview dialog with Create, Reroll, and Cancel controls before the GM-only Journal Entry is created.
+- Automatically pinned Journals and NPC Actors created by GM Screen generators to the current GM's Pinned Documents zone.
+- Changed Trap and Hazard Quick Actions to resolve their assigned generator RollTables and preview Create, Reroll, and Cancel before creating their Journals instead of only opening Settings.
+- Replaced GM Screen Settings Home drag sources with per-GM Show in Quick Actions checkboxes that immediately control Quick Action visibility.
+- Encounter Zone groups now display collapsed by default in GM Screen Settings.
+- Removed the separate Group Management action and moved standalone Time Passes and Roll Encounter actions into the Scene Context row. Roll Encounter now derives its die from Danger (Unsafe 1d6, Risky 2d6, Deadly 3d6) while retaining the legacy grid fallback for other values.
+- Matched the Scene Context Time Passes and Roll Encounter controls to the full-height accented button treatment used by the GM Screen strip.
+- Added a Shop Generator Settings tab with five Scene-owned linked RollTable assignments for Poor, Standard, and Wealthy shop types, Shop Name/Known For, and Interesting Customer results.
+- Split the linked Shop Generator name and Known For assignments into separate First Part, Second Part, and Known For RollTables.
+- Shop quality is now rolled from a linked Quality RollTable instead of selected; legacy imported tables use a 1d3 quality roll.
+- Rearranged Shop Generator assignments into a compact Title, Description, and Assigned RollTable grid, with a reusable template for other generators.
+- Applied the compact Title, Description, and Assigned RollTable template to Trap, Hazard, Tavern, and Location Generator assignments.
+- Applied the same compact assignment layout to NPC Name Composition and NPC Traits, with two Possible Syllable rows and three NPC Feature rows.
+- Added a Location Generator Settings tab with Scene-owned Descriptor, Location, and Feature RollTable assignments; Create Location now resolves linked tables before its Create/Reroll/Cancel preview.
+- Added a Monster Generator Settings tab and Quick Action with Scene-owned Combat, Quality, Strength, Weakness, and three Mutation RollTable assignments; generated monsters are previewed, created as native Shadowdark NPC Actors, and pinned like the other GM Screen generators. Their AC uses the active party's average level + 10, Combat supplies attack bonus and level, and each NPC receives a rolled 1d4 attack count with 1d8 damage.
+- Added a Magic Item Generator Settings tab and Quick Action with Scene-owned Name, Bonus, Benefit, Curse, and Personality RollTable assignments; generated results are previewed, created as native Shadowdark Basic Items, and pinned to the current GM's Pinned Documents.
+- Removed the legacy Location source-table import prompt and blank-journal fallback; Create Location now requires all three linked Location Generator RollTables.
+- Removed the Combat/Round tracker from the GM Screen header.
+- Made the right-side Tables zone collapsible so the remaining GM Screen zones can use the freed space.
+- Added debounced GM Screen Active Party updates for member hit points and active torch/light changes.
+- Removed the GM Status inspect buttons, dialog, and API; Active Party keeps only its compact inline indicators.
+- Shortened the Active Party heading to Party and narrowed the party rail further.
+- Removed the Party heading and member counter so the party rail header contains only the Group dropdown.
+- Moved wound and active-torch counts into the compact HP/AC stats row.
+- Fixed Party and Quick Actions to equal-width columns; only Pinned Documents grows with available space.
+- Changed Pinned Documents to use two columns when the flexible zone has room.
+- Set GM context action buttons to a 40px minimum height with 5px margins instead of forcing full-height stretch.
+- Moved the Scene Context dropdowns and Time Passes/Roll Encounter controls into the GM Screen header and darkened the header background.
+- Matched the Active Party, Quick Actions, Pinned Documents, and Tables header heights while keeping the party selector compact.
+- Moved active Group selection into the Active Party zone as a dropdown listing every available Group, and removed the Group buttons from the GM Screen header.
+- Removed displayed dice-formula metadata from GM Screen Tables rows while preserving table search, rolling, and native sheet actions.
 - Added GM Screen Session Log tools and source-table browsing improvements.
 - Added editable named Encounter Zone groups with multiple collapsible Scene-owned grids and group-specific Roll Zone actions.
 - Removed Group elapsed-time/turn tracking and automatic exploration/rest encounter checks; encounter rolls are now explicit GM actions with no pending check queue.
 - Removed the GM Screen Procedure control and replaced it with an Encounter Zone selector plus a separate final Roll Encounter header control.
 - Enabled Settlement creation for the **NPC Generator** and source-driven Point-of-Interest Location Journals; the generator uses the linked Scene RollTables configured in Compositions.
-- Added Scene-owned NPC name and trait compositions with multiple Possible Syllables and NPC Feature tables, a configurable two-syllable chance, an optional NPC Identifier table rolled as the second name part, and linked Ancestry, Age, Alignment, Wealth, and Occupation tables.
+- Added Scene-owned NPC name and trait compositions with multiple Possible Syllables and NPC Feature tables, configurable second- and third-syllable chances, an optional NPC Identifier table rolled as the second name part, and linked Ancestry, Age, Alignment, Wealth, and Occupation tables.
+- Replaced the NPC Generator's single Two-syllable chance with independent 33% defaults for adding a second and a third syllable.
 - NPC generation now uses only the linked Scene RollTables; the imported Core NPC table fallback and import/update prompt have been removed. Missing linked tables leave their profile entries blank, and only the NPC name is required.
 - NPC generation now rolls Strength, Dexterity, Constitution, Intelligence, Wisdom, and Charisma in order using 3d6, records each roll and Shadowdark modifier in the NPC description, and writes the calculated native modifiers to the NPC sheet.
 - Simplified generated NPC ability display to show each final score with its modifier in parentheses.
@@ -20,6 +55,7 @@
 - RollTable browser entries now retain Foundry folder paths as groups and display each table's document icon.
 - RollTable folder groups in the Tables tab are independently collapsible and start collapsed.
 - Added GM Screen configuration Import and Export controls for Scene-owned Encounter Zones, supporting encounter tables, environment context, NPC Compositions, and Tavern Generator assignments.
+- Moved GM Screen configuration Import and Export controls from the live GM Screen header to GM Screen Settings Home.
 - GM Screen exports now use Foundry's native file-save workflow, matching MK-Compendiums.
 - Moved the GM Screen NPC Generator into a separate gear-button Settings window with left-side navigation.
 - Added draggable Encounters, NPC Generator, and Tavern Generator shortcuts to the end of their GM Screen Settings Home cards for pinning on Overview; removed the separate Open buttons.

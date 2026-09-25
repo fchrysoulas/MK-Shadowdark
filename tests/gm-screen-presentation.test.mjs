@@ -18,10 +18,11 @@ test("selected Group and workspace are not automatically persisted by GM Screen 
   assert.doesNotMatch(gmScreen, /gmScreenPresentationPreferences/);
 });
 
-test("GM Screen still keeps selected Group and workspace as in-memory application state", () => {
+test("GM Screen keeps selected Group while the four-zone layout removes workspace state", () => {
   assert.match(gmScreen, /this\.groupActorUuid = String\(options\.groupActorUuid/);
-  assert.match(gmScreen, /this\.workspace = normalizeWorkspace\(options\.workspace/);
-  assert.match(gmScreen, /actionWorkspace/);
   assert.match(gmScreen, /actionSelectGroup/);
+  assert.match(gmScreen, /actionCreateGroup/);
+  assert.doesNotMatch(gmScreen, /actionOpenGroup|openGroup:/);
+  assert.doesNotMatch(gmScreen, /this\.workspace|actionWorkspace|normalizeWorkspace/);
   assert.doesNotMatch(gmScreen, /partyRailCollapsed|Reset GM Screen Presentation|toggle-rail/);
 });

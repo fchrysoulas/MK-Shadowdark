@@ -100,7 +100,8 @@ function nameTables() {
       syllables: [syllables.uuid],
       suffix: suffix.uuid,
       identifier: identifier.uuid,
-      twoSyllableChance: 0,
+      secondSyllableChance: 0,
+      thirdSyllableChance: 0,
     },
   };
 }

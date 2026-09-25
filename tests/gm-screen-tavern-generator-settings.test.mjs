@@ -103,6 +103,8 @@ test("Tavern Generator settings render one drag target for each assigned RollTab
   ]);
 
   assert.equal((html.match(/data-mk-tavern-generator-slot=/g) ?? []).length, 10);
+  assert.equal((html.match(/mk-gm-rolltable-assignment-row/g) ?? []).length, 10);
+  assert.match(html, /mk-gm-rolltable-assignment-grid/);
   assert.match(html, /First Part Tables/);
   assert.match(html, /Second Part Tables/);
   assert.match(html, /Wealth Tables/);

@@ -1,0 +1,66 @@
+/* Reusable compact Title | Description | RollTable assignment template. */
+.mk-gm-rolltable-assignment-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 0;
+}
+
+.mk-gm-rolltable-assignment-row {
+  display: grid;
+  grid-template-columns: minmax(115px, .7fr) minmax(220px, 1.25fr) minmax(230px, 1.4fr);
+  align-items: center;
+  gap: 0 12px;
+  min-width: 0;
+  padding: 4px 0;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.mk-gm-rolltable-assignment-row:first-child {
+  padding-top: 0;
+}
+
+.mk-gm-rolltable-assignment-row:last-child {
+  padding-bottom: 0;
+  border-bottom: 0;
+}
+
+.mk-gm-rolltable-assignment-title {
+  grid-column: 1;
+  color: var(--mk-gm-text);
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.mk-gm-rolltable-assignment-description {
+  grid-column: 2;
+  min-height: 0;
+  color: var(--mk-gm-muted);
+  font-size: 10px;
+  line-height: 1.45;
+}
+
+.mk-gm-rolltable-assignment-table {
+  grid-column: 3;
+  min-width: 0;
+  min-height: 42px;
+  padding: 5px 8px;
+}
+
+@media (max-width: 720px) {
+  .mk-gm-rolltable-assignment-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .mk-gm-rolltable-assignment-row {
+    grid-template-columns: 1fr;
+    gap: 5px;
+  }
+
+  .mk-gm-rolltable-assignment-title,
+  .mk-gm-rolltable-assignment-description,
+  .mk-gm-rolltable-assignment-table {
+    grid-column: 1;
+  }
+}

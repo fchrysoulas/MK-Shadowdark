@@ -36,7 +36,7 @@ function hideLegacyProfileSetting() {
 
 function registerWorkspaceRefactor() {
   // This file is now compatibility-only. The GM Screen template itself owns the
-  // eight-workspace layout; no GM Screen, Group Sheet, or chat DOM is rewritten here.
+  // permanent four-zone layout; no GM Screen, Group Sheet, or chat DOM is rewritten here.
   globalThis.Hooks?.once?.("init", hideLegacyProfileSetting);
 
   globalThis.Hooks?.on?.("renderApplicationV2", (application, element) => {

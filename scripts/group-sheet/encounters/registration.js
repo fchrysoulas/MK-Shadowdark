@@ -1,6 +1,7 @@
 import { MODULE_ID } from "./constants.js";
 import {
   getSceneEncounterContext,
+  isGroupEncountersEnabled,
   log,
   setSceneEncounterContext,
 } from "./helpers.js";
@@ -54,13 +55,18 @@ function exposeApi() {
 // Keep legacy Group encounter chat-card behavior and the headless API available
 // for existing records and integrations. New encounter rolls are initiated
 // manually from the GM Screen Encounter Zone workspace.
-Hooks.on("renderChatMessage", bindEncounterCard);
+Hooks.on("renderChatMessage", (app, html) => {
+  if (isGroupEncountersEnabled()) bindEncounterCard(app, html);
+});
 
 Hooks.once("ready", () => {
   exposeApi();
-  log("Ready (Group encounter services).");
+  log(isGroupEncountersEnabled()
+    ? "Ready (Group encounter services)."
+    : "Ready (Group encounter services disabled).");
 });
 
 export {
+  isGroupEncountersEnabled,
   exposeApi,
 };

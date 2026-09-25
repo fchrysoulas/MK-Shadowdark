@@ -27,6 +27,14 @@ import {
     return value && value !== key ? value : fallback;
   }
 
+  function isTargetingAssistantEnabled() {
+    try {
+      return !!game.settings.get(MODULE_ID, "targetingAssistantEnabled");
+    } catch (_error) {
+      return true;
+    }
+  }
+
   function escapeHtml(value) {
     return String(value ?? "").replace(/[&<>"']/g, character => ({
       "&": "&amp;",
@@ -72,7 +80,8 @@ import {
   }
 
   function canAssist(config) {
-    return isAttackOrSpellRoll(config)
+    return isTargetingAssistantEnabled()
+      && isAttackOrSpellRoll(config)
       && Boolean(globalThis.canvas?.ready)
       && Boolean(game.user);
   }
@@ -172,6 +181,7 @@ import {
   }
 
   function install() {
+    if (!isTargetingAssistantEnabled()) return false;
     const prototype = globalThis.shadowdark?.apps?.RollDialogSD?.prototype;
     if (!prototype || typeof prototype._onRender !== "function" || typeof prototype._onSubmit !== "function") {
       console.warn(`${MODULE_ID} | ${SUBMODULE} could not find Shadowdark's roll dialog class.`);
@@ -236,6 +246,7 @@ import {
 
   Hooks.once("ready", () => {
     if (game.system?.id !== "shadowdark") return;
+    if (!isTargetingAssistantEnabled()) return;
     install();
   });
 })();

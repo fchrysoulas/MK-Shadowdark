@@ -67,11 +67,13 @@ import {
 import { getRestMode, reportRest, restActor } from "../libs/resting.js";
 import { clampNumber, escapeHtml, getDialogFieldValue, numberOrZero } from "./utils.js";
 import { getPrimaryActiveGm } from "./users.js";
+import { getSettingValue } from "./group-settings.js";
 
 const ActorSheetBase = globalThis.foundry?.appv1?.sheets?.ActorSheet;
 const TextEditorImplementation = globalThis.foundry?.applications?.ux?.TextEditor?.implementation;
 
 async function createGroupActor({ name = "New Group", folder = null } = {}) {
+  if (getSettingValue("enableGroupActors", true) === false) return null;
   if (!game.user.isGM) {
     ui.notifications.warn("Only the GM can create a MK-Shadowdark group.");
     return null;

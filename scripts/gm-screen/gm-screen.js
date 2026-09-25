@@ -11,11 +11,20 @@ let gmScreen = null;
 let activePartyStatusRenderTimer = null;
 
 function notifyGmOnly() {
+  if (!isGmScreenEnabled()) return;
   globalThis.ui?.notifications?.warn?.("The MK-Shadowdark GM Screen is available to GMs only.");
 }
 
+function isGmScreenEnabled() {
+  try {
+    return globalThis.game?.settings?.get?.(MODULE_ID, "gmScreenEnabled") !== false;
+  } catch (_error) {
+    return true;
+  }
+}
+
 function canUseGmScreen() {
-  return Boolean(globalThis.game?.user?.isGM);
+  return isGmScreenEnabled() && Boolean(globalThis.game?.user?.isGM);
 }
 
 function changesTouchPath(changes, path) {
@@ -64,7 +73,8 @@ function itemActor(item) {
 }
 
 function shouldRenderForActorUpdate(actor, changes, application = gmScreen) {
-  return isActivePartyActor(actor, application)
+  return isGmScreenEnabled()
+    && isActivePartyActor(actor, application)
     && changesTouchPath(changes, "system.attributes.hp");
 }
 
@@ -75,20 +85,23 @@ function shouldRenderForTokenUpdate(token, changes, application = gmScreen) {
     "system.attributes.hp",
   ].some(path => changesTouchPath(changes, path));
 
-  return touchesHp && isActivePartyActor(token?.actor, application);
+  return isGmScreenEnabled() && touchesHp && isActivePartyActor(token?.actor, application);
 }
 
 function shouldRenderForItemUpdate(item, changes, application = gmScreen) {
-  return isActivePartyActor(itemActor(item), application)
+  return isGmScreenEnabled()
+    && isActivePartyActor(itemActor(item), application)
     && changesTouchPath(changes, "system.light");
 }
 
 function shouldRenderForItemLifecycle(item, application = gmScreen) {
-  return isActivePartyActor(itemActor(item), application)
+  return isGmScreenEnabled()
+    && isActivePartyActor(itemActor(item), application)
     && isLightSourceItem(item);
 }
 
 function scheduleActivePartyStatusRender(application = gmScreen) {
+  if (!isGmScreenEnabled()) return false;
   if (!application?.rendered || typeof application.render !== "function") return false;
   if (activePartyStatusRenderTimer !== null) return true;
 
@@ -372,15 +385,17 @@ function exposeGmScreenApi() {
 }
 
 function registerGmScreen() {
-  registerSceneControl();
+  globalThis.Hooks?.once?.("init", () => {
+    if (isGmScreenEnabled()) registerSceneControl();
+  });
 
   globalThis.Hooks?.once?.("ready", () => {
     exposeGmScreenApi();
+    if (isGmScreenEnabled()) registerActivePartyStatusRefresh();
   });
 }
 
 registerGmScreen();
-registerActivePartyStatusRefresh();
 
 export {
   changesTouchPath,
@@ -399,6 +414,7 @@ export {
   CONTROL_TOOL_ID,
   MKGMscreen,
   canUseGmScreen,
+  isGmScreenEnabled,
   getGmScreen,
   openGmScreen,
   closeGmScreen,

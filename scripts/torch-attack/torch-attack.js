@@ -10,6 +10,14 @@ function getSheetRoot(html) {
   return null;
 }
 
+function isTorchAttackEnabled() {
+  try {
+    return !!game.settings.get(MODULE_ID, "torchAttackEnabled");
+  } catch (_error) {
+    return true;
+  }
+}
+
 function configuredTorchKeywords() {
   try {
     return game.settings.get(MODULE_ID, "groupSheetCampingTorchKeywords") || "torch,torches";
@@ -42,6 +50,7 @@ async function deleteTemporaryTorchWeapon(actor, weapon) {
 }
 
 async function rollTorchAttack(actor, item, { skipPrompt = false } = {}) {
+  if (!isTorchAttackEnabled()) return false;
   if (!item?.system?.equipped || item?.system?.stashed) {
     ui.notifications?.warn("MK-Shadowdark | Equip the torch before attacking with it.");
     return false;
@@ -78,6 +87,7 @@ async function rollTorchAttack(actor, item, { skipPrompt = false } = {}) {
 }
 
 function addTorchMeleeAttackEntry(root, actor, item) {
+  if (!isTorchAttackEnabled()) return;
   if (!item.system?.equipped || item.system?.stashed || !isTorchItem(item)) return;
 
   const meleeLabel = game.i18n.localize("SHADOWDARK.sheet.player.melee_attacks");
@@ -118,6 +128,7 @@ function addTorchMeleeAttackEntry(root, actor, item) {
 }
 
 function addLightSourceEquippedToggles(app, html) {
+  if (!isTorchAttackEnabled()) return;
   const root = getSheetRoot(html);
   const actor = app?.actor ?? app?.object;
   if (!root || !actor?.items) return;
@@ -175,6 +186,7 @@ function addLightSourceEquippedToggles(app, html) {
 }
 
 Hooks.on("preUpdateItem", (item, change) => {
+  if (!isTorchAttackEnabled()) return;
   const isBeingLit =
     change?.["system.light.active"] === true
     || change?.system?.light?.active === true;

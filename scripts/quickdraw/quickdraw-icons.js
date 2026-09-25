@@ -16,6 +16,14 @@ import { evaluateQuickdrawLimitDetails } from "./quickdraw-limit.js";
     }
   }
 
+  function isQuickdrawEnabled() {
+    try {
+      return !!game.settings.get(MODULE_ID, "quickdrawEnabled");
+    } catch (_error) {
+      return true;
+    }
+  }
+
   function dlog(...args) {
     if (!isDebugEnabled()) return;
     console.log(`${MODULE_ID} | ${SUBMODULE} |`, ...args);
@@ -147,6 +155,24 @@ import { evaluateQuickdrawLimitDetails } from "./quickdraw-limit.js";
     scopes.toggleClass("mk-highlight-equipped", isHighlightEnabled());
   }
 
+  function clearQuickdrawUi(html, rows) {
+    const lists = rows?.length
+      ? rows.closest("ol.SD-list.item-list, ul.SD-list.item-list")
+      : html.find("ol.SD-list.item-list, ul.SD-list.item-list");
+
+    lists.removeClass("mk-has-quickdraw-column");
+    html.find(".mk-quickdraw-toggle").remove();
+    html.find(".mk-has-quickdraw-toggle").removeClass("mk-has-quickdraw-toggle");
+    html.find(".mk-quickdraw-item, .mk-quickdraw-active").removeClass("mk-quickdraw-item mk-quickdraw-active");
+    html.find("[data-mk-quickdraw]").removeAttr("data-mk-quickdraw");
+    html.find(".mk-quickdraw-card").remove();
+
+    html
+      .add(html.find("form.shadowdark.sheet.player, .shadowdark.sheet.player"))
+      .add(html.closest(".window-app, .app"))
+      .removeClass("mk-highlight-equipped");
+  }
+
   /**
    * Update without re-rendering the sheet to avoid flicker.
    */
@@ -165,6 +191,7 @@ import { evaluateQuickdrawLimitDetails } from "./quickdraw-limit.js";
   }
 
   async function tryToggleQuickdraw(app, item) {
+    if (!isQuickdrawEnabled()) return false;
     const currentlyOn = isQuickdraw(item);
 
     if (currentlyOn) {
@@ -604,6 +631,11 @@ import { evaluateQuickdrawLimitDetails } from "./quickdraw-limit.js";
 
   function processSheet(app, html) {
     const rows = getInventoryRows(html);
+
+    if (!isQuickdrawEnabled()) {
+      clearQuickdrawUi(html, rows);
+      return;
+    }
 
     applyHighlightScope(html);
     refreshQuickdrawRowState(app, rows);

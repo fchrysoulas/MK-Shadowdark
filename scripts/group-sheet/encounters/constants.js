@@ -14,7 +14,7 @@ export const SCENE_FLAG = ENVIRONMENT_SCENE_FLAG;
 export const CARD_SELECTOR = ".mk-sd-encounter-card";
 
 export const SETTINGS = Object.freeze({
-  enabled: "encounterEngineEnabled",
+  enabled: "groupEncountersEnabled",
   defaultTable: ENVIRONMENT_SETTINGS.defaultTable,
   profiles: ENVIRONMENT_SETTINGS.profiles,
   whisper: "encounterEngineWhisperToGm",

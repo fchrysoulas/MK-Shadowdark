@@ -6,6 +6,7 @@ import {
   GROUP_SHEET_SOCKET_PLAYER_TRAVEL_ROLL,
   GROUP_SHEET_SOCKET_PROMPT_TRAVEL,
   GROUP_SHEET_SOCKET_UPDATE_TRAVEL,
+  GROUP_SHEET_ENABLED_SETTING,
   MODULE_ID,
   SHEET_ID,
   SUBMODULE,
@@ -36,6 +37,10 @@ const OBSOLETE_ACTOR_DIALOG_TYPES = new Set(["Base", "base"]);
 const LIGHT_SOURCE_MAP_PATH = "systems/shadowdark/assets/mappings/map-light-sources.json";
 const NO_LIGHT = Object.freeze({ dim: 0, bright: 0 });
 let actorCreateDialogPatched = false;
+
+function isGroupSheetEnabled() {
+  return getSettingValue(GROUP_SHEET_ENABLED_SETTING, true) !== false;
+}
 
 function escapeHtml(value) {
   return String(value ?? "").replace(/[&<>"']/g, character => ({
@@ -145,7 +150,7 @@ function getActorFolderOptions(selectedFolder) {
 
 function shouldOfferGroupActorType() {
   return game.user?.isGM &&
-    getSettingValue("enableGroupActors", true);
+    isGroupSheetEnabled();
 }
 
 function buildActorCreateDialogContent(data = {}) {
@@ -270,7 +275,7 @@ async function getGroupActiveLight(groupActor) {
 }
 
 async function syncGroupTokenLight(groupActor) {
-  if (!isPrimaryActiveGm() || !isGroupActor(groupActor) || !canvas?.scene) return;
+  if (!isGroupSheetEnabled() || !isPrimaryActiveGm() || !isGroupActor(groupActor) || !canvas?.scene) return;
 
   const activeLight = await getGroupActiveLight(groupActor);
   let lightData = NO_LIGHT;
@@ -289,7 +294,7 @@ async function syncGroupTokenLight(groupActor) {
 }
 
 async function syncGroupTokenLightsForActor(actor) {
-  if (!isPrimaryActiveGm() || !actor) return;
+  if (!isGroupSheetEnabled() || !isPrimaryActiveGm() || !actor) return;
 
   const groups = (game.actors ?? []).filter(groupActor => {
     if (!isGroupActor(groupActor)) return false;
@@ -302,7 +307,7 @@ async function syncGroupTokenLightsForActor(actor) {
 }
 
 async function handleTravelAssignmentSocketRequest(data) {
-  if (!isPrimaryActiveGm()) return;
+  if (!isGroupSheetEnabled() || !isPrimaryActiveGm()) return;
 
   const activityKind = getActivityKind(data?.activityKind);
   const activityKey = data?.activityKey;
@@ -327,7 +332,7 @@ async function handleTravelAssignmentSocketRequest(data) {
 }
 
 async function handleTravelPlayerRollSocketRequest(data) {
-  if (!isPrimaryActiveGm()) return;
+  if (!isGroupSheetEnabled() || !isPrimaryActiveGm()) return;
 
   const requestingUser = getGameUserById(data?.userId);
   const groupActor = await resolveActorFromUuid(data?.groupActorUuid);
@@ -338,6 +343,7 @@ async function handleTravelPlayerRollSocketRequest(data) {
 
 function registerGroupSheetSocket() {
   game.socket?.on(`module.${MODULE_ID}`, data => {
+    if (!isGroupSheetEnabled()) return;
     if (data?.feature !== GROUP_SHEET_SOCKET_FEATURE) return;
 
     if (data.action === GROUP_SHEET_SOCKET_ASSIGN_TRAVEL) {
@@ -424,6 +430,7 @@ async function ensureExistingGroupActorHpDefaults() {
 }
 
 async function onReadyGroupSheetMaintenance() {
+  if (!isGroupSheetEnabled()) return;
   await ensureExistingGroupActorHpDefaults();
 
   if (!isPrimaryActiveGm()) return;
@@ -440,6 +447,7 @@ async function onReadyGroupSheetMaintenance() {
 }
 
 function registerGroupSheet() {
+  if (!isGroupSheetEnabled()) return false;
   if (groupSheetRegistered) return;
   groupSheetRegistered = true;
   registerGroupSheetSocket();
@@ -495,6 +503,7 @@ function registerGroupSheet() {
   game.shadowdarkExtras ??= game.mkShadowdark;
 
   mkGroupLog("Registered group sheet.");
+  return true;
 }
 
 export { registerGroupSheet };

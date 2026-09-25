@@ -1,3 +1,5 @@
+import { getSettingValue } from "./group-settings.js";
+
 const MODULE_ID = "mk-shadowdark";
 const DASHBOARD_CLASS = "mk-group-command-dashboard";
 const COLLAPSED_CLASS = "is-party-sidebar-collapsed";
@@ -512,6 +514,7 @@ function applyDashboardLayout(app, html) {
 }
 
 function onRenderGroupSheet(app, html) {
+  if (getSettingValue("enableGroupActors", true) === false) return;
   closePartyContextMenu();
   applyDashboardLayout(app, html);
 }

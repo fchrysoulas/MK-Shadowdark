@@ -2,6 +2,7 @@ import { registerEnvironmentContextService } from "../libs/environment-context.j
 import { registerGroupAssignmentsService } from "./assignments.js";
 import { registerGroupSheet } from "./registration.js";
 import { registerGroupProcedureService } from "./procedure.js";
+import { getSettingValue } from "./group-settings.js";
 import "./encounters/registration.js";
 import "./dashboard-layout.js";
 
@@ -30,7 +31,14 @@ export {
 } from "./member-status.js";
 export { registerGroupSheet };
 
-Hooks.once("init", registerGroupSheet);
-registerGroupProcedureService();
+Hooks.once("init", () => {
+  if (getSettingValue("enableGroupActors", true) === false) return;
+
+  registerGroupSheet();
+  registerGroupProcedureService();
+  registerGroupAssignmentsService();
+});
+
+// Environment context is shared by Group Encounters and the GM Screen, so it
+// remains available even when the Group Sheet itself is disabled.
 registerEnvironmentContextService();
-registerGroupAssignmentsService();

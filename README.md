@@ -80,6 +80,8 @@ The old **MK-Shadowdark GM Screen Mock** prototype is not a dependency and is no
 - **Corpse Token Automation** — replaces dead NPC token art while preserving/restoring token state.
 - **Token Shadows** — configurable canvas shadows beneath tokens.
 
+The module's feature menus include enabled-by-default world-level master switches for the Character Dashboard, Journal Sheet availability, Quickdraw, GM Screen, Group Sheet, Group Encounters, Targeting Assistant, Targeted Spell DC, Spell Effects, Chat Reporting, Torch Attack, Source Tables, and Automated Animations compatibility. Disabling a feature stops its runtime controls while preserving its flags, imported tables, and other stored data. The Journal Sheet's availability switch is separate from its default-sheet switch; disabling the Character Dashboard also restores the native Item sheet. Targeting and spell-automation switches may require a reload after they change.
+
 ## Group Management
 
 - **Group Sheet** — members, active party, hirelings, mounts, shared inventory, Traveling, Camping, and party resources.
@@ -352,6 +354,8 @@ Foundry Combat and MK Morale remain authoritative outside the GM Screen. The GM 
 Time Passes restores the v1.6.0 standalone GM flow. In the GM Screen, choose **1d6**, **2d6**, or **3d6**, then press **Time Passes**. The synchronized splash/progress display appears for all clients and the selected dice are published as a public chat roll after the splash completes. If any selected d6 shows **1**, the original synchronized **ENCOUNTER!** skull splash is displayed.
 
 The result-of-1 behavior is a visual cue only. It does not schedule, resolve, stage, or create an encounter, and it never calls the legacy Encounter service. Time Passes has no connection to encounter timing. Group Time is fully separate and does not invoke Time Passes.
+
+The **Time Passes | Font Family** setting is a dropdown containing common Foundry/module fonts, generic CSS families, and font faces registered in the current browser session. Existing custom values are preserved as the current option when they are no longer discoverable.
 
 ---
 

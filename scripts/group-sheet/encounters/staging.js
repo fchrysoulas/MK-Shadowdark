@@ -2,6 +2,7 @@ import { MODULE_ID } from "./constants.js";
 import {
   deepClone,
   escapeHtml,
+  isGroupEncountersEnabled,
   readDialogForm,
   resolveUuid,
 } from "./helpers.js";
@@ -378,6 +379,7 @@ function clampTokenPosition(center, tokenWidthUnits, tokenHeightUnits, bounds) {
 async function buildEncounterStagingPreview(data, rawOptions = {}, {
   scene = globalThis.canvas?.scene,
 } = {}) {
+  if (!isGroupEncountersEnabled()) return null;
   if (!scene) throw new Error("An active Scene is required to preview encounter staging.");
 
   const options = normalizeStagingOptions(data, rawOptions);
@@ -479,6 +481,7 @@ async function deployEncounterStaging(data, rawOptions = {}, {
   sourceMessageId = "",
   user = globalThis.game?.user,
 } = {}) {
+  if (!isGroupEncountersEnabled()) return null;
   if (!user?.isGM) {
     globalThis.ui?.notifications?.warn?.("Only the GM can stage encounters.");
     return null;
@@ -773,6 +776,7 @@ async function openEncounterStagingDialog(data, {
   sourceMessageId = "",
   scene = globalThis.canvas?.scene,
 } = {}) {
+  if (!isGroupEncountersEnabled()) return null;
   if (!globalThis.game?.user?.isGM) return null;
   if (!scene) {
     globalThis.ui?.notifications?.warn?.("Activate a Scene before staging an encounter.");

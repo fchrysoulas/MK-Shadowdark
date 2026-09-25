@@ -20,6 +20,14 @@ import { selectHighestSpellDcCandidate } from "./targeted-spell-dc-logic.js";
     console.log(`${MODULE_ID} v${version} | ${SUBMODULE} |`, ...args);
   }
 
+  function isTargetedSpellDcEnabled() {
+    try {
+      return !!game.settings.get(MODULE_ID, "targetedSpellDcEnabled");
+    } catch (_error) {
+      return true;
+    }
+  }
+
   function collectionValues(collection) {
     if (!collection) return [];
     if (Array.isArray(collection)) return collection;
@@ -101,6 +109,7 @@ import { selectHighestSpellDcCandidate } from "./targeted-spell-dc-logic.js";
   }
 
   function applyTargetSpellDc(config) {
+    if (!isTargetedSpellDcEnabled()) return null;
     if (config?.type !== "spell" || !config.mainRoll) return null;
 
     config[ORIGINAL_HEADING] ??= String(config.heading ?? "Spellcasting Check").trim();
@@ -137,17 +146,24 @@ import { selectHighestSpellDcCandidate } from "./targeted-spell-dc-logic.js";
 
   Hooks.once("ready", () => {
     if (game.system?.id !== "shadowdark") return;
+    if (!isTargetedSpellDcEnabled()) return;
 
     // MK's Targeting Assistant calls this while the roll dialog is open and
     // again immediately before submit, so the visible heading and live config
     // follow target changes.
-    Hooks.on(TARGETS_CHANGED_HOOK, config => applyBeforeShadowdarkSpellRoll(config));
+    Hooks.on(TARGETS_CHANGED_HOOK, config => {
+      if (isTargetedSpellDcEnabled()) applyBeforeShadowdarkSpellRoll(config);
+    });
 
     // Shadowdark 4.0.6 public spell hooks run after its roll dialog closes and
     // immediately before rollFromConfig(). These are the authoritative final
     // application points, including skip-prompt/fast-forward spell casts.
-    Hooks.on("SD-Player-Spell", config => applyBeforeShadowdarkSpellRoll(config));
-    Hooks.on("SD-NPC-Spell-Cast", config => applyBeforeShadowdarkSpellRoll(config));
+    Hooks.on("SD-Player-Spell", config => {
+      if (isTargetedSpellDcEnabled()) applyBeforeShadowdarkSpellRoll(config);
+    });
+    Hooks.on("SD-NPC-Spell-Cast", config => {
+      if (isTargetedSpellDcEnabled()) applyBeforeShadowdarkSpellRoll(config);
+    });
 
     log("Installed target-aware spell DC support through public spell hooks");
   });

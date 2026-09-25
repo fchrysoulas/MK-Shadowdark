@@ -10,6 +10,7 @@ import {
 import {
   buildTableResultData,
   importParsedSources,
+  openSourceTableImporter,
 } from "../scripts/source-tables/source-table-importer.js";
 
 test("d100 treats 00 as 100", () => {
@@ -242,4 +243,36 @@ test("reimport updates the same RollTable ID instead of duplicating it", async (
   assert.equal(second.documents[0].id, originalId);
   assert.equal(second.documents[0].results[0].text, "Updated value");
   assert.equal(runtime.game.folders.length, 2);
+});
+
+test("disabled Source Tables preserve existing documents and skip import work", async () => {
+  const runtime = mockRuntime();
+  runtime.game.settings = { get: () => false };
+
+  const report = await importParsedSources([{ book: { id: "book" }, tables: [{ importable: true }] }], runtime);
+
+  assert.equal(report.disabled, true);
+  assert.deepEqual(report.documents, []);
+  assert.equal(runtime.game.folders.length, 0);
+  assert.equal(runtime.game.tables.length, 0);
+});
+
+test("disabled Source Tables do not open the importer UI", async () => {
+  const previousGame = globalThis.game;
+  const previousUi = globalThis.ui;
+  let warnings = 0;
+
+  globalThis.game = {
+    user: { isGM: true },
+    settings: { get: () => false },
+  };
+  globalThis.ui = { notifications: { warn: () => { warnings += 1; } } };
+
+  try {
+    assert.equal(await openSourceTableImporter(), null);
+    assert.equal(warnings, 1);
+  } finally {
+    globalThis.game = previousGame;
+    globalThis.ui = previousUi;
+  }
 });

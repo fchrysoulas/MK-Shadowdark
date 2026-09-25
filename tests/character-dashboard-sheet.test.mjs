@@ -28,7 +28,13 @@ test("dashboard registers an optional native Player sheet without standard-sheet
   globalThis.game = {
     system: { id: "shadowdark", sheets: { PlayerSheetSD: NativeSheet } }, user: { isGM: true },
     i18n: { localize: key => key }, modules: new Map(),
-    settings: { get: (_module, key) => key === "characterDashboardTheme" ? "osr" : false }
+    settings: {
+      get: (_module, key) => {
+        if (key === "characterDashboardTheme") return "osr";
+        if (key === "usePulpMode") return false;
+        return true;
+      }
+    }
   };
   globalThis.foundry = {
     utils: { mergeObject: (base, options) => ({ ...base, ...options }) },

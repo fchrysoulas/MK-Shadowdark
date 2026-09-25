@@ -14,6 +14,7 @@ import {
   const HAND_SIDE_FLAG = "handSide";
   const QUICK_SLOT_FLAG = "quickSlots";
   const boundDashboardRoots = new WeakSet();
+  let dashboardSheetRegistered = false;
   let CharacterDashboardSheet;
 
   const SLOT_DEFINITIONS = Object.freeze([
@@ -47,6 +48,58 @@ import {
     "wand",
     "weapon"
   ]);
+
+  function characterDashboardEnabled() {
+    try {
+      return globalThis.game?.settings?.get?.(MODULE_ID, "characterDashboardEnabled") !== false;
+    } catch (_error) {
+      return true;
+    }
+  }
+
+  function registerCharacterDashboardSheet() {
+    if (dashboardSheetRegistered || !CharacterDashboardSheet) return false;
+    const actors = globalThis.foundry?.documents?.collections?.Actors;
+    if (typeof actors?.registerSheet !== "function") return false;
+
+    actors.registerSheet(MODULE_ID, CharacterDashboardSheet, {
+      types: ["Player"], makeDefault: false,
+      label: game.i18n.localize("MK_SHADOWDARK.dashboard.sheetName")
+    });
+    dashboardSheetRegistered = true;
+    return true;
+  }
+
+  function unregisterCharacterDashboardSheet() {
+    if (!dashboardSheetRegistered || !CharacterDashboardSheet) return false;
+    const actors = globalThis.foundry?.documents?.collections?.Actors;
+    if (typeof actors?.unregisterSheet !== "function") {
+      console.warn(MODULE_ID + " | Foundry cannot unregister the character dashboard sheet at runtime.");
+      return false;
+    }
+
+    actors.unregisterSheet(MODULE_ID, CharacterDashboardSheet);
+    dashboardSheetRegistered = false;
+    return true;
+  }
+
+  function closeOpenCharacterDashboards() {
+    try {
+      for (const app of Object.values(globalThis.ui?.windows ?? {})) {
+        if (app instanceof CharacterDashboardSheet) void app.close?.();
+      }
+    } catch (error) {
+      console.warn(MODULE_ID + " | Unable to close open character dashboards after toggle.", error);
+    }
+  }
+
+  function setCharacterDashboardEnabled(enabled) {
+    const shouldRegister = enabled !== false;
+    if (shouldRegister) registerCharacterDashboardSheet();
+    else unregisterCharacterDashboardSheet();
+    if (!shouldRegister) closeOpenCharacterDashboards();
+    return dashboardSheetRegistered;
+  }
 
   // Use the system sheet as the base so native rolls, forms and inventory retain their behavior.
   // The system exposes its sheet classes during init, before Foundry builds CONFIG.Actor.sheetClasses.
@@ -126,10 +179,11 @@ import {
         return super._updateObject(event, formData);
       }
     };
-    foundry.documents.collections.Actors.registerSheet(MODULE_ID, CharacterDashboardSheet, {
-      types: ["Player"], makeDefault: false,
-      label: game.i18n.localize("MK_SHADOWDARK.dashboard.sheetName")
-    });
+    globalThis.MKShadowdarkCharacterDashboard = {
+      setEnabled: setCharacterDashboardEnabled,
+      isEnabled: () => dashboardSheetRegistered
+    };
+    setCharacterDashboardEnabled(characterDashboardEnabled());
   });
 
   Hooks.once("ready", () => {
@@ -137,14 +191,14 @@ import {
     if (!mod) return;
     mod.api = mod.api ?? {};
     mod.api.characterDashboard = {
-      open: actor => isPlayerActor(actor) ? openDashboard(actor) : null,
-      getBodySlot: item => getBodySlot(item),
-      assignBodySlot: (item, slotKey) => assignBodySlot(item, slotKey),
-      clearBodySlot: item => clearBodySlot(item),
+      open: actor => characterDashboardEnabled() && isPlayerActor(actor) ? openDashboard(actor) : null,
+      getBodySlot: item => characterDashboardEnabled() ? getBodySlot(item) : null,
+      assignBodySlot: (item, slotKey) => characterDashboardEnabled() ? assignBodySlot(item, slotKey) : false,
+      clearBodySlot: item => characterDashboardEnabled() ? clearBodySlot(item) : false,
       slots: SLOT_DEFINITIONS.map(slot => ({ ...slot })),
       quickSlots: QUICK_SLOT_DEFINITIONS.map(slot => ({ ...slot })),
-      assignQuickSlot: (item, slotKey) => assignQuickSlot(item, slotKey),
-      clearQuickSlot: (actor, slotKey) => clearQuickSlot(actor, slotKey)
+      assignQuickSlot: (item, slotKey) => characterDashboardEnabled() ? assignQuickSlot(item, slotKey) : false,
+      clearQuickSlot: (actor, slotKey) => characterDashboardEnabled() ? clearQuickSlot(actor, slotKey) : false
     };
   });
 

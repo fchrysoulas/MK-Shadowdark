@@ -3,8 +3,17 @@
 
   const AUTOMATED_ANIMATIONS_MODULE_ID = "autoanimations";
 
+  function isCompatibilityEnabled() {
+    try {
+      return !!game.settings.get("mk-shadowdark", "automatedAnimationsCompatibilityEnabled");
+    } catch (_error) {
+      return true;
+    }
+  }
+
   Hooks.on("preCreateChatMessage", (message, data) => {
     if (globalThis.game?.system?.id !== "shadowdark") return;
+    if (!isCompatibilityEnabled()) return;
     if (!game.modules?.get(AUTOMATED_ANIMATIONS_MODULE_ID)?.active) return;
 
     const rollConfig =

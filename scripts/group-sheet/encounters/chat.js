@@ -5,7 +5,16 @@ import {
   MODULE_ID,
   SETTINGS,
 } from "./constants.js";
-import { activeGmIds, deepClone, error, escapeHtml, getProfile, getRootElement, setting } from "./helpers.js";
+import {
+  activeGmIds,
+  deepClone,
+  error,
+  escapeHtml,
+  getProfile,
+  getRootElement,
+  isGroupEncountersEnabled,
+  setting,
+} from "./helpers.js";
 import {
   buildEncounterData,
   buildMoraleInfo,
@@ -149,6 +158,7 @@ export function renderEncounterCard(data, { publicCard = false } = {}) {
 }
 
 export async function createEncounterMessage(data, options = {}) {
+  if (!isGroupEncountersEnabled()) return null;
   const whisperSetting = options.whisper ?? setting(SETTINGS.whisper, true);
   const whisper = whisperSetting ? activeGmIds() : [];
 
@@ -162,6 +172,7 @@ export async function createEncounterMessage(data, options = {}) {
 }
 
 export async function updateEncounterMessage(message, data) {
+  if (!isGroupEncountersEnabled()) return null;
   if (!message?.update || !data) return null;
   await message.update({
     content: renderEncounterCard(data),
@@ -171,6 +182,7 @@ export async function updateEncounterMessage(message, data) {
 }
 
 export async function revealEncounterMessage(message, data = undefined) {
+  if (!isGroupEncountersEnabled()) return null;
   if (!message) return null;
   const encounterData = data ?? encounterMessageData(message);
   if (!encounterData) return null;
@@ -189,6 +201,7 @@ export async function revealEncounterMessage(message, data = undefined) {
 }
 
 export async function stageEncounterMessage(message) {
+  if (!isGroupEncountersEnabled()) return null;
   if (!message) return null;
   const data = encounterMessageData(message);
   if (!data) return null;
@@ -207,6 +220,7 @@ export async function stageEncounterMessage(message) {
 }
 
 export async function rerollEncounterField(message, field) {
+  if (!isGroupEncountersEnabled()) return null;
   const data = deepClone(encounterMessageData(message));
   if (!data) return null;
 
@@ -267,6 +281,7 @@ export async function rerollEncounterField(message, field) {
 }
 
 export async function rerollEntireEncounter(message) {
+  if (!isGroupEncountersEnabled()) return null;
   const oldData = encounterMessageData(message);
   if (!oldData) return null;
 
@@ -296,6 +311,7 @@ function messageFromApp(app) {
 }
 
 export function bindEncounterCard(app, html) {
+  if (!isGroupEncountersEnabled()) return;
   const message = messageFromApp(app);
   if (!message || !encounterMessageData(message)) return;
 

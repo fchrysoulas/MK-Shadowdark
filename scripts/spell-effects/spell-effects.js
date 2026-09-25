@@ -27,6 +27,14 @@ import { isFocusCheckRoll } from "../targeting-assistant/targeting-state.js";
     return module?.version ?? module?.data?.version ?? "unknown";
   }
 
+  function isSpellEffectsEnabled() {
+    try {
+      return !!game.settings.get(MODULE_ID, "spellEffectsEnabled");
+    } catch (_error) {
+      return true;
+    }
+  }
+
   function getPrimaryActiveGM() {
     return game.users
       .filter(user => user.active && user.isGM)
@@ -98,6 +106,7 @@ import { isFocusCheckRoll } from "../targeting-assistant/targeting-state.js";
   }
 
   async function removeFocusSpellEffects({ castId, targetUuids = [], sourceSpellUuid = null } = {}) {
+    if (!isSpellEffectsEnabled()) return { removed: 0, queued: false };
     const normalizedCastId = String(castId ?? "").trim();
     const normalizedTargets = spellTargetUuids({ targetUuids });
     if (!normalizedCastId || !normalizedTargets.length) {
@@ -168,7 +177,7 @@ import { isFocusCheckRoll } from "../targeting-assistant/targeting-state.js";
   }
 
   async function applySpellEffects(message) {
-    if (!isPrimaryActiveGM() || !message?.id) return;
+    if (!isSpellEffectsEnabled() || !isPrimaryActiveGM() || !message?.id) return;
 
     const config = getShadowdarkRollConfig(message);
     const mainRoll = getShadowdarkRoll(message, "main");
@@ -235,6 +244,7 @@ import { isFocusCheckRoll } from "../targeting-assistant/targeting-state.js";
   }
 
   function handleChatMessage(message) {
+    if (!isSpellEffectsEnabled()) return;
     void applySpellEffects(message);
   }
 
@@ -251,8 +261,9 @@ import { isFocusCheckRoll } from "../targeting-assistant/targeting-state.js";
   Hooks.once("init", exposeApi);
   Hooks.once("ready", () => {
     exposeApi();
+    if (!isSpellEffectsEnabled()) return;
     game.socket?.on(SOCKET_CHANNEL, payload => {
-      if (payload?.type !== REMOVE_FOCUS_EFFECTS || !isPrimaryActiveGM()) return;
+      if (!isSpellEffectsEnabled() || payload?.type !== REMOVE_FOCUS_EFFECTS || !isPrimaryActiveGM()) return;
       void removeFocusSpellEffects(payload);
     });
   });

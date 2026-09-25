@@ -9,6 +9,10 @@ const runtimeSource = fs.readFileSync(
   path.join(ROOT, "scripts/time-passes/time-passes-splash.js"),
   "utf8"
 );
+const settingsSource = fs.readFileSync(
+  path.join(ROOT, "scripts/libs/settings.js"),
+  "utf8"
+);
 
 const importGlobals = {
   Hooks: globalThis.Hooks,
@@ -120,6 +124,18 @@ test("Time Passes limits its standalone selector to one, two, or three d6", () =
   assert.equal(normalizeDiceCount(2), 2);
   assert.equal(normalizeDiceCount(3), 3);
   assert.equal(normalizeDiceCount(9), 1);
+});
+
+test("Time Passes exposes its font family as a choices dropdown", () => {
+  const start = settingsSource.indexOf('registerSetting("timePassesFontFamily"');
+  const end = settingsSource.indexOf('registerSetting("timePassesTitleFontSizePx"', start);
+  const setting = settingsSource.slice(start, end);
+
+  assert.ok(start >= 0, "Time Passes font setting should exist");
+  assert.match(setting, /type: String/);
+  assert.match(setting, /choices: timePassesFontFamilyChoices/);
+  assert.match(settingsSource, /globalThis\.document\?\.fonts/);
+  assert.match(settingsSource, /var\(--font-primary, serif\)/);
 });
 
 test("Time Passes keeps the v1.6 splash payload without encounter state", () => {

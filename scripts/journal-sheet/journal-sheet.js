@@ -1,4 +1,5 @@
 const MODULE_ID = "mk-shadowdark";
+const JOURNAL_SHEET_ENABLED_SETTING = "journalSheetEnabled";
 const JOURNAL_SHEET_DEFAULT_SETTING = "journalSheetDefault";
 
 const PAGE_ICONS = {
@@ -201,6 +202,17 @@ function getJournalSheetDefault() {
   }
 }
 
+function getJournalSheetEnabled() {
+  const settings = globalThis.game?.settings;
+  if (typeof settings?.get !== "function") return true;
+
+  try {
+    return settings.get(MODULE_ID, JOURNAL_SHEET_ENABLED_SETTING) !== false;
+  } catch (_error) {
+    return true;
+  }
+}
+
 function getJournalSheetConfig() {
   return globalThis.foundry?.applications?.apps?.DocumentSheetConfig ?? globalThis.DocumentSheetConfig;
 }
@@ -222,13 +234,33 @@ function restoreFoundryDefaultSheets(config) {
   config.updateDefaultSheets(storedDefaults);
 }
 
-function registerJournalSheet({ resetExisting = false, enabled } = {}) {
+function unregisterJournalSheet(config, { restoreDefaults = true } = {}) {
+  const documentClass = getJournalEntryDocumentClass();
+  if (typeof config?.unregisterSheet !== "function" || !documentClass) return false;
+
+  try {
+    config.unregisterSheet(documentClass, MODULE_ID, MKJournalEntrySheet);
+    if (restoreDefaults) restoreFoundryDefaultSheets(config);
+    return true;
+  } catch (error) {
+    console.warn(`${MODULE_ID} | Failed to unregister the JournalEntry sheet.`, error);
+    return false;
+  }
+}
+
+function registerJournalSheet({ resetExisting = false, defaultEnabled, enabled } = {}) {
   const documentClass = getJournalEntryDocumentClass();
   const config = getJournalSheetConfig();
 
   if (!documentClass || !config?.registerSheet) return false;
 
   try {
+    const shouldRegister = typeof enabled === "boolean" ? enabled : getJournalSheetEnabled();
+    if (!shouldRegister) {
+      unregisterJournalSheet(config);
+      return false;
+    }
+
     if (resetExisting && typeof config.unregisterSheet === "function") {
       try {
         config.unregisterSheet(documentClass, MODULE_ID, MKJournalEntrySheet);
@@ -237,7 +269,7 @@ function registerJournalSheet({ resetExisting = false, enabled } = {}) {
       }
     }
 
-    const useAsDefault = typeof enabled === "boolean" ? enabled : getJournalSheetDefault();
+    const useAsDefault = typeof defaultEnabled === "boolean" ? defaultEnabled : getJournalSheetDefault();
     config.registerSheet(documentClass, MODULE_ID, MKJournalEntrySheet, {
       label: "MK-Shadowdark Journal",
       makeDefault: useAsDefault,
@@ -254,7 +286,8 @@ function registerJournalSheet({ resetExisting = false, enabled } = {}) {
 }
 
 globalThis.MKShadowdarkJournalSheet = {
-  setDefault: value => registerJournalSheet({ resetExisting: true, enabled: value })
+  setDefault: value => registerJournalSheet({ resetExisting: true, defaultEnabled: value }),
+  setEnabled: value => registerJournalSheet({ resetExisting: true, enabled: value })
 };
 
 globalThis.Hooks?.once?.("init", registerJournalSheet);

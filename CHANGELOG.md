@@ -3,6 +3,7 @@
 ## 1.9.17
 
 - Added the selectable Character Dashboard and dashboard-styled Item sheets.
+- Added independent world-level runtime switches for the Journal Sheet, Character Dashboard, Quickdraw, GM Screen, Group Sheet and Group Encounters, Targeting and Spell Automation, Chat Reporting, Torch Attack, Source Tables, and Automated Animations compatibility; disabled features preserve their existing data.
 - Improved Focus Tracker, Auto Damage, Death Timer, Corpse Token, Character Sheet Tweaks, Summary Bar, Targeting Assistant, and Detailed Wounds presentation and reliability.
 - Removed the Survival Wound Profile feature and the standalone Encounter Engine surface.
 - Added the production GM Screen with a Scene-owned Encounter Zone editor, manual Roll Encounter workflow, Danger Level and supporting RollTable slots, GM-only Journal reports, and optional roll debug details.
@@ -77,6 +78,7 @@
 - Hid empty shortcut-slot plus indicators until an item is dragged over a shortcut slot.
 - Removed the shortcut row border and added a 1px top margin.
 - Resized the shortcut-row toggle to 22px by 21px and removed its rounded corners.
+- Changed the Time Passes Font Family setting from free text to a dropdown with common Foundry/module fonts, generic CSS families, and browser-registered font families.
 
 ## 1.9.16
 

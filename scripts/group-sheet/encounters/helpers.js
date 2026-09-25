@@ -1,5 +1,6 @@
 import {
   MODULE_ID,
+  SETTINGS,
   SUBMODULE,
 } from "./constants.js";
 
@@ -43,6 +44,10 @@ export function setting(key, fallback) {
   } catch (_error) {
     return fallback;
   }
+}
+
+export function isGroupEncountersEnabled() {
+  return setting(SETTINGS.enabled, true) !== false;
 }
 
 export function deepClone(value) {

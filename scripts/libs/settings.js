@@ -50,7 +50,7 @@
       title: "Quickdraw",
       hint: "Configure Quickdraw toggles, sorting, limits, and diagnostics.",
       icon: "fas fa-bolt",
-      settings: ["quickdrawIconEnabled", "quickdrawAutoSort", "quickdrawLimit", "characterSheetTweaksHighlightEquipped", "debug"]
+      settings: ["quickdrawEnabled", "quickdrawIconEnabled", "quickdrawAutoSort", "quickdrawLimit", "characterSheetTweaksHighlightEquipped", "debug"]
     },
     {
       key: "characterSheet",
@@ -107,9 +107,9 @@
     {
       key: "journalSheet",
       title: "Journal Sheet",
-      hint: "Configure whether the MK-Shadowdark Journal sheet is the world default.",
+      hint: "Configure whether the MK-Shadowdark Journal sheet is available and whether it is the world default.",
       icon: "fas fa-book-open",
-      settings: ["journalSheetDefault"]
+      settings: ["journalSheetEnabled", "journalSheetDefault"]
     },
     {
       key: "summaryBar",
@@ -226,8 +226,12 @@
       title: "GM Screen",
       hint: "Configure GM Screen encounter result presentation and diagnostics.",
       icon: "fas fa-shield-halved",
-      settings: ["gmScreenEncounterDebug"],
+      settings: ["gmScreenEnabled", "gmScreenEncounterDebug"],
       sections: [
+        {
+          title: "General",
+          settings: ["gmScreenEnabled"]
+        },
         {
           title: "Encounter Roll",
           settings: ["gmScreenEncounterDebug"]
@@ -240,7 +244,7 @@
       hint: "Configure Group actors, member presentation, camping supplies, tab backgrounds, travel progress, and weather tables.",
       icon: "fas fa-users",
       settings: [
-        "enableGroupActors", "groupSheetAssignedTokenSize", "groupSheetMemberPortraitSize", "groupSheetActivityColumns", "groupSheetCampingFoodKeywords",
+        "enableGroupActors", "groupEncountersEnabled", "groupSheetAssignedTokenSize", "groupSheetMemberPortraitSize", "groupSheetActivityColumns", "groupSheetCampingFoodKeywords",
         "groupSheetCampingTorchKeywords", "groupSheetTabBackgroundTraveling", "groupSheetTabBackgroundCamping", "groupSheetTabBackgroundInventory",
         "groupSheetTabBackgroundHirelings", "groupSheetTabBackgroundMounts", "groupSheetTravelProgressDurationMs",
         "groupSheetWeatherTemperatureTable", "groupSheetWeatherWindSpeedTable"
@@ -248,7 +252,7 @@
       sections: [
         {
           title: "General",
-          settings: ["enableGroupActors", "groupSheetAssignedTokenSize", "groupSheetMemberPortraitSize", "groupSheetActivityColumns"]
+          settings: ["enableGroupActors", "groupEncountersEnabled", "groupSheetAssignedTokenSize", "groupSheetMemberPortraitSize", "groupSheetActivityColumns"]
         },
         {
           title: "Camping",
@@ -266,6 +270,20 @@
           settings: ["groupSheetTravelProgressDurationMs", "groupSheetWeatherTemperatureTable", "groupSheetWeatherWindSpeedTable"]
         }
       ]
+    },
+    {
+      key: "targetingAutomation",
+      title: "Targeting and Spell Automation",
+      hint: "Configure target selection, target-aware spell DCs, and spell effect transfer.",
+      icon: "fas fa-crosshairs",
+      settings: ["targetingAssistantEnabled", "targetedSpellDcEnabled", "spellEffectsEnabled"]
+    },
+    {
+      key: "utilityRuntimes",
+      title: "Utility Runtimes",
+      hint: "Enable or disable independent reporting, torch, source-table, and compatibility helpers.",
+      icon: "fas fa-toolbox",
+      settings: ["chatReportingEnabled", "torchAttackEnabled", "sourceTablesEnabled", "automatedAnimationsCompatibilityEnabled"]
     },
     {
       key: "corpseToken",
@@ -310,6 +328,61 @@
 
   function localize(value) {
     return game.i18n?.localize?.(value) ?? String(value ?? "");
+  }
+
+  const TIME_PASSES_FONT_CHOICES = Object.freeze({
+    "var(--font-primary, serif)": "Foundry Primary (theme)",
+    "var(--font-monospace, monospace)": "Foundry Monospace (theme)",
+    "var(--font-mono, monospace)": "Foundry Mono (theme)",
+    serif: "Serif",
+    "sans-serif": "Sans Serif",
+    monospace: "Monospace",
+    "system-ui": "System UI",
+    "ui-serif": "UI Serif",
+    "ui-sans-serif": "UI Sans Serif",
+    "ui-monospace": "UI Monospace",
+    "Georgia, serif": "Georgia",
+    "\"Times New Roman\", serif": "Times New Roman",
+    "\"Signika\", sans-serif": "Signika",
+    "\"Segoe UI\", sans-serif": "Segoe UI",
+    "\"Old Newspaper Font\", serif": "Old Newspaper Font",
+    "\"Montserrat-SemiBold\", sans-serif": "Montserrat SemiBold",
+    "\"Montserrat-Regular\", sans-serif": "Montserrat Regular",
+    cursive: "Cursive",
+    fantasy: "Fantasy"
+  });
+
+  function timePassesFontFamilyChoices() {
+    const choices = { ...TIME_PASSES_FONT_CHOICES };
+    const addRegisteredFont = family => {
+      const normalized = String(family ?? "")
+        .trim()
+        .replace(/^(['"])(.*)\1$/, "$2")
+        .trim();
+      if (!normalized) return;
+
+      const value = `"${normalized.replace(/\\/g, "\\\\").replace(/"/g, '\\"')}"`;
+      if (!Object.prototype.hasOwnProperty.call(choices, value)) choices[value] = normalized;
+    };
+
+    try {
+      const fontSet = globalThis.document?.fonts;
+      if (fontSet?.forEach) fontSet.forEach(fontFace => addRegisteredFont(fontFace?.family));
+      else if (fontSet) for (const fontFace of fontSet) addRegisteredFont(fontFace?.family);
+    } catch (_error) {
+      // Font enumeration is optional; the static Foundry and CSS choices remain available.
+    }
+
+    try {
+      const current = game.settings.get(MODULE_ID, "timePassesFontFamily");
+      if (current && !Object.prototype.hasOwnProperty.call(choices, current)) {
+        choices[current] = `${current} (current)`;
+      }
+    } catch (_error) {
+      // Settings may be queried before Foundry has finished initializing.
+    }
+
+    return choices;
   }
 
   function settingLabel(setting) {
@@ -521,6 +594,7 @@
       default: true,
       onChange: value => {
         refreshOpenActorSheets();
+        globalThis.MKShadowdarkCharacterDashboard?.setEnabled?.(value);
         globalThis.MKShadowdarkItemDashboard?.setEnabled?.(value);
       }
     });
@@ -542,6 +616,16 @@
     /* -------------------- */
     /* Journal Sheet        */
     /* -------------------- */
+
+    registerSetting("journalSheetEnabled", {
+      name: "Journal Sheet | Enabled",
+      hint: "Registers the MK-Shadowdark Journal sheet so it can be selected. Disable to leave Foundry and third-party Journal sheets available without changing Journal content.",
+      scope: "world",
+      config: true,
+      type: Boolean,
+      default: true,
+      onChange: value => globalThis.MKShadowdarkJournalSheet?.setEnabled?.(value)
+    });
 
     registerSetting("journalSheetDefault", {
       name: "Journal Sheet | Use as Default",
@@ -841,6 +925,16 @@
     /* Quickdraw            */
     /* -------------------- */
 
+    registerSetting("quickdrawEnabled", {
+      name: "Quickdraw | Enabled",
+      hint: "Enables Quickdraw toggles, sorting, row highlighting, summary cards, and limit calculations. Existing Quickdraw assignments are preserved while disabled.",
+      scope: "world",
+      config: true,
+      type: Boolean,
+      default: true,
+      onChange: refreshOpenActorSheets
+    });
+
     registerSetting("quickdrawIconEnabled", {
       name: "Quickdraw | Enable Toggles",
       hint: "Adds a clickable Quickdraw icon to eligible inventory rows only: Weapon, Basic, Armor, Potion, Wand, Scroll.",
@@ -883,6 +977,73 @@
     /* -------------------- */
     /* Focus Tracker        */
     /* -------------------- */
+
+    /* Targeting and Spell Automation */
+
+    registerSetting("targetingAssistantEnabled", {
+      name: "Targeting Assistant | Enabled",
+      hint: "Adds live target panels and target validation to Shadowdark attack and spell roll dialogs. A reload may be required after changing this setting.",
+      scope: "world",
+      config: true,
+      type: Boolean,
+      default: true
+    });
+
+    registerSetting("targetedSpellDcEnabled", {
+      name: "Targeted Spell DC | Enabled",
+      hint: "Applies target-owned spell DC Active Effects to Shadowdark spell rolls. A reload may be required after changing this setting.",
+      scope: "world",
+      config: true,
+      type: Boolean,
+      default: true
+    });
+
+    registerSetting("spellEffectsEnabled", {
+      name: "Spell Effects | Enabled",
+      hint: "Transfers targeted spell Effect items and performs Focus spell-effect cleanup. Existing transferred effects are preserved while disabled.",
+      scope: "world",
+      config: true,
+      type: Boolean,
+      default: true
+    });
+
+    /* Utility Runtimes */
+
+    registerSetting("chatReportingEnabled", {
+      name: "Chat Reporting | Enabled",
+      hint: "Posts MK Luck gain and loss reports from Shadowdark character sheets.",
+      scope: "world",
+      config: true,
+      type: Boolean,
+      default: true
+    });
+
+    registerSetting("torchAttackEnabled", {
+      name: "Torch Attack | Enabled",
+      hint: "Adds MK torch attack and light-source equip helpers to Shadowdark player sheets.",
+      scope: "world",
+      config: true,
+      type: Boolean,
+      default: true
+    });
+
+    registerSetting("sourceTablesEnabled", {
+      name: "Source Tables | Enabled",
+      hint: "Exposes the MK Shadowdark source-table importer and API. Existing imported RollTables remain intact while disabled.",
+      scope: "world",
+      config: true,
+      type: Boolean,
+      default: true
+    });
+
+    registerSetting("automatedAnimationsCompatibilityEnabled", {
+      name: "Automated Animations Compatibility | Enabled",
+      hint: "Adds the Shadowdark item UUID compatibility flag used by Automated Animations.",
+      scope: "world",
+      config: true,
+      type: Boolean,
+      default: true
+    });
 
     registerSetting("focusTrackerEnabled", {
       name: "Focus Tracker | Enabled",
@@ -1601,10 +1762,11 @@
 
     registerSetting("timePassesFontFamily", {
       name: "Time Passes | Font Family",
-      hint: "CSS font-family for the splash text.",
+      hint: "Choose the CSS font family for the splash text. The list includes common Foundry/module fonts, generic CSS families, and fonts registered in the current browser session.",
       scope: "world",
       config: true,
       type: String,
+      choices: timePassesFontFamilyChoices,
       default: "var(--font-primary, serif)"
     });
 
@@ -1659,6 +1821,18 @@
     /* GM Screen            */
     /* -------------------- */
 
+    registerSetting("gmScreenEnabled", {
+      name: "GM Screen | Enabled",
+      hint: "Adds and enables the MK-Shadowdark GM Screen scene control and runtime. Disabling closes an open GM Screen; a reload may be required to restore it after re-enabling.",
+      scope: "world",
+      config: true,
+      type: Boolean,
+      default: true,
+      onChange: value => {
+        if (value === false) void globalThis.game?.modules?.get?.(MODULE_ID)?.api?.gmScreen?.close?.();
+      }
+    });
+
     registerSetting("gmScreenEncounterDebug", {
       name: "GM Screen | Encounter Roll Debug Mode",
       hint: "When enabled, Roll Encounter Journal pages show dice formulas, roll totals, and result numbers. When disabled, pages keep the encounter context and result text but hide dice, roll details, and result numbers.",
@@ -1684,6 +1858,15 @@
     registerSetting("enableGroupActors", {
       name: "Enable Group Actors",
       hint: "Adds a MK-Shadowdark group actor sheet for party members, hirelings and mounts, group inventory, and travel and camping task assignments.",
+      scope: "world",
+      config: true,
+      type: Boolean,
+      default: true
+    });
+
+    registerSetting("groupEncountersEnabled", {
+      name: "Group Encounters | Enabled",
+      hint: "Enables Group Encounter chat cards, staging, and encounter service/API behavior independently of the Group Sheet.",
       scope: "world",
       config: true,
       type: Boolean,

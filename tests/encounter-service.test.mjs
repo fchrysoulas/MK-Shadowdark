@@ -42,7 +42,7 @@ function installRuntime({
   const previousUi = globalThis.ui;
 
   const settings = new Map([
-    ["mk-shadowdark.encounterEngineEnabled", enabled],
+    ["mk-shadowdark.groupEncountersEnabled", enabled],
     ["mk-shadowdark.encounterEngineProfiles", JSON.stringify(DEFAULT_ENVIRONMENT_PROFILES)],
     ["mk-shadowdark.encounterEngineDefaultProfile", "default"],
     ["mk-shadowdark.encounterEngineDefaultTableUuid", ""],

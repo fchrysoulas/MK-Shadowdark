@@ -10,6 +10,14 @@ const ACTOR_SHEET_RENDER_HOOKS = [
 
 Hooks.once("init", () => log("initialized"));
 
+function isChatReportingEnabled() {
+  try {
+    return !!game.settings.get(MODULE_ID, "chatReportingEnabled");
+  } catch (_error) {
+    return true;
+  }
+}
+
 for (const hookName of ACTOR_SHEET_RENDER_HOOKS) {
   Hooks.on(hookName, (app, html) => {
     try {
@@ -21,6 +29,7 @@ for (const hookName of ACTOR_SHEET_RENDER_HOOKS) {
 }
 
 function onRenderActorSheet(app, html) {
+  if (!isChatReportingEnabled()) return;
   const root = getRootElement(html);
   if (!root?.querySelector || !isShadowdarkPlayerSheet(app, root)) return;
 
@@ -65,6 +74,7 @@ async function onNativeLuckRemainingChange(event, actor) {
 }
 
 export async function reportLuckChange(actor, gainedLuck, remaining, pulpMode = isPulpMode()) {
+  if (!isChatReportingEnabled()) return false;
   const icon = gainedLuck
     ? '<i class="fa-solid fa-check mk-chat-reporting__luck-icon mk-chat-reporting__luck-icon--gain"></i>'
     : '<i class="fa-solid fa-xmark mk-chat-reporting__luck-icon mk-chat-reporting__luck-icon--remove"></i>';
@@ -76,6 +86,7 @@ export async function reportLuckChange(actor, gainedLuck, remaining, pulpMode = 
     speaker: ChatMessage.getSpeaker({ actor }),
     content: `<div class="mk-chat-reporting__luck-message">${icon}<strong>${escapeHtml(actor?.name ?? "Character")}</strong> ${gainedLuck ? "gained Luck" : "removed Luck"}.${remainingText}</div>`
   });
+  return true;
 }
 
 function getLuckRemaining(actor) {

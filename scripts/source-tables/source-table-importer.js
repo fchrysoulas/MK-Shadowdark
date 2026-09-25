@@ -5,6 +5,14 @@ const MODULE_ID = "mk-shadowdark";
 const ROOT_FOLDER_NAME = "MK Shadowdark Source Tables";
 const SOURCE_TABLE_FLAG = "sourceTable";
 
+function isSourceTablesEnabled(runtimeGame = globalThis.game) {
+  try {
+    return runtimeGame?.settings?.get?.(MODULE_ID, "sourceTablesEnabled") !== false;
+  } catch (_error) {
+    return true;
+  }
+}
+
 function escapeHtml(value) {
   return String(value ?? "").replace(/[&<>"']/g, character => ({
     "&": "&amp;",
@@ -190,6 +198,16 @@ async function upsertSourceRollTable(table, folder, runtime = runtimeDefaults())
 }
 
 async function importParsedSources(parsedSources, runtime = runtimeDefaults()) {
+  if (!isSourceTablesEnabled(runtime.game)) {
+    return {
+      created: 0,
+      updated: 0,
+      skipped: 0,
+      warnings: ["Source Tables is disabled."],
+      documents: [],
+      disabled: true,
+    };
+  }
   if (!runtime.game?.user?.isGM) throw new Error("Only the GM can import source RollTables.");
 
   const root = await ensureRollTableFolder(ROOT_FOLDER_NAME, null, runtime);
@@ -336,6 +354,10 @@ async function confirmImport(parsedSources) {
 }
 
 async function openSourceTableImporter() {
+  if (!isSourceTablesEnabled()) {
+    globalThis.ui?.notifications?.warn?.("MK-Shadowdark Source Tables is disabled.");
+    return null;
+  }
   if (!globalThis.game?.user?.isGM) {
     globalThis.ui?.notifications?.warn?.("Only the GM can import Shadowdark source tables.");
     return null;
@@ -367,6 +389,7 @@ function exposeSourceTableApi() {
   if (!mod) return null;
   mod.api = mod.api ?? {};
   mod.api.sourceTables = {
+    isEnabled: isSourceTablesEnabled,
     parseSource: parseSupportedSourceTables,
     readFiles: readSourceFiles,
     importParsedSources,
@@ -385,6 +408,7 @@ export {
   MODULE_ID,
   ROOT_FOLDER_NAME,
   SOURCE_TABLE_FLAG,
+  isSourceTablesEnabled,
   escapeHtml,
   configuredDocumentClass,
   sourceFolderName,

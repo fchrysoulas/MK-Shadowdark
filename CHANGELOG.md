@@ -1,5 +1,13 @@
 # Changelog
 
+## 1.9.18
+
+- Published the accumulated Character Dashboard, dashboard-styled Item sheet, Detailed Wounds, and automation improvements described in 1.9.17.
+- Restored and expanded the production GM Screen with manual encounter reports, linked-table generators, configurable Quick Actions, and pinned documents.
+- Added standalone Bastion Actors with construction and upgrade rules, NPC defenses, and a transferable 100-slot item Vault.
+- Updated Magic Item generation to use Type, Qualities, and Personality RollTables and tightened the Group Sheet's responsive tab rail.
+- Added independent feature runtime switches and font selectors, and removed retired Survival Wound Profile and standalone Encounter Engine runtime files.
+
 ## 1.9.17
 
 - Updated the GM Screen Magic Item Generator to use Type, Qualities, and Personality RollTables.

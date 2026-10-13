@@ -1,6 +1,25 @@
 const MODULE_ID = "mk-shadowdark";
 const BASTION_ACTOR_TYPE = `${MODULE_ID}.bastion`;
 
+function canManageActorItems(actor) {
+  const user = globalThis.game?.user;
+  if (!actor || !user) return false;
+  if (user.isGM) return true;
+  if (typeof actor.testUserPermission === "function") {
+    return actor.testUserPermission(user, globalThis.CONST?.DOCUMENT_OWNERSHIP_LEVELS?.OWNER ?? 3) === true;
+  }
+  return actor.isOwner === true;
+}
+
+function vaultPermissionMessage(key) {
+  const fallback = {
+    ownerOnly: "Only a GM or owner of this Bastion can manage Vault items.",
+    transferOwnership: "You must own both the Bastion and the receiving actor to move Vault items.",
+    sourceOwnership: "You must own the source actor to move its items into the Vault."
+  };
+  return globalThis.game?.i18n?.localize?.(`MK_SHADOWDARK.bastionVault.${key}`) ?? fallback[key];
+}
+
 function getVaultTransferData(data) {
   const transfer = data?.[MODULE_ID]?.vaultTransfer;
   if (!transfer || typeof transfer !== "object") return null;
@@ -46,10 +65,14 @@ async function resolveVaultSource(data) {
 
 async function transferVaultItemToActor(actor, data) {
   if (!actor || actor.type === BASTION_ACTOR_TYPE || !isVaultTransferData(data)) return null;
-  if (!actor.createEmbeddedDocuments || !globalThis.game?.user?.isGM) return null;
+  if (!actor.createEmbeddedDocuments || !canManageActorItems(actor)) return null;
 
   const source = await resolveVaultSource(data);
   if (!source || source.sourceActor.uuid === actor.uuid) return null;
+  if (!canManageActorItems(source.sourceActor)) {
+    globalThis.ui?.notifications?.warn?.(vaultPermissionMessage("transferOwnership"));
+    return null;
+  }
 
   const itemData = typeof source.sourceItem.toObject === "function"
     ? source.sourceItem.toObject()
@@ -83,8 +106,8 @@ function handleVaultTransferDrop(actor, _sheet, data) {
   if (!isVaultTransferData(data)) return undefined;
 
   if (actor?.type === BASTION_ACTOR_TYPE) return undefined;
-  if (!globalThis.game?.user?.isGM) {
-    globalThis.ui?.notifications?.warn?.("Only the GM can move items out of a Bastion Vault.");
+  if (!canManageActorItems(actor)) {
+    globalThis.ui?.notifications?.warn?.(vaultPermissionMessage("transferOwnership"));
     return false;
   }
 
@@ -96,9 +119,11 @@ function handleVaultTransferDrop(actor, _sheet, data) {
 }
 
 export {
+  canManageActorItems,
   getVaultTransferData,
   handleVaultTransferDrop,
   isVaultTransferData,
   resolveVaultSource,
   transferVaultItemToActor,
+  vaultPermissionMessage,
 };

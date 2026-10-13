@@ -104,7 +104,14 @@ test("Bastion actors have a dedicated type, sheet, and upgrade controls", () => 
   assert.match(template, /class="mk-bastion-upgrade-grid"/);
   assert.match(template, /class="\{\{icon\}\}"/);
   assert.match(template, /\{\{#if installed\}\}is-installed\{\{\/if\}\}/);
-  assert.doesNotMatch(template, /\{\{else\}\}Install\{\{\/if\}\}/);
+  const upgradeButtons = [...template.matchAll(/<button\b[^>]*class="mk-bastion-upgrade-toggle[^\"]*"[^>]*>([\s\S]*?)<\/button>/g)];
+  assert.ok(upgradeButtons.length > 0);
+  for (const [, content] of upgradeButtons) {
+    assert.match(content, /fas fa-check/);
+    assert.doesNotMatch(content, /\bInstall\b/);
+  }
+  assert.match(template, /\{\{#each builds\}\}/);
+  assert.match(template, /data-upgrade-build="\{\{number\}\}"/);
   assert.match(template, /data-tab="vault"/);
   assert.match(template, /mk\.bastion\.hasVault/);
   assert.match(template, /data-vault-dropzone="true"/);

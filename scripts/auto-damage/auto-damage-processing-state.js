@@ -44,6 +44,7 @@ function normalizeTarget(target) {
     damageIncrease,
     traitMode: target?.traitMode ?? null,
     propertyNames: Array.from(target?.propertyNames ?? []).map(value => String(value)),
+    sundering: target?.sundering && typeof target.sundering === "object" ? clonePlain(target.sundering) : null,
     conflictReason: target?.conflictReason ? String(target.conflictReason) : null,
     observedHp: finiteNumber(target?.observedHp, null)
   };

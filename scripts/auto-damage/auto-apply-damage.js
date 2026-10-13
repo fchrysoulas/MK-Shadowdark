@@ -261,6 +261,9 @@ import {
 
   async function buildProcessingPlan(message, amount, operation, sourceContext = {}, targetUuids = [], display = null) {
     const damageTraitsApi = game.modules.get(MODULE_ID)?.api?.damageTraits;
+    const sunderingApi = game.modules.get(MODULE_ID)?.api?.sundering;
+    const canSunder = operation === "damage" && amount > 0
+      && await sunderingApi?.isMeleeWeaponAttack?.(message);
     const sourceProperties = Array.from(sourceContext?.properties ?? []);
     const targets = [];
 
@@ -333,7 +336,7 @@ import {
         operation
       );
 
-      targets.push({
+      const target = {
         uuid,
         state: "planned",
         hpPath,
@@ -349,7 +352,9 @@ import {
         damageIncrease,
         traitMode,
         propertyNames: reductionProperties
-      });
+      };
+      if (canSunder) target.sundering = await sunderingApi.createOffer(message, target, actor);
+      targets.push(target);
     }
 
     return createProcessingState({ operation, amount, display, targets });
@@ -368,6 +373,16 @@ import {
     if (typeof value === "string") value = Number(value);
     if (!Number.isFinite(value)) throw new Error(`Target ${target.uuid} no longer has numeric HP.`);
     return value;
+  }
+
+  async function refreshSunderingTarget(target) {
+    const { actor } = await resolvePlannedTarget(target);
+    const hpInfo = resolveHpField(actor);
+    if (!hpInfo || hpInfo.path !== target.hpPath) throw new Error(`Target ${target.uuid} no longer has the planned HP field.`);
+    target.beforeHp = hpInfo.value;
+    const change = calculateHpChange(hpInfo.value, hpInfo.max, target.effectiveAmount, target.operation);
+    target.afterHp = change.newHP;
+    target.appliedAmount = change.appliedAmount;
   }
 
   async function waitForPlannedHp(actor, target, attempts = 40, delayMs = 25) {
@@ -470,12 +485,22 @@ import {
         appliedDamage: target.operation === "damage" ? target.appliedAmount : 0,
         appliedHealing: target.operation === "healing" ? target.appliedAmount : 0,
         propertyNames: target.propertyNames,
+        sunderedItem: target.sundering?.status === "destroyed" ? target.sundering.itemName : null,
         currentHP: target.beforeHp,
         newHP: target.afterHp
       }));
   }
 
   async function applyProcessingPlan(message, state, { critical = false } = {}) {
+    const sunderingApi = game.modules.get(MODULE_ID)?.api?.sundering;
+    if (state.targets.some(target => ["pending", "destroying"].includes(target.sundering?.status))) {
+      if (!sunderingApi?.resolvePlan) throw new Error("Sundering resolution is unavailable; damage remains pending.");
+      state = await sunderingApi.resolvePlan(message, state, {
+        persistState: nextState => persistProcessingState(message, nextState),
+        resolveTarget: resolvePlannedTarget,
+        refreshTarget: refreshSunderingTarget
+      });
+    }
     const finalState = await runProcessingState(state, {
       readCurrentHp: readPlannedHp,
       applyTarget: target => applyPlannedTarget(target, {
@@ -523,7 +548,7 @@ import {
   }
 
   async function appendDamageReductionDisplay(message, results) {
-    const adjusted = Array.from(results ?? []).filter(result => result.traitMode);
+    const adjusted = Array.from(results ?? []).filter(result => result.traitMode || result.sunderedItem);
     if (!adjusted.length) return;
 
     try {
@@ -534,12 +559,15 @@ import {
       const summary = document.createElement("div");
       summary.className = "mk-damage-traits-result";
       summary.innerHTML = `
-        <strong><i class="fas fa-scale-balanced"></i> Damage Trait</strong>
+        <strong><i class="fas fa-scale-balanced"></i> ${adjusted.some(result => result.sunderedItem)
+          ? game.i18n.localize("MK_SHADOWDARK.sundering.resolution") : "Damage Trait"}</strong>
         ${adjusted.map(result => {
           const properties = result.propertyNames.length
             ? ` (${result.propertyNames.map(escapeHtml).join(", ")})`
             : "";
-          const calculation = result.traitMode === "resistance"
+          const calculation = result.sunderedItem
+            ? game.i18n.format("MK_SHADOWDARK.sundering.cancelled", { item: escapeHtml(result.sunderedItem) })
+            : result.traitMode === "resistance"
             ? `${result.damage} &times; &frac12; = <strong>${result.appliedDamage}</strong>`
             : result.traitMode === "nonmagical-immunity"
               ? `${result.damage} &rarr; <strong>0</strong> (nonmagical source)`
@@ -630,6 +658,7 @@ import {
   }
 
   async function handleChatMessage(message, context = {}) {
+    let ownsProcessingLock = false;
     try {
       if (!isPrimaryActiveGM()) return;
       if (!game.settings.get(MODULE_ID, "autoDamageEnabled")) return;
@@ -638,6 +667,7 @@ import {
       if (hasAutoDamageProcessed(message)) return;
 
       PROCESSING_MESSAGES.add(message.id);
+      ownsProcessingLock = true;
 
       const targetUuids = getTargetSnapshot(message);
       await persistTargetSnapshot(message, targetUuids);
@@ -750,7 +780,7 @@ import {
     } catch (err) {
       console.error(`${MODULE_ID} | ${SUBMODULE} v${getModuleVersion()} | Error in handleChatMessage`, err);
     } finally {
-      if (message?.id) PROCESSING_MESSAGES.delete(message.id);
+      if (ownsProcessingLock && message?.id) PROCESSING_MESSAGES.delete(message.id);
     }
   }
 
@@ -778,6 +808,10 @@ import {
   Hooks.once("ready", () => {
     installTokenShakeSocket();
     adLog("ready; hooks active; primary active GM applies damage");
+    void resumePendingProcessing();
+  });
+
+  Hooks.on("userConnected", () => {
     void resumePendingProcessing();
   });
 

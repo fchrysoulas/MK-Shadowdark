@@ -49,7 +49,7 @@
           <h3><i class="fas fa-scroll" aria-hidden="true"></i> Bastion Rules</h3>
           <p><strong>AC and HP.</strong> Bastions have an AC and HP. At 0 HP, the bastion's walls are breached. Ordinary weapons can't damage bastions, but siege weapons, destructive elements like fire, and huge creatures (such as giants) can.</p>
           <p><strong>Repair.</strong> Repairing damage to a bastion takes 1 week and costs 1 gp per HP restored.</p>
-          <p><strong>Upgrade.</strong> PCs can add an upgrade to a bastion by paying its cost. Each upgrade takes a week to build. Limit one of each upgrade per bastion.</p>
+          <p><strong>Upgrade.</strong> PCs can add an upgrade to a bastion by paying its cost. Each upgrade takes a week to build. Aviary, Barracks, Idol, Library, Temple, and Wizard Tower can each be built up to three times. Other upgrades are limited to one each. Each build uses one upgrade slot.</p>
           <p><strong>Safety.</strong> Bastions provide safe shelter from the weather, climate, and random encounters.</p>
         </section>
 
@@ -95,7 +95,7 @@
         <header class="mk-bastion-section-header">
           <div>
             <h2><i class="fas fa-hammer" aria-hidden="true"></i> Bastion Upgrades</h2>
-            <p>Install one of each upgrade until this bastion reaches its upgrade limit.</p>
+            <p>Use the checkmarks to install upgrades. Aviary, Barracks, Idol, Library, Temple, and Wizard Tower allow three builds each; every build uses one upgrade slot.</p>
           </div>
           <strong class="mk-bastion-upgrade-count">{{mk.bastion.installedCount}} / {{mk.bastion.upgradeLimit}}</strong>
         </header>
@@ -112,17 +112,23 @@
                 <span class="mk-bastion-upgrade-cost">{{cost}}</span>
               </div>
               <p>{{description}}</p>
-              <button
-                type="button"
-                class="mk-bastion-upgrade-toggle {{#if installed}}is-installed{{/if}}"
-                data-action="toggle-bastion-upgrade"
-                data-upgrade-key="{{key}}"
-                aria-label="{{#if installed}}Installed: {{name}}{{else}}Install {{name}}{{/if}}"
-                title="{{#if installed}}Installed: {{name}}{{else}}Install {{name}}{{/if}}"
-                {{#unless canInstall}}disabled{{/unless}}
-              >
-                <i class="fas fa-check" aria-hidden="true"></i>
-              </button>
+              <div class="mk-bastion-upgrade-toggles">
+                {{#each builds}}
+                <button
+                  type="button"
+                  class="mk-bastion-upgrade-toggle {{#if installed}}is-installed{{/if}}"
+                  data-action="toggle-bastion-upgrade"
+                  data-upgrade-key="{{../key}}"
+                  data-upgrade-build="{{number}}"
+                  aria-pressed="{{installed}}"
+                  aria-label="{{#if installed}}Remove{{else}}Install{{/if}} {{../name}}{{#if ../repeatable}} ({{number}}/{{../maxBuilds}}){{/if}}"
+                  title="{{#if installed}}Remove{{else}}Install{{/if}} {{../name}}{{#if ../repeatable}} ({{number}}/{{../maxBuilds}}){{/if}}"
+                  {{#unless canInstall}}disabled{{/unless}}
+                >
+                  <i class="fas fa-check" aria-hidden="true"></i>
+                </button>
+                {{/each}}
+              </div>
             </div>
           </article>
           {{/each}}
@@ -229,14 +235,14 @@
         <header class="mk-bastion-section-header">
           <div>
             <h2><i class="fas fa-vault" aria-hidden="true"></i> Vault</h2>
-            <p>Drag Items here to move them into the bastion; world Items are copied.</p>
+            <p>GMs and Bastion owners can drag Items here; moving an actor's items requires ownership of that actor. World Items are copied.</p>
           </div>
           <strong class="mk-bastion-vault-capacity"><i class="fas fa-weight-hanging" aria-hidden="true"></i> {{mk.bastion.vault.used}} / {{mk.bastion.vault.capacity}} slots</strong>
         </header>
 
         <div class="mk-bastion-vault-grid" data-vault-dropzone="true" aria-label="Vault items">
           {{#each mk.bastion.vault.items}}
-          <article class="mk-bastion-vault-item" data-vault-item-id="{{id}}" draggable="true" title="Drag to move {{name}} to another character sheet">
+          <article class="mk-bastion-vault-item" data-vault-item-id="{{id}}" draggable="{{#if ../mk.canManageVault}}true{{else}}false{{/if}}" title="Drag to move {{name}} to another character sheet">
             <button type="button" class="mk-bastion-vault-item-main" data-action="open-vault-item" data-vault-item-id="{{id}}" title="Open {{name}}">
               <img src="{{img}}" alt="" aria-hidden="true">
               <span class="mk-bastion-vault-item-name">{{name}}</span>

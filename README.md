@@ -34,6 +34,7 @@ The old **MK-Shadowdark GM Screen Mock** prototype is not a dependency and is no
 ## Character and combat automation
 
 - **DTP** -- a compact value box before Languages on the native Player sheet Details tab. It starts at 0, persists on the actor, and is editable only by GMs.
+- **Sundering** -- with Auto Damage enabled, a Player character hit by a melee weapon or NPC attack can destroy an equipped, unstashed item with the Sundering Property to cancel that attack's damage. The active owning player receives the item-choice prompt; the GM decides when no owner is online. Declining or closing the prompt applies damage normally. Ranged attacks, spells, healing, and attacks that deal no damage do not prompt. The active GM rechecks the item and performs its deletion; saved decisions prevent duplicate destruction during retries.
 - **Character Dashboard paper-doll layout** -- the enlarged figure uses consistent equipment slot sizing, a compact centered AC badge, and an item-style Spells slot above Right Hand.
 - The character class value in the dashboard header can be edited with the native Shadowdark class selector.
 - Paper-doll and Backpack item cards use full-area artwork.
@@ -171,6 +172,10 @@ The Group Sheet structure is intentionally stable. Its main areas remain:
 The Group Sheet tab rail keeps all five areas on one desktop row, becomes a single-line horizontal rail at medium widths, and switches to compact icon-only tabs at narrow widths.
 
 ## Bastion Actors
+
+Bastion upgrade cards have three independent build checkmarks for Aviary, Barracks, Idol, Library, Temple, and Wizard Tower. Each build uses one slot in the structure's total upgrade limit; other upgrades have one checkmark. Existing installed upgrades keep their first build checked.
+
+Bastion owners and GMs can drag items into and out of the Vault, or discard them in its trash area. Transfers between actors require ownership of both the source and destination actors; world and compendium Items are copied into the Vault. The 100-slot limit still applies.
 
 Bastions are standalone Actors with the namespaced **Bastion** type and a dedicated Bastion Sheet. Create one from the Actor creation dialog by choosing **Bastion**. The sheet stores the bastion type, location, installed upgrades, siege weapons, and warbands; presents upgrades as icon cards; shows a conditional 100-slot Vault tab when the Vault upgrade is installed; lets you move Items from character sheets into the Vault grid, move them back onto a character sheet, and discard stored items by dragging them to the bottom trash area; world Items are copied into the Vault; lets you drop NPC actors into the Defenses tab to assign them; enforces the upgrade limit for each structure; and includes the Bastion rules, type reference, construction costs, build times, and upgrade reference.
 

@@ -1,5 +1,12 @@
 # Changelog
 
+## 1.9.20
+
+- Enabled Bastion owners to drag items into and out of the Vault and discard stored items, with ownership checks on both actors for transfers.
+- Allowed Aviary, Barracks, Idol, Library, Temple, and Wizard Tower Bastion upgrades to be built up to three times, with independent checkmarks and one upgrade slot per build.
+- Added Sundering prompts before Auto Damage applies a melee weapon or NPC attack to a Player character with an equipped Sundering item. The owner can destroy one eligible item to cancel the damage; the GM handles offline owners, and saved decisions protect retries from duplicate destruction.
+- Fixed Auto Damage's processing lock so nested chat updates cannot restart an attack that is already being handled.
+
 ## 1.9.19
 
 - Added a DTP value box before Languages on the native Player sheet Details tab, matching the XP and Renown boxes.

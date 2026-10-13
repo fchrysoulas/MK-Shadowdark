@@ -4,11 +4,11 @@ import {
   BASTION_DEFAULT_TYPE,
   BASTION_SHEET_ID,
   BASTION_TYPES,
-  BASTION_UPGRADES,
   MODULE_ID,
 } from "./constants.js";
 import { buildVaultData, getVaultItemSlots } from "./vault.js";
-import { getVaultTransferData } from "../libs/bastion-vault-transfer.js";
+import { buildUpgradeData, getUpgradeBuildKey, normalizeBastionUpgrades, queueUpgradeUpdate } from "./upgrades.js";
+import { canManageActorItems, getVaultTransferData, vaultPermissionMessage } from "../libs/bastion-vault-transfer.js";
 
 const ActorSheetBase = globalThis.foundry?.appv1?.sheets?.ActorSheet;
 const TextEditorImplementation = globalThis.foundry?.applications?.ux?.TextEditor?.implementation;
@@ -115,10 +115,7 @@ async function buildDefenseData(defenses) {
 function getBastionState(actor) {
   const state = actor?.getFlag?.(MODULE_ID, "bastion") ?? {};
   const type = getBastionType(state.type || BASTION_DEFAULT_TYPE);
-  const validKeys = new Set(BASTION_UPGRADES.map(upgrade => upgrade.key));
-  const upgrades = Array.isArray(state.upgrades)
-    ? [...new Set(state.upgrades.filter(key => validKeys.has(key)))]
-    : [];
+  const upgrades = normalizeBastionUpgrades(state.upgrades);
   const defenses = {
     siegeWeapons: normalizeDefenseList(
       BASTION_DEFENSE_KINDS.siegeWeapons,
@@ -140,6 +137,10 @@ function getNumber(value, fallback = 0) {
 
 function canEditBastion(sheet) {
   return Boolean(sheet.isEditable && globalThis.game?.user?.isGM);
+}
+
+function canManageVault(sheet) {
+  return Boolean(sheet.isEditable && canManageActorItems(sheet.actor));
 }
 
 async function createBastionActor({ name = "New Bastion", folder = null } = {}) {
@@ -224,9 +225,8 @@ class MKBastionSheet extends ActorSheetBase {
   async getData(options = {}) {
     const context = await super.getData(options);
     const state = getBastionState(this.actor);
-    const installed = new Set(state.upgrades);
     const installedCount = state.upgrades.length;
-    const hasVault = installed.has("vault");
+    const hasVault = state.upgrades.includes("vault");
     const defenseCount = state.defenses.siegeWeapons.length + state.defenses.warbands.length;
     const defenses = await buildDefenseData(state.defenses);
     const canEdit = canEditBastion(this);
@@ -239,6 +239,7 @@ class MKBastionSheet extends ActorSheetBase {
     context.mk = {
       isBastion: true,
       canEditBastion: canEdit,
+      canManageVault: canManageVault(this),
       bastion: {
         type: state.type,
         location: String(this.actor.system?.location ?? ""),
@@ -259,11 +260,7 @@ class MKBastionSheet extends ActorSheetBase {
           ...buildVaultData(this.actor.items),
           gold: Math.max(0, Math.floor(getNumber(this.actor.system?.coins?.gp, 0))),
         },
-        upgrades: BASTION_UPGRADES.map(upgrade => ({
-          ...upgrade,
-          installed: installed.has(upgrade.key),
-          canInstall: canEdit && (installed.has(upgrade.key) || installedCount < state.type.upgrades),
-        })),
+        upgrades: buildUpgradeData(state.upgrades, state.type.upgrades, canEdit),
         installedCount,
         upgradeLimit: state.type.upgrades,
       },
@@ -325,7 +322,7 @@ class MKBastionSheet extends ActorSheetBase {
     });
 
     html[0]?.querySelectorAll("[data-vault-item-id]").forEach(itemElement => {
-      itemElement.draggable = true;
+      itemElement.draggable = canManageVault(this);
       itemElement.addEventListener("dragstart", event => this._onVaultItemDragStart(event));
     });
   }
@@ -355,23 +352,28 @@ class MKBastionSheet extends ActorSheetBase {
   async _onToggleBastionUpgrade(event) {
     if (!canEditBastion(this)) return;
 
-    const key = String(event.currentTarget.dataset.upgradeKey ?? "");
-    const upgrade = BASTION_UPGRADES.find(entry => entry.key === key);
-    if (!upgrade) return;
+    const key = getUpgradeBuildKey(
+      String(event.currentTarget.dataset.upgradeKey ?? ""),
+      Number(event.currentTarget.dataset.upgradeBuild ?? 1)
+    );
+    if (!key) return;
 
-    const state = getBastionState(this.actor);
-    const installed = state.upgrades.includes(key);
-    if (!installed && state.upgrades.length >= state.type.upgrades) {
-      ui.notifications?.warn?.(`This ${state.type.name} supports only ${state.type.upgrades} upgrades.`);
-      return;
-    }
+    await queueUpgradeUpdate(this.actor, async () => {
+      if (!canEditBastion(this)) return;
+      const state = getBastionState(this.actor);
+      const installed = state.upgrades.includes(key);
+      if (!installed && state.upgrades.length >= state.type.upgrades) {
+        ui.notifications?.warn?.(`This ${state.type.name} supports only ${state.type.upgrades} upgrades.`);
+        return;
+      }
 
-    const upgrades = installed
-      ? state.upgrades.filter(entry => entry !== key)
-      : [...state.upgrades, key];
+      const upgrades = installed
+        ? state.upgrades.filter(entry => entry !== key)
+        : [...state.upgrades, key];
 
-    await this.actor.update({
-      [`flags.${MODULE_ID}.bastion.upgrades`]: upgrades,
+      await this.actor.update({
+        [`flags.${MODULE_ID}.bastion.upgrades`]: upgrades,
+      });
     });
   }
 
@@ -433,6 +435,10 @@ class MKBastionSheet extends ActorSheetBase {
   }
 
   _onVaultItemDragStart(event) {
+    if (!canManageVault(this)) {
+      event.preventDefault();
+      return;
+    }
     const itemId = String(event.currentTarget.dataset.vaultItemId ?? "").trim();
     const item = this.actor.items?.get?.(itemId)
       ?? Array.from(this.actor.items ?? []).find(candidate => candidate.id === itemId);
@@ -499,10 +505,15 @@ class MKBastionSheet extends ActorSheetBase {
   }
 
   _onVaultDragEnter(event) {
+    if (!canManageVault(this)) return;
     event.currentTarget.classList.add("is-drag-over");
   }
 
   _onVaultDragOver(event) {
+    if (!canManageVault(this)) {
+      if (event.dataTransfer) event.dataTransfer.dropEffect = "none";
+      return;
+    }
     if (event.dataTransfer) event.dataTransfer.dropEffect = "move";
     event.currentTarget.classList.add("is-drag-over");
   }
@@ -513,10 +524,15 @@ class MKBastionSheet extends ActorSheetBase {
   }
 
   _onVaultTrashDragEnter(event) {
+    if (!canManageVault(this)) return;
     event.currentTarget.classList.add("is-drag-over");
   }
 
   _onVaultTrashDragOver(event) {
+    if (!canManageVault(this)) {
+      if (event.dataTransfer) event.dataTransfer.dropEffect = "none";
+      return;
+    }
     if (event.dataTransfer) event.dataTransfer.dropEffect = "move";
     event.currentTarget.classList.add("is-drag-over");
   }
@@ -601,8 +617,8 @@ class MKBastionSheet extends ActorSheetBase {
     dropzone.classList.remove("is-drag-over");
     event.stopPropagation();
 
-    if (!canEditBastion(this)) {
-      ui.notifications?.warn?.("Only the GM can discard items from a bastion vault.");
+    if (!canManageVault(this)) {
+      ui.notifications?.warn?.(vaultPermissionMessage("ownerOnly"));
       return false;
     }
 
@@ -629,8 +645,8 @@ class MKBastionSheet extends ActorSheetBase {
     dropzone.classList.remove("is-drag-over");
     event.stopPropagation();
 
-    if (!canEditBastion(this)) {
-      ui.notifications?.warn?.("Only the GM can store items in a bastion vault.");
+    if (!canManageVault(this)) {
+      ui.notifications?.warn?.(vaultPermissionMessage("ownerOnly"));
       return false;
     }
 
@@ -658,6 +674,10 @@ class MKBastionSheet extends ActorSheetBase {
     const sourceActor = droppedItem.parent?.documentName === "Actor"
       ? droppedItem.parent
       : null;
+    if (sourceActor && !canManageActorItems(sourceActor)) {
+      ui.notifications?.warn?.(vaultPermissionMessage("sourceOwnership"));
+      return false;
+    }
 
     const itemData = typeof droppedItem.toObject === "function"
       ? droppedItem.toObject()
@@ -684,6 +704,7 @@ class MKBastionSheet extends ActorSheetBase {
     let createdItem;
     try {
       [createdItem] = await this.actor.createEmbeddedDocuments("Item", [itemData], { renderSheet: false });
+      if (!createdItem) return false;
       if (sourceActor && sourceActor.uuid !== this.actor.uuid) {
         await sourceActor.deleteEmbeddedDocuments("Item", [droppedItem.id]);
       }

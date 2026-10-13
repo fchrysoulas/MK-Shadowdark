@@ -1,5 +1,10 @@
 # Changelog
 
+## 1.9.19
+
+- Added a DTP value box before Languages on the native Player sheet Details tab, matching the XP and Renown boxes.
+- DTP starts at 0, persists on the actor, and is editable only by GMs; players and observers see a read-only value.
+
 ## 1.9.18
 
 - Published the accumulated Character Dashboard, dashboard-styled Item sheet, Detailed Wounds, and automation improvements described in 1.9.17.

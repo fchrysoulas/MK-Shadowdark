@@ -1,4 +1,7 @@
 {
+  "MK_SHADOWDARK.dtp.label": "DTP",
+  "MK_SHADOWDARK.dtp.gmOnly": "Only the GM can edit DTP.",
+  "MK_SHADOWDARK.dtp.saveFailed": "Could not save DTP.",
   "MK_SHADOWDARK.dashboard.sheetName": "MK-Shadowdark: Character Dashboard",
   "MK_SHADOWDARK.dashboard.itemSheetName": "MK-Shadowdark: Dashboard Item Sheet",
   "MK_SHADOWDARK.dashboard.settingName": "Character Dashboard",

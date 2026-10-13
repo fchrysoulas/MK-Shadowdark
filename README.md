@@ -33,6 +33,7 @@ The old **MK-Shadowdark GM Screen Mock** prototype is not a dependency and is no
 
 ## Character and combat automation
 
+- **DTP** -- a compact value box before Languages on the native Player sheet Details tab. It starts at 0, persists on the actor, and is editable only by GMs.
 - **Character Dashboard paper-doll layout** -- the enlarged figure uses consistent equipment slot sizing, a compact centered AC badge, and an item-style Spells slot above Right Hand.
 - The character class value in the dashboard header can be edited with the native Shadowdark class selector.
 - Paper-doll and Backpack item cards use full-area artwork.

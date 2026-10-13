@@ -10,6 +10,7 @@ const CONSUMERS = [
   "scripts/focus-spell-tracker/focus-spell-tracker.js",
   "scripts/sheet-style-editor/sheet-style-editor.js",
   "scripts/character-sheet-tweaks/character-sheet-tweaks.js",
+  "scripts/dtp/dtp.js",
   "scripts/equipment-hands/equipment-hands.js"
 ];
 

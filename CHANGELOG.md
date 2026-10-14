@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.9.21
+
+- Added automatic weekly wage totals for stationed Bastion warbands at 3 gp per level per warband, including quantity and live updates when linked NPC levels change.
+
 ## 1.9.20
 
 - Enabled Bastion owners to drag items into and out of the Vault and discard stored items, with ownership checks on both actors for transfers.

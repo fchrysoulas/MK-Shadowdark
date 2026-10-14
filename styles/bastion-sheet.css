@@ -575,6 +575,33 @@
   gap: 8px;
 }
 
+.mk-bastion-warband-wages {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 4px 8px;
+  margin-bottom: 12px;
+  padding: 8px 10px;
+  border: 1px solid rgba(242, 208, 133, 0.28);
+  border-radius: 4px;
+  background: rgba(242, 208, 133, 0.08);
+  font-size: 12px;
+}
+
+.mk-bastion-warband-wages strong {
+  color: var(--mk-bastion-accent);
+}
+
+.mk-bastion-warband-wages small,
+.mk-bastion-warband-wage {
+  grid-column: 1 / -1;
+  color: var(--mk-bastion-muted);
+  font-size: 10px;
+}
+
+.mk-bastion-warband-wages .mk-bastion-warband-wages-warning {
+  color: var(--mk-bastion-accent);
+}
+
 .mk-bastion-defense-row {
   display: grid;
   grid-template-columns: minmax(0, 1fr) 52px 30px;

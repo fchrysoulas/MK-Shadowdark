@@ -173,6 +173,8 @@ The Group Sheet tab rail keeps all five areas on one desktop row, becomes a sing
 
 ## Bastion Actors
 
+Bastion Defenses show weekly wages for each stationed warband and their combined total: **3 gp × warband level × quantity per week**. Wages use the linked NPC's current level and refresh when it changes. Missing warbands or levels are marked as unavailable and excluded from a clearly labeled subtotal.
+
 Bastion upgrade cards have three independent build checkmarks for Aviary, Barracks, Idol, Library, Temple, and Wizard Tower. Each build uses one slot in the structure's total upgrade limit; other upgrades have one checkmark. Existing installed upgrades keep their first build checked.
 
 Bastion owners and GMs can drag items into and out of the Vault, or discard them in its trash area. Transfers between actors require ownership of both the source and destination actors; world and compendium Items are copied into the Vault. The 100-slot limit still applies.

@@ -90,6 +90,12 @@ async function buildDefenseData(defenses) {
       const hpPercent = hasHp && maximumHp > 0
         ? Math.min(100, Math.max(0, Math.round((currentHp / maximumHp) * 100)))
         : 0;
+      const rawLevel = actor?.system?.level?.value;
+      const level = rawLevel === undefined || rawLevel === null || String(rawLevel).trim() === ""
+        ? NaN
+        : Number(rawLevel);
+      const hasWages = kind === BASTION_DEFENSE_KINDS.warbands
+        && Number.isInteger(level) && level >= 0;
 
       return {
         ...entry,
@@ -105,6 +111,9 @@ async function buildDefenseData(defenses) {
           : null,
         img: actor?.img ?? "icons/svg/mystery-man.svg",
         name: actor?.name ?? entry.name,
+        hasWages,
+        level: hasWages ? level : null,
+        weeklyWages: hasWages ? 3 * level * entry.quantity : null,
       };
     }));
   }
@@ -133,6 +142,18 @@ function getBastionState(actor) {
 function getNumber(value, fallback = 0) {
   const number = Number(value);
   return Number.isFinite(number) ? number : fallback;
+}
+
+function rerenderOpenBastionSheets(updatedActor) {
+  if (!updatedActor?.uuid) return;
+
+  for (const app of Object.values(globalThis.ui?.windows ?? {})) {
+    if (!(app instanceof MKBastionSheet) || !app.rendered) continue;
+    const state = getBastionState(app.actor);
+    if (Object.values(state.defenses).some(entries => (
+      entries.some(entry => entry.actorUuid === updatedActor.uuid)
+    ))) app.render(false);
+  }
 }
 
 function canEditBastion(sheet) {
@@ -256,6 +277,10 @@ class MKBastionSheet extends ActorSheetBase {
         },
         ac: state.type.ac,
         defenses,
+        warbandWages: {
+          weeklyTotal: defenses.warbands.reduce((total, entry) => total + (entry.weeklyWages ?? 0), 0),
+          incomplete: defenses.warbands.some(entry => !entry.hasWages),
+        },
         vault: {
           ...buildVaultData(this.actor.items),
           gold: Math.max(0, Math.floor(getNumber(this.actor.system?.coins?.gp, 0))),
@@ -767,4 +792,5 @@ export {
   createBastionActor,
   getBastionState,
   MKBastionSheet,
+  rerenderOpenBastionSheets,
 };

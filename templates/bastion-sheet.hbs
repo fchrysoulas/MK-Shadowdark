@@ -191,6 +191,15 @@
             </div>
           </header>
 
+          <div class="mk-bastion-warband-wages" role="status" aria-live="polite">
+            <span>{{#if mk.bastion.warbandWages.incomplete}}{{localize "MK_SHADOWDARK.bastionWages.subtotal"}}{{else}}{{localize "MK_SHADOWDARK.bastionWages.total"}}{{/if}}</span>
+            <strong>{{mk.bastion.warbandWages.weeklyTotal}} {{localize "MK_SHADOWDARK.bastionWages.unit"}}</strong>
+            <small>{{localize "MK_SHADOWDARK.bastionWages.rule"}}</small>
+            {{#if mk.bastion.warbandWages.incomplete}}
+            <small class="mk-bastion-warband-wages-warning">{{localize "MK_SHADOWDARK.bastionWages.incomplete"}}</small>
+            {{/if}}
+          </div>
+
           <div class="mk-bastion-defense-list">
             {{#each mk.bastion.defenses.warbands}}
             <div class="mk-bastion-defense-row {{#unless actorExists}}is-missing{{/unless}}">
@@ -220,6 +229,13 @@
                 <input type="number" min="1" step="1" value="{{quantity}}" aria-label="Quantity" data-action="update-defense" data-defense-kind="warbands" data-defense-id="{{id}}" data-defense-field="quantity" {{#unless ../mk.canEditBastion}}disabled{{/unless}}>
               </label>
               <button type="button" class="mk-bastion-remove-button" data-action="remove-defense" data-defense-kind="warbands" data-defense-id="{{id}}" title="Remove warband" aria-label="Remove warband" {{#unless ../mk.canEditBastion}}disabled{{/unless}}><i class="fas fa-trash"></i></button>
+              <small class="mk-bastion-warband-wage">
+                {{#if hasWages}}
+                {{localize "MK_SHADOWDARK.bastionWages.level"}} {{level}} &middot; {{weeklyWages}} {{localize "MK_SHADOWDARK.bastionWages.unit"}}
+                {{else}}
+                {{localize "MK_SHADOWDARK.bastionWages.unavailable"}}
+                {{/if}}
+              </small>
             </div>
             {{else}}
             <p class="mk-bastion-defense-empty">No warbands added.</p>

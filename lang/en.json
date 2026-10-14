@@ -1,4 +1,11 @@
 {
+  "MK_SHADOWDARK.bastionWages.total": "Weekly warband wages",
+  "MK_SHADOWDARK.bastionWages.subtotal": "Weekly warband wages (subtotal)",
+  "MK_SHADOWDARK.bastionWages.unit": "gp/week",
+  "MK_SHADOWDARK.bastionWages.rule": "3 gp per warband level per week, multiplied by quantity.",
+  "MK_SHADOWDARK.bastionWages.level": "Level",
+  "MK_SHADOWDARK.bastionWages.incomplete": "Some linked warbands or their levels are unavailable; their wages are excluded from this subtotal.",
+  "MK_SHADOWDARK.bastionWages.unavailable": "Wages unavailable: linked warband or level missing.",
   "MK_SHADOWDARK.bastionVault.ownerOnly": "Only a GM or owner of this Bastion can manage Vault items.",
   "MK_SHADOWDARK.bastionVault.transferOwnership": "You must own both the Bastion and the receiving actor to move Vault items.",
   "MK_SHADOWDARK.bastionVault.sourceOwnership": "You must own the source actor to move its items into the Vault.",

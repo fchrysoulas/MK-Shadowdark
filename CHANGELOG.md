@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.9.22
+
+- Made DTP clickable to choose Spiritualism, Skulduggery, Martial Training, Magical Research, and Learning Skills. Owners can attempt native checks for 1 DTP each; starred activities also deduct 10 gp per PC level. The menu checks class eligibility and resources, confirms facilities, equipment and lodging, and posts results without luck-token rerolls.
+
 ## 1.9.21
 
 - Added automatic weekly wage totals for stationed Bastion warbands at 3 gp per level per warband, including quantity and live updates when linked NPC levels change.

@@ -57,6 +57,8 @@ function isDtpSpend(actor, change, options) {
   if (!expected) return false;
   const actual = flattenUpdate(change);
   if (actual._id === actor.id) delete actual._id;
+  // Foundry injects the current subtype before preUpdateActor, even for flag-only updates.
+  if (actual.type === actor.type) delete actual.type;
   return Object.keys(actual).length === Object.keys(expected).length
     && Object.entries(expected).every(([path, value]) => actual[path] === value);
 }
@@ -103,7 +105,6 @@ function buildDowntimeMenu(actor, profile) {
     <p class="mk-dtp-balance"><strong>${escapeHtml(actor.name)}</strong> · ${getDtp(actor)} DTP · ${Number(actor.system?.coins?.gp) || 0} gp</p>
     <p>${escapeHtml(localize("rules"))}</p>
     <p class="mk-dtp-note">${escapeHtml(localize("outcomes"))}</p>
-    <label class="mk-dtp-requirements"><input type="checkbox" name="requirements" required> ${escapeHtml(localize("requirements"))}</label>
     ${DOWNTIME_ACTIVITIES.map((activity, index) => `<details${index === 0 ? " open" : ""}>
       <summary>${escapeHtml(activity.title)} <span>${escapeHtml(activity.facility)}</span></summary>
       <p>${escapeHtml(activity.description)}</p>
@@ -129,10 +130,10 @@ function buildDowntimeMenu(actor, profile) {
   </div>`;
 }
 
-async function performDowntime(actor, activityId, ability, { requirementsMet = false } = {}) {
+async function performDowntime(actor, activityId, ability) {
   const entry = getDowntimeOption(activityId);
   const key = actor?.uuid ?? actor?.id ?? actor;
-  if (!canSpendDtp(actor) || !entry || !requirementsMet || !entry.group.abilities.includes(ability) || activeAttempts.has(key)) return false;
+  if (!canSpendDtp(actor) || !entry || !entry.group.abilities.includes(ability) || activeAttempts.has(key)) return false;
   activeAttempts.add(key);
   let paid = false;
   try {
@@ -172,11 +173,13 @@ async function performDowntime(actor, activityId, ability, { requirementsMet = f
     // Use the native roll template without the system roll-card reroll/luck controls.
     await roll.toMessage({
       speaker: globalThis.ChatMessage?.getSpeaker?.({ actor }),
-      flavor: `<div class="mk-dtp-result"><strong>${escapeHtml(entry.activity.title)}: ${escapeHtml(entry.label)}</strong>
-        <p>${ability.toUpperCase()} DC ${entry.dc} · ${escapeHtml(localize(success ? "success" : "failure"))}</p>
+      flavor: `<div class="mk-dtp-result">
+        <p class="mk-dtp-result-activity">${escapeHtml(entry.activity.title)}</p>
+        <strong class="mk-dtp-result-title">${escapeHtml(entry.label)}</strong>
+        <p class="mk-dtp-result-check"><strong>${escapeHtml(localize(success ? "success" : "failure"))}</strong><span>${ability.toUpperCase()} · DC ${entry.dc}</span></p>
         ${success ? `<p>${escapeHtml(entry.description)}</p>` : ""}
-        <p>${escapeHtml(localize("spent", { gold, remaining: getDtp(actor) }))}</p>
-        <p>${escapeHtml(localize("noLuck"))}</p></div>`,
+        <p class="mk-dtp-result-cost">${escapeHtml(localize(gold > 0 ? "spentWithGold" : "spent", { gold, remaining: getDtp(actor) }))}</p>
+      </div>`,
       flags: { [MODULE_ID]: { downtime: { activityId: entry.id, dc: entry.dc, gold, success } } }
     }, { rollMode: config.rollMode });
     return true;
@@ -204,9 +207,9 @@ async function openDowntimeMenu(actor) {
         callback: (_event, button) => {
           const form = button.form;
           const entry = getDowntimeOption(form.elements.activity?.value);
-          if (!entry || !form.elements.requirements?.checked) return null;
+          if (!entry) return null;
           return {
-            activityId: entry.id, requirementsMet: true,
+            activityId: entry.id,
             ability: form.elements[`ability-${entry.activity.id}-${entry.group.id}`]?.value ?? entry.group.abilities[0]
           };
         } },
@@ -215,7 +218,7 @@ async function openDowntimeMenu(actor) {
     rejectClose: false,
     close: () => null
   });
-  if (choice) await performDowntime(actor, choice.activityId, choice.ability, choice);
+  if (choice) await performDowntime(actor, choice.activityId, choice.ability);
 }
 
 function renderDtp(app, html) {

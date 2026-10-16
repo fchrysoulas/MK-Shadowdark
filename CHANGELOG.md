@@ -1,5 +1,10 @@
 # Changelog
 
+## 1.9.23
+
+- Removed the downtime facility confirmation checkbox and tidied chat results, omitting the "No luck tokens" notice and zero-gold costs.
+- Fixed player-owned downtime attempts being blocked with an incorrect insufficient DTP/gold warning when Foundry adds the unchanged actor type to the payment update.
+
 ## 1.9.22
 
 - Made DTP clickable to choose Spiritualism, Skulduggery, Martial Training, Magical Research, and Learning Skills. Owners can attempt native checks for 1 DTP each; starred activities also deduct 10 gp per PC level. The menu checks class eligibility and resources, confirms facilities, equipment and lodging, and posts results without luck-token rerolls.

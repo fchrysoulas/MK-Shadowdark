@@ -1,5 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
+import { readFileSync } from "node:fs";
 import {
   buildDowntimeMenu, changesDtp, getDtp, guardDtpUpdate,
   openDowntimeMenu, performDowntime, renderDtp, saveDtp, spendDtp
@@ -8,6 +9,8 @@ import {
   DOWNTIME_ACTIVITIES, DOWNTIME_OPTIONS, getDowntimeGoldCost,
   getDowntimeOption, getDowntimeProfile, isDowntimeEligible
 } from "../scripts/dtp/activities.js";
+
+const translations = JSON.parse(readFileSync(new URL("../lang/en.json", import.meta.url), "utf8"));
 
 function actorWithDtp(value, type = "Player") {
   return {
@@ -22,7 +25,13 @@ function actorWithDtp(value, type = "Player") {
 }
 
 function setUser(isGM) {
-  globalThis.game = { system: { id: "shadowdark" }, user: { isGM } };
+  globalThis.game = {
+    system: { id: "shadowdark" }, user: { isGM },
+    i18n: {
+      localize: key => translations[key] ?? key,
+      format: (key, data) => (translations[key] ?? key).replace(/\{(\w+)\}/g, (_, name) => data[name])
+    }
+  };
 }
 
 class Element {
@@ -179,7 +188,8 @@ function downtimeActor({ dtp = 5, gp = 100, level = 3, hitPoints = "d6", casterA
     }
   };
   actor.update = async (change, options) => {
-    if (guardDtpUpdate(actor, change, options) === false) return undefined;
+    // Foundry adds the document subtype before calling preUpdateActor.
+    if (guardDtpUpdate(actor, { _id: actor.id, type: actor.type, ...change }, options) === false) return undefined;
     actor.writes.push({ change, options });
     actor.flags["mk-shadowdark"].dtp = change["flags.mk-shadowdark.dtp"];
     if ("system.coins.gp" in change) actor.system.coins.gp = change["system.coins.gp"];
@@ -212,7 +222,7 @@ test("the menu contains all 29 supplied options, facilities, DCs, and asterisks"
   setUser(true);
   const html = buildDowntimeMenu(downtimeActor(), { hitDie: 6, casterAbility: "wis" });
   assert.equal((html.match(/type="radio"/g) ?? []).length, 29);
-  assert.ok(html.includes("name=\"requirements\" required"));
+  assert.doesNotMatch(html, /type="checkbox"|name="requirements"/);
   assert.ok(html.includes("Test &lt;Cleric&gt;"));
   assert.ok(html.includes('value="research-wis-healing" required>'));
   assert.ok(html.includes('value="research-int-scroll" required disabled>'));
@@ -259,6 +269,8 @@ test("owners can spend exactly one DTP with its fixed gold cost, but cannot forg
   const valid = { "flags.mk-shadowdark.dtp": 3, "system.coins.gp": 40 };
   assert.notEqual(guardDtpUpdate(actor, valid, options), false);
   assert.notEqual(guardDtpUpdate(actor, { _id: actor.id, ...valid }, options), false);
+  assert.notEqual(guardDtpUpdate(actor, { _id: actor.id, type: "Player", ...valid }, options), false);
+  assert.notEqual(guardDtpUpdate(actor, { _id: actor.id, type: "Player", flags: { "mk-shadowdark": { dtp: 3 } }, system: { coins: { gp: 40 } } }, options), false);
   assert.equal(guardDtpUpdate(actor, { _id: "another-actor", ...valid }, options), false);
   assert.notEqual(guardDtpUpdate(actor, { flags: { "mk-shadowdark": { dtp: 3 } }, system: { coins: { gp: 40 } } }, options), false);
   for (const invalid of [
@@ -266,6 +278,7 @@ test("owners can spend exactly one DTP with its fixed gold cost, but cannot forg
     { ...valid, "flags.mk-shadowdark.dtp": 2 },
     { ...valid, "system.coins.gp": 70 },
     { ...valid, "system.level.xp": 99 },
+    { ...valid, type: "NPC" },
     { "flags.mk-shadowdark.dtp": 3 }
   ]) assert.equal(guardDtpUpdate(actor, invalid, options), false);
   assert.equal(guardDtpUpdate(actor, valid, { mkShadowdarkDtp: { activityId: "made-up" } }), false);
@@ -291,7 +304,7 @@ test("closing the native check spends nothing and produces no roll", async () =>
   setUser(false);
   const actor = downtimeActor();
   const calls = nativeDowntime({ submitted: false });
-  assert.equal(await performDowntime(actor, "skills-int-learn", "int", { requirementsMet: true }), false);
+  assert.equal(await performDowntime(actor, "skills-int-learn", "int"), false);
   assert.equal(calls.dialogs.length, 1);
   assert.equal(calls.rolls.length, 0);
   assert.equal(actor.writes.length, 0);
@@ -304,7 +317,7 @@ test("successes and failures both pay once and post native rolls without a luck 
   for (const total of [3, 19]) {
     const actor = downtimeActor();
     const calls = nativeDowntime({ total });
-    assert.equal(await performDowntime(actor, "skills-int-learn", "int", { requirementsMet: true }), true);
+    assert.equal(await performDowntime(actor, "skills-int-learn", "int"), true);
     assert.equal(getDtp(actor), 4);
     assert.equal(actor.system.coins.gp, 70);
     assert.equal(actor.writes.length, 1);
@@ -314,18 +327,42 @@ test("successes and failures both pay once and post native rolls without a luck 
     assert.equal(message.flags["mk-shadowdark"].downtime.success, total >= 18);
     assert.equal(message.flags.shadowdark, undefined);
     assert.equal(message.flavor.includes('data-action="reroll"'), false);
+    assert.doesNotMatch(message.flavor, /noLuck|luck tokens/i);
+    assert.match(message.flavor, /mk-dtp-result-title">Learn a language or auxiliary skill/);
+    assert.match(message.flavor, /INT · DC 18/);
+    assert.ok(message.flavor.includes(total >= 18 ? "Success" : "Failure"));
+    assert.match(message.flavor, /Spent 1 DTP and 30 gp · 4 DTP remaining/);
+    assert.equal(message.flavor.includes("With a capable instructor"), total >= 18);
   }
 });
 
-test("requirements, ownership, ability and class eligibility are checked before rolling", async () => {
+test("unstarred chat results omit a zero-gold cost and escape activity text", async () => {
+  setUser(false);
+  const actor = downtimeActor({ gp: 0 });
+  const entry = getDowntimeOption("skulduggery-cha-rumor");
+  const label = entry.label;
+  const calls = nativeDowntime();
+  try {
+    entry.label = "Rumor <test>";
+    assert.equal(await performDowntime(actor, entry.id, "cha"), true);
+    const { flavor } = calls.messages[0].data;
+    assert.match(flavor, /Rumor &lt;test&gt;/);
+    assert.match(flavor, /Spent 1 DTP · 4 DTP remaining/);
+    assert.doesNotMatch(flavor, /\bgp\b|noLuck|luck tokens/i);
+  } finally {
+    entry.label = label;
+  }
+});
+
+test("ownership, ability and class eligibility are checked before rolling", async () => {
   setUser(false);
   const calls = nativeDowntime();
   const actor = downtimeActor();
-  assert.equal(await performDowntime(actor, "skills-int-learn", "int"), false);
-  assert.equal(await performDowntime(actor, "skills-int-learn", "wis", { requirementsMet: true }), false);
-  assert.equal(await performDowntime(actor, "research-cha-scroll", "cha", { requirementsMet: true }), false);
-  assert.equal(await performDowntime(actor, "martial-d8-bonus", "str", { requirementsMet: true }), false);
-  assert.equal(await performDowntime(downtimeActor({ owner: false }), "skills-int-learn", "int", { requirementsMet: true }), false);
+  assert.equal(await performDowntime(actor, "missing", "int"), false);
+  assert.equal(await performDowntime(actor, "skills-int-learn", "wis"), false);
+  assert.equal(await performDowntime(actor, "research-cha-scroll", "cha"), false);
+  assert.equal(await performDowntime(actor, "martial-d8-bonus", "str"), false);
+  assert.equal(await performDowntime(downtimeActor({ owner: false }), "skills-int-learn", "int"), false);
   assert.equal(calls.dialogs.length, 0);
   assert.equal(actor.writes.length, 0);
 });
@@ -341,7 +378,7 @@ test("downtime outcomes match native critical successes and failures", async () 
       criticalSuccess: success, criticalFailure: !success,
       toMessage: async data => { message = data; }
     });
-    assert.equal(await performDowntime(actor, "skills-int-learn", "int", { requirementsMet: true }), true);
+    assert.equal(await performDowntime(actor, "skills-int-learn", "int"), true);
     assert.equal(message.flags["mk-shadowdark"].downtime.success, success);
     assert.equal(getDtp(actor), 4);
   }
@@ -353,9 +390,9 @@ test("resources are rechecked after the prompt and duplicate clicks cannot open 
   const calls = nativeDowntime();
   let submit;
   globalThis.shadowdark.dice.rollDialog = () => new Promise(resolve => { submit = resolve; });
-  const first = performDowntime(actor, "skills-int-learn", "int", { requirementsMet: true });
+  const first = performDowntime(actor, "skills-int-learn", "int");
   while (!submit) await new Promise(resolve => setTimeout(resolve, 0));
-  assert.equal(await performDowntime(actor, "skills-int-learn", "int", { requirementsMet: true }), false);
+  assert.equal(await performDowntime(actor, "skills-int-learn", "int"), false);
   actor.system.coins.gp = 1;
   submit(true);
   assert.equal(await first, false);
@@ -380,4 +417,25 @@ test("the DTP button opens the option menu and cancel does not spend", async () 
   assert.ok(dialogConfig.content.includes("Learning Skills"));
   assert.equal(app.actor.writes.length, 0);
   delete globalThis.foundry;
+});
+
+test("choosing an activity opens the native check without facility confirmation", async () => {
+  setUser(false);
+  const actor = downtimeActor();
+  const calls = nativeDowntime();
+  globalThis.foundry = { applications: { api: { DialogV2: { wait: async config => {
+    const attempt = config.buttons.find(button => button.action === "attempt");
+    assert.equal(attempt.callback(null, { form: { elements: {} } }), null);
+    return attempt.callback(null, { form: { elements: { activity: { value: "skills-int-learn" } } } });
+  } } } } };
+  try {
+    await openDowntimeMenu(actor);
+    assert.equal(calls.dialogs.length, 1);
+    assert.equal(calls.rolls.length, 1);
+    assert.equal(calls.messages.length, 1);
+    assert.equal(actor.writes.length, 1);
+    assert.equal(getDtp(actor), 4);
+  } finally {
+    delete globalThis.foundry;
+  }
 });

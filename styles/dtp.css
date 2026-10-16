@@ -46,14 +46,6 @@
   opacity: .7;
 }
 
-.mk-dtp-menu .mk-dtp-requirements {
-  display: flex;
-  align-items: flex-start;
-  gap: 8px;
-  margin: 12px 0;
-}
-
-.mk-dtp-menu input[type="checkbox"],
 .mk-dtp-menu input[type="radio"] {
   flex: 0 0 auto;
   margin-top: 3px;
@@ -116,4 +108,34 @@
 
 .mk-dtp-menu .mk-dtp-option:has(input:disabled) {
   cursor: default;
+}
+
+.mk-dtp-result > p {
+  margin: 6px 0;
+}
+
+.mk-dtp-result > .mk-dtp-result-activity {
+  margin-top: 0;
+}
+
+.mk-dtp-result .mk-dtp-result-activity,
+.mk-dtp-result .mk-dtp-result-cost {
+  font-size: .85em;
+  opacity: .8;
+}
+
+.mk-dtp-result .mk-dtp-result-title {
+  display: block;
+  font-size: 1.1em;
+}
+
+.mk-dtp-result .mk-dtp-result-check {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: 4px 12px;
+}
+
+.mk-dtp-result > .mk-dtp-result-cost {
+  margin-bottom: 0;
 }

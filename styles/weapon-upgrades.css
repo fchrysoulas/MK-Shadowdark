@@ -9,17 +9,13 @@
   padding: 0;
 }
 
-.mk-weapon-upgrades p {
-  margin: 0 0 10px;
-  font-size: 12px;
-  line-height: 1.4;
-}
-
 .mk-weapon-upgrade-controls {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
-  align-items: center;
-  gap: 10px;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
 }
 
 .mk-weapon-upgrade-controls label {
@@ -28,6 +24,8 @@
   gap: 6px;
   min-width: 0;
   font-size: 12px;
+  letter-spacing: normal;
+  text-transform: none;
 }
 
 .mk-weapon-upgrade-controls input[type="checkbox"] {
@@ -36,16 +34,11 @@
 }
 
 .mk-weapon-upgrade-controls .mk-weapon-upgrade-die {
-  display: grid;
-  gap: 4px;
+  flex-wrap: wrap;
 }
 
 .mk-weapon-upgrade-die select {
-  width: 100%;
+  width: auto;
+  max-width: 140px;
   min-width: 0;
-}
-
-.mk-weapon-upgrades .mk-weapon-upgrade-status {
-  margin: 10px 0 0;
-  font-style: italic;
 }

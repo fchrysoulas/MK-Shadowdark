@@ -127,6 +127,25 @@ test("rapid edits retain all selected upgrades in one effect and clear them with
   assert.equal(item.effects.length, 0);
 });
 
+test("the hit-only and combined list options replace one another without stacking and preserve die increases", async () => {
+  const { item } = setup();
+  assert.equal(await setWeaponUpgrade(item, "bonus", "attack"), true);
+  assert.deepEqual(getWeaponUpgrades(item), { attackBonus: true, damageBonus: false, damageDieSteps: 0 });
+  await Promise.all([
+    setWeaponUpgrade(item, "bonus", "attackAndDamage"),
+    setWeaponUpgrade(item, "damageDieSteps", 2)
+  ]);
+  await setWeaponUpgrade(item, "bonus", "attackAndDamage");
+  assert.deepEqual(getWeaponUpgrades(item), { attackBonus: true, damageBonus: true, damageDieSteps: 2 });
+  assert.equal(item.effects.length, 1);
+  assert.deepEqual(item.effects[0].changes.map(change => change.value), ["1", "1", "2"]);
+  await setWeaponUpgrade(item, "bonus", "attack");
+  assert.deepEqual(getWeaponUpgrades(item), { attackBonus: true, damageBonus: false, damageDieSteps: 2 });
+  await setWeaponUpgrade(item, "bonus", "none");
+  assert.deepEqual(getWeaponUpgrades(item), { attackBonus: false, damageBonus: false, damageDieSteps: 2 });
+  assert.equal(await setWeaponUpgrade(item, "bonus", "invalid"), false);
+});
+
 test("editing a disabled training effect enables it and cleans up only duplicate managed effects", async () => {
   const changes = [{ key: "system.roll.attack.bonus.this", value: "1" }];
   const { item } = setup({ effects: [
@@ -214,6 +233,13 @@ test("native and dashboard weapon sheets show one upgrade panel, preserve select
   assert.equal(grid.children.length, 1);
   const controls = grid.querySelectorAll("[data-weapon-upgrade]");
   assert.equal(controls.length, 3);
+  const panel = grid.children[0];
+  assert.deepEqual(panel.children.map(child => child.tagName), ["h3", "ul"], "the panel has no descriptive text");
+  const rows = panel.children[1].children;
+  assert.ok(rows.every(row => row.tagName === "li"));
+  assert.deepEqual(rows.map(row => row.children[0].children.find(child => child.tagName === "span").textContent), [
+    "+1 to hit", "+1 to hit and damage", "Increase damage die"
+  ]);
   assert.ok(controls.every(control => !control.disabled && control.name === undefined));
   assert.equal(controls[2].children.length, 3);
   controls[0].checked = true;
@@ -223,6 +249,12 @@ test("native and dashboard weapon sheets show one upgrade panel, preserve select
   assert.equal(app.renders, 1);
   renderWeaponUpgrades(app, root);
   assert.equal(controls[0].checked, true);
+  controls[1].checked = true;
+  await controls[1].listeners.change({ stopPropagation() {} });
+  renderWeaponUpgrades(app, root);
+  assert.equal(controls[0].checked, false);
+  assert.equal(controls[1].checked, true);
+  assert.deepEqual(getWeaponUpgrades(item), { attackBonus: true, damageBonus: true, damageDieSteps: 0 });
   game.user.isGM = false;
   renderWeaponUpgrades(app, root);
   assert.ok(controls.every(control => control.disabled));
@@ -233,6 +265,25 @@ test("native and dashboard weapon sheets show one upgrade panel, preserve select
   const other = nativeSheet({ type: "Armor" });
   renderWeaponUpgrades(other.app, other.root);
   assert.equal(other.grid.children.length, 0);
+});
+
+test("earlier damage-only rewards remain intact and display a partial combined option until edited", async () => {
+  const { item } = setup({ effects: [managedEffect("training", [
+    { key: "system.roll.attack.damage.this", mode: 2, value: "1" }
+  ])] });
+  const { app, root, grid } = nativeSheet(item);
+  renderWeaponUpgrades(app, root);
+  const controls = grid.querySelectorAll("[data-weapon-upgrade]");
+  assert.equal(controls[1].checked, false);
+  assert.equal(controls[1].indeterminate, true);
+  assert.equal(item.writes.length, 0);
+  assert.deepEqual(getWeaponUpgrades(item), { attackBonus: false, damageBonus: true, damageDieSteps: 0 });
+  controls[1].checked = true;
+  await controls[1].listeners.change({ stopPropagation() {} });
+  renderWeaponUpgrades(app, root);
+  assert.equal(controls[1].checked, true);
+  assert.equal(controls[1].indeterminate, false);
+  assert.deepEqual(getWeaponUpgrades(item), { attackBonus: true, damageBonus: true, damageDieSteps: 0 });
 });
 
 test("weapon upgrades support the native and established alternate item render hooks without duplicate panels", async () => {

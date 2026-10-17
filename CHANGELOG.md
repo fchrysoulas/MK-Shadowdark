@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.9.27
+
+- Simplified weapon Downtime Upgrades to a compact list with +1 to hit, +1 to hit and damage, and Increase damage die, and removed the explanatory text.
+
 ## 1.9.26
 
 - Added weapon-sheet Downtime Upgrades options for earned Martial Training: +1 to hit, +1 damage, and up to two damage-die increases capped at d12, applied through weapon-specific Active Effects.

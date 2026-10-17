@@ -43,8 +43,10 @@ function buildUpgradeChanges(upgrades) {
 }
 
 async function setWeaponUpgrade(item, field, value, { editable = true } = {}) {
-  if (!canEditWeaponUpgrades(item, editable) || !Object.hasOwn(UPGRADE_KEYS, field)) return false;
-  if (field === "damageDieSteps") {
+  if (!canEditWeaponUpgrades(item, editable) || !(field === "bonus" || Object.hasOwn(UPGRADE_KEYS, field))) return false;
+  if (field === "bonus") {
+    if (!["none", "attack", "attackAndDamage"].includes(value)) return false;
+  } else if (field === "damageDieSteps") {
     value = Number(value);
     if (!Number.isInteger(value) || value < 0 || value > 2) return false;
   } else if (typeof value !== "boolean") return false;
@@ -53,7 +55,11 @@ async function setWeaponUpgrade(item, field, value, { editable = true } = {}) {
   const update = (pendingUpdates.get(item) ?? Promise.resolve()).catch(() => {}).then(async () => {
     if (!canEditWeaponUpgrades(item, editable)) return false;
     const effects = getUpgradeEffects(item);
-    const upgrades = { ...getWeaponUpgrades(item), [field]: value };
+    const upgrades = getWeaponUpgrades(item);
+    if (field === "bonus") {
+      upgrades.attackBonus = value !== "none";
+      upgrades.damageBonus = value === "attackAndDamage";
+    } else upgrades[field] = value;
     const changes = buildUpgradeChanges(upgrades);
     if (!changes.length) {
       if (!effects.length) return true;
@@ -101,11 +107,10 @@ function renderWeaponUpgrades(app, html) {
     panel.className = "mk-weapon-upgrades SD-box";
     const heading = document.createElement("h3");
     heading.textContent = localize("title");
-    const hint = document.createElement("p");
-    hint.textContent = localize("hint");
-    const controls = document.createElement("div");
+    const controls = document.createElement("ul");
     controls.className = "mk-weapon-upgrade-controls";
-    for (const field of Object.keys(UPGRADE_KEYS)) {
+    for (const field of ["attackBonus", "attackAndDamageBonus", "damageDieSteps"]) {
+      const row = document.createElement("li");
       const label = document.createElement("label");
       const caption = document.createElement("span");
       caption.textContent = localize(field);
@@ -127,9 +132,10 @@ function renderWeaponUpgrades(app, html) {
       }
       input.addEventListener("change", async event => {
         event.stopPropagation();
-        const value = field === "damageDieSteps" ? input.value : input.checked;
+        const value = field === "damageDieSteps" ? input.value
+          : !input.checked ? "none" : field === "attackBonus" ? "attack" : "attackAndDamage";
         try {
-          if (!await setWeaponUpgrade(item, field, value, { editable: app.isEditable })) {
+          if (!await setWeaponUpgrade(item, field === "damageDieSteps" ? field : "bonus", value, { editable: app.isEditable })) {
             globalThis.ui?.notifications?.warn?.(localize("saveFailed"));
           }
         } catch (error) {
@@ -139,12 +145,10 @@ function renderWeaponUpgrades(app, html) {
           app.render?.(false);
         }
       });
-      controls.append(label);
+      row.append(label);
+      controls.append(row);
     }
-    const status = document.createElement("p");
-    status.className = "mk-weapon-upgrade-status";
-    status.textContent = localize("effectDisabled");
-    panel.append(heading, hint, controls, status);
+    panel.append(heading, controls);
     grid.append(panel);
   }
 
@@ -152,10 +156,14 @@ function renderWeaponUpgrades(app, html) {
   for (const input of panel.querySelectorAll("[data-weapon-upgrade]")) {
     const field = input.dataset.weaponUpgrade;
     if (field === "damageDieSteps") input.value = String(upgrades[field]);
-    else input.checked = upgrades[field];
+    else if (field === "attackBonus") input.checked = upgrades.attackBonus && !upgrades.damageBonus;
+    else {
+      input.checked = upgrades.attackBonus && upgrades.damageBonus;
+      // Retain earlier damage-only rewards as a partial combined upgrade until edited.
+      input.indeterminate = upgrades.damageBonus && !upgrades.attackBonus;
+    }
     input.disabled = !canEditWeaponUpgrades(item, app.isEditable);
   }
-  panel.querySelector(".mk-weapon-upgrade-status").hidden = !getUpgradeEffects(item)[0]?.disabled;
 }
 
 for (const hook of [

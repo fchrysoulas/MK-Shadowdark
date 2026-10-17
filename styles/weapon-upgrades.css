@@ -1,44 +1,79 @@
-.mk-weapon-upgrades {
-  grid-column: 1 / -1;
-  min-width: 0;
-  padding: 10px;
+.mk-weapon-upgrades-tab:not(.active) {
+  display: none;
 }
 
-.mk-weapon-upgrades h3 {
-  margin: 0 0 6px;
+.mk-weapon-upgrades-tab.active {
+  display: block;
+}
+
+.mk-weapon-upgrades-tab .mk-weapon-upgrades {
+  display: block;
+  box-sizing: border-box;
+  width: 100%;
+  max-width: 480px;
+  min-width: 0;
+  padding: 16px;
+  border: 1px solid var(--mk-dashboard-line, currentColor);
+  border-radius: 4px;
+  background: rgba(127, 127, 127, 0.06);
+}
+
+.mk-weapon-upgrades-tab .mk-weapon-upgrades h3 {
+  margin: 0 0 14px;
   padding: 0;
 }
 
-.mk-weapon-upgrade-controls {
+.mk-weapon-upgrades-tab .mk-weapon-upgrade-controls {
   display: grid;
   grid-template-columns: minmax(0, 1fr);
-  gap: 8px;
+  gap: 14px;
   margin: 0;
   padding: 0;
   list-style: none;
 }
 
-.mk-weapon-upgrade-controls label {
-  display: flex;
+.mk-weapon-upgrades-tab .mk-weapon-upgrade-controls label {
+  display: grid;
+  grid-template-columns: 20px minmax(0, 1fr);
   align-items: center;
-  gap: 6px;
+  gap: 10px;
+  width: 100%;
   min-width: 0;
-  font-size: 12px;
+  margin: 0;
+  font-size: 14px;
+  line-height: 1.4;
   letter-spacing: normal;
   text-transform: none;
 }
 
-.mk-weapon-upgrade-controls input[type="checkbox"] {
-  flex: 0 0 auto;
+.mk-weapon-upgrades-tab .mk-weapon-upgrade-controls label > span {
+  min-width: 0;
+  white-space: normal;
+  word-break: normal;
+  overflow-wrap: break-word;
+}
+
+.mk-weapon-upgrades-tab .mk-weapon-upgrade-controls input[type="checkbox"] {
+  box-sizing: border-box;
+  width: 16px;
+  min-width: 16px;
+  max-width: 16px;
+  height: 16px;
   margin: 0;
 }
 
-.mk-weapon-upgrade-controls .mk-weapon-upgrade-die {
-  flex-wrap: wrap;
+.mk-weapon-upgrades-tab .mk-weapon-upgrade-controls .mk-weapon-upgrade-die {
+  grid-template-columns: minmax(0, 1fr) 110px;
 }
 
-.mk-weapon-upgrade-die select {
-  width: auto;
-  max-width: 140px;
+.mk-weapon-upgrades-tab .mk-weapon-upgrade-die select {
+  box-sizing: border-box;
+  width: 110px;
   min-width: 0;
+  height: 30px;
+  margin: 0;
+}
+
+.mk-weapon-upgrades-nav {
+  white-space: nowrap;
 }

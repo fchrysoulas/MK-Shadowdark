@@ -202,38 +202,81 @@ class Element {
     this.dataset = {};
     this.listeners = {};
     this.attributes = {};
+    this.classList = {
+      contains: value => (this.className ?? "").split(" ").includes(value),
+      add: value => { this.className = [...new Set([...(this.className ?? "").split(" ").filter(Boolean), value])].join(" "); },
+      remove: value => { this.className = (this.className ?? "").split(" ").filter(entry => entry !== value).join(" "); }
+    };
   }
   append(...elements) { this.children.push(...elements); }
   setAttribute(name, value) { this.attributes[name] = value; }
-  addEventListener(name, callback) { this.listeners[name] = callback; }
+  addEventListener(name, callback) {
+    const previous = this.listeners[name];
+    this.listeners[name] = previous ? event => { previous(event); return callback(event); } : callback;
+  }
   querySelectorAll(selector) {
     return this.children.flatMap(child => {
-      const matches = selector === "[data-weapon-upgrade]"
-        ? Boolean(child.dataset.weaponUpgrade)
-        : selector.startsWith(".") && child.className?.split(" ").includes(selector.slice(1));
+      const tabValue = selector.match(/^\[data-tab="([^"]+)"\]$/)?.[1];
+      const matches = selector === "[data-weapon-upgrade]" ? Boolean(child.dataset.weaponUpgrade)
+        : selector === "[data-tab]" ? Boolean(child.dataset.tab)
+          : tabValue ? child.dataset.tab === tabValue
+            : selector === "nav.SD-nav" ? child.tagName === "nav" && child.classList.contains("SD-nav")
+              : selector.startsWith(".") && child.classList.contains(selector.slice(1));
       return [...(matches ? [child] : []), ...child.querySelectorAll(selector)];
     });
   }
   querySelector(selector) { return this.querySelectorAll(selector)[0] ?? null; }
 }
 
-function nativeSheet(item) {
+function nativeSheet(item, existingApp = null) {
   const document = { createElement: tag => new Element(tag, document) };
+  const root = new Element("form", document);
+  const nav = new Element("nav", document);
+  nav.className = "SD-nav";
+  const content = new Element("section", document);
+  content.className = "SD-content-body";
+  const links = [];
+  const sections = [];
+  for (const name of ["details", "description", "source"]) {
+    const link = new Element("a", document);
+    link.className = `navigation-tab${name === "details" ? " active" : ""}`;
+    link.dataset.tab = `tab-${name}`;
+    const section = new Element("section", document);
+    section.className = `tab${name === "details" ? " active" : ""}`;
+    section.dataset.tab = link.dataset.tab;
+    section.dataset.group = "primary";
+    links.push(link);
+    sections.push(section);
+    link.addEventListener("click", () => {
+      for (const nativeLink of links) nativeLink.classList.remove("active");
+      for (const nativeSection of sections) nativeSection.classList.remove("active");
+      link.classList.add("active");
+      section.classList.add("active");
+    });
+    nav.append(link);
+    content.append(section);
+  }
   const grid = new Element("div", document);
-  const root = { querySelector: selector => selector === '.tab[data-tab="tab-details"] .grid-3-columns' ? grid : null };
-  const app = { item, isEditable: true, renders: 0, render() { this.renders += 1; } };
-  return { app, root, grid };
+  sections[0].append(grid);
+  root.append(nav, content);
+  const app = existingApp ?? { item, isEditable: true, renders: 0, render() { this.renders += 1; } };
+  return { app, root, grid, nav, content, links, sections };
 }
 
-test("native and dashboard weapon sheets show one upgrade panel, preserve selections and save outside native form data", async () => {
+test("native and dashboard weapon sheets show a dedicated upgrade tab, preserve selections and save outside native form data", async () => {
   const { item } = setup();
-  const { app, root, grid } = nativeSheet(item);
+  const { app, root, grid, nav, content } = nativeSheet(item);
   renderWeaponUpgrades(app, root);
   renderWeaponUpgrades(app, [root]);
-  assert.equal(grid.children.length, 1);
-  const controls = grid.querySelectorAll("[data-weapon-upgrade]");
+  assert.equal(grid.children.length, 0, "Details no longer contains the upgrades panel");
+  assert.equal(nav.children.length, 4);
+  assert.equal(content.children.length, 4);
+  const tab = content.querySelector('[data-tab="mk-downtime-upgrades"]');
+  assert.equal(tab.dataset.group, "primary");
+  const controls = tab.querySelectorAll("[data-weapon-upgrade]");
   assert.equal(controls.length, 3);
-  const panel = grid.children[0];
+  const panel = tab.children[0];
+  assert.equal(panel.classList.contains("SD-box"), false, "the panel avoids native SD-box sizing rules");
   assert.deepEqual(panel.children.map(child => child.tagName), ["h3", "ul"], "the panel has no descriptive text");
   const rows = panel.children[1].children;
   assert.ok(rows.every(row => row.tagName === "li"));
@@ -265,15 +308,44 @@ test("native and dashboard weapon sheets show one upgrade panel, preserve select
   const other = nativeSheet({ type: "Armor" });
   renderWeaponUpgrades(other.app, other.root);
   assert.equal(other.grid.children.length, 0);
+  assert.equal(other.nav.children.length, 3);
+});
+
+test("the added tab opens, stays selected across saves and fresh renders, and switches back to native tabs", async () => {
+  const { item } = setup();
+  const initial = nativeSheet(item);
+  renderWeaponUpgrades(initial.app, initial.root);
+  const link = initial.nav.querySelector('[data-tab="mk-downtime-upgrades"]');
+  const tab = initial.content.querySelector('[data-tab="mk-downtime-upgrades"]');
+  assert.equal(link.textContent, "Upgrades");
+  assert.equal(tab.classList.contains("active"), false);
+  link.listeners.click({ preventDefault() {} });
+  assert.equal(tab.classList.contains("active"), true);
+  assert.equal(link.attributes["aria-selected"], "true");
+  assert.ok(initial.sections.every(section => !section.classList.contains("active")));
+  const checkbox = tab.querySelectorAll("[data-weapon-upgrade]")[0];
+  checkbox.checked = true;
+  await checkbox.listeners.change({ stopPropagation() {} });
+  const refreshed = nativeSheet(item, initial.app);
+  renderWeaponUpgrades(refreshed.app, refreshed.root);
+  const refreshedTab = refreshed.content.querySelector('[data-tab="mk-downtime-upgrades"]');
+  assert.equal(refreshedTab.classList.contains("active"), true);
+  assert.equal(refreshedTab.querySelectorAll("[data-weapon-upgrade]")[0].checked, true);
+  refreshed.links[1].listeners.click({});
+  assert.equal(refreshedTab.classList.contains("active"), false);
+  assert.equal(refreshed.sections[1].classList.contains("active"), true);
+  const reopened = nativeSheet(item, initial.app);
+  renderWeaponUpgrades(reopened.app, reopened.root);
+  assert.equal(reopened.content.querySelector('[data-tab="mk-downtime-upgrades"]').classList.contains("active"), false);
 });
 
 test("earlier damage-only rewards remain intact and display a partial combined option until edited", async () => {
   const { item } = setup({ effects: [managedEffect("training", [
     { key: "system.roll.attack.damage.this", mode: 2, value: "1" }
   ])] });
-  const { app, root, grid } = nativeSheet(item);
+  const { app, root, content } = nativeSheet(item);
   renderWeaponUpgrades(app, root);
-  const controls = grid.querySelectorAll("[data-weapon-upgrade]");
+  const controls = content.querySelectorAll("[data-weapon-upgrade]");
   assert.equal(controls[1].checked, false);
   assert.equal(controls[1].indeterminate, true);
   assert.equal(item.writes.length, 0);
@@ -290,7 +362,7 @@ test("weapon upgrades support the native and established alternate item render h
   const hooks = new Map();
   globalThis.Hooks = { on: (name, callback) => hooks.set(name, callback) };
   const { item } = setup();
-  const { app, root, grid } = nativeSheet(item);
+  const { app, root, grid, nav, content } = nativeSheet(item);
   await import("../scripts/weapon-upgrades/weapon-upgrades.js?hooks");
   for (const hook of [
     "renderItemSheet", "renderItemSheetSD", "renderMKDashboardItemSheet",
@@ -299,6 +371,8 @@ test("weapon upgrades support the native and established alternate item render h
     assert.equal(typeof hooks.get(hook), "function");
     hooks.get(hook)(app, root);
   }
-  assert.equal(grid.children.length, 1);
+  assert.equal(grid.children.length, 0);
+  assert.equal(nav.children.length, 4);
+  assert.equal(content.querySelectorAll(".mk-weapon-upgrades").length, 1);
   delete globalThis.Hooks;
 });

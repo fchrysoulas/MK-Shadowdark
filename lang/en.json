@@ -1,5 +1,6 @@
 {
   "MK_SHADOWDARK.weaponUpgrades.title": "Downtime Upgrades",
+  "MK_SHADOWDARK.weaponUpgrades.tab": "Upgrades",
   "MK_SHADOWDARK.weaponUpgrades.attackBonus": "+1 to hit",
   "MK_SHADOWDARK.weaponUpgrades.attackAndDamageBonus": "+1 to hit and damage",
   "MK_SHADOWDARK.weaponUpgrades.damageDieSteps": "Increase damage die",

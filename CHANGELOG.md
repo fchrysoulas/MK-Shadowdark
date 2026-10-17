@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.9.28
+
+- Moved weapon Downtime Upgrades into a dedicated Upgrades tab, corrected control widths and label alignment, and preserved the selected tab when saving options.
+
 ## 1.9.27
 
 - Simplified weapon Downtime Upgrades to a compact list with +1 to hit, +1 to hit and damage, and Increase damage die, and removed the explanatory text.

@@ -1,0 +1,55 @@
+.mk-carousing-menu .mk-carousing-fields {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px 14px;
+}
+
+.mk-carousing-menu .mk-carousing-fields > label {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.mk-carousing-menu .mk-carousing-participants {
+  margin-top: 12px;
+}
+
+.mk-carousing-menu .mk-carousing-participant {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) 80px auto;
+  align-items: center;
+  gap: 8px;
+  padding: 5px 0;
+}
+
+.mk-carousing-menu .mk-carousing-participant small {
+  display: block;
+  opacity: .7;
+}
+
+.mk-carousing-menu .mk-carousing-outcomes {
+  font-size: .9em;
+}
+
+.mk-carousing-menu .mk-carousing-outcomes th,
+.mk-carousing-menu .mk-carousing-outcomes td {
+  padding: 5px;
+  text-align: left;
+  vertical-align: top;
+}
+
+.mk-carousing-result > section {
+  border-top: 1px solid var(--color-border-light-primary, #777);
+  margin-top: 10px;
+  padding-top: 4px;
+}
+
+.mk-carousing-result > section h4 {
+  margin: 5px 0;
+}
+
+@media (max-width: 600px) {
+  .mk-carousing-menu .mk-carousing-fields {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}

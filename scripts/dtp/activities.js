@@ -29,8 +29,11 @@ const DOWNTIME_ACTIVITIES = [
         options: [
           option("rumor", 9, false, "Start a rumor", "Start a rumor about one person. Their renown increases or decreases by 1 point (you choose)."),
           option("lay-low", 12, false, "Lay low", "Escape from a minor crime."),
+          option("local-rumor", 12, true, "Gain a local rumor", "Gain a local rumor."),
           option("extortion", 15, false, "Extortion", "Increase the value of your next sale by 25%, or reduce the cost of your next purchase by 25%."),
-          option("hide-out", 18, false, "Hide out", "Escape from a major crime.")
+          option("hide-out", 18, false, "Hide out", "Escape from a major crime."),
+          option("world-rumor", 20, true, "Gain a world rumor", "Gain a world rumor."),
+          option("seed-rumor", 20, true, "Seed a rumor", "Seed a rumor.")
         ]
       },
       {

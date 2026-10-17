@@ -210,10 +210,10 @@ function nativeDowntime({ submitted = true, total = 18 } = {}) {
   return calls;
 }
 
-test("the menu contains all 29 supplied options, facilities, DCs, and asterisks", () => {
+test("the menu starts with every category collapsed and contains 32 checks plus Carousing", () => {
   assert.equal(DOWNTIME_ACTIVITIES.length, 5);
-  assert.equal(DOWNTIME_OPTIONS.length, 29);
-  assert.equal(new Set(DOWNTIME_OPTIONS.map(entry => entry.id)).size, 29);
+  assert.equal(DOWNTIME_OPTIONS.length, 32);
+  assert.equal(new Set(DOWNTIME_OPTIONS.map(entry => entry.id)).size, 32);
   assert.deepEqual(DOWNTIME_ACTIVITIES.map(activity => activity.facility), ["Temple", "Tavern", "Barracks", "Library", "Trainer"]);
   assert.equal(DOWNTIME_OPTIONS.filter(entry => !entry.starred).length, 4);
   assert.deepEqual(DOWNTIME_OPTIONS.filter(entry => entry.activity.id === "spiritualism").map(entry => entry.dc), [9, 15, 20]);
@@ -221,12 +221,39 @@ test("the menu contains all 29 supplied options, facilities, DCs, and asterisks"
   assert.equal(getDowntimeOption("missing"), null);
   setUser(true);
   const html = buildDowntimeMenu(downtimeActor(), { hitDie: 6, casterAbility: "wis" });
-  assert.equal((html.match(/type="radio"/g) ?? []).length, 29);
+  assert.equal((html.match(/type="radio"/g) ?? []).length, 33);
+  assert.equal((html.match(/<details\b/g) ?? []).length, 6);
+  assert.doesNotMatch(html, /<details\b[^>]*\bopen\b/);
+  assert.match(html, /value="carousing" required/);
   assert.doesNotMatch(html, /type="checkbox"|name="requirements"/);
   assert.ok(html.includes("Test &lt;Cleric&gt;"));
   assert.ok(html.includes('value="research-wis-healing" required>'));
   assert.ok(html.includes('value="research-int-scroll" required disabled>'));
   assert.ok(html.includes('name="ability-martial-d6"'));
+});
+
+test("new Skulduggery rumors use CHA at their listed DCs and pay starred activity costs", async () => {
+  setUser(false);
+  for (const [id, dc, label] of [
+    ["local-rumor", 12, "Gain a local rumor"],
+    ["world-rumor", 20, "Gain a world rumor"],
+    ["seed-rumor", 20, "Seed a rumor"]
+  ]) {
+    const actor = downtimeActor();
+    const activityId = `skulduggery-cha-${id}`;
+    const calls = nativeDowntime({ total: 21 });
+    const entry = getDowntimeOption(activityId);
+    assert.equal(entry.label, label);
+    assert.equal(entry.starred, true);
+    assert.equal(await performDowntime(actor, activityId, "cha"), true);
+    assert.equal(calls.dialogs[0].check.stat, "cha");
+    assert.equal(calls.rolls[0].dc, dc);
+    assert.equal(calls.messages[0].data.flags["mk-shadowdark"].downtime.gold, 30);
+    assert.ok(calls.messages[0].data.flavor.includes(label));
+    assert.equal(getDtp(actor), 4);
+    assert.equal(actor.system.coins.gp, 70);
+    assert.equal(actor.writes.length, 1);
+  }
 });
 
 test("starred costs use 10 gp per PC level, while unstarred activities cost no gold", () => {
@@ -438,4 +465,28 @@ test("choosing an activity opens the native check without facility confirmation"
   } finally {
     delete globalThis.foundry;
   }
+});
+
+test("Carousing opens its separate event menu without charging the check activity fee", async () => {
+  setUser(true);
+  const actor = downtimeActor();
+  globalThis.game.actors = [actor];
+  let dialogs = 0;
+  globalThis.foundry = { applications: { api: { DialogV2: { wait: async config => {
+    dialogs++;
+    if (dialogs === 1) {
+      return config.buttons.find(button => button.action === "attempt").callback(null, {
+        form: { elements: { activity: { value: "carousing" } } }
+      });
+    }
+    assert.equal(config.window.title, "Carousing*");
+    assert.match(config.content, /name="bonus"/);
+    return null;
+  } } } } };
+  try {
+    await openDowntimeMenu(actor);
+    assert.equal(dialogs, 2);
+    assert.equal(actor.writes.length, 0);
+    assert.equal(getDtp(actor), 5);
+  } finally { delete globalThis.foundry; }
 });

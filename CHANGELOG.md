@@ -1,5 +1,10 @@
 # Changelog
 
+## 1.9.24
+
+- Made all DTP activity categories start collapsed and added starred Skulduggery CHA checks for Gain a local rumor (DC 12), Gain a world rumor (DC 20), and Seed a rumor (DC 20).
+- Added Carousing* to the DTP menu with the campaign outcome table, individual/shared rolls, participant contributions, outcome-based DTP costs and XP/luck rewards, open event fields (including an optional extra 1d6), Bastion Tavern/Brewery rules, and confirmed campaign time.
+
 ## 1.9.23
 
 - Removed the downtime facility confirmation checkbox and tidied chat results, omitting the "No luck tokens" notice and zero-gold costs.

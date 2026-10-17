@@ -1,4 +1,6 @@
 import { onCharacterSheetRender } from "../libs/sheet-render-adapter.js";
+import { getDtp } from "../libs/downtime-resources.js";
+import { openCarousingMenu } from "../carousing/carousing.js";
 import {
   DOWNTIME_ACTIVITIES, DOWNTIME_OPTIONS, getDowntimeOption,
   getDowntimeGoldCost, getDowntimeProfile, isDowntimeEligible
@@ -17,11 +19,6 @@ function escapeHtml(value) {
   return String(value ?? "").replace(/[&<>"']/g, character => ({
     "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;"
   })[character]);
-}
-
-function getDtp(actor) {
-  const value = Number(actor?.getFlag?.(MODULE_ID, FLAG_KEY) ?? actor?.flags?.[MODULE_ID]?.[FLAG_KEY] ?? 0);
-  return Number.isFinite(value) ? Math.max(0, Math.trunc(value)) : 0;
 }
 
 function canEditDtp(app) {
@@ -105,7 +102,12 @@ function buildDowntimeMenu(actor, profile) {
     <p class="mk-dtp-balance"><strong>${escapeHtml(actor.name)}</strong> · ${getDtp(actor)} DTP · ${Number(actor.system?.coins?.gp) || 0} gp</p>
     <p>${escapeHtml(localize("rules"))}</p>
     <p class="mk-dtp-note">${escapeHtml(localize("outcomes"))}</p>
-    ${DOWNTIME_ACTIVITIES.map((activity, index) => `<details${index === 0 ? " open" : ""}>
+    <details><summary>Carousing* <span>Tavern</span></summary>
+      <label class="mk-dtp-option"><input type="radio" name="activity" value="carousing" required>
+        <span><strong>Carousing*</strong><span>${escapeHtml(localize("carousingRules"))}</span></span>
+      </label>
+    </details>
+    ${DOWNTIME_ACTIVITIES.map(activity => `<details>
       <summary>${escapeHtml(activity.title)} <span>${escapeHtml(activity.facility)}</span></summary>
       <p>${escapeHtml(activity.description)}</p>
       ${activity.groups.map(group => {
@@ -206,6 +208,7 @@ async function openDowntimeMenu(actor) {
         disabled: !canSpendDtp(actor),
         callback: (_event, button) => {
           const form = button.form;
+          if (form.elements.activity?.value === "carousing") return { carousing: true };
           const entry = getDowntimeOption(form.elements.activity?.value);
           if (!entry) return null;
           return {
@@ -218,7 +221,8 @@ async function openDowntimeMenu(actor) {
     rejectClose: false,
     close: () => null
   });
-  if (choice) await performDowntime(actor, choice.activityId, choice.ability);
+  if (choice?.carousing) await openCarousingMenu(actor);
+  else if (choice) await performDowntime(actor, choice.activityId, choice.ability);
 }
 
 function renderDtp(app, html) {

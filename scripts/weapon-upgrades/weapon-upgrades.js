@@ -1,13 +1,11 @@
 const MODULE_ID = "mk-shadowdark";
 const EFFECT_FLAG = "downtimeWeaponUpgrades";
-const UPGRADES_TAB = "mk-downtime-upgrades";
 const UPGRADE_KEYS = Object.freeze({
   attackBonus: "system.roll.attack.bonus.this",
   damageBonus: "system.roll.attack.damage.this",
   damageDieSteps: "system.roll.attack.upgrade-damage-die.this"
 });
 const pendingUpdates = new WeakMap();
-const activeUpgradeSheets = new WeakSet();
 
 function localize(key) {
   const fullKey = `MK_SHADOWDARK.weaponUpgrades.${key}`;
@@ -95,75 +93,16 @@ async function setWeaponUpgrade(item, field, value, { editable = true } = {}) {
   }
 }
 
-function ensureUpgradesTab(app, root) {
-  const nav = root.querySelector("nav.SD-nav");
-  const content = root.querySelector(".SD-content-body");
-  if (!nav || !content) return null;
-
-  let tab = content.querySelector(`[data-tab="${UPGRADES_TAB}"]`);
-  if (!tab) {
-    tab = content.ownerDocument.createElement("section");
-    tab.className = "tab mk-weapon-upgrades-tab";
-    tab.dataset.tab = UPGRADES_TAB;
-    tab.dataset.group = "primary";
-    tab.setAttribute("role", "tabpanel");
-    tab.setAttribute("aria-label", localize("title"));
-    content.append(tab);
-  }
-
-  let link = nav.querySelector(`[data-tab="${UPGRADES_TAB}"]`);
-  if (!link) {
-    link = nav.ownerDocument.createElement("a");
-    link.className = "navigation-tab mk-weapon-upgrades-nav";
-    link.dataset.tab = UPGRADES_TAB;
-    link.href = "#";
-    link.textContent = localize("tab");
-    link.title = localize("title");
-    link.setAttribute("role", "tab");
-    link.setAttribute("aria-selected", "false");
-    nav.append(link);
-
-    // Render hooks run after native tab listeners bind, so bind the added tab here.
-    link.addEventListener("click", event => {
-      event.preventDefault();
-      activeUpgradeSheets.add(app);
-      activateUpgradesTab(nav, content, link, tab);
-    });
-    for (const nativeLink of nav.querySelectorAll("[data-tab]")) {
-      if (nativeLink === link) continue;
-      nativeLink.addEventListener("click", () => {
-        activeUpgradeSheets.delete(app);
-        link.classList.remove("active");
-        link.setAttribute("aria-selected", "false");
-        tab.classList.remove("active");
-      });
-    }
-  }
-
-  if (activeUpgradeSheets.has(app)) activateUpgradesTab(nav, content, link, tab);
-  return tab;
-}
-
-function activateUpgradesTab(nav, content, link, tab) {
-  for (const nativeLink of nav.querySelectorAll("[data-tab]")) nativeLink.classList.remove("active");
-  for (const section of content.children) {
-    if (section.dataset.group === "primary" && section.dataset.tab) section.classList.remove("active");
-  }
-  link.classList.add("active");
-  link.setAttribute("aria-selected", "true");
-  tab.classList.add("active");
-}
-
 function renderWeaponUpgrades(app, html) {
   const item = app?.item ?? app?.object;
   const root = html?.[0] ?? html;
   if (globalThis.game?.system?.id !== "shadowdark" || item?.type !== "Weapon" || !root?.querySelector) return;
-  const tab = ensureUpgradesTab(app, root);
-  if (!tab) return;
+  const grid = root.querySelector('.tab[data-tab="tab-details"] .grid-3-columns');
+  if (!grid) return;
 
-  let panel = tab.querySelector(".mk-weapon-upgrades");
+  let panel = grid.querySelector(".mk-weapon-upgrades");
   if (!panel) {
-    const document = tab.ownerDocument;
+    const document = grid.ownerDocument;
     panel = document.createElement("section");
     panel.className = "mk-weapon-upgrades";
     const heading = document.createElement("h3");
@@ -210,7 +149,7 @@ function renderWeaponUpgrades(app, html) {
       controls.append(row);
     }
     panel.append(heading, controls);
-    tab.append(panel);
+    grid.append(panel);
   }
 
   const upgrades = getWeaponUpgrades(item);

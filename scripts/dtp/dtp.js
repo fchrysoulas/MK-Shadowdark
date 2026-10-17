@@ -1,7 +1,7 @@
 import { onCharacterSheetRender } from "../libs/sheet-render-adapter.js";
 import { getDtp } from "../libs/downtime-resources.js";
 import { openCarousingMenu } from "../carousing/carousing.js";
-import { canSpendDtp, getGold, getPartyGroups, getPersonalSpendUpdate, getDowntimePayment, payDowntime } from "./payments.js";
+import { canSpendDtp, getGold, getPartyGroups, getSkillTeachers, getPersonalSpendUpdate, getDowntimePayment, payDowntime } from "./payments.js";
 import {
   DOWNTIME_ACTIVITIES, DOWNTIME_OPTIONS, getDowntimeOption,
   getDowntimeGoldCost, getDowntimeProfile, isDowntimeEligible
@@ -86,27 +86,48 @@ function buildDowntimeBalance(actor, groupUuid = "") {
   return `<strong>${escapeHtml(actor.name)}</strong> · ${getDtp(actor)} DTP · ${Number(actor.system?.coins?.gp) || 0} gp${party}`;
 }
 
-function downtimeCostLabel(actor, entry, groupUuid = "") {
+function buildSkillTeacherSelector(actor) {
+  return `<label class="mk-dtp-ability">${escapeHtml(localize("skillTeacher"))}
+    <select name="skillTeacher"${!canSpendDtp(actor) ? " disabled" : ""}>
+      <option value="">${escapeHtml(localize("paidTrainer"))}</option>
+      ${getSkillTeachers(actor).map(teacher => `<option value="${escapeHtml(teacher.uuid)}"${getDtp(teacher) < 1 ? " disabled" : ""}>${escapeHtml(localize("teacherOption", {
+        teacher: teacher.name, dtp: getDtp(teacher)
+      }))}</option>`).join("")}
+    </select></label><p class="mk-dtp-note">${escapeHtml(localize("teachingRules"))}</p>`;
+}
+
+function downtimeCostLabel(actor, entry, groupUuid = "", teacherUuid = "") {
+  const learning = entry.id === "skills-int-learn" && teacherUuid;
   const gold = getDowntimeGoldCost(actor, entry);
-  const payment = getDowntimePayment(actor, entry, { groupUuid });
-  return localize("cost", { gold: gold ?? "?" })
+  const payment = getDowntimePayment(actor, entry, { groupUuid, teacherUuid: learning ? teacherUuid : "" });
+  return (learning ? localize("teachingCost") : localize("cost", { gold: gold ?? "?" }))
     + (payment?.group ? ` · ${localize("partySource", { group: payment.group.name })}` : "")
     + (!payment ? ` · ${localize("insufficient")}` : "");
 }
 
 function refreshDowntimeMenu(actor, profile, form) {
   const groupUuid = form.elements.partyGroup?.value ?? "";
+  const teacherUuid = form.elements.skillTeacher?.value ?? "";
+  const teachers = new Map(getSkillTeachers(actor).map(teacher => [teacher.uuid, teacher]));
+  for (const option of form.elements.skillTeacher?.options ?? []) {
+    if (!option.value) continue;
+    const teacher = teachers.get(option.value);
+    option.disabled = !teacher || getDtp(teacher) < 1;
+    option.textContent = teacher ? localize("teacherOption", { teacher: teacher.name, dtp: getDtp(teacher) }) : localize("teacherUnavailable");
+  }
   const balance = form.querySelector(".mk-dtp-balance");
   if (balance) balance.innerHTML = buildDowntimeBalance(actor, groupUuid);
   for (const input of form.querySelectorAll('input[name="activity"]')) {
     const entry = getDowntimeOption(input.value);
     if (!entry) continue;
-    const unavailable = !isDowntimeEligible(entry, profile) || !getDowntimePayment(actor, entry, { groupUuid });
+    const unavailable = !isDowntimeEligible(entry, profile) || !getDowntimePayment(actor, entry, {
+      groupUuid, teacherUuid: entry.id === "skills-int-learn" ? teacherUuid : ""
+    });
     input.disabled = !canSpendDtp(actor) || unavailable;
     if (input.disabled) input.checked = false;
     const row = input.closest(".mk-dtp-option");
     row.classList.toggle("is-unavailable", unavailable);
-    row.querySelector("small").textContent = downtimeCostLabel(actor, entry, groupUuid);
+    row.querySelector("small").textContent = downtimeCostLabel(actor, entry, groupUuid, teacherUuid);
   }
 }
 
@@ -129,6 +150,7 @@ function buildDowntimeMenu(actor, profile) {
     ${DOWNTIME_ACTIVITIES.map(activity => `<details>
       <summary>${escapeHtml(activity.title)} <span>${escapeHtml(activity.facility)}</span></summary>
       <p>${escapeHtml(activity.description)}</p>
+      ${activity.id === "skills" ? buildSkillTeacherSelector(actor) : ""}
       ${activity.groups.map(group => {
         const entries = DOWNTIME_OPTIONS.filter(entry => entry.activity === activity && entry.group === group);
         const eligible = isDowntimeEligible(entries[0], profile);
@@ -150,7 +172,7 @@ function buildDowntimeMenu(actor, profile) {
   </div>`;
 }
 
-async function performDowntime(actor, activityId, ability, { groupUuid = "" } = {}) {
+async function performDowntime(actor, activityId, ability, { groupUuid = "", teacherUuid = "" } = {}) {
   const entry = getDowntimeOption(activityId);
   const key = actor?.uuid ?? actor?.id ?? actor;
   if (!canSpendDtp(actor) || !entry || !entry.group.abilities.includes(ability) || activeAttempts.has(key)) return false;
@@ -158,7 +180,7 @@ async function performDowntime(actor, activityId, ability, { groupUuid = "" } = 
   let paid = false;
   try {
     if (!isDowntimeEligible(entry, await getDowntimeProfile(actor))) return false;
-    if (!getDowntimePayment(actor, entry, { groupUuid })) {
+    if (!getDowntimePayment(actor, entry, { groupUuid, teacherUuid })) {
       globalThis.ui?.notifications?.warn?.(localize("insufficient"));
       return false;
     }
@@ -182,7 +204,7 @@ async function performDowntime(actor, activityId, ability, { groupUuid = "" } = 
     const roll = await dice.roll(config.mainRoll, actor.getRollData?.() ?? {});
     if (!roll || !Number.isFinite(roll.total)) return false;
     // Recheck current resources after the native prompt. Closing it never spends anything.
-    const payment = await payDowntime(actor, entry, { groupUuid });
+    const payment = await payDowntime(actor, entry, { groupUuid, teacherUuid });
     if (!payment) {
       globalThis.ui?.notifications?.warn?.(localize("insufficient"));
       return false;
@@ -199,15 +221,17 @@ async function performDowntime(actor, activityId, ability, { groupUuid = "" } = 
         <strong class="mk-dtp-result-title">${escapeHtml(entry.label)}</strong>
         <p class="mk-dtp-result-check"><strong>${escapeHtml(localize(success ? "success" : "failure"))}</strong><span>${ability.toUpperCase()} · DC ${entry.dc}</span></p>
         ${success ? `<p>${escapeHtml(entry.description)}</p>` : ""}
-        <p class="mk-dtp-result-cost">${escapeHtml(localize(payment.groupUuid ? "spentFromParty" : gold > 0 ? "spentWithGold" : "spent", {
-          gold, remaining: getDtp(actor), group: payment.groupName
+        <p class="mk-dtp-result-cost">${escapeHtml(localize(payment.teacherUuid ? "spentWithTeacher" : payment.groupUuid ? "spentFromParty" : gold > 0 ? "spentWithGold" : "spent", {
+          gold, remaining: getDtp(actor), group: payment.groupName, teacher: payment.teacherName, teacherRemaining: payment.teacherRemaining
         }))}</p>
       </div>`,
-      flags: { [MODULE_ID]: { downtime: { activityId: entry.id, dc: entry.dc, gold, success, groupUuid: payment.groupUuid } } }
+      flags: { [MODULE_ID]: { downtime: {
+        activityId: entry.id, dc: entry.dc, gold, success, groupUuid: payment.groupUuid, teacherUuid: payment.teacherUuid ?? null
+      } } }
     }, { rollMode: config.rollMode });
     return true;
   } catch (error) {
-    globalThis.ui?.notifications?.error?.(localize(error.partyPaymentReview ? "partyReview" : paid ? "reportFailed" : "attemptFailed"));
+    globalThis.ui?.notifications?.error?.(localize(error.partyPaymentReview ? "paymentReview" : paid ? "reportFailed" : "attemptFailed"));
     console.error(`${MODULE_ID} | DTP | attempt failed`, error);
     return false;
   } finally {
@@ -236,7 +260,10 @@ async function openDowntimeMenu(actor) {
               const entry = getDowntimeOption(form.elements.activity?.value);
               if (!entry) return;
               const ability = form.elements[`ability-${entry.activity.id}-${entry.group.id}`]?.value ?? entry.group.abilities[0];
-              await performDowntime(actor, entry.id, ability, { groupUuid: form.elements.partyGroup?.value ?? "" });
+              await performDowntime(actor, entry.id, ability, {
+                groupUuid: form.elements.partyGroup?.value ?? "",
+                teacherUuid: entry.id === "skills-int-learn" ? form.elements.skillTeacher?.value ?? "" : ""
+              });
             }
           } finally {
             // Update resources in place so expanded categories, choices and scroll stay intact.
@@ -249,6 +276,7 @@ async function openDowntimeMenu(actor) {
   dialog.addEventListener("render", () => {
     const form = dialog.element.querySelector("form");
     form.elements.partyGroup?.addEventListener("change", () => refreshDowntimeMenu(actor, profile, form));
+    form.elements.skillTeacher?.addEventListener("change", () => refreshDowntimeMenu(actor, profile, form));
   });
   return dialog.render({ force: true });
 }

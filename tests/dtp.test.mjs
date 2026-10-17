@@ -233,6 +233,14 @@ function installDowntimeDialog() {
       if (config.content.includes('name="partyGroup"')) {
         elements.partyGroup = { value: "", listeners: {}, addEventListener(name, callback) { this.listeners[name] = callback; } };
       }
+      const teacherOptions = config.content.match(/<select name="skillTeacher"[^>]*>([\s\S]*?)<\/select>/)?.[1];
+      if (teacherOptions) {
+        elements.skillTeacher = {
+          value: "", listeners: {}, addEventListener(name, callback) { this.listeners[name] = callback; },
+          options: [...teacherOptions.matchAll(/<option value="([^"]*)"([^>]*)>(.*?)<\/option>/g)]
+            .map(([, value, attributes, textContent]) => ({ value, disabled: attributes.includes("disabled"), textContent }))
+        };
+      }
       for (const activity of DOWNTIME_ACTIVITIES) {
         for (const group of activity.groups) {
           if (group.abilities.length > 1) elements[`ability-${activity.id}-${group.id}`] = { value: group.abilities[0] };
@@ -605,6 +613,45 @@ test("party selection enables fallback attempts and the open menu refreshes char
     assert.equal(first.system.coins.gp, 60);
     assert.equal(second.system.coins.gp, 30);
     assert.equal(calls.messages[0].data.flags["mk-shadowdark"].downtime.groupUuid, second.uuid);
+  } finally { delete globalThis.foundry; }
+});
+
+test("Learning Skills teacher selection waives gold, refreshes both DTP balances and disables an exhausted teacher", async () => {
+  setUser(true);
+  game.user.id = "gm";
+  game.user.active = true;
+  game.users = [game.user];
+  const actor = downtimeActor({ gp: 100 });
+  const teacher = downtimeActor({ dtp: 1, gp: 200 });
+  teacher.id = "teacher";
+  teacher.uuid = "Actor.teacher";
+  teacher.name = "Teacher";
+  game.actors = [actor, teacher];
+  const calls = nativeDowntime();
+  installDowntimeDialog();
+  try {
+    const dialog = await openDowntimeMenu(actor);
+    const selector = dialog.form.elements.skillTeacher;
+    selector.value = teacher.uuid;
+    selector.listeners.change();
+    const input = dialog.inputs.find(input => input.value === "skills-int-learn");
+    assert.match(input.closest().querySelector().textContent, /1 DTP each for learner and teacher · 0 gp/);
+    dialog.select("skills-int-learn");
+    await dialog.press("attempt");
+    assert.equal(dialog.closed, false);
+    assert.ok(dialog.balance.innerHTML.includes("4 DTP · 100 gp"));
+    assert.equal(getDtp(teacher), 0);
+    assert.equal(actor.system.coins.gp, 100);
+    assert.equal(teacher.system.coins.gp, 200);
+    assert.equal(selector.value, teacher.uuid, "the teacher stays selected rather than switching to paid training");
+    const option = selector.options.find(option => option.value === teacher.uuid);
+    assert.equal(option.disabled, true);
+    assert.equal(option.textContent, "Teacher · 0 DTP");
+    assert.equal(input.disabled, true);
+    assert.equal(calls.messages[0].data.flags["mk-shadowdark"].downtime.teacherUuid, teacher.uuid);
+    selector.value = "";
+    selector.listeners.change();
+    assert.equal(input.disabled, false, "paid training remains an explicit option");
   } finally { delete globalThis.foundry; }
 });
 

@@ -215,6 +215,10 @@ class Element {
     this.listeners[name] = previous ? event => { previous(event); return callback(event); } : callback;
   }
   querySelectorAll(selector) {
+    if (selector === '.tab[data-tab="tab-details"] .grid-3-columns') {
+      return this.querySelectorAll(".tab").filter(tab => tab.dataset.tab === "tab-details")
+        .flatMap(tab => tab.querySelectorAll(".grid-3-columns"));
+    }
     return this.children.flatMap(child => {
       const tabValue = selector.match(/^\[data-tab="([^"]+)"\]$/)?.[1];
       const matches = selector === "[data-weapon-upgrade]" ? Boolean(child.dataset.weaponUpgrade)
@@ -257,25 +261,25 @@ function nativeSheet(item, existingApp = null) {
     content.append(section);
   }
   const grid = new Element("div", document);
+  grid.className = "grid-3-columns";
   sections[0].append(grid);
   root.append(nav, content);
   const app = existingApp ?? { item, isEditable: true, renders: 0, render() { this.renders += 1; } };
   return { app, root, grid, nav, content, links, sections };
 }
 
-test("native and dashboard weapon sheets show a dedicated upgrade tab, preserve selections and save outside native form data", async () => {
+test("native and dashboard weapon sheets show one upgrade list in Details, preserve selections and save outside native form data", async () => {
   const { item } = setup();
   const { app, root, grid, nav, content } = nativeSheet(item);
   renderWeaponUpgrades(app, root);
   renderWeaponUpgrades(app, [root]);
-  assert.equal(grid.children.length, 0, "Details no longer contains the upgrades panel");
-  assert.equal(nav.children.length, 4);
-  assert.equal(content.children.length, 4);
-  const tab = content.querySelector('[data-tab="mk-downtime-upgrades"]');
-  assert.equal(tab.dataset.group, "primary");
-  const controls = tab.querySelectorAll("[data-weapon-upgrade]");
+  assert.equal(grid.children.length, 1, "Details contains the upgrades panel");
+  assert.equal(nav.children.length, 3);
+  assert.equal(content.children.length, 3);
+  assert.equal(content.querySelector('[data-tab="mk-downtime-upgrades"]'), null);
+  const controls = grid.querySelectorAll("[data-weapon-upgrade]");
   assert.equal(controls.length, 3);
-  const panel = tab.children[0];
+  const panel = grid.children[0];
   assert.equal(panel.classList.contains("SD-box"), false, "the panel avoids native SD-box sizing rules");
   assert.deepEqual(panel.children.map(child => child.tagName), ["h3", "ul"], "the panel has no descriptive text");
   const rows = panel.children[1].children;
@@ -311,32 +315,22 @@ test("native and dashboard weapon sheets show a dedicated upgrade tab, preserve 
   assert.equal(other.nav.children.length, 3);
 });
 
-test("the added tab opens, stays selected across saves and fresh renders, and switches back to native tabs", async () => {
+test("upgrade selections survive fresh renders without adding tabs or changing native navigation", async () => {
   const { item } = setup();
   const initial = nativeSheet(item);
   renderWeaponUpgrades(initial.app, initial.root);
-  const link = initial.nav.querySelector('[data-tab="mk-downtime-upgrades"]');
-  const tab = initial.content.querySelector('[data-tab="mk-downtime-upgrades"]');
-  assert.equal(link.textContent, "Upgrades");
-  assert.equal(tab.classList.contains("active"), false);
-  link.listeners.click({ preventDefault() {} });
-  assert.equal(tab.classList.contains("active"), true);
-  assert.equal(link.attributes["aria-selected"], "true");
-  assert.ok(initial.sections.every(section => !section.classList.contains("active")));
-  const checkbox = tab.querySelectorAll("[data-weapon-upgrade]")[0];
+  const checkbox = initial.grid.querySelectorAll("[data-weapon-upgrade]")[0];
   checkbox.checked = true;
   await checkbox.listeners.change({ stopPropagation() {} });
   const refreshed = nativeSheet(item, initial.app);
   renderWeaponUpgrades(refreshed.app, refreshed.root);
-  const refreshedTab = refreshed.content.querySelector('[data-tab="mk-downtime-upgrades"]');
-  assert.equal(refreshedTab.classList.contains("active"), true);
-  assert.equal(refreshedTab.querySelectorAll("[data-weapon-upgrade]")[0].checked, true);
+  assert.equal(refreshed.nav.children.length, 3);
+  assert.equal(refreshed.grid.querySelectorAll("[data-weapon-upgrade]")[0].checked, true);
   refreshed.links[1].listeners.click({});
-  assert.equal(refreshedTab.classList.contains("active"), false);
+  renderWeaponUpgrades(refreshed.app, refreshed.root);
+  assert.equal(refreshed.sections[0].classList.contains("active"), false);
   assert.equal(refreshed.sections[1].classList.contains("active"), true);
-  const reopened = nativeSheet(item, initial.app);
-  renderWeaponUpgrades(reopened.app, reopened.root);
-  assert.equal(reopened.content.querySelector('[data-tab="mk-downtime-upgrades"]').classList.contains("active"), false);
+  assert.equal(refreshed.grid.children.length, 1);
 });
 
 test("earlier damage-only rewards remain intact and display a partial combined option until edited", async () => {
@@ -371,8 +365,8 @@ test("weapon upgrades support the native and established alternate item render h
     assert.equal(typeof hooks.get(hook), "function");
     hooks.get(hook)(app, root);
   }
-  assert.equal(grid.children.length, 0);
-  assert.equal(nav.children.length, 4);
+  assert.equal(grid.children.length, 1);
+  assert.equal(nav.children.length, 3);
   assert.equal(content.querySelectorAll(".mk-weapon-upgrades").length, 1);
   delete globalThis.Hooks;
 });

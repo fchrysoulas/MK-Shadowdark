@@ -1,5 +1,10 @@
 # Changelog
 
+## 1.9.31
+
+- Returned weapon Downtime Upgrades to Details, removed the separate Upgrades tab, and retained compact controls with fixed checkbox widths and aligned labels.
+- Added character teachers to Learning Skills: learner and teacher each spend 1 DTP per submitted attempt, with no gold cost and updated balances.
+
 ## 1.9.30
 
 - Added Party Treasure fallback for DTP check fees when character gold is insufficient, restricted to assigned groups the trying player can access, with group selection, GM-processed payments and refreshed balances.

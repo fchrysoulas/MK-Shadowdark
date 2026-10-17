@@ -2,7 +2,7 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import {
-  getPartyGroups, getDowntimePayment, payDowntime, handlePartyPaymentRequest, receivePartyPayment
+  getPartyGroups, getSkillTeachers, getDowntimePayment, payDowntime, handlePartyPaymentRequest, receivePartyPayment
 } from "../scripts/dtp/payments.js";
 import { buildDowntimeMenu, performDowntime, guardDtpUpdate } from "../scripts/dtp/dtp.js";
 import { getDowntimeOption } from "../scripts/dtp/activities.js";
@@ -24,7 +24,7 @@ function fixture({ gp = 5, dtp = 3, partyGold = 100, asPlayer = false } = {}) {
   globalThis.ui = { notifications: { warn: value => warnings.push(value), error: value => warnings.push(value) } };
   const makeActor = (id, gold = gp) => {
     const actor = {
-      id, uuid: `Actor.${id}`, documentName: "Actor", type: "Player", name: id, writes: [], owner: player.id,
+      id, uuid: `Actor.${id}`, documentName: "Actor", type: "Player", name: id, writes: [], owner: player.id, observers: [],
       flags: { "mk-shadowdark": { dtp } },
       system: {
         coins: { gp: gold, sp: 10, cp: 20 }, level: { value: 3 },
@@ -32,7 +32,7 @@ function fixture({ gp = 5, dtp = 3, partyGold = 100, asPlayer = false } = {}) {
         rollConfigGenerators: { check: config => { config.mainRoll.formula = "1d20"; } }
       },
       getFlag(scope, key) { return this.flags[scope]?.[key]; },
-      testUserPermission(user) { return user.isGM || user.id === this.owner; },
+      testUserPermission(user, permission = "OWNER") { return user.isGM || user.id === this.owner || (permission === "OBSERVER" && this.observers.includes(user.id)); },
       get isOwner() { return this.testUserPermission(game.user); },
       async update(change, options) {
         if (guardDtpUpdate(this, change, options) === false) return undefined;
@@ -267,4 +267,159 @@ test("party resources and membership are rechecked after the native roll prompt"
     assert.equal(f.group.writes.length, 0);
     assert.equal(f.messages.length, 0);
   }
+});
+
+test("Learning Skills lists accessible character teachers, excludes self, NPCs and groups, and marks exhausted teachers", () => {
+  const f = fixture({ asPlayer: true });
+  const teacher = f.makeActor("Teacher <One>");
+  teacher.owner = f.stranger.id;
+  teacher.observers = [f.player.id];
+  const exhausted = f.makeActor("Exhausted");
+  exhausted.flags["mk-shadowdark"].dtp = 0;
+  const hidden = f.makeActor("Hidden");
+  hidden.owner = f.stranger.id;
+  const npc = f.makeActor("NPC");
+  npc.type = "NPC";
+  assert.deepEqual(getSkillTeachers(f.actor).map(teacher => teacher.uuid), [exhausted.uuid, teacher.uuid]);
+  const html = buildDowntimeMenu(f.actor, { hitDie: 6, casterAbility: "wis" });
+  const select = html.match(/<select name="skillTeacher"[^>]*>([\s\S]*?)<\/select>/)?.[1];
+  assert.ok(select);
+  assert.match(select, /Paid trainer \(usual gold fee\)/);
+  assert.match(select, /Teacher &lt;One&gt; · 3 DTP/);
+  assert.ok(select.includes(`value="${exhausted.uuid}" disabled`));
+  for (const invalid of [f.actor, f.group, hidden, npc]) assert.equal(select.includes(`value="${invalid.uuid}"`), false);
+});
+
+test("character teaching costs each participant 1 DTP on successes and failures, with no personal or party gold", async () => {
+  for (const total of [3, 20]) {
+    const f = fixture({ gp: 100 });
+    const teacher = f.makeActor("teacher", 200);
+    let config;
+    shadowdark.dice.rollDialog = async value => { config = value; return true; };
+    shadowdark.dice.roll = async () => ({ total, toMessage: async data => f.messages.push(data) });
+    assert.equal(await performDowntime(f.actor, entry.id, "int", { teacherUuid: teacher.uuid }), true);
+    assert.equal(config.check.stat, "int");
+    assert.equal(config.mainRoll.dc, 18);
+    assert.equal(f.actor.flags["mk-shadowdark"].dtp, 2);
+    assert.equal(teacher.flags["mk-shadowdark"].dtp, 2);
+    assert.equal(f.actor.system.coins.gp, 100);
+    assert.equal(teacher.system.coins.gp, 200);
+    assert.equal(f.group.system.coins.gp, 100);
+    assert.equal(f.group.writes.length, 0);
+    const result = f.messages[0].flags["mk-shadowdark"].downtime;
+    assert.equal(result.teacherUuid, teacher.uuid);
+    assert.equal(result.gold, 0);
+    assert.equal(result.groupUuid, null);
+    assert.equal(result.success, total >= 18);
+    assert.match(f.messages[0].flavor, /each spent 1 DTP/);
+    assert.match(f.messages[0].flavor, /2 learner DTP and 2 teacher DTP remaining · no gold used/);
+  }
+});
+
+test("a cancelled character lesson spends no DTP or gold", async () => {
+  const f = fixture({ gp: 0 });
+  const teacher = f.makeActor("teacher", 0);
+  shadowdark.dice.rollDialog = async () => false;
+  assert.equal(await performDowntime(f.actor, entry.id, "int", { teacherUuid: teacher.uuid }), false);
+  assert.equal(f.actor.writes.length, 0);
+  assert.equal(teacher.writes.length, 0);
+  assert.equal(f.group.writes.length, 0);
+  assert.equal(f.messages.length, 0);
+});
+
+test("teacher fees cannot bypass unavailable DTP, character access or the Learning Skills restriction", async () => {
+  for (const setup of [
+    (f, teacher) => { teacher.flags["mk-shadowdark"].dtp = 0; },
+    f => { f.actor.flags["mk-shadowdark"].dtp = 0; },
+    (_f, teacher) => { teacher.type = "NPC"; },
+    (f, teacher) => { teacher.owner = f.stranger.id; },
+    () => { game.users = []; }
+  ]) {
+    const f = fixture({ asPlayer: true, gp: 100 });
+    const teacher = f.makeActor("teacher");
+    setup(f, teacher);
+    assert.equal(await payDowntime(f.actor, entry, { teacherUuid: teacher.uuid }), null);
+    assert.equal(f.actor.writes.length, 0);
+    assert.equal(teacher.writes.length, 0);
+    assert.equal(f.group.writes.length, 0);
+  }
+  const f = fixture();
+  for (const teacherUuid of [f.actor.uuid, f.group.uuid, "Actor.missing"]) {
+    assert.equal(await payDowntime(f.actor, entry, { teacherUuid }), null);
+  }
+  const teacher = f.makeActor("teacher");
+  assert.equal(await payDowntime(f.actor, getDowntimeOption("spiritualism-wis-favor"), { teacherUuid: teacher.uuid }), null);
+});
+
+test("teacher DTP and access are rechecked after the native check prompt", async () => {
+  for (const revoke of [
+    (_f, teacher) => { teacher.flags["mk-shadowdark"].dtp = 0; },
+    (f, teacher) => { teacher.owner = f.stranger.id; }
+  ]) {
+    const f = fixture({ asPlayer: true });
+    const teacher = f.makeActor("teacher");
+    shadowdark.dice.rollDialog = async () => { revoke(f, teacher); return true; };
+    assert.equal(await performDowntime(f.actor, entry.id, "int", { teacherUuid: teacher.uuid }), false);
+    assert.equal(f.actor.writes.length, 0);
+    assert.equal(teacher.writes.length, 0);
+    assert.equal(f.group.writes.length, 0);
+  }
+});
+
+test("simultaneous lessons cannot spend the same teacher DTP twice", async () => {
+  const f = fixture();
+  const teacher = f.makeActor("teacher");
+  teacher.flags["mk-shadowdark"].dtp = 1;
+  const other = f.makeActor("other");
+  const receipts = await Promise.all([
+    payDowntime(f.actor, entry, { teacherUuid: teacher.uuid }),
+    payDowntime(other, entry, { teacherUuid: teacher.uuid })
+  ]);
+  assert.equal(receipts.filter(Boolean).length, 1);
+  assert.equal(teacher.flags["mk-shadowdark"].dtp, 0);
+  assert.equal(f.actor.flags["mk-shadowdark"].dtp + other.flags["mk-shadowdark"].dtp, 5);
+  assert.equal(f.group.writes.length, 0);
+});
+
+test("a rejected learner update refunds the teacher and a rejected teacher update never charges the learner", async () => {
+  const f = fixture();
+  const teacher = f.makeActor("teacher");
+  f.actor.update = async () => undefined;
+  await assert.rejects(payDowntime(f.actor, entry, { teacherUuid: teacher.uuid }), /DTP payment was rejected/);
+  assert.equal(teacher.flags["mk-shadowdark"].dtp, 3);
+  assert.equal(f.actor.flags["mk-shadowdark"].dtp, 3);
+  teacher.update = async () => undefined;
+  assert.equal(await payDowntime(f.actor, entry, { teacherUuid: teacher.uuid }), null);
+  assert.equal(f.actor.writes.length, 0);
+  assert.equal(f.group.writes.length, 0);
+});
+
+test("the GM can process a player's lesson with a visible teacher owned by someone else", async () => {
+  const f = fixture({ asPlayer: true });
+  const teacher = f.makeActor("teacher");
+  teacher.owner = f.stranger.id;
+  teacher.observers = [f.player.id];
+  let processing;
+  let request;
+  globalThis.ChatMessage = { create: async data => {
+    request = data;
+    const message = paymentMessage(f, data.flags["mk-shadowdark"].dtpPartyPayment);
+    processing = Promise.resolve().then(async () => {
+      game.user = f.gm;
+      try { await handlePartyPaymentRequest(message); }
+      finally { game.user = f.player; }
+    });
+    return message;
+  } };
+  try {
+    const receipt = await payDowntime(f.actor, entry, { teacherUuid: teacher.uuid });
+    await processing;
+    assert.equal(receipt.teacherUuid, teacher.uuid);
+    assert.equal(receipt.gold, 0);
+    assert.equal(request.flags["mk-shadowdark"].dtpPartyPayment.teacherUuid, teacher.uuid);
+    assert.equal(f.actor.flags["mk-shadowdark"].dtp, 2);
+    assert.equal(teacher.flags["mk-shadowdark"].dtp, 2);
+    assert.equal(f.actor.system.coins.gp, 5);
+    assert.equal(f.group.writes.length, 0);
+  } finally { delete globalThis.ChatMessage; }
 });

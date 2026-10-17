@@ -55,7 +55,7 @@ test("v1.6.0 visual proportions and responsive behavior are preserved", () => {
   const groupCss = source("styles/group-sheet.css");
   const css = source("styles/group-sheet-dashboard.css");
 
-  assert.match(groupCss, /\.mk-group-nav\s*\{[\s\S]*?grid-template-columns:\s*repeat\(5,\s*minmax\(0,\s*1fr\)\)/);
+  assert.match(groupCss, /\.mk-group-nav\s*\{[\s\S]*?grid-template-columns:\s*repeat\(7,\s*minmax\(max-content,\s*1fr\)\)/);
   assert.match(groupCss, /\.mk-group-nav \.item\s*\{[\s\S]*?font-size:\s*13px[\s\S]*?white-space:\s*nowrap/);
   assert.match(css, /--mk-party-sidebar-width:\s*224px/);
   assert.match(css, /--mk-party-sidebar-collapsed-width:\s*58px/);
@@ -63,16 +63,28 @@ test("v1.6.0 visual proportions and responsive behavior are preserved", () => {
   assert.match(css, /@container\s*\(max-width:\s*760px\)[\s\S]*?width:\s*196px/);
   assert.match(css, /@container\s*\(max-width:\s*760px\)[\s\S]*?\.mk-group-dashboard-enabled \.mk-group-nav\s*\{[\s\S]*?overflow-x:\s*auto/);
   assert.match(css, /@container\s*\(max-width:\s*560px\)[\s\S]*?font-size:\s*0/);
-  assert.match(css, /@container\s*\(max-width:\s*560px\)[\s\S]*?grid-template-columns:\s*repeat\(5,\s*minmax\(0,\s*1fr\)/);
+  assert.match(css, /@container\s*\(max-width:\s*560px\)[\s\S]*?grid-template-columns:\s*repeat\(7,\s*minmax\(0,\s*1fr\)/);
 });
 
-test("Group Sheet no longer owns Bastion content", () => {
+test("Group Sheet links Bastion actors while their rules remain on the standalone sheet", () => {
   const template = source("templates/group-sheet.hbs");
   const sheet = source("scripts/group-sheet/sheet.js");
   const css = source("styles/group-sheet.css");
 
-  assert.doesNotMatch(template, /data-tab="bastions"/);
+  assert.match(template, /data-tab="bastions"/);
   assert.doesNotMatch(template, /Bastion Rules|Bastion Types|Bastion Upgrades/);
   assert.doesNotMatch(sheet, /BASTION_TYPES|BASTION_UPGRADES|mk\.bastions/);
   assert.doesNotMatch(css, /mk-bastions/);
+});
+
+test("Boats follows Mounts and Bastion follows Boats, with drops on headers and tab bodies", () => {
+  const template = source("templates/group-sheet.hbs");
+  const nav = template.match(/<nav class="mk-group-nav[\s\S]*?<\/nav>/)[0];
+  assert.deepEqual([...nav.matchAll(/data-tab="([^"]+)"/g)].map(match => match[1]), [
+    "traveling", "camping", "inventory", "hirelings", "mounts", "boats", "bastions",
+  ]);
+  for (const kind of ["boats", "bastions"]) {
+    assert.match(nav, new RegExp(`data-tab="${kind}" data-group-actor-kind="${kind}"`));
+    assert.match(template, new RegExp(`<div class="tab mk-group-tab mk-group-tab-body"[^>]*data-tab="${kind}" data-group-actor-kind="${kind}"`));
+  }
 });

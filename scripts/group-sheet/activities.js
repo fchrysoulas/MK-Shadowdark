@@ -7,7 +7,7 @@ import {
   TRAVEL_ACTIVITIES,
   TRAVEL_DEFAULT_ACTIVITY_KEY,
 } from "./constants.js";
-import { canUserControlActor, getModuleFlag, resolveActorFromUuid } from "./actors.js";
+import { canUserControlActor, getModuleFlag, normalizeActorUuids, resolveActorFromUuid } from "./actors.js";
 import { getActorClassName } from "./inventory.js";
 import { getTravelProgressDurationMs } from "./group-settings.js";
 import { clampNumber, hasOwn } from "./utils.js";
@@ -355,6 +355,8 @@ function getGroupData(actor) {
       .filter(uuid => existing.members.includes(uuid))
   ));
   existing.companions = normalizeCompanions(existing.companions);
+  existing.boats = normalizeActorUuids(existing.boats);
+  existing.bastions = normalizeActorUuids(existing.bastions);
   existing.travel ??= {};
   existing.camping ??= {};
   existing.travel.weather ??= "normal";

@@ -68,6 +68,12 @@ import { getRestMode, reportRest, restActor } from "../libs/resting.js";
 import { clampNumber, escapeHtml, getDialogFieldValue, numberOrZero } from "./utils.js";
 import { getPrimaryActiveGm } from "./users.js";
 import { getSettingValue } from "./group-settings.js";
+import { BASTION_ACTOR_TYPE } from "../bastion-sheet/constants.js";
+
+const GROUP_ACTOR_LINKS = Object.freeze({
+  boats: { type: "NPC", label: "boat", dropLabel: "an NPC actor representing a boat" },
+  bastions: { type: BASTION_ACTOR_TYPE, label: "Bastion", dropLabel: "a Bastion actor" },
+});
 
 const ActorSheetBase = globalThis.foundry?.appv1?.sheets?.ActorSheet;
 const TextEditorImplementation = globalThis.foundry?.applications?.ux?.TextEditor?.implementation;
@@ -100,6 +106,8 @@ async function createGroupActor({ name = "New Group", folder = null } = {}) {
         group: {
           members: [],
           companions: [],
+          boats: [],
+          bastions: [],
           travel: {
             weather: "normal",
             speed: "normal",
@@ -163,6 +171,7 @@ class MKGroupSheet extends ActorSheetBase {
       ".mk-camping-roster-member[data-can-assign='true']",
       ".mk-travel-member-toggle[data-can-assign='true']",
       ".mk-camping-assigned-chip",
+      ".mk-group-actor-open[data-actor-available='true']",
     ];
 
     element.querySelectorAll(selectors.join(",")).forEach(control => {
@@ -258,6 +267,9 @@ class MKGroupSheet extends ActorSheetBase {
         };
       });
 
+    const boats = await this._buildGroupActorLinks(groupData, "boats");
+    const bastions = await this._buildGroupActorLinks(groupData, "bastions");
+
     context.mk = {
       isGroup: true,
       sheetStyle: buildGroupSheetStyle(),
@@ -283,6 +295,8 @@ class MKGroupSheet extends ActorSheetBase {
         totalGearSlots: mounts.reduce((total, mount) => total + mount.gearSlots, 0),
         totalCarrySlots: mounts.reduce((total, mount) => total + mount.availableCarrySlots, 0),
       },
+      boats: { entries: boats, hasEntries: boats.length > 0 },
+      bastions: { entries: bastions, hasEntries: bastions.length > 0 },
       campingResources: buildCampingResources(memberActors, this.actor),
       camping: {
         members: campingMembers,
@@ -444,6 +458,22 @@ class MKGroupSheet extends ActorSheetBase {
       this._onClearMountRider(event);
     });
 
+    html.find("[data-action='open-group-actor']").on("click", event => this._onOpenGroupActor(event));
+    html.find("[data-action='remove-group-actor']").on("click", event => this._onRemoveGroupActor(event));
+
+    html[0]?.querySelectorAll("[data-group-actor-kind]").forEach(target => {
+      target.addEventListener("dragover", event => {
+        if (!this.isEditable || !game.user?.isGM) return;
+        event.preventDefault();
+        if (event.dataTransfer) event.dataTransfer.dropEffect = "copy";
+        target.classList.add("is-actor-drag-over");
+      });
+      target.addEventListener("dragleave", event => {
+        if (!target.contains(event.relatedTarget)) target.classList.remove("is-actor-drag-over");
+      });
+      target.addEventListener("drop", () => target.classList.remove("is-actor-drag-over"));
+    });
+
     html[0]?.querySelectorAll("[data-mount-rider-dropzone='true']").forEach(card => {
       card.addEventListener("dragenter", event => this._onMountRiderDragEnter(event), true);
       card.addEventListener("dragover", event => this._onMountRiderDragOver(event), true);
@@ -549,6 +579,13 @@ class MKGroupSheet extends ActorSheetBase {
     const dropTarget = event.target?.closest?.("[data-party-member-dropzone='true']");
     const travelCard = event.target.closest?.("[data-travel-activity-key]");
     const mountDropTarget = event.target?.closest?.("[data-mount-dropzone='true']");
+    const groupActorTarget = event.target?.closest?.("[data-group-actor-kind]");
+
+    if (groupActorTarget) {
+      const actor = data.type === "Item" ? null : await this._resolveDroppedActor(data);
+      await this._addGroupActorLink(groupActorTarget.dataset.groupActorKind, actor);
+      return false;
+    }
 
     if (data.type === "Actor" || data.uuid) {
       const droppedActor = await this._resolveDroppedActor(data);
@@ -782,6 +819,76 @@ class MKGroupSheet extends ActorSheetBase {
       flying: false,
     });
 
+    await this._saveGroupData(groupData);
+    this.render(false);
+    return true;
+  }
+
+  async _buildGroupActorLinks(groupData, kind) {
+    const definition = GROUP_ACTOR_LINKS[kind];
+    const entries = [];
+    for (const uuid of groupData[kind]) {
+      let actor;
+      try {
+        actor = await resolveActorFromUuid(uuid);
+      } catch {
+        // Deleted compendium documents must leave a removable link on the group.
+      }
+      const available = actor?.type === definition.type && actor.visible !== false;
+      entries.push({
+        uuid,
+        name: available ? actor.name : `Unavailable ${definition.label}`,
+        img: available ? actor.img : "icons/svg/mystery-man.svg",
+        available,
+      });
+    }
+    return entries;
+  }
+
+  _canManageGroupActorLinks() {
+    if (this.isEditable && game.user?.isGM) return true;
+    ui.notifications.warn("Only the GM can manage group boats and bastions.");
+    return false;
+  }
+
+  async _addGroupActorLink(kind, actor) {
+    if (!this._canManageGroupActorLinks()) return false;
+    if (!Object.hasOwn(GROUP_ACTOR_LINKS, kind)) return false;
+    const definition = GROUP_ACTOR_LINKS[kind];
+    if (!actor?.uuid || actor.type !== definition.type || actor.id === this.actor.id) {
+      ui.notifications.warn(`Drop ${definition.dropLabel} into this tab.`);
+      return false;
+    }
+
+    const groupData = getGroupData(this.actor);
+    if (groupData[kind].includes(actor.uuid)) {
+      ui.notifications.info(`${actor.name} is already listed in this tab.`);
+      return false;
+    }
+    groupData[kind].push(actor.uuid);
+    await this._saveGroupData(groupData);
+    this.render(false);
+    return true;
+  }
+
+  async _onOpenGroupActor(event) {
+    event.preventDefault();
+    const row = event.currentTarget.closest("[data-group-actor-uuid]");
+    const kind = row?.closest("[data-group-actor-kind]")?.dataset.groupActorKind;
+    const uuid = row?.dataset.groupActorUuid;
+    if (!Object.hasOwn(GROUP_ACTOR_LINKS, kind) || !getGroupData(this.actor)[kind].includes(uuid)) return;
+    const actor = await resolveActorFromUuid(uuid);
+    if (actor?.visible !== false) actor?.sheet?.render(true);
+  }
+
+  async _onRemoveGroupActor(event) {
+    event.preventDefault();
+    if (!this._canManageGroupActorLinks()) return false;
+    const row = event.currentTarget.closest("[data-group-actor-uuid]");
+    const kind = row?.closest("[data-group-actor-kind]")?.dataset.groupActorKind;
+    if (!Object.hasOwn(GROUP_ACTOR_LINKS, kind)) return false;
+    const groupData = getGroupData(this.actor);
+    groupData[kind] = groupData[kind].filter(uuid => uuid !== row.dataset.groupActorUuid);
     await this._saveGroupData(groupData);
     this.render(false);
     return true;

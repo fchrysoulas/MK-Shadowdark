@@ -252,6 +252,7 @@ function patchActorCreateDialog() {
 }
 
 function rerenderOpenGroupSheets(updatedActor) {
+  if (!updatedActor?.uuid) return;
   for (const app of Object.values(ui.windows)) {
     if (!(app instanceof MKGroupSheet)) continue;
 
@@ -265,6 +266,8 @@ function rerenderOpenGroupSheets(updatedActor) {
 
     if (
       groupData.members.includes(updatedActor.uuid) ||
+      groupData.boats.includes(updatedActor.uuid) ||
+      groupData.bastions.includes(updatedActor.uuid) ||
       assignedActivityActors.includes(updatedActor.uuid) ||
       app.actor.id === updatedActor.id
     ) {
@@ -489,6 +492,7 @@ function registerGroupSheet() {
       console.error(`${MODULE_ID} | ${SUBMODULE} | Failed to sync group token light`, error);
     });
   });
+  Hooks.on("deleteActor", rerenderOpenGroupSheets);
   Hooks.on("createChatMessage", handleTravelPromptChatMessage);
 
   Hooks.on("createItem", item => {

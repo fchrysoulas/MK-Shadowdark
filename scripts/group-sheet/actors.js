@@ -133,6 +133,13 @@ async function resolveActorFromUuid(uuid) {
   return null;
 }
 
+function normalizeActorUuids(value) {
+  return [...new Set((Array.isArray(value) ? value : [])
+    .filter(uuid => typeof uuid === "string")
+    .map(uuid => uuid.trim())
+    .filter(Boolean))];
+}
+
 async function resolveItemFromDropData(data) {
   if (!data) return null;
 
@@ -158,5 +165,6 @@ export {
   getFreeCoinCarry,
   getGemsPerSlot,
   resolveActorFromUuid,
+  normalizeActorUuids,
   resolveItemFromDropData,
 };

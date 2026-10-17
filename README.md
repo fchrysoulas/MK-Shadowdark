@@ -88,7 +88,7 @@ The module's feature menus include enabled-by-default world-level master switche
 
 ## Group Management
 
-- **Group Sheet** — members, active party, hirelings, mounts, shared inventory, Traveling, Camping, and party resources.
+- **Group Sheet** — members, active party, hirelings, mounts, linked boats and bastions, shared inventory, Traveling, Camping, and party resources.
 - **Camping Tasks** — Bed Down, Cook, Craft, Entertain, Scavenge, Hunt, Keep Watch, and Predict.
 - **Shared Scene Context** — terrain, danger, and day/night period belong to the active Scene context.
 - **Marching / Role Context** — Front, Middle, Rear, Scout, Light Bearer, and ordered camp watches.
@@ -170,8 +170,12 @@ The Group Sheet structure is intentionally stable. Its main areas remain:
 - Inventory
 - Hirelings
 - Mounts
+- Boats
+- Bastion
 
-The Group Sheet tab rail keeps all five areas on one desktop row, becomes a single-line horizontal rail at medium widths, and switches to compact icon-only tabs at narrow widths.
+The seven-tab rail places Boats after Mounts, followed by Bastion. It scrolls horizontally when needed and switches to compact icon-only tabs at narrow widths.
+
+GMs can drag NPC actors representing boats into the Boats tab and Bastion actors into the Bastion tab, either onto the tab header or anywhere in its content area. These are links to the original actors: click a card to open its sheet, or use its trash button to remove the group link without deleting the actor. Duplicate drops do not add extra links.
 
 ## Bastion Actors
 

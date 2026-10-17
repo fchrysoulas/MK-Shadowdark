@@ -120,7 +120,8 @@
 
 .mk-group-nav {
   display: grid;
-  grid-template-columns: repeat(5, minmax(0, 1fr));
+  grid-template-columns: repeat(7, minmax(max-content, 1fr));
+  overflow-x: auto;
   min-height: 42px;
   border-bottom: 1px solid rgba(255, 255, 255, 0.12);
   background: rgba(0, 0, 0, 0.32);
@@ -1924,7 +1925,8 @@ body.mk-travel-prompt-open #sd-roll-dialog {
   background: rgba(242, 208, 133, 0.2);
 }
 
-.mk-mounts-panel {
+.mk-mounts-panel,
+.mk-group-linked-panel {
   min-height: 100%;
   padding: 14px;
   border: 1px solid rgba(255, 255, 255, 0.12);
@@ -1937,7 +1939,8 @@ body.mk-travel-prompt-open #sd-roll-dialog {
   gap: 12px;
 }
 
-.mk-mount-dropzone {
+.mk-mount-dropzone,
+.mk-group-actor-dropzone {
   display: grid;
   grid-template-columns: 22px auto;
   column-gap: 7px;
@@ -1952,16 +1955,64 @@ body.mk-travel-prompt-open #sd-roll-dialog {
   font-weight: 900;
 }
 
-.mk-mount-dropzone i {
+.mk-mount-dropzone i,
+.mk-group-actor-dropzone i {
   grid-row: span 2;
   font-size: 18px;
   text-align: center;
 }
 
-.mk-mount-dropzone small {
+.mk-mount-dropzone small,
+.mk-group-actor-dropzone small {
   color: var(--mk-group-muted);
   font-size: 11px;
   font-weight: 700;
+}
+
+.mk-group-sheet [data-group-actor-kind].is-actor-drag-over {
+  background-color: rgba(242, 208, 133, 0.1);
+  box-shadow: inset 0 0 0 2px rgba(242, 208, 133, 0.65);
+}
+
+.mk-group-actor-list {
+  display: grid;
+  gap: 12px;
+}
+
+.mk-group-actor-card {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px;
+  border: 1px solid rgba(242, 208, 133, 0.22);
+  border-radius: 6px;
+  background: rgba(0, 0, 0, 0.2);
+}
+
+.mk-group-actor-open {
+  display: flex;
+  flex: 1;
+  align-items: center;
+  gap: 12px;
+  min-width: 0;
+  height: auto;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  text-align: left;
+}
+
+.mk-group-actor-open img {
+  flex: 0 0 52px;
+  width: 52px;
+  height: 52px;
+  border-radius: 4px;
+  object-fit: cover;
+}
+
+.mk-group-actor-open strong {
+  overflow-wrap: anywhere;
 }
 
 .mk-mount-card {

@@ -16,6 +16,7 @@
 
 ## 1.9.21
 
+- Added Boats and Bastion tabs after Mounts on the Group Sheet, accepting NPC boat and Bastion actor drops across each tab area, with linked actor cards and removal controls.
 - Added automatic weekly wage totals for stationed Bastion warbands at 3 gp per level per warband, including quantity and live updates when linked NPC levels change.
 
 ## 1.9.20

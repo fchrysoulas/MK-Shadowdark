@@ -210,6 +210,50 @@ function nativeDowntime({ submitted = true, total = 18 } = {}) {
   return calls;
 }
 
+function installDowntimeDialog() {
+  class DowntimeDialog {
+    constructor(config) {
+      this.options = config;
+      this.closed = false;
+      this.balance = { innerHTML: config.content.match(/class="mk-dtp-balance">(.*?)<\/p>/s)?.[1] };
+      this.inputs = [...config.content.matchAll(/<input type="radio" name="activity" value="([^"]+)"([^>]*)>/g)].map(([, value, attributes]) => {
+        const classes = new Set();
+        const cost = { textContent: "" };
+        const row = {
+          classList: {
+            toggle(name, active) { if (active) classes.add(name); else classes.delete(name); },
+            contains: name => classes.has(name)
+          },
+          querySelector: () => cost
+        };
+        return { value, disabled: attributes.includes("disabled"), checked: false, closest: () => row };
+      });
+      const inputs = this.inputs;
+      const elements = { activity: { get value() { return inputs.find(input => input.checked)?.value ?? ""; } } };
+      for (const activity of DOWNTIME_ACTIVITIES) {
+        for (const group of activity.groups) {
+          if (group.abilities.length > 1) elements[`ability-${activity.id}-${group.id}`] = { value: group.abilities[0] };
+        }
+      }
+      this.form = {
+        elements,
+        querySelector: () => this.balance,
+        querySelectorAll: () => this.inputs
+      };
+    }
+    render() { return this; }
+    close() { this.closed = true; return this; }
+    select(value) { for (const input of this.inputs) input.checked = input.value === value; }
+    async press(action) {
+      const button = this.options.buttons.find(button => button.action === action);
+      await button.callback(null, { form: this.form }, this);
+      if (this.options.form?.closeOnSubmit !== false) this.close();
+    }
+  }
+  globalThis.foundry = { applications: { api: { DialogV2: DowntimeDialog } } };
+  return DowntimeDialog;
+}
+
 test("the menu starts with every category collapsed and contains 32 checks plus Carousing", () => {
   assert.equal(DOWNTIME_ACTIVITIES.length, 5);
   assert.equal(DOWNTIME_OPTIONS.length, 32);
@@ -430,41 +474,96 @@ test("resources are rechecked after the prompt and duplicate clicks cannot open 
 
 test("the DTP button opens the option menu and cancel does not spend", async () => {
   setUser(true);
-  let dialogConfig;
-  globalThis.foundry = { applications: { api: { DialogV2: { wait: async config => { dialogConfig = config; return null; } } } } };
+  installDowntimeDialog();
   const { grid, app, root } = nativeDetails();
   renderDtp(app, root);
   const button = grid.children[0].querySelector(".mk-dtp-open");
   assert.equal(button.tagName, "button");
   assert.equal(button.type, "button");
   assert.equal(typeof button.listeners.click, "function");
-  await openDowntimeMenu(app.actor);
+  const dialog = await openDowntimeMenu(app.actor);
+  const dialogConfig = dialog.options;
   assert.equal(dialogConfig.classes[0], "mk-dtp-dialog");
   assert.ok(dialogConfig.content.includes("Spiritualism"));
   assert.ok(dialogConfig.content.includes("Learning Skills"));
+  await dialog.press("cancel");
+  assert.equal(dialog.closed, true);
   assert.equal(app.actor.writes.length, 0);
   delete globalThis.foundry;
 });
 
-test("choosing an activity opens the native check without facility confirmation", async () => {
+test("attempts keep the menu open, preserve choices and refresh gold and DTP for repeated native checks", async () => {
   setUser(false);
   const actor = downtimeActor();
   const calls = nativeDowntime();
-  globalThis.foundry = { applications: { api: { DialogV2: { wait: async config => {
-    const attempt = config.buttons.find(button => button.action === "attempt");
-    assert.equal(attempt.callback(null, { form: { elements: {} } }), null);
-    return attempt.callback(null, { form: { elements: { activity: { value: "skills-int-learn" } } } });
-  } } } } };
+  installDowntimeDialog();
   try {
-    await openDowntimeMenu(actor);
-    assert.equal(calls.dialogs.length, 1);
-    assert.equal(calls.rolls.length, 1);
-    assert.equal(calls.messages.length, 1);
-    assert.equal(actor.writes.length, 1);
-    assert.equal(getDtp(actor), 4);
+    const dialog = await openDowntimeMenu(actor);
+    const form = dialog.form;
+    dialog.select("martial-d6-bonus");
+    form.elements["ability-martial-d6"].value = "dex";
+    for (const [dtp, gold] of [[4, 70], [3, 40]]) {
+      await dialog.press("attempt");
+      assert.equal(dialog.closed, false);
+      assert.equal(dialog.form, form, "the existing form stays in place");
+      assert.equal(form.elements.activity.value, "martial-d6-bonus");
+      assert.equal(form.elements["ability-martial-d6"].value, "dex");
+      assert.ok(dialog.balance.innerHTML.includes(`${dtp} DTP · ${gold} gp`));
+      assert.ok(dialog.balance.innerHTML.includes("Test &lt;Cleric&gt;"));
+    }
+    assert.equal(calls.dialogs.length, 2);
+    assert.equal(calls.dialogs[0].check.stat, "dex");
+    assert.equal(calls.rolls.length, 2);
+    assert.equal(calls.messages.length, 2);
+    assert.equal(actor.writes.length, 2);
+    assert.equal(getDtp(actor), 3);
+    await dialog.press("cancel");
+    assert.equal(dialog.closed, true);
   } finally {
     delete globalThis.foundry;
   }
+});
+
+test("the open menu disables unaffordable activities after gold or DTP is spent", async () => {
+  setUser(false);
+  installDowntimeDialog();
+  nativeDowntime();
+  try {
+    for (const [points, expectedPoints, freeDisabled] of [[3, 2, false], [1, 0, true]]) {
+      const actor = downtimeActor({ dtp: points, gp: 30 });
+      const dialog = await openDowntimeMenu(actor);
+      dialog.select("skills-int-learn");
+      await dialog.press("attempt");
+      const starred = dialog.inputs.find(input => input.value === "skills-int-learn");
+      const free = dialog.inputs.find(input => input.value === "skulduggery-cha-rumor");
+      assert.equal(dialog.closed, false);
+      assert.equal(starred.disabled, true);
+      assert.equal(starred.checked, false);
+      assert.equal(starred.closest().classList.contains("is-unavailable"), true);
+      assert.match(starred.closest().querySelector().textContent, /Not enough DTP or gold/);
+      assert.equal(free.disabled, freeDisabled);
+      assert.ok(dialog.balance.innerHTML.includes(`${expectedPoints} DTP · 0 gp`));
+      await dialog.press("attempt");
+      assert.equal(actor.writes.length, 1, "an empty selection never charges another attempt");
+    }
+  } finally { delete globalThis.foundry; }
+});
+
+test("cancelling the native check leaves the menu open with unchanged balances and selection", async () => {
+  setUser(false);
+  installDowntimeDialog();
+  const actor = downtimeActor();
+  const calls = nativeDowntime({ submitted: false });
+  try {
+    const dialog = await openDowntimeMenu(actor);
+    dialog.select("skills-int-learn");
+    await dialog.press("attempt");
+    assert.equal(dialog.closed, false);
+    assert.equal(dialog.form.elements.activity.value, "skills-int-learn");
+    assert.ok(dialog.balance.innerHTML.includes("5 DTP · 100 gp"));
+    assert.equal(actor.writes.length, 0);
+    assert.equal(calls.rolls.length, 0);
+  } finally { delete globalThis.foundry; }
 });
 
 test("Carousing opens its separate event menu without charging the check activity fee", async () => {
@@ -472,20 +571,21 @@ test("Carousing opens its separate event menu without charging the check activit
   const actor = downtimeActor();
   globalThis.game.actors = [actor];
   let dialogs = 0;
-  globalThis.foundry = { applications: { api: { DialogV2: { wait: async config => {
+  const DialogV2 = installDowntimeDialog();
+  DialogV2.wait = async config => {
     dialogs++;
-    if (dialogs === 1) {
-      return config.buttons.find(button => button.action === "attempt").callback(null, {
-        form: { elements: { activity: { value: "carousing" } } }
-      });
-    }
     assert.equal(config.window.title, "Carousing*");
     assert.match(config.content, /name="bonus"/);
     return null;
-  } } } } };
+  };
   try {
-    await openDowntimeMenu(actor);
-    assert.equal(dialogs, 2);
+    const dialog = await openDowntimeMenu(actor);
+    dialog.select("carousing");
+    await dialog.press("attempt");
+    assert.equal(dialogs, 1);
+    assert.equal(dialog.closed, false);
+    assert.equal(dialog.form.elements.activity.value, "carousing");
+    assert.ok(dialog.balance.innerHTML.includes("5 DTP · 100 gp"));
     assert.equal(actor.writes.length, 0);
     assert.equal(getDtp(actor), 5);
   } finally { delete globalThis.foundry; }

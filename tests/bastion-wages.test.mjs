@@ -11,7 +11,7 @@ const { MKBastionSheet, rerenderOpenBastionSheets } = await import("../scripts/b
 
 function fixture() {
   const actors = new Map();
-  const state = { defenses: { warbands: [], siegeWeapons: [] } };
+  const state = { upgrades: [], defenses: { warbands: [], siegeWeapons: [] } };
   const actor = { items: [], system: {}, getFlag: () => state };
   const sheet = new MKBastionSheet(actor);
   globalThis.game = { user: { isGM: true } };
@@ -59,6 +59,49 @@ test("level changes, quantity edits, additions and removals recalculate wages wi
   assert.equal((await f.data()).warbandWages.weeklyTotal, 51);
   f.state.defenses.warbands.shift();
   assert.equal((await f.data()).warbandWages.weeklyTotal, 15);
+  assert.equal(f.state.warbandWages, undefined);
+});
+
+test("a built Granary reduces weekly wages by 3 gp per warband including quantities", async () => {
+  const f = fixture();
+  f.add("guards", 2, 3);
+  f.add("veterans", 5, 2);
+  f.add("catapult", 10, 4, "siegeWeapons");
+  f.state.upgrades = ["granary"];
+  const data = await f.data();
+  assert.equal(data.hasGranary, true);
+  assert.deepEqual(data.defenses.warbands.map(entry => entry.weeklyWages), [9, 24]);
+  assert.deepEqual(data.warbandWages, { weeklyTotal: 33, incomplete: false });
+  assert.equal(data.defenses.siegeWeapons[0].hasWages, false);
+});
+
+test("Granary discounts cannot make wages negative or turn missing levels into payable entries", async () => {
+  const f = fixture();
+  f.state.upgrades = ["granary"];
+  f.add("recruits", 0, 3);
+  f.add("novices", 1, 2);
+  f.add("guards", 2);
+  f.add("unknown", undefined);
+  const missing = f.add("missing", 4);
+  f.actors.delete(missing.uuid);
+  const data = await f.data();
+  assert.deepEqual(data.defenses.warbands.map(entry => entry.weeklyWages), [0, 0, 3, null, null]);
+  assert.deepEqual(data.warbandWages, { weeklyTotal: 3, incomplete: true });
+});
+
+test("Granary installation and removal recalculate wages alongside linked levels and quantities", async () => {
+  const f = fixture();
+  const npc = f.add("guards", 2, 2);
+  assert.equal((await f.data()).hasGranary, false);
+  assert.equal((await f.data()).warbandWages.weeklyTotal, 12);
+  f.state.upgrades = ["granary"];
+  assert.equal((await f.data()).warbandWages.weeklyTotal, 6);
+  npc.system.level.value = 3;
+  f.state.defenses.warbands[0].quantity = 4;
+  assert.equal((await f.data()).warbandWages.weeklyTotal, 24);
+  f.state.upgrades = [];
+  assert.equal((await f.data()).hasGranary, false);
+  assert.equal((await f.data()).warbandWages.weeklyTotal, 36);
   assert.equal(f.state.warbandWages, undefined);
 });
 

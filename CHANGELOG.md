@@ -1,5 +1,10 @@
 # Changelog
 
+## 1.9.29
+
+- Applied the Granary's 3 gp weekly wage reduction to each stationed warband, including quantities, with a minimum of 0 gp, and corrected its description.
+- Kept the DTP activity window open after attempts, refreshed its gold and DTP balances and available options, and preserved activity choices and expanded categories.
+
 ## 1.9.28
 
 - Moved weapon Downtime Upgrades into a dedicated Upgrades tab, corrected control widths and label alignment, and preserved the selected tab when saving options.

@@ -59,7 +59,7 @@ export const BASTION_UPGRADES = Object.freeze([
   { key: "brewery", name: "Brewery", icon: "fas fa-beer-mug-empty", cost: "200 gp", description: "+1 to carousing event rolls within bastion" },
   { key: "casino", name: "Casino", icon: "fas fa-dice", cost: "300 gp", description: "Generates 2d20 gp per month" },
   { key: "dungeon", name: "Dungeon", icon: "fas fa-dungeon", cost: "300 gp", description: "Underground prison and tunnels" },
-  { key: "granary", name: "Granary", icon: "fas fa-wheat-awn", cost: "100 gp", description: "Warbands each cost 10 gp less in bastion" },
+  { key: "granary", name: "Granary", icon: "fas fa-wheat-awn", cost: "100 gp", description: "Reduces weekly wages by 3 gp per warband stationed in this bastion (minimum 0 gp)" },
   { key: "idol", name: "Idol", icon: "fas fa-star", cost: "400 gp", maxBuilds: 3, description: "+1 to CHA spellcasting checks in bastion" },
   { key: "infirmary", name: "Infirmary", icon: "fas fa-heart-pulse", cost: "200 gp", description: "Patients have ADV on CON checks" },
   { key: "kennels", name: "Kennels", icon: "fas fa-paw", cost: "300 gp", description: "DISADV on checks to sneak into bastion" },

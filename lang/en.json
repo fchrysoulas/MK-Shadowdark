@@ -12,6 +12,7 @@
   "MK_SHADOWDARK.bastionWages.subtotal": "Weekly warband wages (subtotal)",
   "MK_SHADOWDARK.bastionWages.unit": "gp/week",
   "MK_SHADOWDARK.bastionWages.rule": "3 gp per warband level per week, multiplied by quantity.",
+  "MK_SHADOWDARK.bastionWages.granary": "Granary: 3 gp less per warband per week (minimum 0 gp).",
   "MK_SHADOWDARK.bastionWages.level": "Level",
   "MK_SHADOWDARK.bastionWages.incomplete": "Some linked warbands or their levels are unavailable; their wages are excluded from this subtotal.",
   "MK_SHADOWDARK.bastionWages.unavailable": "Wages unavailable: linked warband or level missing.",

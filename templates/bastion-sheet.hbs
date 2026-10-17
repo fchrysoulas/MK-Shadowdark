@@ -195,6 +195,9 @@
             <span>{{#if mk.bastion.warbandWages.incomplete}}{{localize "MK_SHADOWDARK.bastionWages.subtotal"}}{{else}}{{localize "MK_SHADOWDARK.bastionWages.total"}}{{/if}}</span>
             <strong>{{mk.bastion.warbandWages.weeklyTotal}} {{localize "MK_SHADOWDARK.bastionWages.unit"}}</strong>
             <small>{{localize "MK_SHADOWDARK.bastionWages.rule"}}</small>
+            {{#if mk.bastion.hasGranary}}
+            <small>{{localize "MK_SHADOWDARK.bastionWages.granary"}}</small>
+            {{/if}}
             {{#if mk.bastion.warbandWages.incomplete}}
             <small class="mk-bastion-warband-wages-warning">{{localize "MK_SHADOWDARK.bastionWages.incomplete"}}</small>
             {{/if}}

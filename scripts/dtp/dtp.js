@@ -96,10 +96,35 @@ function guardDtpUpdate(actor, change, options) {
   return false;
 }
 
+function buildDowntimeBalance(actor) {
+  return `<strong>${escapeHtml(actor.name)}</strong> · ${getDtp(actor)} DTP · ${Number(actor.system?.coins?.gp) || 0} gp`;
+}
+
+function downtimeCostLabel(actor, entry) {
+  const gold = getDowntimeGoldCost(actor, entry);
+  return localize("cost", { gold: gold ?? "?" })
+    + (!getSpendUpdate(actor, entry) ? ` · ${localize("insufficient")}` : "");
+}
+
+function refreshDowntimeMenu(actor, profile, form) {
+  const balance = form.querySelector(".mk-dtp-balance");
+  if (balance) balance.innerHTML = buildDowntimeBalance(actor);
+  for (const input of form.querySelectorAll('input[name="activity"]')) {
+    const entry = getDowntimeOption(input.value);
+    if (!entry) continue;
+    const unavailable = !isDowntimeEligible(entry, profile) || !getSpendUpdate(actor, entry);
+    input.disabled = !canSpendDtp(actor) || unavailable;
+    if (input.disabled) input.checked = false;
+    const row = input.closest(".mk-dtp-option");
+    row.classList.toggle("is-unavailable", unavailable);
+    row.querySelector("small").textContent = downtimeCostLabel(actor, entry);
+  }
+}
+
 function buildDowntimeMenu(actor, profile) {
   const canSpend = canSpendDtp(actor);
   return `<div class="mk-dtp-menu">
-    <p class="mk-dtp-balance"><strong>${escapeHtml(actor.name)}</strong> · ${getDtp(actor)} DTP · ${Number(actor.system?.coins?.gp) || 0} gp</p>
+    <p class="mk-dtp-balance">${buildDowntimeBalance(actor)}</p>
     <p>${escapeHtml(localize("rules"))}</p>
     <p class="mk-dtp-note">${escapeHtml(localize("outcomes"))}</p>
     <details><summary>Carousing* <span>Tavern</span></summary>
@@ -118,13 +143,12 @@ function buildDowntimeMenu(actor, profile) {
           ${group.abilities.length > 1 ? `<label class="mk-dtp-ability">${escapeHtml(localize("ability"))}
             <select name="ability-${activity.id}-${group.id}">${group.abilities.map(ability => `<option value="${ability}">${ability.toUpperCase()}</option>`).join("")}</select></label>` : ""}
           ${entries.map(entry => {
-            const gold = getDowntimeGoldCost(actor, entry);
             const affordable = Boolean(getSpendUpdate(actor, entry));
             return `<label class="mk-dtp-option${!eligible || !affordable ? " is-unavailable" : ""}">
               <input type="radio" name="activity" value="${entry.id}" required${!canSpend || !eligible || !affordable ? " disabled" : ""}>
               <span><strong>DC ${entry.dc}${entry.starred ? "*" : ""} · ${escapeHtml(entry.label)}</strong>
                 <span>${escapeHtml(entry.description)}</span>
-                <small>${escapeHtml(localize("cost", { gold: gold ?? "?" }))}${!affordable ? ` · ${escapeHtml(localize("insufficient"))}` : ""}</small></span>
+                <small>${escapeHtml(downtimeCostLabel(actor, entry))}</small></span>
             </label>`;
           }).join("")}</section>`;
       }).join("")}
@@ -196,33 +220,35 @@ async function performDowntime(actor, activityId, ability) {
 
 async function openDowntimeMenu(actor) {
   const DialogV2 = globalThis.foundry?.applications?.api?.DialogV2;
-  if (actor?.type !== "Player" || typeof DialogV2?.wait !== "function") return;
+  if (actor?.type !== "Player" || typeof DialogV2 !== "function") return;
   const profile = await getDowntimeProfile(actor);
-  const choice = await DialogV2.wait({
+  return new DialogV2({
     window: { title: localize("menuTitle") },
     position: { width: 720 },
     classes: ["mk-dtp-dialog"],
+    form: { closeOnSubmit: false },
     content: buildDowntimeMenu(actor, profile),
     buttons: [
       { action: "attempt", label: localize("attempt"), icon: "fa-solid fa-dice-d20",
         disabled: !canSpendDtp(actor),
-        callback: (_event, button) => {
+        callback: async (_event, button) => {
           const form = button.form;
-          if (form.elements.activity?.value === "carousing") return { carousing: true };
-          const entry = getDowntimeOption(form.elements.activity?.value);
-          if (!entry) return null;
-          return {
-            activityId: entry.id,
-            ability: form.elements[`ability-${entry.activity.id}-${entry.group.id}`]?.value ?? entry.group.abilities[0]
-          };
+          try {
+            if (form.elements.activity?.value === "carousing") await openCarousingMenu(actor);
+            else {
+              const entry = getDowntimeOption(form.elements.activity?.value);
+              if (!entry) return;
+              const ability = form.elements[`ability-${entry.activity.id}-${entry.group.id}`]?.value ?? entry.group.abilities[0];
+              await performDowntime(actor, entry.id, ability);
+            }
+          } finally {
+            // Update resources in place so expanded categories, choices and scroll stay intact.
+            refreshDowntimeMenu(actor, profile, form);
+          }
         } },
-      { action: "cancel", label: localize("close"), callback: () => null }
-    ],
-    rejectClose: false,
-    close: () => null
-  });
-  if (choice?.carousing) await openCarousingMenu(actor);
-  else if (choice) await performDowntime(actor, choice.activityId, choice.ability);
+      { action: "cancel", label: localize("close"), type: "button", callback: (_event, _button, dialog) => dialog.close() }
+    ]
+  }).render({ force: true });
 }
 
 function renderDtp(app, html) {

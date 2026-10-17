@@ -76,7 +76,7 @@ function isItemDropData(data) {
   return String(data?.type ?? data?.documentName ?? "").toLowerCase() === "item";
 }
 
-async function buildDefenseData(defenses) {
+async function buildDefenseData(defenses, hasGranary) {
   const result = {};
 
   for (const kind of Object.values(BASTION_DEFENSE_KINDS)) {
@@ -113,7 +113,7 @@ async function buildDefenseData(defenses) {
         name: actor?.name ?? entry.name,
         hasWages,
         level: hasWages ? level : null,
-        weeklyWages: hasWages ? 3 * level * entry.quantity : null,
+        weeklyWages: hasWages ? Math.max(0, 3 * level - (hasGranary ? 3 : 0)) * entry.quantity : null,
       };
     }));
   }
@@ -248,8 +248,9 @@ class MKBastionSheet extends ActorSheetBase {
     const state = getBastionState(this.actor);
     const installedCount = state.upgrades.length;
     const hasVault = state.upgrades.includes("vault");
+    const hasGranary = state.upgrades.includes("granary");
     const defenseCount = state.defenses.siegeWeapons.length + state.defenses.warbands.length;
-    const defenses = await buildDefenseData(state.defenses);
+    const defenses = await buildDefenseData(state.defenses, hasGranary);
     const canEdit = canEditBastion(this);
     const hpMax = state.type.hp;
     const hpValue = Math.min(
@@ -265,6 +266,7 @@ class MKBastionSheet extends ActorSheetBase {
         type: state.type,
         location: String(this.actor.system?.location ?? ""),
         hasVault,
+        hasGranary,
         defenseCount,
         types: BASTION_TYPES.map(type => ({
           ...type,

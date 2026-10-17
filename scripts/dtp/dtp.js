@@ -1,6 +1,7 @@
 import { onCharacterSheetRender } from "../libs/sheet-render-adapter.js";
 import { getDtp } from "../libs/downtime-resources.js";
 import { openCarousingMenu } from "../carousing/carousing.js";
+import { canSpendDtp, getGold, getPartyGroups, getPersonalSpendUpdate, getDowntimePayment, payDowntime } from "./payments.js";
 import {
   DOWNTIME_ACTIVITIES, DOWNTIME_OPTIONS, getDowntimeOption,
   getDowntimeGoldCost, getDowntimeProfile, isDowntimeEligible
@@ -25,19 +26,6 @@ function canEditDtp(app) {
   return globalThis.game?.user?.isGM === true && app?.isEditable !== false;
 }
 
-function canSpendDtp(actor) {
-  return globalThis.game?.system?.id === "shadowdark" && actor?.type === "Player"
-    && (globalThis.game?.user?.isGM === true || actor.isOwner === true);
-}
-
-function getSpendUpdate(actor, entry) {
-  const gold = getDowntimeGoldCost(actor, entry);
-  if (!entry || getDtp(actor) < 1 || gold === null) return null;
-  const gp = Number(actor?.system?.coins?.gp ?? 0);
-  if (gold > 0 && (!Number.isSafeInteger(gp) || gp < gold)) return null;
-  return { [FLAG_PATH]: getDtp(actor) - 1, ...(gold > 0 ? { "system.coins.gp": gp - gold } : {}) };
-}
-
 function flattenUpdate(change, prefix = "", result = {}) {
   for (const [key, value] of Object.entries(change ?? {})) {
     const path = [prefix, key].filter(Boolean).join(".");
@@ -50,7 +38,7 @@ function flattenUpdate(change, prefix = "", result = {}) {
 function isDtpSpend(actor, change, options) {
   if (!canSpendDtp(actor)) return false;
   const entry = getDowntimeOption(options?.mkShadowdarkDtp?.activityId);
-  const expected = getSpendUpdate(actor, entry);
+  const expected = getPersonalSpendUpdate(actor, entry);
   if (!expected) return false;
   const actual = flattenUpdate(change);
   if (actual._id === actor.id) delete actual._id;
@@ -60,13 +48,8 @@ function isDtpSpend(actor, change, options) {
     && Object.entries(expected).every(([path, value]) => actual[path] === value);
 }
 
-async function spendDtp(actor, entry) {
-  if (!canSpendDtp(actor) || getDowntimeOption(entry?.id) !== entry) return false;
-  const update = getSpendUpdate(actor, entry);
-  if (!update) return false;
-  // One document update keeps the point and starred activity's gold payment together.
-  const saved = await actor.update(update, { mkShadowdarkDtp: { activityId: entry.id } });
-  return Boolean(saved);
+async function spendDtp(actor, entry, options = {}) {
+  return Boolean(await payDowntime(actor, entry, options));
 }
 
 async function saveDtp(actor, value) {
@@ -96,35 +79,46 @@ function guardDtpUpdate(actor, change, options) {
   return false;
 }
 
-function buildDowntimeBalance(actor) {
-  return `<strong>${escapeHtml(actor.name)}</strong> · ${getDtp(actor)} DTP · ${Number(actor.system?.coins?.gp) || 0} gp`;
+function buildDowntimeBalance(actor, groupUuid = "") {
+  const groups = getPartyGroups(actor);
+  const group = groupUuid ? groups.find(group => group.uuid === groupUuid) : groups.length === 1 ? groups[0] : null;
+  const party = group ? `<br>${escapeHtml(localize("partyBalance", { group: group.name, gold: getGold(group) ?? "?" }))}` : "";
+  return `<strong>${escapeHtml(actor.name)}</strong> · ${getDtp(actor)} DTP · ${Number(actor.system?.coins?.gp) || 0} gp${party}`;
 }
 
-function downtimeCostLabel(actor, entry) {
+function downtimeCostLabel(actor, entry, groupUuid = "") {
   const gold = getDowntimeGoldCost(actor, entry);
+  const payment = getDowntimePayment(actor, entry, { groupUuid });
   return localize("cost", { gold: gold ?? "?" })
-    + (!getSpendUpdate(actor, entry) ? ` · ${localize("insufficient")}` : "");
+    + (payment?.group ? ` · ${localize("partySource", { group: payment.group.name })}` : "")
+    + (!payment ? ` · ${localize("insufficient")}` : "");
 }
 
 function refreshDowntimeMenu(actor, profile, form) {
+  const groupUuid = form.elements.partyGroup?.value ?? "";
   const balance = form.querySelector(".mk-dtp-balance");
-  if (balance) balance.innerHTML = buildDowntimeBalance(actor);
+  if (balance) balance.innerHTML = buildDowntimeBalance(actor, groupUuid);
   for (const input of form.querySelectorAll('input[name="activity"]')) {
     const entry = getDowntimeOption(input.value);
     if (!entry) continue;
-    const unavailable = !isDowntimeEligible(entry, profile) || !getSpendUpdate(actor, entry);
+    const unavailable = !isDowntimeEligible(entry, profile) || !getDowntimePayment(actor, entry, { groupUuid });
     input.disabled = !canSpendDtp(actor) || unavailable;
     if (input.disabled) input.checked = false;
     const row = input.closest(".mk-dtp-option");
     row.classList.toggle("is-unavailable", unavailable);
-    row.querySelector("small").textContent = downtimeCostLabel(actor, entry);
+    row.querySelector("small").textContent = downtimeCostLabel(actor, entry, groupUuid);
   }
 }
 
 function buildDowntimeMenu(actor, profile) {
   const canSpend = canSpendDtp(actor);
+  const groups = getPartyGroups(actor);
   return `<div class="mk-dtp-menu">
     <p class="mk-dtp-balance">${buildDowntimeBalance(actor)}</p>
+    ${groups.length > 1 ? `<label class="mk-dtp-ability">${escapeHtml(localize("partyGroup"))}
+      <select name="partyGroup"><option value="">${escapeHtml(localize("chooseParty"))}</option>
+        ${groups.map(group => `<option value="${escapeHtml(group.uuid)}">${escapeHtml(group.name)}</option>`).join("")}
+      </select></label>` : ""}
     <p>${escapeHtml(localize("rules"))}</p>
     <p class="mk-dtp-note">${escapeHtml(localize("outcomes"))}</p>
     <details><summary>Carousing* <span>Tavern</span></summary>
@@ -143,7 +137,7 @@ function buildDowntimeMenu(actor, profile) {
           ${group.abilities.length > 1 ? `<label class="mk-dtp-ability">${escapeHtml(localize("ability"))}
             <select name="ability-${activity.id}-${group.id}">${group.abilities.map(ability => `<option value="${ability}">${ability.toUpperCase()}</option>`).join("")}</select></label>` : ""}
           ${entries.map(entry => {
-            const affordable = Boolean(getSpendUpdate(actor, entry));
+            const affordable = Boolean(getDowntimePayment(actor, entry));
             return `<label class="mk-dtp-option${!eligible || !affordable ? " is-unavailable" : ""}">
               <input type="radio" name="activity" value="${entry.id}" required${!canSpend || !eligible || !affordable ? " disabled" : ""}>
               <span><strong>DC ${entry.dc}${entry.starred ? "*" : ""} · ${escapeHtml(entry.label)}</strong>
@@ -156,7 +150,7 @@ function buildDowntimeMenu(actor, profile) {
   </div>`;
 }
 
-async function performDowntime(actor, activityId, ability) {
+async function performDowntime(actor, activityId, ability, { groupUuid = "" } = {}) {
   const entry = getDowntimeOption(activityId);
   const key = actor?.uuid ?? actor?.id ?? actor;
   if (!canSpendDtp(actor) || !entry || !entry.group.abilities.includes(ability) || activeAttempts.has(key)) return false;
@@ -164,7 +158,7 @@ async function performDowntime(actor, activityId, ability) {
   let paid = false;
   try {
     if (!isDowntimeEligible(entry, await getDowntimeProfile(actor))) return false;
-    if (!getSpendUpdate(actor, entry)) {
+    if (!getDowntimePayment(actor, entry, { groupUuid })) {
       globalThis.ui?.notifications?.warn?.(localize("insufficient"));
       return false;
     }
@@ -187,12 +181,13 @@ async function performDowntime(actor, activityId, ability) {
     config.mainRoll.type = "main";
     const roll = await dice.roll(config.mainRoll, actor.getRollData?.() ?? {});
     if (!roll || !Number.isFinite(roll.total)) return false;
-    const gold = getDowntimeGoldCost(actor, entry);
     // Recheck current resources after the native prompt. Closing it never spends anything.
-    if (!await spendDtp(actor, entry)) {
+    const payment = await payDowntime(actor, entry, { groupUuid });
+    if (!payment) {
       globalThis.ui?.notifications?.warn?.(localize("insufficient"));
       return false;
     }
+    const gold = payment.gold;
     paid = true;
     const success = roll.criticalSuccess === true
       || (roll.criticalFailure !== true && (roll.success ?? roll.total >= entry.dc));
@@ -204,13 +199,15 @@ async function performDowntime(actor, activityId, ability) {
         <strong class="mk-dtp-result-title">${escapeHtml(entry.label)}</strong>
         <p class="mk-dtp-result-check"><strong>${escapeHtml(localize(success ? "success" : "failure"))}</strong><span>${ability.toUpperCase()} · DC ${entry.dc}</span></p>
         ${success ? `<p>${escapeHtml(entry.description)}</p>` : ""}
-        <p class="mk-dtp-result-cost">${escapeHtml(localize(gold > 0 ? "spentWithGold" : "spent", { gold, remaining: getDtp(actor) }))}</p>
+        <p class="mk-dtp-result-cost">${escapeHtml(localize(payment.groupUuid ? "spentFromParty" : gold > 0 ? "spentWithGold" : "spent", {
+          gold, remaining: getDtp(actor), group: payment.groupName
+        }))}</p>
       </div>`,
-      flags: { [MODULE_ID]: { downtime: { activityId: entry.id, dc: entry.dc, gold, success } } }
+      flags: { [MODULE_ID]: { downtime: { activityId: entry.id, dc: entry.dc, gold, success, groupUuid: payment.groupUuid } } }
     }, { rollMode: config.rollMode });
     return true;
   } catch (error) {
-    globalThis.ui?.notifications?.error?.(localize(paid ? "reportFailed" : "attemptFailed"));
+    globalThis.ui?.notifications?.error?.(localize(error.partyPaymentReview ? "partyReview" : paid ? "reportFailed" : "attemptFailed"));
     console.error(`${MODULE_ID} | DTP | attempt failed`, error);
     return false;
   } finally {
@@ -222,7 +219,7 @@ async function openDowntimeMenu(actor) {
   const DialogV2 = globalThis.foundry?.applications?.api?.DialogV2;
   if (actor?.type !== "Player" || typeof DialogV2 !== "function") return;
   const profile = await getDowntimeProfile(actor);
-  return new DialogV2({
+  const dialog = new DialogV2({
     window: { title: localize("menuTitle") },
     position: { width: 720 },
     classes: ["mk-dtp-dialog"],
@@ -239,7 +236,7 @@ async function openDowntimeMenu(actor) {
               const entry = getDowntimeOption(form.elements.activity?.value);
               if (!entry) return;
               const ability = form.elements[`ability-${entry.activity.id}-${entry.group.id}`]?.value ?? entry.group.abilities[0];
-              await performDowntime(actor, entry.id, ability);
+              await performDowntime(actor, entry.id, ability, { groupUuid: form.elements.partyGroup?.value ?? "" });
             }
           } finally {
             // Update resources in place so expanded categories, choices and scroll stay intact.
@@ -248,7 +245,12 @@ async function openDowntimeMenu(actor) {
         } },
       { action: "cancel", label: localize("close"), type: "button", callback: (_event, _button, dialog) => dialog.close() }
     ]
-  }).render({ force: true });
+  });
+  dialog.addEventListener("render", () => {
+    const form = dialog.element.querySelector("form");
+    form.elements.partyGroup?.addEventListener("change", () => refreshDowntimeMenu(actor, profile, form));
+  });
+  return dialog.render({ force: true });
 }
 
 function renderDtp(app, html) {

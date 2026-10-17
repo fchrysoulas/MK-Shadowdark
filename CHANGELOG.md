@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.9.30
+
+- Added Party Treasure fallback for DTP check fees when character gold is insufficient, restricted to assigned groups the trying player can access, with group selection, GM-processed payments and refreshed balances.
+
 ## 1.9.29
 
 - Applied the Granary's 3 gp weekly wage reduction to each stationed warband, including quantities, with a minimum of 0 gp, and corrected its description.

@@ -230,6 +230,9 @@ function installDowntimeDialog() {
       });
       const inputs = this.inputs;
       const elements = { activity: { get value() { return inputs.find(input => input.checked)?.value ?? ""; } } };
+      if (config.content.includes('name="partyGroup"')) {
+        elements.partyGroup = { value: "", listeners: {}, addEventListener(name, callback) { this.listeners[name] = callback; } };
+      }
       for (const activity of DOWNTIME_ACTIVITIES) {
         for (const group of activity.groups) {
           if (group.abilities.length > 1) elements[`ability-${activity.id}-${group.id}`] = { value: group.abilities[0] };
@@ -240,8 +243,11 @@ function installDowntimeDialog() {
         querySelector: () => this.balance,
         querySelectorAll: () => this.inputs
       };
+      this.element = { querySelector: () => this.form };
+      this.listeners = {};
     }
-    render() { return this; }
+    addEventListener(name, callback) { this.listeners[name] = callback; }
+    render() { this.listeners.render?.(); return this; }
     close() { this.closed = true; return this; }
     select(value) { for (const input of this.inputs) input.checked = input.value === value; }
     async press(action) {
@@ -563,6 +569,42 @@ test("cancelling the native check leaves the menu open with unchanged balances a
     assert.ok(dialog.balance.innerHTML.includes("5 DTP · 100 gp"));
     assert.equal(actor.writes.length, 0);
     assert.equal(calls.rolls.length, 0);
+  } finally { delete globalThis.foundry; }
+});
+
+test("party selection enables fallback attempts and the open menu refreshes character and treasury balances", async () => {
+  setUser(true);
+  game.user.id = "gm";
+  game.user.active = true;
+  game.users = [game.user];
+  const actor = downtimeActor({ gp: 5 });
+  const party = id => ({
+    id, uuid: `Actor.${id}`, name: id, system: { coins: { gp: 60 } },
+    getFlag: (_scope, key) => key === "isGroup" ? true : key === "group" ? { members: [actor.uuid] } : undefined,
+    async update(change) { this.system.coins.gp = change["system.coins.gp"]; return this; }
+  });
+  const first = party("first");
+  const second = party("second");
+  game.actors = [actor, first, second];
+  const calls = nativeDowntime();
+  installDowntimeDialog();
+  foundry.utils = { deepClone: structuredClone };
+  try {
+    const dialog = await openDowntimeMenu(actor);
+    const input = dialog.inputs.find(input => input.value === "skills-int-learn");
+    assert.equal(input.disabled, true, "several groups require a choice");
+    dialog.form.elements.partyGroup.value = second.uuid;
+    dialog.form.elements.partyGroup.listeners.change();
+    assert.equal(input.disabled, false);
+    assert.ok(dialog.balance.innerHTML.includes("Party Treasure — second: 60 gp"));
+    dialog.select("skills-int-learn");
+    await dialog.press("attempt");
+    assert.equal(dialog.closed, false);
+    assert.ok(dialog.balance.innerHTML.includes("4 DTP · 5 gp"));
+    assert.ok(dialog.balance.innerHTML.includes("Party Treasure — second: 30 gp"));
+    assert.equal(first.system.coins.gp, 60);
+    assert.equal(second.system.coins.gp, 30);
+    assert.equal(calls.messages[0].data.flags["mk-shadowdark"].downtime.groupUuid, second.uuid);
   } finally { delete globalThis.foundry; }
 });
 

@@ -425,6 +425,8 @@ function normalizeCompanions(value) {
       type,
       name: String(companion.name ?? "").trim() || (type === "mount" ? "Unnamed Mount" : "Unnamed Hireling"),
       carrySlots,
+      background: String(companion.background ?? "").trim(),
+      ownerUuid: String(companion.ownerUuid ?? "").trim(),
       rarity: rarities.has(companion.rarity) ? companion.rarity : "common",
       personality: String(companion.personality ?? "").trim(),
       strengthBonus,

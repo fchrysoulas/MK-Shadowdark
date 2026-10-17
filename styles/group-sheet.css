@@ -1846,12 +1846,13 @@ body.mk-travel-prompt-open #sd-roll-dialog {
 
 .mk-companion-fields {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) 104px;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 10px;
 }
 
 .mk-companion-fields label {
   display: grid;
+  min-width: 0;
   gap: 4px;
 }
 
@@ -1864,7 +1865,9 @@ body.mk-travel-prompt-open #sd-roll-dialog {
   text-transform: uppercase;
 }
 
-.mk-companion-fields input {
+.mk-companion-fields input,
+.mk-companion-fields select {
+  min-width: 0;
   width: 100%;
   height: 28px;
   padding: 0 7px;
@@ -1876,8 +1879,15 @@ body.mk-travel-prompt-open #sd-roll-dialog {
   font-weight: 800;
 }
 
-.mk-companion-fields input:disabled {
+.mk-companion-fields input:disabled,
+.mk-companion-fields select:disabled {
   opacity: 0.72;
+}
+
+@container (max-width: 560px) {
+  .mk-group-sheet .mk-companion-fields {
+    grid-template-columns: minmax(0, 1fr);
+  }
 }
 
 .mk-companion-type {

@@ -424,6 +424,18 @@
                 <input type="text" value="{{name}}" data-action="change-companion" data-companion-field="name" {{#unless ../mk.canEditGroup}}disabled{{/unless}}>
               </label>
               <label>
+                <span>Background / Profession</span>
+                <input type="text" value="{{background}}" data-action="change-companion" data-companion-field="background" {{#unless ../mk.canEditGroup}}disabled{{/unless}}>
+              </label>
+              <label>
+                <span>Owner</span>
+                <select data-action="change-companion" data-companion-field="ownerUuid" {{#unless ../mk.canEditGroup}}disabled{{/unless}}>
+                  {{#each ownerOptions}}
+                  <option value="{{uuid}}" {{#if selected}}selected{{/if}} {{#if unavailable}}disabled{{/if}}>{{name}}</option>
+                  {{/each}}
+                </select>
+              </label>
+              <label>
                 <span>Carry slots</span>
                 <input type="number" value="{{carrySlots}}" min="0" step="1" data-action="change-companion" data-companion-field="carrySlots" {{#unless ../mk.canEditGroup}}disabled{{/unless}}>
               </label>

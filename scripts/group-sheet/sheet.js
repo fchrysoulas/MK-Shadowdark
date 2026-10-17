@@ -236,9 +236,24 @@ class MKGroupSheet extends ActorSheetBase {
     const travelProgress = buildTravelProgress(groupData);
     const travelPromptActorCount = getTravelAssignmentKeys(groupData).length;
     const membersByUuid = new Map(members.map(member => [member.uuid, member]));
+    const hirelingOwners = rosterMembers.filter(member => member.isPlayer);
     const hirelings = companions
       .filter(companion => companion.type === "hireling")
-      .map(companion => ({ ...companion }));
+      .map(companion => {
+        const ownerOptions = [{ uuid: "", name: "Unassigned" }, ...hirelingOwners];
+        if (companion.ownerUuid && !hirelingOwners.some(member => member.uuid === companion.ownerUuid)) {
+          ownerOptions.push({ uuid: companion.ownerUuid, name: "Unavailable character", unavailable: true });
+        }
+        return {
+          ...companion,
+          ownerOptions: ownerOptions.map(option => ({
+            uuid: option.uuid,
+            name: option.name,
+            selected: option.uuid === companion.ownerUuid,
+            unavailable: Boolean(option.unavailable),
+          })),
+        };
+      });
     const mounts = companions
       .filter(companion => companion.type === "mount")
       .map(companion => {
@@ -922,6 +937,9 @@ class MKGroupSheet extends ActorSheetBase {
       if (companion.type === "mount" && companion.riderUuid === uuid) {
         companion.riderUuid = "";
       }
+      if (companion.type === "hireling" && companion.ownerUuid === uuid) {
+        companion.ownerUuid = "";
+      }
     });
 
     for (const kind of ACTIVITY_KINDS) {
@@ -1427,6 +1445,8 @@ class MKGroupSheet extends ActorSheetBase {
       type,
       name: type === "mount" ? "Unnamed Mount" : "Unnamed Hireling",
       carrySlots: 0,
+      background: "",
+      ownerUuid: "",
       rarity: "common",
       personality: "",
       strengthBonus: 0,
@@ -1452,19 +1472,31 @@ class MKGroupSheet extends ActorSheetBase {
     const field = event.currentTarget.dataset.companionField;
     if (!id || ![
       "name", "carrySlots", "rarity", "personality", "strengthBonus", "riderUuid",
-      "level", "hpValue", "hpMax", "movement", "flying",
+      "level", "hpValue", "hpMax", "movement", "flying", "background", "ownerUuid",
     ].includes(field)) return;
 
     const groupData = getGroupData(this.actor);
     const companion = groupData.companions.find(entry => entry.id === id);
     if (!companion) return;
+    if (["background", "ownerUuid"].includes(field) && companion.type !== "hireling") return;
 
     if (field === "name") {
       companion.name = String(event.currentTarget.value ?? "").trim()
         || (companion.type === "mount" ? "Unnamed Mount" : "Unnamed Hireling");
+    } else if (field === "ownerUuid") {
+      const ownerUuid = String(event.currentTarget.value ?? "").trim();
+      const owner = ownerUuid && groupData.members.includes(ownerUuid)
+        ? await resolveActorFromUuid(ownerUuid)
+        : null;
+      if (ownerUuid && owner?.type !== "Player") {
+        ui.notifications.warn("Choose a player character from the group as the hireling's owner.");
+        this.render(false);
+        return;
+      }
+      companion.ownerUuid = ownerUuid;
     } else if (field === "flying") {
       companion.flying = Boolean(event.currentTarget.checked);
-    } else if (["personality", "movement", "riderUuid"].includes(field)) {
+    } else if (["personality", "movement", "riderUuid", "background"].includes(field)) {
       companion[field] = String(event.currentTarget.value ?? "").trim();
     } else if (field === "rarity") {
       companion.rarity = ["common", "uncommon", "rare", "legendary"].includes(event.currentTarget.value)

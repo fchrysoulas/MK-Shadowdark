@@ -175,6 +175,8 @@ The Group Sheet structure is intentionally stable. Its main areas remain:
 
 The seven-tab rail places Boats after Mounts, followed by Bastion. It scrolls horizontally when needed and switches to compact icon-only tabs at narrow widths.
 
+Hirelings have a free-text Background / Profession field and an Owner dropdown listing the group's player characters, including inactive party members. GMs can assign an owner or leave the hireling Unassigned. Removing a character from the group clears their hireling ownership; changing the active party does not.
+
 GMs can drag NPC actors representing boats into the Boats tab and Bastion actors into the Bastion tab, either onto the tab header or anywhere in its content area. These are links to the original actors: click a card to open its sheet, or use its trash button to remove the group link without deleting the actor. Duplicate drops do not add extra links.
 
 ## Bastion Actors

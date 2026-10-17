@@ -2,6 +2,7 @@
 
 ## 1.9.24
 
+- Added a Background / Profession field and an Owner dropdown for Group Sheet hirelings, with owners selected from the group's player characters.
 - Made all DTP activity categories start collapsed and added starred Skulduggery CHA checks for Gain a local rumor (DC 12), Gain a world rumor (DC 20), and Seed a rumor (DC 20).
 - Added Carousing* to the DTP menu with the campaign outcome table, individual/shared rolls, participant contributions, outcome-based DTP costs and XP/luck rewards, open event fields (including an optional extra 1d6), Bastion Tavern/Brewery rules, and confirmed campaign time.
 

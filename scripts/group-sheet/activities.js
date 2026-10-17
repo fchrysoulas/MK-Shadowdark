@@ -355,7 +355,9 @@ function getGroupData(actor) {
       .filter(uuid => existing.members.includes(uuid))
   ));
   existing.companions = normalizeCompanions(existing.companions);
+  existing.warbands = normalizeActorUuids(existing.warbands);
   existing.boats = normalizeActorUuids(existing.boats);
+  existing.boatAssignments = normalizeBoatAssignments(existing.boatAssignments, existing.boats);
   existing.bastions = normalizeActorUuids(existing.bastions);
   existing.travel ??= {};
   existing.camping ??= {};
@@ -398,6 +400,35 @@ function getGroupData(actor) {
   existing.camping.activities = normalizeActivityAssignments(existing.camping.activities, CAMPING_ACTIVITIES);
 
   return existing;
+}
+
+function normalizeBoatAssignments(value, boatUuids) {
+  const records = Array.isArray(value) ? value : [];
+  return boatUuids.map(actorUuid => {
+    const record = records.find(entry => entry?.actorUuid === actorUuid) ?? {};
+    const assignment = {
+      actorUuid,
+      captainName: typeof record.captainName === "string" ? record.captainName.trim() : "",
+    };
+    for (const kind of ["crew", "warbands"]) {
+      const seen = new Set([actorUuid]);
+      assignment[kind] = (Array.isArray(record[kind]) ? record[kind] : []).flatMap(entry => {
+        const uuid = typeof entry?.actorUuid === "string" ? entry.actorUuid.trim() : "";
+        if (!uuid || seen.has(uuid)) return [];
+        seen.add(uuid);
+        const quantity = Number(entry.quantity);
+        return [{ actorUuid: uuid, quantity: Number.isFinite(quantity) ? Math.max(1, Math.floor(quantity)) : 1 }];
+      });
+    }
+    return assignment;
+  });
+}
+
+function getBoatCrewSlots(assignment) {
+  return ["crew", "warbands"].reduce((slots, kind) => slots + (
+    (assignment?.[kind] ?? []).reduce((total, entry) => total + entry.quantity, 0)
+    * (kind === "warbands" ? 20 : 1)
+  ), 0);
 }
 
 function normalizeCompanions(value) {
@@ -614,6 +645,7 @@ export {
   buildTravelPromptAssignments,
   buildTravelPromptPayload,
   getGroupData,
+  getBoatCrewSlots,
   normalizeCompanions,
   getActivityName,
   setActivityMember,

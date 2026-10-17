@@ -266,7 +266,11 @@ function rerenderOpenGroupSheets(updatedActor) {
 
     if (
       groupData.members.includes(updatedActor.uuid) ||
+      groupData.warbands.includes(updatedActor.uuid) ||
       groupData.boats.includes(updatedActor.uuid) ||
+      groupData.boatAssignments.some(boat => ["crew", "warbands"].some(kind => (
+        boat[kind].some(entry => entry.actorUuid === updatedActor.uuid)
+      ))) ||
       groupData.bastions.includes(updatedActor.uuid) ||
       assignedActivityActors.includes(updatedActor.uuid) ||
       app.actor.id === updatedActor.id

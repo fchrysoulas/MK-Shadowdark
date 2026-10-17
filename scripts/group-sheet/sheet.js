@@ -31,6 +31,7 @@ import {
   getActivitiesForKind,
   getActivityKind,
   getActivityStore,
+  getBoatCrewSlots,
   getGroupData,
   getTravelAssignmentKeys,
   normalizeTravelPrompt,
@@ -71,9 +72,11 @@ import { getSettingValue } from "./group-settings.js";
 import { BASTION_ACTOR_TYPE } from "../bastion-sheet/constants.js";
 
 const GROUP_ACTOR_LINKS = Object.freeze({
+  warbands: { type: "NPC", label: "warband", dropLabel: "an NPC actor representing a warband" },
   boats: { type: "NPC", label: "boat", dropLabel: "an NPC actor representing a boat" },
   bastions: { type: BASTION_ACTOR_TYPE, label: "Bastion", dropLabel: "a Bastion actor" },
 });
+const BOAT_ASSIGNMENT_KINDS = ["crew", "warbands"];
 
 const ActorSheetBase = globalThis.foundry?.appv1?.sheets?.ActorSheet;
 const TextEditorImplementation = globalThis.foundry?.applications?.ux?.TextEditor?.implementation;
@@ -106,7 +109,9 @@ async function createGroupActor({ name = "New Group", folder = null } = {}) {
         group: {
           members: [],
           companions: [],
+          warbands: [],
           boats: [],
+          boatAssignments: [],
           bastions: [],
           travel: {
             weather: "normal",
@@ -172,6 +177,7 @@ class MKGroupSheet extends ActorSheetBase {
       ".mk-travel-member-toggle[data-can-assign='true']",
       ".mk-camping-assigned-chip",
       ".mk-group-actor-open[data-actor-available='true']",
+      ".mk-boat-assignment-open[data-actor-available='true']",
     ];
 
     element.querySelectorAll(selectors.join(",")).forEach(control => {
@@ -282,6 +288,7 @@ class MKGroupSheet extends ActorSheetBase {
         };
       });
 
+    const warbands = await this._buildGroupActorLinks(groupData, "warbands");
     const boats = await this._buildGroupActorLinks(groupData, "boats");
     const bastions = await this._buildGroupActorLinks(groupData, "bastions");
 
@@ -310,6 +317,7 @@ class MKGroupSheet extends ActorSheetBase {
         totalGearSlots: mounts.reduce((total, mount) => total + mount.gearSlots, 0),
         totalCarrySlots: mounts.reduce((total, mount) => total + mount.availableCarrySlots, 0),
       },
+      warbands: { entries: warbands, hasEntries: warbands.length > 0 },
       boats: { entries: boats, hasEntries: boats.length > 0 },
       bastions: { entries: bastions, hasEntries: bastions.length > 0 },
       campingResources: buildCampingResources(memberActors, this.actor),
@@ -475,11 +483,15 @@ class MKGroupSheet extends ActorSheetBase {
 
     html.find("[data-action='open-group-actor']").on("click", event => this._onOpenGroupActor(event));
     html.find("[data-action='remove-group-actor']").on("click", event => this._onRemoveGroupActor(event));
+    html.find("[data-action='change-boat']").on("change", event => this._onChangeBoat(event));
+    html.find("[data-action='open-boat-assignment']").on("click", event => this._onOpenBoatAssignment(event));
+    html.find("[data-action='remove-boat-assignment']").on("click", event => this._onRemoveBoatAssignment(event));
 
-    html[0]?.querySelectorAll("[data-group-actor-kind]").forEach(target => {
+    html[0]?.querySelectorAll("[data-group-actor-kind], [data-boat-assignment-kind]").forEach(target => {
       target.addEventListener("dragover", event => {
         if (!this.isEditable || !game.user?.isGM) return;
         event.preventDefault();
+        event.stopPropagation();
         if (event.dataTransfer) event.dataTransfer.dropEffect = "copy";
         target.classList.add("is-actor-drag-over");
       });
@@ -595,6 +607,14 @@ class MKGroupSheet extends ActorSheetBase {
     const travelCard = event.target.closest?.("[data-travel-activity-key]");
     const mountDropTarget = event.target?.closest?.("[data-mount-dropzone='true']");
     const groupActorTarget = event.target?.closest?.("[data-group-actor-kind]");
+    const boatAssignmentTarget = event.target?.closest?.("[data-boat-assignment-kind]");
+
+    if (boatAssignmentTarget) {
+      const boatUuid = boatAssignmentTarget.closest("[data-group-actor-uuid]")?.dataset.groupActorUuid;
+      const actor = data.type === "Item" ? null : await this._resolveDroppedActor(data);
+      await this._addBoatAssignment(boatUuid, boatAssignmentTarget.dataset.boatAssignmentKind, actor);
+      return false;
+    }
 
     if (groupActorTarget) {
       const actor = data.type === "Item" ? null : await this._resolveDroppedActor(data);
@@ -843,26 +863,154 @@ class MKGroupSheet extends ActorSheetBase {
     const definition = GROUP_ACTOR_LINKS[kind];
     const entries = [];
     for (const uuid of groupData[kind]) {
-      let actor;
-      try {
-        actor = await resolveActorFromUuid(uuid);
-      } catch {
-        // Deleted compendium documents must leave a removable link on the group.
+      const card = await this._buildLinkedActorCard(uuid, definition.type, definition.label);
+      if (kind === "boats") {
+        const assignment = groupData.boatAssignments.find(entry => entry.actorUuid === uuid);
+        card.captainName = assignment.captainName;
+        card.assignmentSections = [];
+        for (const assignmentKind of BOAT_ASSIGNMENT_KINDS) {
+          const assigned = [];
+          for (const entry of assignment[assignmentKind]) {
+            assigned.push({
+              ...await this._buildLinkedActorCard(entry.actorUuid, "NPC", assignmentKind === "crew" ? "crew member" : "warband"),
+              quantity: entry.quantity,
+            });
+          }
+          card.assignmentSections.push({
+            kind: assignmentKind,
+            label: assignmentKind === "crew" ? "Crew" : "Warbands",
+            slotRule: assignmentKind === "crew" ? "1 crew slot each" : "20 crew slots each",
+            entries: assigned,
+            hasEntries: assigned.length > 0,
+          });
+        }
+        const boat = card.available ? await this._resolveLinkedActor(uuid, "NPC") : null;
+        card.crewSlotsUsed = getBoatCrewSlots(assignment);
+        card.crewSlotCapacity = this._getBoatCrewCapacity(boat);
+        card.crewSlotsRemaining = Math.max(0, card.crewSlotCapacity - card.crewSlotsUsed);
+        card.crewSlotsOver = Math.max(0, card.crewSlotsUsed - card.crewSlotCapacity);
+        card.overCapacity = card.available && card.crewSlotsOver > 0;
       }
-      const available = actor?.type === definition.type && actor.visible !== false;
-      entries.push({
-        uuid,
-        name: available ? actor.name : `Unavailable ${definition.label}`,
-        img: available ? actor.img : "icons/svg/mystery-man.svg",
-        available,
-      });
+      entries.push(card);
     }
     return entries;
   }
 
+  async _resolveLinkedActor(uuid, type) {
+    try {
+      const actor = await resolveActorFromUuid(uuid);
+      return actor?.type === type && actor.visible !== false ? actor : null;
+    } catch {
+      // Deleted compendium documents must leave a removable link on the group.
+      return null;
+    }
+  }
+
+  async _buildLinkedActorCard(uuid, type, label) {
+    const actor = await this._resolveLinkedActor(uuid, type);
+    return {
+      uuid,
+      name: actor?.name ?? `Unavailable ${label}`,
+      img: actor?.img ?? "icons/svg/mystery-man.svg",
+      available: Boolean(actor),
+    };
+  }
+
+  _getBoatCrewCapacity(actor) {
+    const hp = Number(actor?.system?.attributes?.hp?.max);
+    return Number.isFinite(hp) ? Math.max(0, Math.floor(hp)) : 0;
+  }
+
+  _getBoatAssignmentContext(element, groupData) {
+    const boatUuid = element.closest("[data-group-actor-uuid]")?.dataset.groupActorUuid;
+    const kind = element.closest("[data-boat-assignment-kind]")?.dataset.boatAssignmentKind;
+    const uuid = element.closest("[data-boat-assignment-uuid]")?.dataset.boatAssignmentUuid;
+    const boat = groupData.boatAssignments.find(entry => entry.actorUuid === boatUuid);
+    const assignment = BOAT_ASSIGNMENT_KINDS.includes(kind)
+      ? boat?.[kind].find(entry => entry.actorUuid === uuid)
+      : null;
+    return { boat, kind, assignment };
+  }
+
+  async _hasBoatCrewCapacity(boat, previousSlots) {
+    const used = getBoatCrewSlots(boat);
+    if (used <= previousSlots) return true;
+    const actor = await this._resolveLinkedActor(boat.actorUuid, "NPC");
+    const capacity = this._getBoatCrewCapacity(actor);
+    if (actor?.type === "NPC" && used <= capacity) return true;
+    ui.notifications.warn(`This boat has ${capacity} crew slots (equal to its maximum HP); that assignment would use ${used}.`);
+    this.render(false);
+    return false;
+  }
+
+  async _addBoatAssignment(boatUuid, kind, actor) {
+    if (!this._canManageGroupActorLinks() || !BOAT_ASSIGNMENT_KINDS.includes(kind)) return false;
+    const groupData = getGroupData(this.actor);
+    const boat = groupData.boatAssignments.find(entry => entry.actorUuid === boatUuid);
+    if (!boat) return false;
+    if (!actor?.uuid || actor.type !== "NPC" || actor.uuid === boatUuid || actor.id === this.actor.id) {
+      ui.notifications.warn("Drop an NPC actor into this boat's Crew or Warbands section.");
+      return false;
+    }
+    if (boat[kind].some(entry => entry.actorUuid === actor.uuid)) {
+      ui.notifications.info(`${actor.name} is already assigned here. Change its quantity to add more.`);
+      return false;
+    }
+    const previousSlots = getBoatCrewSlots(boat);
+    boat[kind].push({ actorUuid: actor.uuid, quantity: 1 });
+    if (!await this._hasBoatCrewCapacity(boat, previousSlots)) return false;
+    await this._saveGroupData(groupData);
+    this.render(false);
+    return true;
+  }
+
+  async _onChangeBoat(event) {
+    event.preventDefault();
+    if (!this._canManageGroupActorLinks()) return false;
+    const groupData = getGroupData(this.actor);
+    const { boat, assignment } = this._getBoatAssignmentContext(event.currentTarget, groupData);
+    if (!boat) return false;
+    const field = event.currentTarget.dataset.boatField;
+    if (field === "captainName") {
+      boat.captainName = String(event.currentTarget.value ?? "").trim();
+    } else if (field === "quantity" && assignment) {
+      const quantity = Number(event.currentTarget.value);
+      if (!Number.isFinite(quantity) || quantity < 1 || !Number.isInteger(quantity)) {
+        this.render(false);
+        return false;
+      }
+      const previousSlots = getBoatCrewSlots(boat);
+      assignment.quantity = quantity;
+      if (!await this._hasBoatCrewCapacity(boat, previousSlots)) return false;
+    } else return false;
+    await this._saveGroupData(groupData);
+    this.render(false);
+    return true;
+  }
+
+  async _onOpenBoatAssignment(event) {
+    event.preventDefault();
+    const { assignment } = this._getBoatAssignmentContext(event.currentTarget, getGroupData(this.actor));
+    if (!assignment) return;
+    const actor = await this._resolveLinkedActor(assignment.actorUuid, "NPC");
+    actor?.sheet?.render(true);
+  }
+
+  async _onRemoveBoatAssignment(event) {
+    event.preventDefault();
+    if (!this._canManageGroupActorLinks()) return false;
+    const groupData = getGroupData(this.actor);
+    const { boat, kind, assignment } = this._getBoatAssignmentContext(event.currentTarget, groupData);
+    if (!assignment) return false;
+    boat[kind] = boat[kind].filter(entry => entry !== assignment);
+    await this._saveGroupData(groupData);
+    this.render(false);
+    return true;
+  }
+
   _canManageGroupActorLinks() {
     if (this.isEditable && game.user?.isGM) return true;
-    ui.notifications.warn("Only the GM can manage group boats and bastions.");
+    ui.notifications.warn("Only the GM can manage group warbands, boats and bastions.");
     return false;
   }
 
@@ -904,6 +1052,9 @@ class MKGroupSheet extends ActorSheetBase {
     if (!Object.hasOwn(GROUP_ACTOR_LINKS, kind)) return false;
     const groupData = getGroupData(this.actor);
     groupData[kind] = groupData[kind].filter(uuid => uuid !== row.dataset.groupActorUuid);
+    if (kind === "boats") {
+      groupData.boatAssignments = groupData.boatAssignments.filter(entry => entry.actorUuid !== row.dataset.groupActorUuid);
+    }
     await this._saveGroupData(groupData);
     this.render(false);
     return true;

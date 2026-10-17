@@ -120,7 +120,7 @@
 
 .mk-group-nav {
   display: grid;
-  grid-template-columns: repeat(7, minmax(max-content, 1fr));
+  grid-template-columns: repeat(8, minmax(max-content, 1fr));
   overflow-x: auto;
   min-height: 42px;
   border-bottom: 1px solid rgba(255, 255, 255, 0.12);
@@ -2023,6 +2023,143 @@ body.mk-travel-prompt-open #sd-roll-dialog {
 
 .mk-group-actor-open strong {
   overflow-wrap: anywhere;
+}
+
+.mk-boat-card {
+  display: grid;
+  min-width: 0;
+}
+
+.mk-boat-header,
+.mk-boat-assignment-section > header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  min-width: 0;
+}
+
+.mk-boat-details,
+.mk-boat-assignments {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 230px), 1fr));
+  gap: 10px;
+  min-width: 0;
+}
+
+.mk-boat-captain,
+.mk-boat-capacity {
+  display: grid;
+  align-content: start;
+  gap: 4px;
+  min-width: 0;
+}
+
+.mk-boat-captain > span,
+.mk-boat-capacity > span {
+  color: var(--mk-group-muted);
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.mk-boat-captain input {
+  width: 100%;
+  min-width: 0;
+  height: 30px;
+  padding: 4px 7px;
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  background: rgba(0, 0, 0, 0.3);
+}
+
+.mk-boat-capacity > strong {
+  color: #f2d085;
+  font-size: 18px;
+}
+
+.mk-boat-capacity.is-over-capacity > strong,
+.mk-boat-capacity.is-over-capacity > small {
+  color: #ff9292;
+}
+
+.mk-boat-assignment-section {
+  min-width: 0;
+  padding: 9px;
+  border: 1px dashed rgba(242, 208, 133, 0.35);
+  border-radius: 5px;
+  background: rgba(242, 208, 133, 0.035);
+}
+
+.mk-boat-assignment-section.is-actor-drag-over {
+  background: rgba(242, 208, 133, 0.12);
+  box-shadow: inset 0 0 0 2px rgba(242, 208, 133, 0.65);
+}
+
+.mk-boat-assignment-section small,
+.mk-boat-capacity small,
+.mk-boat-assignment-hint,
+.mk-boat-assignment-empty {
+  color: var(--mk-group-muted);
+  font-size: 11px;
+}
+
+.mk-boat-assignment-list {
+  display: grid;
+  gap: 7px;
+}
+
+.mk-boat-assignment-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 44px auto;
+  align-items: center;
+  gap: 6px;
+}
+
+.mk-boat-assignment-open {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  min-width: 0;
+  height: auto;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  text-align: left;
+}
+
+.mk-boat-assignment-open img {
+  flex: 0 0 30px;
+  width: 30px;
+  height: 30px;
+  object-fit: cover;
+  border-radius: 3px;
+}
+
+.mk-boat-assignment-open strong {
+  overflow-wrap: anywhere;
+  font-size: 12px;
+}
+
+.mk-boat-assignment-quantity {
+  display: grid;
+  text-align: center;
+  font-size: 10px;
+}
+
+.mk-boat-assignment-quantity input {
+  width: 100%;
+  min-width: 0;
+  height: 25px;
+  text-align: center;
+}
+
+.mk-boat-assignment-remove {
+  width: 22px;
+  height: 25px;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background: transparent;
 }
 
 .mk-mount-card {

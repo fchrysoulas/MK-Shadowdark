@@ -2,7 +2,7 @@
   "id": "mk-shadowdark",
   "title": "MK-Shadowdark",
   "description": "Quality-of-life extras and expansions for the Shadowdark RPG system.",
-  "version": "1.9.25",
+  "version": "1.9.26",
   "compatibility": {
     "minimum": "13",
     "verified": "14"
@@ -86,6 +86,7 @@
     "scripts/detailed-wounds/recovery-runtime.js",
     "scripts/detailed-wounds/history-runtime.js",
     "scripts/item-dashboard/item-dashboard.js",
+    "scripts/weapon-upgrades/weapon-upgrades.js",
     "scripts/character-dashboard/character-dashboard.js",
     "scripts/detailed-wounds/functional-consequences-runtime.js",
     "scripts/chat-reporting/chat-reporting.js",
@@ -148,6 +149,7 @@
     "styles/damage-traits.css",
     "styles/detailed-wounds.css",
     "styles/item-dashboard.css",
+    "styles/weapon-upgrades.css",
     "styles/character-dashboard.css",
     "styles/detailed-wounds-history.css",
     "styles/auto-apply-damage.css",

@@ -55,7 +55,7 @@ test("v1.6.0 visual proportions and responsive behavior are preserved", () => {
   const groupCss = source("styles/group-sheet.css");
   const css = source("styles/group-sheet-dashboard.css");
 
-  assert.match(groupCss, /\.mk-group-nav\s*\{[\s\S]*?grid-template-columns:\s*repeat\(7,\s*minmax\(max-content,\s*1fr\)\)/);
+  assert.match(groupCss, /\.mk-group-nav\s*\{[\s\S]*?grid-template-columns:\s*repeat\(8,\s*minmax\(max-content,\s*1fr\)\)/);
   assert.match(groupCss, /\.mk-group-nav \.item\s*\{[\s\S]*?font-size:\s*13px[\s\S]*?white-space:\s*nowrap/);
   assert.match(css, /--mk-party-sidebar-width:\s*224px/);
   assert.match(css, /--mk-party-sidebar-collapsed-width:\s*58px/);
@@ -63,7 +63,7 @@ test("v1.6.0 visual proportions and responsive behavior are preserved", () => {
   assert.match(css, /@container\s*\(max-width:\s*760px\)[\s\S]*?width:\s*196px/);
   assert.match(css, /@container\s*\(max-width:\s*760px\)[\s\S]*?\.mk-group-dashboard-enabled \.mk-group-nav\s*\{[\s\S]*?overflow-x:\s*auto/);
   assert.match(css, /@container\s*\(max-width:\s*560px\)[\s\S]*?font-size:\s*0/);
-  assert.match(css, /@container\s*\(max-width:\s*560px\)[\s\S]*?grid-template-columns:\s*repeat\(7,\s*minmax\(0,\s*1fr\)/);
+  assert.match(css, /@container\s*\(max-width:\s*560px\)[\s\S]*?grid-template-columns:\s*repeat\(8,\s*minmax\(0,\s*1fr\)/);
 });
 
 test("Group Sheet links Bastion actors while their rules remain on the standalone sheet", () => {
@@ -77,13 +77,13 @@ test("Group Sheet links Bastion actors while their rules remain on the standalon
   assert.doesNotMatch(css, /mk-bastions/);
 });
 
-test("Boats follows Mounts and Bastion follows Boats, with drops on headers and tab bodies", () => {
+test("Warbands follows Hirelings while Boats and Bastion retain their order, with drops on headers and tab bodies", () => {
   const template = source("templates/group-sheet.hbs");
   const nav = template.match(/<nav class="mk-group-nav[\s\S]*?<\/nav>/)[0];
   assert.deepEqual([...nav.matchAll(/data-tab="([^"]+)"/g)].map(match => match[1]), [
-    "traveling", "camping", "inventory", "hirelings", "mounts", "boats", "bastions",
+    "traveling", "camping", "inventory", "hirelings", "warbands", "mounts", "boats", "bastions",
   ]);
-  for (const kind of ["boats", "bastions"]) {
+  for (const kind of ["warbands", "boats", "bastions"]) {
     assert.match(nav, new RegExp(`data-tab="${kind}" data-group-actor-kind="${kind}"`));
     assert.match(template, new RegExp(`<div class="tab mk-group-tab mk-group-tab-body"[^>]*data-tab="${kind}" data-group-actor-kind="${kind}"`));
   }

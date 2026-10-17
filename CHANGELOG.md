@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.9.26
+
+- Added weapon-sheet Downtime Upgrades options for earned Martial Training: +1 to hit, +1 damage, and up to two damage-die increases capped at d12, applied through weapon-specific Active Effects.
+- Added a Warbands tab after Hirelings on the Group Sheet, with NPC actor drops, linked sheets, removal controls, and an eight-tab responsive rail.
+- Added captain names and NPC crew/warband assignments to Group Sheet boats, with quantities and crew capacity equal to maximum HP; each warband occupies 20 crew slots.
+
 ## 1.9.25
 
 - Added a Background / Profession field and an Owner dropdown for Group Sheet hirelings, with owners selected from the group's player characters.

@@ -34,6 +34,7 @@ The old **MK-Shadowdark GM Screen Mock** prototype is not a dependency and is no
 ## Character and combat automation
 
 - **DTP** -- a compact value box before Languages on the native Player sheet Details tab. It starts at 0 and persists on the actor. GMs can edit the balance; click the DTP label (or the read-only value) to open Carousing, Spiritualism, Skulduggery, Martial Training, Magical Research, and Learning Skills. For check activities, character owners choose an option and proceed directly to Shadowdark's native check dialog with editable modifiers and advantage/disadvantage. Required facilities remain listed in the menu. Each check attempt deducts **1 DTP**, and its starred (*) options also deduct **10 gp × PC level** from the character's gold, on success or failure. Closing a dialog spends nothing. Class hit die and spellcasting ability determine eligible training and research. Compact chat results show the activity, outcome, check, costs and remaining DTP without a luck-token notice or reroll controls; the GM applies rewards, training limits, created items, and narrative consequences.
+- **Weapon Downtime Upgrades** -- weapon item sheets, including the Dashboard Item Sheet, show a Downtime Upgrades section in Details. GMs can record earned +1 to hit, +1 damage, and 0–2 damage-die increases (maximum d12). For d4 classes, mark attack and damage training separately; for d6/d8+ classes, mark both bonuses together. Only d8+ classes can earn damage-die increases. One managed Active Effect applies the upgrades only to that weapon through Shadowdark's native attack and damage rolls. It preserves base damage, other effects, and the weapon's magical-item state. Unchecking options removes their bonuses; players can view the recorded upgrades.
 - DTP activity categories start collapsed. Skulduggery's CHA checks include **DC 12*: Gain a local rumor**, **DC 20*: Gain a world rumor**, and **DC 20*: Seed a rumor**; these use the usual starred activity costs.
 - **Carousing\*** -- select it in the DTP menu, then choose **Attempt selected activity** to open its event form and outcome table. The GM enters participants, individual contributions toward the total cost, the bonus (a number or `1d6`), and duration in days. Events require a suitable sanctuary with a Tavern. A selected Bastion must have a built Tavern, allows at most **100 gp total**, and adds **+1** for a built Brewery. Individual mode rolls `1d8 + bonus` per character; group mode shares one chosen participant's roll. Each participant gains the listed **XP** and pays the rolled **DTP cost** (3–8). Participants must hold enough DTP for the highest possible result; only the actual result's cost is deducted. Event gold, XP, DTP and luck tokens are applied automatically. The GM handles additional fines, CON/disease checks, allies, bans, debts and item rewards; **Item (80–100)** and **Item (90–100)** are reward-table ranges. Final review confirms the location and advances Foundry campaign time once for the event. Cancelling either dialog spends nothing. Owners can view the form and table; the GM resolves events.
 - **Sundering** -- with Auto Damage enabled, a Player character hit by a melee weapon or NPC attack can destroy an equipped, unstashed item with the Sundering Property to cancel that attack's damage. The active owning player receives the item-choice prompt; the GM decides when no owner is online. Declining or closing the prompt applies damage normally. Ranged attacks, spells, healing, and attacks that deal no damage do not prompt. The active GM rechecks the item and performs its deletion; saved decisions prevent duplicate destruction during retries.
@@ -88,7 +89,7 @@ The module's feature menus include enabled-by-default world-level master switche
 
 ## Group Management
 
-- **Group Sheet** — members, active party, hirelings, mounts, linked boats and bastions, shared inventory, Traveling, Camping, and party resources.
+- **Group Sheet** — members, active party, hirelings, warbands, mounts, linked boats and bastions, shared inventory, Traveling, Camping, and party resources.
 - **Camping Tasks** — Bed Down, Cook, Craft, Entertain, Scavenge, Hunt, Keep Watch, and Predict.
 - **Shared Scene Context** — terrain, danger, and day/night period belong to the active Scene context.
 - **Marching / Role Context** — Front, Middle, Rear, Scout, Light Bearer, and ordered camp watches.
@@ -169,15 +170,18 @@ The Group Sheet structure is intentionally stable. Its main areas remain:
 - Camping
 - Inventory
 - Hirelings
+- Warbands
 - Mounts
 - Boats
 - Bastion
 
-The seven-tab rail places Boats after Mounts, followed by Bastion. It scrolls horizontally when needed and switches to compact icon-only tabs at narrow widths.
+The eight-tab rail places Warbands after Hirelings, with Boats after Mounts, followed by Bastion. It scrolls horizontally when needed and switches to compact icon-only tabs at narrow widths.
 
 Hirelings have a free-text Background / Profession field and an Owner dropdown listing the group's player characters, including inactive party members. GMs can assign an owner or leave the hireling Unassigned. Removing a character from the group clears their hireling ownership; changing the active party does not.
 
-GMs can drag NPC actors representing boats into the Boats tab and Bastion actors into the Bastion tab, either onto the tab header or anywhere in its content area. These are links to the original actors: click a card to open its sheet, or use its trash button to remove the group link without deleting the actor. Duplicate drops do not add extra links.
+GMs can drag NPC actors representing warbands into the Warbands tab, NPC boats into the Boats tab, and Bastion actors into the Bastion tab, either onto the tab header or anywhere in its content area. These are links to the original actors: click a card to open its sheet, or use its trash button to remove the group link without deleting the actor. Duplicate drops do not add extra links.
+
+Each boat has a Captain name field and separate Crew and Warbands areas that accept NPC actor drops. GMs can edit assignment quantities, open linked NPC sheets, and unassign them without deleting the actors. Each crew member uses 1 crew slot and each warband uses 20. Crew capacity equals the ship's maximum HP; the card shows used and free slots and prevents assignments that exceed capacity. Damage does not reduce crew capacity. If maximum HP is reduced below the assigned total, the card marks the excess while preserving the assignments so the GM can adjust them.
 
 ## Bastion Actors
 

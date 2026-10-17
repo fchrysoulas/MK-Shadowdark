@@ -44,6 +44,7 @@
     <a class="item" data-tab="camping" title="Procedure: PCs make task checks in any order they choose. After resolving tasks, the GM follows normal resting and random encounter procedures."><i class="fas fa-campground"></i> Camping</a>
     <a class="item" data-tab="inventory"><i class="fas fa-box-open"></i> Inventory</a>
     <a class="item" data-tab="hirelings"><i class="fas fa-user-shield"></i> Hirelings</a>
+    <a class="item" data-tab="warbands" data-group-actor-kind="warbands" title="Warbands" aria-label="Warbands"><i class="fas fa-people-group"></i> Warbands</a>
     <a class="item" data-tab="mounts"><i class="fas fa-horse"></i> Mounts</a>
     <a class="item" data-tab="boats" data-group-actor-kind="boats" title="Boats" aria-label="Boats"><i class="fas fa-ship"></i> Boats</a>
     <a class="item" data-tab="bastions" data-group-actor-kind="bastions" title="Bastion" aria-label="Bastion"><i class="fas fa-chess-rook"></i> Bastion</a>
@@ -458,6 +459,32 @@
       </section>
     </div>
 
+    <div class="tab mk-group-tab mk-group-tab-body" data-group="primary" data-tab="warbands" data-group-actor-kind="warbands">
+      <section class="mk-group-linked-panel">
+        <header class="mk-companions-header"><h2>Warbands</h2></header>
+        <div class="mk-group-actor-dropzone">
+          <i class="fas fa-people-group" aria-hidden="true"></i>
+          <span>Drop an NPC warband anywhere in this tab</span>
+          <small>Click a warband to open its actor sheet.</small>
+        </div>
+        {{#if mk.warbands.hasEntries}}
+        <div class="mk-group-actor-list">
+          {{#each mk.warbands.entries}}
+          <article class="mk-group-actor-card" data-group-actor-uuid="{{uuid}}">
+            <button type="button" class="mk-group-actor-open" data-action="open-group-actor" data-actor-available="{{available}}" {{#unless available}}disabled{{/unless}}>
+              <img src="{{img}}" alt="{{name}}">
+              <strong>{{name}}</strong>
+            </button>
+            {{#if ../mk.canEditGroup}}<button type="button" class="mk-companion-remove" data-action="remove-group-actor" title="Remove {{name}} from group" aria-label="Remove {{name}} from group"><i class="fas fa-trash"></i></button>{{/if}}
+          </article>
+          {{/each}}
+        </div>
+        {{else}}
+        <p class="mk-companions-empty">No warbands yet. Drop an NPC warband into this tab to link it to the group.</p>
+        {{/if}}
+      </section>
+    </div>
+
     <div class="tab mk-group-tab mk-group-tab-body" data-group="primary" data-tab="mounts">
       <section class="mk-mounts-panel" data-mount-dropzone="true">
         <header class="mk-companions-header">
@@ -523,18 +550,62 @@
         <header class="mk-companions-header"><h2>Boats</h2></header>
         <div class="mk-group-actor-dropzone">
           <i class="fas fa-ship" aria-hidden="true"></i>
-          <span>Drop an NPC boat anywhere in this tab</span>
-          <small>Click a boat to open its actor sheet.</small>
+          <span>Drop an NPC boat here or in an empty part of this tab</span>
+          <small>Click a boat to open its actor sheet. Assign NPCs in its Crew and Warbands areas below.</small>
         </div>
         {{#if mk.boats.hasEntries}}
         <div class="mk-group-actor-list">
           {{#each mk.boats.entries}}
-          <article class="mk-group-actor-card" data-group-actor-uuid="{{uuid}}">
-            <button type="button" class="mk-group-actor-open" data-action="open-group-actor" data-actor-available="{{available}}" {{#unless available}}disabled{{/unless}}>
-              <img src="{{img}}" alt="{{name}}">
-              <strong>{{name}}</strong>
-            </button>
-            {{#if ../mk.canEditGroup}}<button type="button" class="mk-companion-remove" data-action="remove-group-actor" title="Remove {{name}} from group" aria-label="Remove {{name}} from group"><i class="fas fa-trash"></i></button>{{/if}}
+          <article class="mk-group-actor-card mk-boat-card" data-group-actor-uuid="{{uuid}}">
+            <header class="mk-boat-header">
+              <button type="button" class="mk-group-actor-open" data-action="open-group-actor" data-actor-available="{{available}}" {{#unless available}}disabled{{/unless}}>
+                <img src="{{img}}" alt="{{name}}">
+                <strong>{{name}}</strong>
+              </button>
+              {{#if ../mk.canEditGroup}}<button type="button" class="mk-companion-remove" data-action="remove-group-actor" title="Remove {{name}} from group" aria-label="Remove {{name}} from group"><i class="fas fa-trash"></i></button>{{/if}}
+            </header>
+            <div class="mk-boat-details">
+              <label class="mk-boat-captain">
+                <span>Captain</span>
+                <input type="text" value="{{captainName}}" placeholder="Captain's name" data-action="change-boat" data-boat-field="captainName" {{#unless ../mk.canEditGroup}}disabled{{/unless}}>
+              </label>
+              <div class="mk-boat-capacity {{#if overCapacity}}is-over-capacity{{/if}}" aria-live="polite">
+                <span>Crew slots used</span>
+                {{#if available}}
+                <strong>{{crewSlotsUsed}} / {{crewSlotCapacity}}</strong>
+                <small>{{#if overCapacity}}{{crewSlotsOver}} over capacity{{else}}{{crewSlotsRemaining}} free{{/if}} · Capacity equals maximum ship HP</small>
+                {{else}}
+                <strong>{{crewSlotsUsed}}</strong>
+                <small>Capacity unavailable</small>
+                {{/if}}
+              </div>
+            </div>
+            <div class="mk-boat-assignments">
+              {{#each assignmentSections}}
+              <section class="mk-boat-assignment-section" data-boat-assignment-kind="{{kind}}" aria-label="{{label}} assignments">
+                <header><strong>{{label}}</strong><small>{{slotRule}}</small></header>
+                <p class="mk-boat-assignment-hint">Drop an NPC here to assign {{label}}.</p>
+                {{#if hasEntries}}
+                <div class="mk-boat-assignment-list">
+                  {{#each entries}}
+                  <div class="mk-boat-assignment-row" data-boat-assignment-uuid="{{uuid}}">
+                    <button type="button" class="mk-boat-assignment-open" data-action="open-boat-assignment" data-actor-available="{{available}}" {{#unless available}}disabled{{/unless}}>
+                      <img src="{{img}}" alt="{{name}}"><strong>{{name}}</strong>
+                    </button>
+                    <label class="mk-boat-assignment-quantity">
+                      <span>Qty</span>
+                      <input type="number" value="{{quantity}}" min="1" step="1" data-action="change-boat" data-boat-field="quantity" {{#unless ../../../mk.canEditGroup}}disabled{{/unless}}>
+                    </label>
+                    {{#if ../../../mk.canEditGroup}}<button type="button" class="mk-boat-assignment-remove" data-action="remove-boat-assignment" title="Unassign {{name}}" aria-label="Unassign {{name}}"><i class="fas fa-xmark"></i></button>{{/if}}
+                  </div>
+                  {{/each}}
+                </div>
+                {{else}}
+                <p class="mk-boat-assignment-empty">No {{label}} assigned.</p>
+                {{/if}}
+              </section>
+              {{/each}}
+            </div>
           </article>
           {{/each}}
         </div>

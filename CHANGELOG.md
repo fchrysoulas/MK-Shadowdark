@@ -1,8 +1,12 @@
 # Changelog
 
-## 1.9.24
+## 1.9.25
 
 - Added a Background / Profession field and an Owner dropdown for Group Sheet hirelings, with owners selected from the group's player characters.
+- Added Boats and Bastion tabs after Mounts on the Group Sheet, accepting NPC boat and Bastion actor drops across each tab area, with linked actor cards and removal controls.
+
+## 1.9.24
+
 - Made all DTP activity categories start collapsed and added starred Skulduggery CHA checks for Gain a local rumor (DC 12), Gain a world rumor (DC 20), and Seed a rumor (DC 20).
 - Added Carousing* to the DTP menu with the campaign outcome table, individual/shared rolls, participant contributions, outcome-based DTP costs and XP/luck rewards, open event fields (including an optional extra 1d6), Bastion Tavern/Brewery rules, and confirmed campaign time.
 
@@ -17,7 +21,6 @@
 
 ## 1.9.21
 
-- Added Boats and Bastion tabs after Mounts on the Group Sheet, accepting NPC boat and Bastion actor drops across each tab area, with linked actor cards and removal controls.
 - Added automatic weekly wage totals for stationed Bastion warbands at 3 gp per level per warband, including quantity and live updates when linked NPC levels change.
 
 ## 1.9.20

@@ -168,6 +168,7 @@ Create an Actor and choose **Group** in the Actor creation dialog. MK-Shadowdark
 The Group Sheet structure is intentionally stable. Its main areas remain:
 
 - party / roster member cards
+- Summary
 - Traveling
 - Camping
 - Inventory
@@ -177,13 +178,15 @@ The Group Sheet structure is intentionally stable. Its main areas remain:
 - Boats
 - Bastion
 
-The eight-tab rail places Warbands after Hirelings, with Boats after Mounts, followed by Bastion. It scrolls horizontally when needed and switches to compact icon-only tabs at narrow widths.
+The Group Sheet uses Montserrat throughout. Its nine-tab rail uses icons at every width, with tab names shown on hover, accessible labels, and Enter/Space keyboard activation. Summary opens first and shows party treasure, weekly wages and salaries, hirelings with their owners, warbands, mounts with their riders, boats with their captains and crew/warband assignments, and bastions. Hirelings cost **1 gp each per week**; warbands linked in the group's Warbands tab cost **3 gp per level per week**. Summary shows each cost and the combined weekly payroll, with a clearly marked subtotal when warband levels or actors are unavailable. Warbands follows Hirelings, with Boats after Mounts, followed by Bastion; the rail scrolls horizontally when needed.
 
 Hirelings have a free-text Background / Profession field and an Owner dropdown listing the group's player characters, including inactive party members. GMs can assign an owner or leave the hireling Unassigned. Removing a character from the group clears their hireling ownership; changing the active party does not.
 
 GMs can drag NPC actors representing warbands into the Warbands tab, NPC boats into the Boats tab, and Bastion actors into the Bastion tab, either onto the tab header or anywhere in its content area. These are links to the original actors: click a card to open its sheet, or use its trash button to remove the group link without deleting the actor. Duplicate drops do not add extra links.
 
 Each boat has a Captain name field and separate Crew and Warbands areas that accept NPC actor drops. GMs can edit assignment quantities, open linked NPC sheets, and unassign them without deleting the actors. Each crew member uses 1 crew slot and each warband uses 20. Crew capacity equals the ship's maximum HP; the card shows used and free slots and prevents assignments that exceed capacity. Damage does not reduce crew capacity. If maximum HP is reduced below the assigned total, the card marks the excess while preserving the assignments so the GM can adjust them.
+
+The Warbands tab shows rectangular cards in a three-column grid, with one card per linked group warband and horizontal scrolling in narrow windows. Each card shows live level, AC, HP, and assignment badges. Warbands with no assignment follow the group; boat and bastion badges name their destinations and show assignment quantities. Multiple destinations appear on the same card. Assignments come from the Boats tab and linked bastions' Defenses tabs, and also appear in Summary. Unavailable bastions produce a warning and leave unknown assignments marked as unavailable.
 
 ## Bastion Actors
 

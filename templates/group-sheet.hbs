@@ -40,14 +40,15 @@
   </section>
 
   <nav class="mk-group-nav tabs" data-group="primary">
-    <a class="item active" data-tab="traveling"><i class="fas fa-route"></i> Traveling</a>
-    <a class="item" data-tab="camping" title="Procedure: PCs make task checks in any order they choose. After resolving tasks, the GM follows normal resting and random encounter procedures."><i class="fas fa-campground"></i> Camping</a>
-    <a class="item" data-tab="inventory"><i class="fas fa-box-open"></i> Inventory</a>
-    <a class="item" data-tab="hirelings"><i class="fas fa-user-shield"></i> Hirelings</a>
-    <a class="item" data-tab="warbands" data-group-actor-kind="warbands" title="Warbands" aria-label="Warbands"><i class="fas fa-people-group"></i> Warbands</a>
-    <a class="item" data-tab="mounts"><i class="fas fa-horse"></i> Mounts</a>
-    <a class="item" data-tab="boats" data-group-actor-kind="boats" title="Boats" aria-label="Boats"><i class="fas fa-ship"></i> Boats</a>
-    <a class="item" data-tab="bastions" data-group-actor-kind="bastions" title="Bastion" aria-label="Bastion"><i class="fas fa-chess-rook"></i> Bastion</a>
+    <a class="item active" data-tab="summary" data-tooltip="Summary" aria-label="Summary" tabindex="0"><i class="fas fa-clipboard-list" aria-hidden="true"></i></a>
+    <a class="item" data-tab="traveling" data-tooltip="Traveling" aria-label="Traveling" tabindex="0"><i class="fas fa-route" aria-hidden="true"></i></a>
+    <a class="item" data-tab="camping" data-tooltip="Camping" aria-label="Camping" tabindex="0"><i class="fas fa-campground" aria-hidden="true"></i></a>
+    <a class="item" data-tab="inventory" data-tooltip="Inventory" aria-label="Inventory" tabindex="0"><i class="fas fa-box-open" aria-hidden="true"></i></a>
+    <a class="item" data-tab="hirelings" data-tooltip="Hirelings" aria-label="Hirelings" tabindex="0"><i class="fas fa-user-shield" aria-hidden="true"></i></a>
+    <a class="item" data-tab="warbands" data-group-actor-kind="warbands" data-tooltip="Warbands" aria-label="Warbands" tabindex="0"><i class="fas fa-people-group" aria-hidden="true"></i></a>
+    <a class="item" data-tab="mounts" data-tooltip="Mounts" aria-label="Mounts" tabindex="0"><i class="fas fa-horse" aria-hidden="true"></i></a>
+    <a class="item" data-tab="boats" data-group-actor-kind="boats" data-tooltip="Boats" aria-label="Boats" tabindex="0"><i class="fas fa-ship" aria-hidden="true"></i></a>
+    <a class="item" data-tab="bastions" data-group-actor-kind="bastions" data-tooltip="Bastion" aria-label="Bastion" tabindex="0"><i class="fas fa-chess-rook" aria-hidden="true"></i></a>
   </nav>
 
   <div class="mk-group-member-source" aria-hidden="true">
@@ -93,315 +94,386 @@
   </div>
 
   <section class="mk-group-content">
-    <div class="tab mk-group-tab mk-group-tab-body active" data-group="primary" data-tab="traveling">
-      <div class="mk-travel-toolbar">
-        <button type="button" data-action="cycle-weather" title="{{mk.travel.weatherTooltip}}">
-          <i class="fas fa-cloud-sun-rain"></i> Weather:
-          {{#if mk.travel.weatherSummaries.hasResults}}
-            {{#if mk.travel.weatherSummaries.temperature}}Temperature: <span class="mk-weather-keyword">{{mk.travel.weatherSummaries.temperature}}</span>{{/if}}
-            {{#if mk.travel.weatherSummaries.temperature}}{{#if mk.travel.weatherSummaries.windSpeed}}&middot;{{/if}}{{/if}}
-            {{#if mk.travel.weatherSummaries.windSpeed}}Wind Speed: <span class="mk-weather-keyword">{{mk.travel.weatherSummaries.windSpeed}}</span>{{/if}}
-          {{else}}
-            {{mk.travel.weatherLabel}}
-          {{/if}}
-        </button>
-
-        <label class="mk-speed-control">Speed
-          <select data-action="change-speed">
-            {{#each mk.travel.speedOptions}}
-            <option value="{{value}}" {{#if selected}}selected{{/if}}>{{label}}</option>
-            {{/each}}
-          </select>
-        </label>
-
-        <label class="mk-travel-number-control">MPH
-          <input type="number" data-action="change-miles-per-hour" value="{{mk.travel.milesPerHour}}" min="0" max="100" step="0.1">
-        </label>
-
-        <label class="mk-travel-number-control">Hexes
-          <input type="number" data-action="change-hexes-to-explore" value="{{mk.travel.hexesToExplore}}" min="0" max="999" step="1">
-        </label>
-
-        {{#if mk.canEditGroup}}
-        <button type="button" data-action="start-travel-rolls" {{#unless mk.travel.hasAssigned}}disabled{{/unless}}>
-          <i class="fas fa-bullhorn"></i> Prompt Travelling
-        </button>
-        {{/if}}
-      </div>
-
-      <div class="mk-travel-progress" data-prompt-id="{{mk.travel.progress.promptId}}" data-travel-duration-ms="{{mk.travel.progress.durationMs}}" style="--mk-travel-progress-fill: {{mk.travel.progress.percent}}%;">
-        <span class="mk-travel-progress-track" aria-hidden="true">
-          <span class="mk-travel-progress-fill" data-travel-progress-fill></span>
-        </span>
-        {{#each mk.travel.progress.steps}}
-        <div class="mk-travel-progress-step {{#if complete}}is-complete{{/if}} {{#if failed}}is-failed{{/if}} {{#if successOutcome}}is-success-result{{/if}} {{#if failureOutcome}}is-failure-result{{/if}} {{#if active}}is-active{{/if}} {{#if pending}}is-pending{{/if}} {{#if empty}}is-empty{{/if}}" data-travel-progress-step="{{key}}">
-          <span class="mk-travel-progress-node">
-            <img src="{{icon}}" alt="">
-          </span>
-          <span class="mk-travel-progress-label">{{name}}</span>
-          <span class="mk-travel-progress-count">
-            <span data-progress-completed>{{completedCount}}</span>/<span data-progress-assigned>{{assignedCount}}</span>
-          </span>
-          <span class="mk-travel-progress-status" data-progress-status>{{statusLabel}}</span>
-          <span class="mk-travel-progress-results" data-progress-results>
-            {{#each resultMarks}}
-            <span data-travel-result="{{type}}" title="{{label}}">{{symbol}}</span>
-            {{/each}}
-          </span>
+    <div class="tab mk-group-tab mk-group-tab-body active" data-group="primary" data-tab="summary">
+      <section class="mk-companions-panel">
+        <header class="mk-companions-header">
+          <div>
+            <h2>Summary</h2>
+            <p>Group assets and weekly payroll.</p>
+          </div>
+        </header>
+        <div class="mk-group-summary-resources">
+          <div><span>Party Treasure</span><strong>{{mk.inventory.coins.gp}} GP · {{mk.inventory.coins.sp}} SP · {{mk.inventory.coins.cp}} CP</strong></div>
+          <div><span>Hireling Salaries</span><strong>{{mk.assets.wages.hirelings}} gp/week</strong></div>
+          <div>
+            <span>Warband Wages{{#if mk.assets.wages.incomplete}} (Subtotal){{/if}}</span>
+            <strong>{{mk.assets.wages.warbands}} gp/week</strong>
+            {{#if mk.assets.wages.incomplete}}<small>Some warband wages are unavailable.</small>{{/if}}
+          </div>
+          <div><span>{{#if mk.assets.wages.incomplete}}Known Wages &amp; Salaries{{else}}Total Wages &amp; Salaries{{/if}}</span><strong>{{mk.assets.wages.total}} gp/week</strong></div>
         </div>
-        {{/each}}
-      </div>
+        <div class="mk-group-summary-grid">
+          {{#each mk.assets.categories}}
+          <section class="mk-group-summary-category">
+            <header>
+              <h3><i class="fas {{icon}}" aria-hidden="true"></i> {{label}}</h3>
+              <strong class="mk-group-summary-count">{{count}}</strong>
+            </header>
+            {{#if count}}
+            <ul class="mk-group-summary-list">
+              {{#each entries}}
+              <li>
+                {{#if img}}<img src="{{img}}" alt="">{{else}}<i class="fas {{../icon}}" aria-hidden="true"></i>{{/if}}
+                <div>
+                  <strong>{{name}}</strong>
+                  {{#if detail}}<span>{{detail}}</span>{{/if}}
+                  {{#each assignments}}<span>{{label}}: {{text}}</span>{{/each}}
+                </div>
+              </li>
+              {{/each}}
+            </ul>
+            {{else}}
+            <p class="mk-group-summary-empty">None assigned.</p>
+            {{/if}}
+          </section>
+          {{/each}}
+        </div>
+      </section>
+    </div>
 
-      {{#if mk.travel.hasMembers}}
-      <div class="mk-camping-roster mk-travel-roster">
-        {{#each mk.travel.members}}
-        <button
-          type="button"
-          class="mk-camping-roster-member {{#if assigned}}is-assigned{{/if}} {{#unless canAssign}}is-unavailable{{/unless}}"
-          data-action="open-member"
-          data-camping-member-drag="true"
-          data-activity-kind="travel"
-          data-member-uuid="{{uuid}}"
-          data-can-assign="{{#if canAssign}}true{{else}}false{{/if}}"
-          draggable="{{#if canAssign}}true{{else}}false{{/if}}"
-          title="{{#unless canAssign}}{{name}} is controlled by another user{{else}}{{#if assignedActivityName}}{{name}}: {{assignedActivityName}}{{else}}{{name}} is unassigned{{/if}}{{/unless}}"
-        >
-          <span class="mk-camping-portrait"><img src="{{img}}" alt="{{name}}"></span>
-          <span>{{name}}</span>
-          {{#if assignedActivityName}}<small>{{assignedActivityName}}</small>{{else}}<small>Free</small>{{/if}}
-        </button>
-        {{/each}}
-        {{#if mk.canEditGroup}}
-        <button type="button" class="mk-camping-reset" data-action="reset-travel" data-activity-kind="travel" data-tooltip="Reset Travel Assignments" aria-label="Reset Travel Assignments">
-          <i class="fas fa-undo"></i>
-        </button>
-        {{/if}}
-      </div>
-      {{else}}
-      <div class="mk-camping-roster-empty">Add members to the group to assign travel tasks.</div>
-      {{/if}}
+    <div class="tab mk-group-tab mk-group-tab-body" data-group="primary" data-tab="traveling">
+      <section class="mk-companions-panel">
+        <header class="mk-companions-header">
+          <div>
+            <h2>Traveling</h2>
+            <p>Assign party members to travel tasks and track the journey.</p>
+          </div>
+        </header>
+        <div class="mk-travel-toolbar">
+          <button type="button" data-action="cycle-weather" title="{{mk.travel.weatherTooltip}}">
+            <i class="fas fa-cloud-sun-rain"></i> Weather:
+            {{#if mk.travel.weatherSummaries.hasResults}}
+              {{#if mk.travel.weatherSummaries.temperature}}Temperature: <span class="mk-weather-keyword">{{mk.travel.weatherSummaries.temperature}}</span>{{/if}}
+              {{#if mk.travel.weatherSummaries.temperature}}{{#if mk.travel.weatherSummaries.windSpeed}}&middot;{{/if}}{{/if}}
+              {{#if mk.travel.weatherSummaries.windSpeed}}Wind Speed: <span class="mk-weather-keyword">{{mk.travel.weatherSummaries.windSpeed}}</span>{{/if}}
+            {{else}}
+              {{mk.travel.weatherLabel}}
+            {{/if}}
+          </button>
 
-      <div class="mk-travel-grid">
-        {{#each mk.travel.activities}}
-        <article class="mk-travel-card" data-activity-kind="travel" data-travel-activity-key="{{key}}">
-          <header class="mk-travel-card-header">
-            <span class="mk-travel-activity-icon" aria-hidden="true">
+          <label class="mk-speed-control">Speed
+            <select data-action="change-speed">
+              {{#each mk.travel.speedOptions}}
+              <option value="{{value}}" {{#if selected}}selected{{/if}}>{{label}}</option>
+              {{/each}}
+            </select>
+          </label>
+
+          <label class="mk-travel-number-control">MPH
+            <input type="number" data-action="change-miles-per-hour" value="{{mk.travel.milesPerHour}}" min="0" max="100" step="0.1">
+          </label>
+
+          <label class="mk-travel-number-control">Hexes
+            <input type="number" data-action="change-hexes-to-explore" value="{{mk.travel.hexesToExplore}}" min="0" max="999" step="1">
+          </label>
+
+          {{#if mk.canEditGroup}}
+          <button type="button" data-action="start-travel-rolls" {{#unless mk.travel.hasAssigned}}disabled{{/unless}}>
+            <i class="fas fa-bullhorn"></i> Prompt Travelling
+          </button>
+          {{/if}}
+        </div>
+
+        <div class="mk-travel-progress" data-prompt-id="{{mk.travel.progress.promptId}}" data-travel-duration-ms="{{mk.travel.progress.durationMs}}" style="--mk-travel-progress-fill: {{mk.travel.progress.percent}}%;">
+          <span class="mk-travel-progress-track" aria-hidden="true">
+            <span class="mk-travel-progress-fill" data-travel-progress-fill></span>
+          </span>
+          {{#each mk.travel.progress.steps}}
+          <div class="mk-travel-progress-step {{#if complete}}is-complete{{/if}} {{#if failed}}is-failed{{/if}} {{#if successOutcome}}is-success-result{{/if}} {{#if failureOutcome}}is-failure-result{{/if}} {{#if active}}is-active{{/if}} {{#if pending}}is-pending{{/if}} {{#if empty}}is-empty{{/if}}" data-travel-progress-step="{{key}}">
+            <span class="mk-travel-progress-node">
               <img src="{{icon}}" alt="">
             </span>
-
-            <div class="mk-travel-title" data-tooltip="{{description}}" aria-label="{{description}}" tabindex="0">
-              <strong class="mk-travel-name">{{name}}</strong>
-              <span class="mk-travel-meta">{{abilityLabel}} <b>DC {{dc}}</b></span>
-            </div>
-
-            <button type="button" class="mk-travel-roll" data-action="roll-travel-activity" data-has-assigned="{{#if hasAssigned}}true{{else}}false{{/if}}" title="{{#if hasAssigned}}Roll {{name}}{{else}}Assign a character to roll {{name}}{{/if}}" {{#unless hasAssigned}}disabled{{/unless}}>
-              <i class="fas fa-dice-d20"></i>
-            </button>
-          </header>
-
-          <div class="mk-camping-assignment-row" data-action="toggle-travel-picker" title="Choose assigned members">
-            <div class="mk-camping-assignment-summary" title="{{assignmentLabel}}">
-              {{#if hasAssigned}}
-              {{#each assigned}}
-              <button type="button" class="mk-camping-assigned-chip" data-action="open-member" data-assigned-actor-uuid="{{uuid}}" title="{{name}}">
-                <span class="mk-camping-portrait"><img src="{{img}}" alt="{{name}}"></span>
-              </button>
+            <span class="mk-travel-progress-label">{{name}}</span>
+            <span class="mk-travel-progress-count">
+              <span data-progress-completed>{{completedCount}}</span>/<span data-progress-assigned>{{assignedCount}}</span>
+            </span>
+            <span class="mk-travel-progress-status" data-progress-status>{{statusLabel}}</span>
+            <span class="mk-travel-progress-results" data-progress-results>
+              {{#each resultMarks}}
+              <span data-travel-result="{{type}}" title="{{label}}">{{symbol}}</span>
               {{/each}}
-              {{else}}
-              <span class="mk-camping-unassigned">Unassigned</span>
-              {{/if}}
-            </div>
+            </span>
           </div>
+          {{/each}}
+        </div>
 
-          {{#if hasMemberOptions}}
-          <div class="mk-camping-picker-panel">
-            <div class="mk-travel-member-picker">
-              {{#each memberOptions}}
-              <button
-                type="button"
-                class="mk-travel-member-toggle {{#if assigned}}is-assigned{{/if}} {{#if assignedElsewhere}}is-assigned-elsewhere{{/if}}"
-                data-action="toggle-travel-participant"
-                data-member-uuid="{{uuid}}"
-                data-can-assign="{{#if canAssign}}true{{else}}false{{/if}}"
-                title="{{title}}"
-                {{#unless canAssign}}disabled{{/unless}}
-              >
-                <span class="mk-camping-portrait"><img src="{{img}}" alt="{{name}}"></span>
-                <span>{{name}}</span>
-                {{#if assignedActivityName}}<small>{{assignedActivityName}}</small>{{/if}}
-              </button>
-              {{/each}}
-            </div>
-          </div>
+        {{#if mk.travel.hasMembers}}
+        <div class="mk-camping-roster mk-travel-roster">
+          {{#each mk.travel.members}}
+          <button
+            type="button"
+            class="mk-camping-roster-member {{#if assigned}}is-assigned{{/if}} {{#unless canAssign}}is-unavailable{{/unless}}"
+            data-action="open-member"
+            data-camping-member-drag="true"
+            data-activity-kind="travel"
+            data-member-uuid="{{uuid}}"
+            data-can-assign="{{#if canAssign}}true{{else}}false{{/if}}"
+            draggable="{{#if canAssign}}true{{else}}false{{/if}}"
+            title="{{#unless canAssign}}{{name}} is controlled by another user{{else}}{{#if assignedActivityName}}{{name}}: {{assignedActivityName}}{{else}}{{name}} is unassigned{{/if}}{{/unless}}"
+          >
+            <span class="mk-camping-portrait"><img src="{{img}}" alt="{{name}}"></span>
+            <span>{{name}}</span>
+            {{#if assignedActivityName}}<small>{{assignedActivityName}}</small>{{else}}<small>Free</small>{{/if}}
+          </button>
+          {{/each}}
+          {{#if mk.canEditGroup}}
+          <button type="button" class="mk-camping-reset" data-action="reset-travel" data-activity-kind="travel" data-tooltip="Reset Travel Assignments" aria-label="Reset Travel Assignments">
+            <i class="fas fa-undo"></i>
+          </button>
           {{/if}}
-        </article>
-        {{/each}}
-      </div>
+        </div>
+        {{else}}
+        <div class="mk-camping-roster-empty">Add members to the group to assign travel tasks.</div>
+        {{/if}}
+
+        <div class="mk-travel-grid">
+          {{#each mk.travel.activities}}
+          <article class="mk-travel-card" data-activity-kind="travel" data-travel-activity-key="{{key}}">
+            <header class="mk-travel-card-header">
+              <span class="mk-travel-activity-icon" aria-hidden="true">
+                <img src="{{icon}}" alt="">
+              </span>
+
+              <div class="mk-travel-title" data-tooltip="{{description}}" aria-label="{{description}}" tabindex="0">
+                <strong class="mk-travel-name">{{name}}</strong>
+                <span class="mk-travel-meta">{{abilityLabel}} <b>DC {{dc}}</b></span>
+              </div>
+
+              <button type="button" class="mk-travel-roll" data-action="roll-travel-activity" data-has-assigned="{{#if hasAssigned}}true{{else}}false{{/if}}" title="{{#if hasAssigned}}Roll {{name}}{{else}}Assign a character to roll {{name}}{{/if}}" {{#unless hasAssigned}}disabled{{/unless}}>
+                <i class="fas fa-dice-d20"></i>
+              </button>
+            </header>
+
+            <div class="mk-camping-assignment-row" data-action="toggle-travel-picker" title="Choose assigned members">
+              <div class="mk-camping-assignment-summary" title="{{assignmentLabel}}">
+                {{#if hasAssigned}}
+                {{#each assigned}}
+                <button type="button" class="mk-camping-assigned-chip" data-action="open-member" data-assigned-actor-uuid="{{uuid}}" title="{{name}}">
+                  <span class="mk-camping-portrait"><img src="{{img}}" alt="{{name}}"></span>
+                </button>
+                {{/each}}
+                {{else}}
+                <span class="mk-camping-unassigned">Unassigned</span>
+                {{/if}}
+              </div>
+            </div>
+
+            {{#if hasMemberOptions}}
+            <div class="mk-camping-picker-panel">
+              <div class="mk-travel-member-picker">
+                {{#each memberOptions}}
+                <button
+                  type="button"
+                  class="mk-travel-member-toggle {{#if assigned}}is-assigned{{/if}} {{#if assignedElsewhere}}is-assigned-elsewhere{{/if}}"
+                  data-action="toggle-travel-participant"
+                  data-member-uuid="{{uuid}}"
+                  data-can-assign="{{#if canAssign}}true{{else}}false{{/if}}"
+                  title="{{title}}"
+                  {{#unless canAssign}}disabled{{/unless}}
+                >
+                  <span class="mk-camping-portrait"><img src="{{img}}" alt="{{name}}"></span>
+                  <span>{{name}}</span>
+                  {{#if assignedActivityName}}<small>{{assignedActivityName}}</small>{{/if}}
+                </button>
+                {{/each}}
+              </div>
+            </div>
+            {{/if}}
+          </article>
+          {{/each}}
+        </div>
+      </section>
     </div>
 
     <div class="tab mk-group-tab mk-group-tab-body" data-group="primary" data-tab="camping">
-      <section class="mk-camping-info">
-        <div class="mk-campfire-note">
-          <strong>Campfire</strong>
-          <p>The PCs can make a campfire using 3 torches; it lasts 8 hours while a PC remains near to it and casts light out to a near distance.</p>
-          <div class="mk-campfire-resources">
-            <span title="Total food and rations carried by members plus shared group inventory">
-              <i class="fas fa-utensils"></i>
-              <strong>{{mk.campingResources.food.total}}</strong>
-            </span>
-            <span title="Total torches carried by members plus shared group inventory">
-              <i class="fas fa-fire"></i>
-              <strong>{{mk.campingResources.torches.total}}</strong>
-            </span>
-            {{#if mk.canEditGroup}}
-            <button type="button" class="mk-group-rest-button" data-action="rest-party">
-              <i class="fas fa-bed"></i> Rest Party
-            </button>
-            {{/if}}
+      <section class="mk-companions-panel">
+        <header class="mk-companions-header">
+          <div>
+            <h2>Camping</h2>
+            <p>Assign camp tasks and manage the party's rest.</p>
           </div>
-        </div>
-      </section>
-
-      {{#if mk.camping.hasMembers}}
-      <div class="mk-camping-roster">
-        {{#each mk.camping.members}}
-        <button
-          type="button"
-          class="mk-camping-roster-member {{#if assigned}}is-assigned{{/if}} {{#unless canAssign}}is-unavailable{{/unless}}"
-          data-action="open-member"
-          data-camping-member-drag="true"
-          data-activity-kind="camping"
-          data-member-uuid="{{uuid}}"
-          data-can-assign="{{#if canAssign}}true{{else}}false{{/if}}"
-          draggable="{{#if canAssign}}true{{else}}false{{/if}}"
-          title="{{#unless canAssign}}{{name}} is controlled by another user{{else}}{{#if assignedActivityName}}{{name}}: {{assignedActivityName}}{{else}}{{name}} is unassigned{{/if}}{{/unless}}"
-        >
-          <span class="mk-camping-portrait"><img src="{{img}}" alt="{{name}}"></span>
-          <span>{{name}}</span>
-          {{#if assignedActivityName}}<small>{{assignedActivityName}}</small>{{else}}<small>Free</small>{{/if}}
-        </button>
-        {{/each}}
-        {{#if mk.canEditGroup}}
-        <button type="button" class="mk-camping-reset" data-action="reset-travel" data-activity-kind="camping" data-tooltip="Reset Camping Assignments" aria-label="Reset Camping Assignments">
-          <i class="fas fa-undo"></i>
-        </button>
-        {{/if}}
-      </div>
-      {{else}}
-      <div class="mk-camping-roster-empty">Add members to the group to assign camping tasks.</div>
-      {{/if}}
-
-      <div class="mk-travel-grid">
-        {{#each mk.camping.activities}}
-        <article class="mk-travel-card" data-activity-kind="camping" data-travel-activity-key="{{key}}">
-          <header class="mk-travel-card-header">
-            <span class="mk-travel-activity-icon" aria-hidden="true">
-              <img src="{{icon}}" alt="">
-            </span>
-
-            <div class="mk-travel-title" data-tooltip="{{description}}" aria-label="{{description}}" tabindex="0">
-              <strong class="mk-travel-name">{{name}}</strong>
-              <span class="mk-travel-meta">{{abilityLabel}} <b>DC {{dc}}</b></span>
-            </div>
-
-            <button type="button" class="mk-travel-roll" data-action="roll-travel-activity" data-has-assigned="{{#if hasAssigned}}true{{else}}false{{/if}}" title="{{#if hasAssigned}}Roll {{name}}{{else}}Assign a character to roll {{name}}{{/if}}" {{#unless hasAssigned}}disabled{{/unless}}>
-              <i class="fas fa-dice-d20"></i>
-            </button>
-          </header>
-
-          <div class="mk-camping-assignment-row" data-action="toggle-travel-picker" title="Choose assigned members">
-            <div class="mk-camping-assignment-summary" title="{{assignmentLabel}}">
-              {{#if hasAssigned}}
-              {{#each assigned}}
-              <button type="button" class="mk-camping-assigned-chip" data-action="open-member" data-assigned-actor-uuid="{{uuid}}" title="{{name}}">
-                <span class="mk-camping-portrait"><img src="{{img}}" alt="{{name}}"></span>
+        </header>
+        <section class="mk-camping-info">
+          <div class="mk-campfire-note">
+            <strong>Campfire</strong>
+            <p>The PCs can make a campfire using 3 torches; it lasts 8 hours while a PC remains near to it and casts light out to a near distance.</p>
+            <div class="mk-campfire-resources">
+              <span title="Total food and rations carried by members plus shared group inventory">
+                <i class="fas fa-utensils"></i>
+                <strong>{{mk.campingResources.food.total}}</strong>
+              </span>
+              <span title="Total torches carried by members plus shared group inventory">
+                <i class="fas fa-fire"></i>
+                <strong>{{mk.campingResources.torches.total}}</strong>
+              </span>
+              {{#if mk.canEditGroup}}
+              <button type="button" class="mk-group-rest-button" data-action="rest-party">
+                <i class="fas fa-bed"></i> Rest Party
               </button>
-              {{/each}}
-              {{else}}
-              <span class="mk-camping-unassigned">Unassigned</span>
-              {{/if}}
-            </div>
-          </div>
-
-          {{#if hasMemberOptions}}
-          <div class="mk-camping-picker-panel">
-            <div class="mk-travel-member-picker">
-              {{#each memberOptions}}
-              <button
-                type="button"
-                class="mk-travel-member-toggle {{#if assigned}}is-assigned{{/if}} {{#if assignedElsewhere}}is-assigned-elsewhere{{/if}}"
-                data-action="toggle-travel-participant"
-                data-member-uuid="{{uuid}}"
-                data-can-assign="{{#if canAssign}}true{{else}}false{{/if}}"
-                title="{{title}}"
-                {{#unless canAssign}}disabled{{/unless}}
-              >
-                <span class="mk-camping-portrait"><img src="{{img}}" alt="{{name}}"></span>
-                <span>{{name}}</span>
-                {{#if assignedActivityName}}<small>{{assignedActivityName}}</small>{{/if}}
-              </button>
-              {{/each}}
-            </div>
-          </div>
-          {{/if}}
-        </article>
-        {{/each}}
-      </div>
-    </div>
-
-    <div class="tab mk-group-tab mk-group-tab-body" data-group="primary" data-tab="inventory">
-      <div class="mk-inventory-layout">
-        <section class="mk-shared-items-panel">
-          <header class="mk-inventory-panel-header">
-            <button type="button" class="mk-panel-add-button" data-action="create-group-item" title="Add gear"><i class="fas fa-plus"></i></button>
-            <h2>Shared Items</h2>
-            <span class="mk-inventory-slots {{#if mk.inventory.slots.over}}mk-danger{{/if}}"><i class="fas fa-weight-hanging"></i> <strong>{{mk.inventory.slots.total}}/{{mk.inventory.slots.max}}</strong></span>
-          </header>
-
-          <div class="mk-shared-items-table">
-            <div class="mk-shared-items-table-header">
-              <span>Item</span>
-              <span>Qty</span>
-              <span>Slots</span>
-            </div>
-
-            <div class="mk-shared-items-table-body">
-              {{#if mk.inventory.hasItems}}
-              {{#each mk.inventory.items}}
-              <div class="mk-shared-item-row" data-item-id="{{id}}">
-                <div class="mk-shared-item-name-cell">
-                  <img src="{{img}}" alt="{{name}}" data-action="open-item">
-                  <button type="button" class="mk-inventory-name" data-action="open-item">{{name}}</button>
-                </div>
-
-                <div class="mk-shared-item-qty-cell">
-                  <button type="button" data-action="item-decrement" title="Decrease quantity"><i class="fas fa-minus"></i></button>
-                  <strong>{{quantity}}</strong>
-                  <button type="button" data-action="item-increment" title="Increase quantity"><i class="fas fa-plus"></i></button>
-                </div>
-
-                <div class="mk-shared-item-slots-cell">{{slots}}</div>
-              </div>
-              {{/each}}
-              {{else}}
-              <div class="mk-shared-items-empty">No shared items. Drop gear here or press +.</div>
               {{/if}}
             </div>
           </div>
         </section>
 
-        <aside class="mk-party-treasure-panel">
-          <h2>Party Treasure</h2>
+        {{#if mk.camping.hasMembers}}
+        <div class="mk-camping-roster">
+          {{#each mk.camping.members}}
+          <button
+            type="button"
+            class="mk-camping-roster-member {{#if assigned}}is-assigned{{/if}} {{#unless canAssign}}is-unavailable{{/unless}}"
+            data-action="open-member"
+            data-camping-member-drag="true"
+            data-activity-kind="camping"
+            data-member-uuid="{{uuid}}"
+            data-can-assign="{{#if canAssign}}true{{else}}false{{/if}}"
+            draggable="{{#if canAssign}}true{{else}}false{{/if}}"
+            title="{{#unless canAssign}}{{name}} is controlled by another user{{else}}{{#if assignedActivityName}}{{name}}: {{assignedActivityName}}{{else}}{{name}} is unassigned{{/if}}{{/unless}}"
+          >
+            <span class="mk-camping-portrait"><img src="{{img}}" alt="{{name}}"></span>
+            <span>{{name}}</span>
+            {{#if assignedActivityName}}<small>{{assignedActivityName}}</small>{{else}}<small>Free</small>{{/if}}
+          </button>
+          {{/each}}
+          {{#if mk.canEditGroup}}
+          <button type="button" class="mk-camping-reset" data-action="reset-travel" data-activity-kind="camping" data-tooltip="Reset Camping Assignments" aria-label="Reset Camping Assignments">
+            <i class="fas fa-undo"></i>
+          </button>
+          {{/if}}
+        </div>
+        {{else}}
+        <div class="mk-camping-roster-empty">Add members to the group to assign camping tasks.</div>
+        {{/if}}
 
-          <label class="mk-coin-row"><span>GP</span><input type="number" value="{{mk.inventory.coins.gp}}" min="0" data-action="change-group-coin" data-coin="gp"></label>
-          <label class="mk-coin-row"><span>SP</span><input type="number" value="{{mk.inventory.coins.sp}}" min="0" data-action="change-group-coin" data-coin="sp"></label>
-          <label class="mk-coin-row"><span>CP</span><input type="number" value="{{mk.inventory.coins.cp}}" min="0" data-action="change-group-coin" data-coin="cp"></label>
+        <div class="mk-travel-grid">
+          {{#each mk.camping.activities}}
+          <article class="mk-travel-card" data-activity-kind="camping" data-travel-activity-key="{{key}}">
+            <header class="mk-travel-card-header">
+              <span class="mk-travel-activity-icon" aria-hidden="true">
+                <img src="{{icon}}" alt="">
+              </span>
 
-          <p class="mk-coin-slots"><i class="fas fa-weight-hanging"></i> Coin slots <strong>{{mk.inventory.coinSlots}}</strong></p>
+              <div class="mk-travel-title" data-tooltip="{{description}}" aria-label="{{description}}" tabindex="0">
+                <strong class="mk-travel-name">{{name}}</strong>
+                <span class="mk-travel-meta">{{abilityLabel}} <b>DC {{dc}}</b></span>
+              </div>
 
-          <button type="button" class="mk-divide-coins-button" data-action="divide-coins"><i class="fas fa-coins"></i> Divide Coins</button>
-        </aside>
-      </div>
+              <button type="button" class="mk-travel-roll" data-action="roll-travel-activity" data-has-assigned="{{#if hasAssigned}}true{{else}}false{{/if}}" title="{{#if hasAssigned}}Roll {{name}}{{else}}Assign a character to roll {{name}}{{/if}}" {{#unless hasAssigned}}disabled{{/unless}}>
+                <i class="fas fa-dice-d20"></i>
+              </button>
+            </header>
+
+            <div class="mk-camping-assignment-row" data-action="toggle-travel-picker" title="Choose assigned members">
+              <div class="mk-camping-assignment-summary" title="{{assignmentLabel}}">
+                {{#if hasAssigned}}
+                {{#each assigned}}
+                <button type="button" class="mk-camping-assigned-chip" data-action="open-member" data-assigned-actor-uuid="{{uuid}}" title="{{name}}">
+                  <span class="mk-camping-portrait"><img src="{{img}}" alt="{{name}}"></span>
+                </button>
+                {{/each}}
+                {{else}}
+                <span class="mk-camping-unassigned">Unassigned</span>
+                {{/if}}
+              </div>
+            </div>
+
+            {{#if hasMemberOptions}}
+            <div class="mk-camping-picker-panel">
+              <div class="mk-travel-member-picker">
+                {{#each memberOptions}}
+                <button
+                  type="button"
+                  class="mk-travel-member-toggle {{#if assigned}}is-assigned{{/if}} {{#if assignedElsewhere}}is-assigned-elsewhere{{/if}}"
+                  data-action="toggle-travel-participant"
+                  data-member-uuid="{{uuid}}"
+                  data-can-assign="{{#if canAssign}}true{{else}}false{{/if}}"
+                  title="{{title}}"
+                  {{#unless canAssign}}disabled{{/unless}}
+                >
+                  <span class="mk-camping-portrait"><img src="{{img}}" alt="{{name}}"></span>
+                  <span>{{name}}</span>
+                  {{#if assignedActivityName}}<small>{{assignedActivityName}}</small>{{/if}}
+                </button>
+                {{/each}}
+              </div>
+            </div>
+            {{/if}}
+          </article>
+          {{/each}}
+        </div>
+      </section>
+    </div>
+
+    <div class="tab mk-group-tab mk-group-tab-body" data-group="primary" data-tab="inventory">
+      <section class="mk-companions-panel">
+        <header class="mk-companions-header">
+          <div>
+            <h2>Inventory</h2>
+            <p>Manage the group's shared gear and party treasure.</p>
+          </div>
+        </header>
+        <div class="mk-inventory-layout">
+          <section class="mk-shared-items-panel">
+            <header class="mk-inventory-panel-header">
+              <button type="button" class="mk-panel-add-button" data-action="create-group-item" title="Add gear"><i class="fas fa-plus"></i></button>
+              <h2>Shared Items</h2>
+              <span class="mk-inventory-slots {{#if mk.inventory.slots.over}}mk-danger{{/if}}"><i class="fas fa-weight-hanging"></i> <strong>{{mk.inventory.slots.total}}/{{mk.inventory.slots.max}}</strong></span>
+            </header>
+
+            <div class="mk-shared-items-table">
+              <div class="mk-shared-items-table-header">
+                <span>Item</span>
+                <span>Qty</span>
+                <span>Slots</span>
+              </div>
+
+              <div class="mk-shared-items-table-body">
+                {{#if mk.inventory.hasItems}}
+                {{#each mk.inventory.items}}
+                <div class="mk-shared-item-row" data-item-id="{{id}}">
+                  <div class="mk-shared-item-name-cell">
+                    <img src="{{img}}" alt="{{name}}" data-action="open-item">
+                    <button type="button" class="mk-inventory-name" data-action="open-item">{{name}}</button>
+                  </div>
+
+                  <div class="mk-shared-item-qty-cell">
+                    <button type="button" data-action="item-decrement" title="Decrease quantity"><i class="fas fa-minus"></i></button>
+                    <strong>{{quantity}}</strong>
+                    <button type="button" data-action="item-increment" title="Increase quantity"><i class="fas fa-plus"></i></button>
+                  </div>
+
+                  <div class="mk-shared-item-slots-cell">{{slots}}</div>
+                </div>
+                {{/each}}
+                {{else}}
+                <div class="mk-shared-items-empty">No shared items. Drop gear here or press +.</div>
+                {{/if}}
+              </div>
+            </div>
+          </section>
+
+          <aside class="mk-party-treasure-panel">
+            <h2>Party Treasure</h2>
+
+            <label class="mk-coin-row"><span>GP</span><input type="number" value="{{mk.inventory.coins.gp}}" min="0" data-action="change-group-coin" data-coin="gp"></label>
+            <label class="mk-coin-row"><span>SP</span><input type="number" value="{{mk.inventory.coins.sp}}" min="0" data-action="change-group-coin" data-coin="sp"></label>
+            <label class="mk-coin-row"><span>CP</span><input type="number" value="{{mk.inventory.coins.cp}}" min="0" data-action="change-group-coin" data-coin="cp"></label>
+
+            <p class="mk-coin-slots"><i class="fas fa-weight-hanging"></i> Coin slots <strong>{{mk.inventory.coinSlots}}</strong></p>
+
+            <button type="button" class="mk-divide-coins-button" data-action="divide-coins"><i class="fas fa-coins"></i> Divide Coins</button>
+          </aside>
+        </div>
+      </section>
     </div>
 
     <div class="tab mk-group-tab mk-group-tab-body" data-group="primary" data-tab="hirelings">
@@ -461,21 +533,44 @@
 
     <div class="tab mk-group-tab mk-group-tab-body" data-group="primary" data-tab="warbands" data-group-actor-kind="warbands">
       <section class="mk-group-linked-panel">
-        <header class="mk-companions-header"><h2>Warbands</h2></header>
+        <header class="mk-companions-header">
+          <div>
+            <h2>Warbands</h2>
+            <p>Track warbands following the group or assigned to boats and bastions.</p>
+          </div>
+          <strong class="mk-companion-capacity"><i class="fas fa-people-group" aria-hidden="true"></i> {{mk.warbands.count}}</strong>
+        </header>
+        <div class="mk-warband-status-summary" aria-label="Warband assignments">
+          <span><i class="fas fa-person-walking" aria-hidden="true"></i> Following <strong>{{mk.warbands.counts.following}}</strong></span>
+          <span><i class="fas fa-ship" aria-hidden="true"></i> Boats <strong>{{mk.warbands.counts.boat}}</strong></span>
+          <span><i class="fas fa-chess-rook" aria-hidden="true"></i> Bastions <strong>{{mk.warbands.counts.bastion}}</strong></span>
+        </div>
+        {{#if mk.warbands.hasUnavailableBastions}}<p class="mk-warband-assignment-warning">Some linked bastions are unavailable. Warbands without a known assignment are marked as unavailable.</p>{{/if}}
         <div class="mk-group-actor-dropzone">
           <i class="fas fa-people-group" aria-hidden="true"></i>
           <span>Drop an NPC warband anywhere in this tab</span>
-          <small>Click a warband to open its actor sheet.</small>
+          <small>Click a warband to open its sheet. Assign it in the Boats tab or a bastion's Defenses tab.</small>
         </div>
         {{#if mk.warbands.hasEntries}}
-        <div class="mk-group-actor-list">
+        <div class="mk-group-actor-list mk-warband-grid">
           {{#each mk.warbands.entries}}
-          <article class="mk-group-actor-card" data-group-actor-uuid="{{uuid}}">
-            <button type="button" class="mk-group-actor-open" data-action="open-group-actor" data-actor-available="{{available}}" {{#unless available}}disabled{{/unless}}>
-              <img src="{{img}}" alt="{{name}}">
-              <strong>{{name}}</strong>
-            </button>
-            {{#if ../mk.canEditGroup}}<button type="button" class="mk-companion-remove" data-action="remove-group-actor" title="Remove {{name}} from group" aria-label="Remove {{name}} from group"><i class="fas fa-trash"></i></button>{{/if}}
+          <article class="mk-group-actor-card mk-warband-card" data-group-actor-uuid="{{uuid}}">
+            <div class="mk-warband-card-header">
+              <button type="button" class="mk-group-actor-open" data-action="open-group-actor" data-actor-available="{{available}}" {{#unless available}}disabled{{/unless}}>
+                <img src="{{img}}" alt="{{name}}">
+                <strong>{{name}}</strong>
+              </button>
+              {{#if ../mk.canEditGroup}}<button type="button" class="mk-companion-remove" data-action="remove-group-actor" title="Remove {{name}} from group" aria-label="Remove {{name}} from group"><i class="fas fa-trash"></i></button>{{/if}}
+            </div>
+            <div class="mk-warband-stats">
+              <span>Level <strong>{{levelLabel}}</strong></span>
+              <span>AC <strong>{{acLabel}}</strong></span>
+              <span>HP <strong>{{#if hp.known}}{{hp.value}} / {{hp.max}}{{else}}—{{/if}}</strong></span>
+            </div>
+            {{#if hp.known}}<div class="mk-warband-hp-track" aria-label="HP {{hp.value}} of {{hp.max}}"><span style="width: {{hp.percent}}%;"></span></div>{{/if}}
+            <div class="mk-warband-deployments">
+              {{#each deployments}}<span class="mk-warband-deployment is-{{kind}}"><i class="fas {{icon}}" aria-hidden="true"></i> {{label}}</span>{{/each}}
+            </div>
           </article>
           {{/each}}
         </div>

@@ -1,5 +1,14 @@
 # Changelog
 
+## 1.9.33
+
+- Displayed warbands in a three-column grid of rectangular cards with live level, AC, HP, and assignment badges for following the group, boats, and bastions; Summary shows the same destinations and quantities.
+- Removed the View buttons from Summary cards.
+- Matched the Summary, Traveling, Camping, and Inventory panels, headings, dividers, and subtitles to the other Group Sheet asset tabs.
+- Fixed Group Sheet tab hover highlights to fill the rail evenly, center each icon, and use a crisp active-tab underline instead of a glow.
+- Unified Group Sheet text in Montserrat, made every tab icon-only with hover labels, and added a default Summary tab showing party treasure, weekly payroll, hirelings, warbands, mounts, boats and assignments, and bastions.
+- Summary payroll includes 1 gp per hireling per week and 3 gp per level per group-owned warband per week, with individual costs and a combined total; removed its carrying-capacity, rations, torches, party-roster, and shared-inventory views.
+
 ## 1.9.32
 
 - Moved Death Timer from the Summary Bar onto the player portrait with a larger skull and readable turn count, including native and Character Dashboard sheets; HP remains visible in the bar.

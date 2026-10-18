@@ -18,6 +18,7 @@ import {
 import {
   canUserControlActor,
   getActorAbilityModifier,
+  getModuleFlag,
   resolveActorFromUuid,
   resolveItemFromDropData,
 } from "./actors.js";
@@ -146,7 +147,7 @@ class MKGroupSheet extends ActorSheetBase {
         {
           navSelector: ".mk-group-nav",
           contentSelector: ".mk-group-content",
-          initial: "traveling",
+          initial: "summary",
         },
       ],
       dragDrop: [
@@ -291,6 +292,7 @@ class MKGroupSheet extends ActorSheetBase {
     const warbands = await this._buildGroupActorLinks(groupData, "warbands");
     const boats = await this._buildGroupActorLinks(groupData, "boats");
     const bastions = await this._buildGroupActorLinks(groupData, "bastions");
+    const warbandDisplay = await this._buildWarbandDisplay(warbands, groupData, boats, bastions);
 
     context.mk = {
       isGroup: true,
@@ -317,7 +319,7 @@ class MKGroupSheet extends ActorSheetBase {
         totalGearSlots: mounts.reduce((total, mount) => total + mount.gearSlots, 0),
         totalCarrySlots: mounts.reduce((total, mount) => total + mount.availableCarrySlots, 0),
       },
-      warbands: { entries: warbands, hasEntries: warbands.length > 0 },
+      warbands: warbandDisplay,
       boats: { entries: boats, hasEntries: boats.length > 0 },
       bastions: { entries: bastions, hasEntries: bastions.length > 0 },
       campingResources: buildCampingResources(memberActors, this.actor),
@@ -357,7 +359,152 @@ class MKGroupSheet extends ActorSheetBase {
       },
     };
 
+    context.mk.assets = await this._buildAssetSummary(context.mk);
+
     return context;
+  }
+
+  async _buildWarbandDisplay(warbands, groupData, boats, bastions) {
+    const assignments = new Map(warbands.map(warband => [warband.uuid, []]));
+    const addAssignment = (uuid, kind, location, quantity) => {
+      const destinations = assignments.get(uuid);
+      if (!destinations) return;
+      const amount = Number(quantity);
+      const count = Number.isFinite(amount) ? Math.max(1, Math.floor(amount)) : 1;
+      const existing = destinations.find(entry => entry.kind === kind && entry.uuid === location.uuid);
+      if (existing) existing.quantity += count;
+      else destinations.push({ kind, uuid: location.uuid, name: location.name, quantity: count });
+    };
+
+    for (const boat of boats) {
+      const assignment = groupData.boatAssignments.find(entry => entry.actorUuid === boat.uuid);
+      for (const warband of assignment?.warbands ?? []) {
+        addAssignment(warband.actorUuid, "boat", boat, warband.quantity);
+      }
+    }
+
+    let hasUnavailableBastions = false;
+    for (const bastion of bastions) {
+      const actor = bastion.available ? await this._resolveLinkedActor(bastion.uuid, BASTION_ACTOR_TYPE) : null;
+      if (!actor) {
+        hasUnavailableBastions = true;
+        continue;
+      }
+      // Bastion defenses own these assignments; the Group Sheet only reads them.
+      const state = getModuleFlag(actor, "bastion", {});
+      const stationed = state?.defenses?.warbands;
+      for (const warband of Array.isArray(stationed) ? stationed : []) {
+        const uuid = String(warband?.actorUuid ?? warband?.uuid ?? "").trim();
+        addAssignment(uuid, "bastion", bastion, warband?.quantity);
+      }
+    }
+
+    const entries = await Promise.all(warbands.map(async warband => {
+      const actor = warband.available ? await this._resolveLinkedActor(warband.uuid, "NPC") : null;
+      const rawLevel = actor?.system?.level?.value;
+      const level = rawLevel === undefined || rawLevel === null || String(rawLevel).trim() === ""
+        ? NaN : Number(rawLevel);
+      const ac = actor?.system?.attributes?.ac?.value;
+      const hp = actor?.system?.attributes?.hp ?? {};
+      const value = Number(hp.value);
+      const max = Number(hp.max ?? hp.value);
+      const hasHp = hp.value != null && hp.max != null && Number.isFinite(value) && Number.isFinite(max);
+      const deployments = assignments.get(warband.uuid).map(entry => ({
+        ...entry,
+        icon: entry.kind === "boat" ? "fa-ship" : "fa-chess-rook",
+        label: `${entry.kind === "boat" ? "Boat" : "Bastion"}: ${entry.name}${entry.quantity > 1 ? ` × ${entry.quantity}` : ""}`,
+      }));
+      if (!deployments.length) {
+        deployments.push(hasUnavailableBastions
+          ? { kind: "unknown", icon: "fa-question-circle", label: "Assignment unavailable" }
+          : { kind: "following", icon: "fa-person-walking", label: "Following the group" });
+      }
+      return {
+        ...warband,
+        levelLabel: Number.isInteger(level) && level >= 0 ? level : "—",
+        acLabel: ac === undefined || ac === null || String(ac).trim() === "" ? "—" : ac,
+        hp: {
+          known: hasHp,
+          value: hasHp ? value : 0,
+          max: hasHp ? max : 0,
+          percent: hasHp && max > 0 ? Math.min(100, Math.max(0, Math.round(100 * value / max))) : 0,
+        },
+        deployments,
+      };
+    }));
+    const counts = Object.fromEntries(["following", "boat", "bastion", "unknown"].map(kind => [
+      kind, entries.filter(entry => entry.deployments.some(deployment => deployment.kind === kind)).length,
+    ]));
+    return { entries, hasEntries: entries.length > 0, count: entries.length, counts, hasUnavailableBastions };
+  }
+
+  async _buildAssetSummary(data) {
+    const hirelingWeeklySalary = 1;
+    const warbands = await Promise.all(data.warbands.entries.map(async warband => {
+      const actor = warband.available ? await this._resolveLinkedActor(warband.uuid, "NPC") : null;
+      const rawLevel = actor?.system?.level?.value;
+      const level = rawLevel === undefined || rawLevel === null || String(rawLevel).trim() === ""
+        ? NaN
+        : Number(rawLevel);
+      const hasWages = Number.isInteger(level) && level >= 0;
+      const weeklyWages = hasWages ? 3 * level : null;
+      return {
+        ...warband,
+        hasWages,
+        level: hasWages ? level : null,
+        weeklyWages,
+        detail: hasWages ? `Level ${level} · ${weeklyWages} gp/week` : "Wages unavailable",
+        assignments: [{ label: "Assignment", text: warband.deployments.map(entry => entry.label).join("; ") }],
+      };
+    }));
+    const hirelingSalaries = data.hirelings.entries.length * hirelingWeeklySalary;
+    const warbandWages = warbands.reduce((total, warband) => total + (warband.weeklyWages ?? 0), 0);
+    const categories = [
+      {
+        label: "Hirelings", icon: "fa-user-shield", tab: "hirelings",
+        entries: data.hirelings.entries.map(hireling => ({
+          ...hireling,
+          detail: [
+            hireling.background,
+            `Owner: ${hireling.ownerOptions.find(owner => owner.selected)?.name ?? "Unassigned"}`,
+            `${hireling.carrySlots} carry slots`,
+            `${hirelingWeeklySalary} gp/week`,
+          ].filter(Boolean).join(" · "),
+        })),
+      },
+      { label: "Warbands", icon: "fa-people-group", tab: "warbands", entries: warbands },
+      {
+        label: "Mounts", icon: "fa-horse", tab: "mounts",
+        entries: data.mounts.entries.map(mount => ({
+          ...mount,
+          detail: `${mount.hasRider ? `Rider: ${mount.riderName}` : "No active rider"} · ${mount.availableCarrySlots} free slots · HP ${mount.hpValue}/${mount.hpMax}`,
+        })),
+      },
+      {
+        label: "Boats", icon: "fa-ship", tab: "boats",
+        entries: data.boats.entries.map(boat => ({
+          ...boat,
+          detail: [
+            boat.captainName ? `Captain: ${boat.captainName}` : "",
+            boat.available ? `${boat.crewSlotsUsed}/${boat.crewSlotCapacity} crew slots` : "",
+          ].filter(Boolean).join(" · "),
+          assignments: boat.assignmentSections.filter(section => section.hasEntries).map(section => ({
+            label: section.label,
+            text: section.entries.map(entry => `${entry.name} × ${entry.quantity}`).join(", "),
+          })),
+        })),
+      },
+      { label: "Bastions", icon: "fa-chess-rook", tab: "bastions", entries: data.bastions.entries },
+    ];
+    return {
+      wages: {
+        hirelings: hirelingSalaries,
+        warbands: warbandWages,
+        total: hirelingSalaries + warbandWages,
+        incomplete: warbands.some(warband => !warband.hasWages),
+      },
+      categories: categories.map(category => ({ ...category, count: category.entries.length })),
+    };
   }
 
   activateListeners(html) {
@@ -365,6 +512,12 @@ class MKGroupSheet extends ActorSheetBase {
     this._applyTabBackgrounds(html);
     this._normalizeCampingResetButton(html);
     this._enablePlayerCampingControls(html);
+
+    html.find(".mk-group-nav .item").on("keydown", event => {
+      if (event.key !== "Enter" && event.key !== " ") return;
+      event.preventDefault();
+      event.currentTarget.click();
+    });
 
     html.find("[data-action='open-member']").on("click", event => {
       this._onOpenMember(event);

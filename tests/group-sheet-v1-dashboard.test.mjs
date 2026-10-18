@@ -55,15 +55,15 @@ test("v1.6.0 visual proportions and responsive behavior are preserved", () => {
   const groupCss = source("styles/group-sheet.css");
   const css = source("styles/group-sheet-dashboard.css");
 
-  assert.match(groupCss, /\.mk-group-nav\s*\{[\s\S]*?grid-template-columns:\s*repeat\(8,\s*minmax\(max-content,\s*1fr\)\)/);
-  assert.match(groupCss, /\.mk-group-nav \.item\s*\{[\s\S]*?font-size:\s*13px[\s\S]*?white-space:\s*nowrap/);
+  assert.match(groupCss, /\.mk-group-nav\s*\{[\s\S]*?grid-template-columns:\s*repeat\(9,\s*minmax\(40px,\s*1fr\)\)/);
+  assert.match(groupCss, /\.mk-group-nav \.item\s*\{[\s\S]*?font-size:\s*16px[\s\S]*?white-space:\s*nowrap/);
   assert.match(css, /--mk-party-sidebar-width:\s*224px/);
   assert.match(css, /--mk-party-sidebar-collapsed-width:\s*58px/);
   assert.match(css, /\.mk-party-sidebar-header\s*\{[\s\S]*?min-height:\s*43px/);
   assert.match(css, /@container\s*\(max-width:\s*760px\)[\s\S]*?width:\s*196px/);
   assert.match(css, /@container\s*\(max-width:\s*760px\)[\s\S]*?\.mk-group-dashboard-enabled \.mk-group-nav\s*\{[\s\S]*?overflow-x:\s*auto/);
-  assert.match(css, /@container\s*\(max-width:\s*560px\)[\s\S]*?font-size:\s*0/);
-  assert.match(css, /@container\s*\(max-width:\s*560px\)[\s\S]*?grid-template-columns:\s*repeat\(8,\s*minmax\(0,\s*1fr\)/);
+  assert.match(css, /@container\s*\(max-width:\s*560px\)[\s\S]*?font-size:\s*15px/);
+  assert.match(css, /@container\s*\(max-width:\s*560px\)[\s\S]*?grid-template-columns:\s*repeat\(9,\s*minmax\(36px,\s*1fr\)/);
 });
 
 test("Group Sheet links Bastion actors while their rules remain on the standalone sheet", () => {
@@ -81,10 +81,37 @@ test("Warbands follows Hirelings while Boats and Bastion retain their order, wit
   const template = source("templates/group-sheet.hbs");
   const nav = template.match(/<nav class="mk-group-nav[\s\S]*?<\/nav>/)[0];
   assert.deepEqual([...nav.matchAll(/data-tab="([^"]+)"/g)].map(match => match[1]), [
-    "traveling", "camping", "inventory", "hirelings", "warbands", "mounts", "boats", "bastions",
+    "summary", "traveling", "camping", "inventory", "hirelings", "warbands", "mounts", "boats", "bastions",
   ]);
   for (const kind of ["warbands", "boats", "bastions"]) {
     assert.match(nav, new RegExp(`data-tab="${kind}" data-group-actor-kind="${kind}"`));
     assert.match(template, new RegExp(`<div class="tab mk-group-tab mk-group-tab-body"[^>]*data-tab="${kind}" data-group-actor-kind="${kind}"`));
   }
+});
+
+test("all Group Sheet tabs are icon-only with accessible hover labels and Summary opens first", () => {
+  const template = source("templates/group-sheet.hbs");
+  const nav = template.match(/<nav class="mk-group-nav[\s\S]*?<\/nav>/)[0];
+  const tabs = [...nav.matchAll(/<a\b([^>]+)>([\s\S]*?)<\/a>/g)];
+  assert.equal(tabs.length, 9);
+  for (const [, attributes, content] of tabs) {
+    const label = attributes.match(/data-tooltip="([^"]+)"/)[1];
+    assert.ok(attributes.includes(`aria-label="${label}"`));
+    assert.match(attributes, /tabindex="0"/);
+    assert.match(content, /<i[^>]+aria-hidden="true"/);
+    assert.equal(content.replace(/<[^>]+>/g, "").trim(), "");
+  }
+  assert.match(source("scripts/group-sheet/sheet.js"), /initial:\s*"summary"/);
+  assert.match(template, /class="tab mk-group-tab mk-group-tab-body active"[^>]*data-tab="summary"/);
+});
+
+test("Summary shows treasure and weekly payroll without resource totals, roster or shared inventory", () => {
+  const template = source("templates/group-sheet.hbs");
+  const summary = template.slice(template.indexOf('data-tab="summary">'), template.indexOf('<div class="tab mk-group-tab mk-group-tab-body" data-group="primary" data-tab="traveling">'));
+  assert.match(summary, /Party Treasure/);
+  assert.match(summary, /Hireling Salaries/);
+  assert.match(summary, /Warband Wages/);
+  assert.match(summary, /Total Wages &amp; Salaries/);
+  assert.match(summary, /Some warband wages are unavailable/);
+  assert.doesNotMatch(summary, /Shared Carrying Capacity|Rations|Torches|mk\.campingResources|mk\.inventory\.slots|mk\.members|mk\.inventory\.items/);
 });

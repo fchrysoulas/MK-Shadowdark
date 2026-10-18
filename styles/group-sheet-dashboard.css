@@ -683,16 +683,16 @@
   }
 
   .mk-group-dashboard-enabled .mk-group-nav .item {
-    flex: 0 0 112px;
-    min-width: 112px;
+    flex: 1 0 40px;
+    min-width: 40px;
   }
 }
 
 @container (max-width: 560px) {
   .mk-group-dashboard-enabled .mk-group-nav {
     display: grid;
-    grid-template-columns: repeat(8, minmax(0, 1fr));
-    overflow-x: visible;
+    grid-template-columns: repeat(9, minmax(36px, 1fr));
+    overflow-x: auto;
   }
 
   .mk-group-dashboard-enabled .mk-group-nav .item {
@@ -708,7 +708,7 @@
 
   .mk-group-dashboard-enabled .mk-group-nav .item {
     gap: 0;
-    font-size: 0;
+    font-size: 15px;
   }
 
   .mk-group-dashboard-enabled .mk-group-nav .item i {

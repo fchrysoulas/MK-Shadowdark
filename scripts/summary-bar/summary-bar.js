@@ -16,7 +16,7 @@ import { getRestMode, onRest } from "../libs/resting.js";
     DEBUG: "summaryBarDebug"
   });
 
-  const DEFAULT_ELEMENTS = ["HP", "DT", "LUCK", "REST", "|", "STR", "DEX", "CON", "INT", "WIS", "CHA", "SLOTS"];
+  const DEFAULT_ELEMENTS = ["HP", "LUCK", "REST", "|", "STR", "DEX", "CON", "INT", "WIS", "CHA", "SLOTS"];
   const SHORTCUT_FLAG = "summaryBarShortcuts";
   const SHORTCUT_ROW_FLAG = "summaryBarShortcutRowEnabled";
   const SHORTCUT_SLOT_COUNT = 12;
@@ -34,13 +34,13 @@ import { getRestMode, onRest } from "../libs/resting.js";
     const form = getSheetForm(root);
     const windowEl = getWindowElement(app, root);
     cleanupSummaryBar(root, form, windowEl);
-
-    if (!getSetting(SETTINGS.ENABLED, true)) return;
-
-    applySummaryBarScope(form, windowEl);
-    injectSummaryBar(app, form ?? root, data);
-    injectShortcutRowToggle(app, root, windowEl);
-    log("applied", app.actor?.name ?? app.object?.name ?? "unknown actor");
+    if (getSetting(SETTINGS.ENABLED, true)) {
+      applySummaryBarScope(form, windowEl);
+      injectSummaryBar(app, form ?? root, data);
+      injectShortcutRowToggle(app, root, windowEl);
+      log("applied", app.actor?.name ?? app.object?.name ?? "unknown actor");
+    }
+    injectDeathTimerPortrait(form ?? root, app.actor ?? app.object);
   }
 
   function isShadowdarkPlayerSheet(app, root) {
@@ -90,6 +90,8 @@ import { getRestMode, onRest } from "../libs/resting.js";
     for (const scope of uniqueElements([root, form, windowEl])) {
       scope.querySelectorAll?.(".mk-character-sheet-bar")?.forEach(element => element.remove());
       scope.querySelectorAll?.(".mk-summary-bar-shortcut-toggle")?.forEach(element => element.remove());
+      scope.querySelectorAll?.(".mk-death-timer-portrait")?.forEach(element => element.remove());
+      scope.querySelectorAll?.(".mk-death-timer-portrait-host")?.forEach(element => element.classList.remove("mk-death-timer-portrait-host"));
     }
 
     for (const element of uniqueElements([form, windowEl])) {
@@ -150,14 +152,54 @@ import { getRestMode, onRest } from "../libs/resting.js";
     bar.querySelectorAll('[data-mk-action="toggle-luck"]').forEach(element => {
       element.addEventListener("click", event => onToggleLuck(event, actor));
     });
-    bar.querySelectorAll('[data-mk-action="death-timer"]').forEach(element => {
-      element.addEventListener("click", event => onDeathTimer(event, actor));
-    });
     bar.querySelectorAll('[data-mk-action="rest"]').forEach(element => {
       element.addEventListener("click", event => onRest(event, actor));
     });
     bindShortcutListeners(app, bar, actor);
     return bar;
+  }
+
+  function injectDeathTimerPortrait(root, actor) {
+    if (!isAtZeroHp(actor) || !getSetting("deathTimerEnabled", true)) return null;
+    const portrait = root.querySelector("header.SD-header img.portrait, .mk-dashboard-portrait-frame img.mk-dashboard-portrait");
+    const host = portrait?.parentElement;
+    if (!host) return null;
+
+    const timer = globalThis.MKShadowdarkDeathTimer;
+    const state = timer?.getState?.(actor) ?? { dead: false, turns: timer?.getTurns?.(actor) };
+    const turns = state.turns;
+    const hasTurns = turns !== null && turns !== undefined && turns !== "" && Number.isFinite(Number(turns));
+    const display = state.dead ? "Dead" : (hasTurns ? String(turns) : "-");
+    const icon = escapeHtml(getSetting("deathTimerIcon", "fa-solid fa-skull") || "fa-solid fa-skull");
+    const tooltip = "Death Timer";
+    const title = state.dead ? "Dead" : (hasTurns ? `${tooltip}: ${turns} turn(s) remaining` : tooltip);
+    const control = document.createElement("button");
+    control.type = "button";
+    control.className = "mk-death-timer-portrait";
+    control.dataset.mkAction = "death-timer";
+    control.title = title;
+    control.setAttribute("aria-label", title);
+    control.disabled = state.dead || !(game.user?.isGM || actor.isOwner);
+    control.innerHTML = `<i class="${icon} mk-death-timer-icon" aria-hidden="true"></i><span>${escapeHtml(display)}</span>`;
+    control.addEventListener("click", event => onDeathTimer(event, actor));
+    host.classList.add("mk-death-timer-portrait-host");
+    host.append(control);
+    if (host.classList.contains("mk-dashboard-portrait-frame")) {
+      control.style.left = "50%";
+      control.style.top = "50%";
+      return control;
+    }
+
+    // Anchor to the visible portrait area, including the cropped bust layout.
+    const imageRect = portrait.getBoundingClientRect();
+    const hostRect = host.getBoundingClientRect();
+    const left = Math.max(imageRect.left, hostRect.left);
+    const right = Math.min(imageRect.right, hostRect.right);
+    const top = Math.max(imageRect.top, hostRect.top);
+    const bottom = Math.min(imageRect.bottom, hostRect.bottom);
+    control.style.left = `${(left + right) / 2 - hostRect.left - host.clientLeft + host.scrollLeft}px`;
+    control.style.top = `${(top + bottom) / 2 - hostRect.top - host.clientTop + host.scrollTop}px`;
+    return control;
   }
 
   function bindShortcutDragSources(root, actor) {
@@ -489,13 +531,8 @@ import { getRestMode, onRest } from "../libs/resting.js";
   }
 
   function buildSummaryChips(actor, data) {
-    const elements = getSelectedElements();
-    if (isAtZeroHp(actor) && !elements.includes("DT")) {
-      const hpIndex = elements.indexOf("HP");
-      elements.splice(hpIndex >= 0 ? hpIndex + 1 : 0, 0, "DT");
-    }
-
-    return elements
+    // Preserve old element settings while moving DT exclusively onto the portrait.
+    return getSelectedElements().filter(element => element !== "DT")
       .map(element => buildBarChip(element, actor, data))
       .filter(Boolean)
       .map(chip => chip.divider ? chip : { ...chip, value: chip.value ?? "-" });
@@ -525,26 +562,7 @@ import { getRestMode, onRest } from "../libs/resting.js";
       case "LVL":
         return { label: "LVL", value: getNumber(actor, "system.level.value") };
       case "HP": {
-        if (isAtZeroHp(actor) && getSetting("deathTimerEnabled", true)) return null;
         return { label: "HP", value: formatPair(getNumber(actor, "system.attributes.hp.value"), getHpMax(actor)) };
-      }
-      case "DT": {
-        if (!isAtZeroHp(actor) || !getSetting("deathTimerEnabled", true)) return null;
-        const timer = globalThis.MKShadowdarkDeathTimer;
-        const state = timer?.getState?.(actor) ?? { dead: false, turns: timer?.getTurns?.(actor) };
-        const turns = state.turns;
-        const hasTurns = turns !== null && turns !== undefined && turns !== "" && Number.isFinite(Number(turns));
-        const display = state.dead ? "Dead" : (hasTurns ? String(turns) : "-");
-        const icon = escapeHtml(getSetting("deathTimerIcon", "fa-solid fa-skull") || "fa-solid fa-skull");
-        const tooltip = "Death Timer";
-        return {
-          label: "DT",
-          value: hasTurns ? String(turns) : "-",
-          html: `<i class="${icon} mk-death-timer-icon" aria-hidden="true"></i><em>${display}</em>`,
-          action: state.dead ? null : "death-timer",
-          className: "mk-death-timer-chip",
-          title: state.dead ? "Dead" : (hasTurns ? `${tooltip}: ${turns} turn(s) remaining` : tooltip)
-        };
       }
       case "AC":
         return { label: "AC", value: getValue(actor, "system.attributes.ac.value") };

@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.9.32
+
+- Moved Death Timer from the Summary Bar onto the player portrait with a larger skull and readable turn count, including native and Character Dashboard sheets; HP remains visible in the bar.
+
 ## 1.9.31
 
 - Returned weapon Downtime Upgrades to Details, removed the separate Upgrades tab, and retained compact controls with fixed checkbox widths and aligned labels.

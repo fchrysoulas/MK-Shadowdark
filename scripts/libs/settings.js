@@ -880,7 +880,7 @@
 
     registerSetting("deathTimerEnabled", {
       name: "Death Timer | Enable Death Timer",
-      hint: "Shows the DT control in the Summary Bar when a player character is at 0 HP.",
+      hint: "MK_SHADOWDARK.deathTimer.portraitHint",
       scope: "world",
       config: true,
       type: Boolean,
@@ -890,7 +890,7 @@
 
     registerSetting("deathTimerIcon", {
       name: "Death Timer | Icon Class",
-      hint: "Font Awesome icon class for the DT Summary Bar control. Example: fa-solid fa-skull.",
+      hint: "MK_SHADOWDARK.deathTimer.iconHint",
       scope: "world",
       config: true,
       type: String,
@@ -1151,11 +1151,11 @@
 
     registerSetting("characterSheetTweaksBarElements", {
       name: "Summary Bar | Elements",
-      hint: "Comma-separated list of bar elements, in display order. Available: LVL, HP, DT, AC, XP, LUCK, REST, SLOTS, STR, DEX, CON, INT, WIS, CHA. DT is the Death Timer and appears only at 0 HP. Use | to add a vertical divider.",
+      hint: "MK_SHADOWDARK.summaryBar.elementsHint",
       scope: "world",
       config: true,
       type: String,
-      default: "HP, DT, LUCK, REST,|,STR,DEX,CON,INT,WIS,CHA, SLOTS",
+      default: "HP, LUCK, REST,|,STR,DEX,CON,INT,WIS,CHA, SLOTS",
       onChange: refreshOpenActorSheets
     });
 

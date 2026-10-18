@@ -253,25 +253,56 @@ button.mk-sheet-chip:focus-visible {
   filter: drop-shadow(0 1px 1px rgba(0, 0, 0, 0.75));
 }
 
-.mk-death-timer-chip span {
-  display: flex !important;
-  align-items: center;
-  justify-content: center !important;
-  min-height: 1em;
+.mk-death-timer-portrait-host {
+  position: relative;
 }
 
-.mk-death-timer-icon {
-  color: #e04242;
+button.mk-death-timer-portrait {
+  position: absolute;
+  z-index: 6;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  box-sizing: border-box;
+  width: 64px;
+  height: 72px;
+  max-width: calc(100% - 8px);
+  max-height: calc(100% - 8px);
+  min-height: 0;
+  margin: 0;
+  padding: 4px;
+  border: 2px solid #e04242;
+  border-radius: 8px;
+  background: rgba(0, 0, 0, 0.82);
+  color: #fff;
+  line-height: 1;
+  transform: translate(-50%, -50%);
+  cursor: pointer;
+}
+
+button.mk-death-timer-portrait .mk-death-timer-icon {
+  color: #ff5c5c;
+  font-size: 40px;
   filter: drop-shadow(0 1px 1px rgba(0, 0, 0, 0.75));
 }
 
-.mk-death-timer-chip em {
-  margin-left: 0.2rem;
-  font-size: 0.9em;
-  font-style: normal;
+button.mk-death-timer-portrait span {
+  font-size: 16px;
   font-weight: 700;
 }
 
+button.mk-death-timer-portrait:hover,
+button.mk-death-timer-portrait:focus-visible {
+  border-color: #ff8a8a;
+  box-shadow: 0 0 8px rgba(224, 66, 66, 0.65);
+}
+
+button.mk-death-timer-portrait:disabled {
+  opacity: 1;
+  cursor: default;
+}
 
 .mk-bar-divider {
   display: inline-block;

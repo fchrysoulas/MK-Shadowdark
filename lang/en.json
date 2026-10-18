@@ -1,4 +1,7 @@
 {
+  "MK_SHADOWDARK.deathTimer.portraitHint": "Shows a large Death Timer control over the player portrait at 0 HP, including when the Summary Bar is disabled.",
+  "MK_SHADOWDARK.deathTimer.iconHint": "Font Awesome icon class for the Death Timer portrait control. Example: fa-solid fa-skull.",
+  "MK_SHADOWDARK.summaryBar.elementsHint": "Comma-separated bar elements in display order: LVL, HP, AC, XP, LUCK, REST, SLOTS, STR, DEX, CON, INT, WIS, CHA. Use | for a divider. Death Timer appears on the portrait; legacy DT entries are ignored.",
   "MK_SHADOWDARK.weaponUpgrades.title": "Downtime Upgrades",
   "MK_SHADOWDARK.weaponUpgrades.attackBonus": "+1 to hit",
   "MK_SHADOWDARK.weaponUpgrades.attackAndDamageBonus": "+1 to hit and damage",

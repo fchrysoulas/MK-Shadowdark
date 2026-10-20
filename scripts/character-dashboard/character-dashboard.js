@@ -8,6 +8,7 @@ import {
   isWeapon
 } from "../libs/equipment.js";
 import { isVaultTransferData, transferVaultItemToActor } from "../libs/bastion-vault-transfer.js";
+import { isGroupInventoryTransferData, transferGroupInventoryItemToActor } from "../libs/group-inventory-transfer.js";
 
 (() => {
   const MODULE_ID = "mk-shadowdark";
@@ -1088,6 +1089,16 @@ import { isVaultTransferData, transferVaultItemToActor } from "../libs/bastion-v
     const nativeEvent = event.originalEvent ?? event;
     const data = getDropEventData(nativeEvent);
     if (!data) return null;
+
+    if (isGroupInventoryTransferData(data)) {
+      try {
+        return await transferGroupInventoryItemToActor(actor, data);
+      } catch (error) {
+        console.error(MODULE_ID + " | Unable to move shared gear onto the character sheet.", error);
+        ui.notifications?.error?.(error.message);
+      }
+      return null;
+    }
 
     if (isVaultTransferData(data)) {
       try {

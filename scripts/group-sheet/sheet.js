@@ -67,6 +67,7 @@ import {
   showTravelRollPrompt,
 } from "./travel-prompt.js";
 import { getRestMode, reportRest, restActor } from "../libs/resting.js";
+import { isGroupInventoryTransferData } from "../libs/group-inventory-transfer.js";
 import { clampNumber, escapeHtml, getDialogFieldValue, numberOrZero } from "./utils.js";
 import { getPrimaryActiveGm } from "./users.js";
 import { getSettingValue } from "./group-settings.js";
@@ -152,7 +153,7 @@ class MKGroupSheet extends ActorSheetBase {
       ],
       dragDrop: [
         {
-          dragSelector: null,
+          dragSelector: ".mk-shared-item-row[data-item-id]",
           dropSelector: ".mk-group-sheet",
         },
       ],
@@ -161,6 +162,32 @@ class MKGroupSheet extends ActorSheetBase {
 
   get template() {
     return `modules/${MODULE_ID}/templates/group-sheet.hbs`;
+  }
+
+  _canDragStart(selector) {
+    if (selector === ".mk-shared-item-row[data-item-id]") {
+      const user = globalThis.game?.user;
+      // Players can request a GM-managed transfer with Observer access.
+      return Boolean(user && (user.isGM || this.actor?.testUserPermission?.(user, "OBSERVER")));
+    }
+    return super._canDragStart(selector);
+  }
+
+  _onDragStart(event) {
+    const item = this.actor.items?.get?.(event.currentTarget?.dataset?.itemId);
+    if (!this._canDragStart(".mk-shared-item-row[data-item-id]") || !item || !event.dataTransfer) {
+      event.preventDefault();
+      return;
+    }
+    const data = item.toDragData();
+    data[MODULE_ID] = {
+      ...data[MODULE_ID],
+      groupInventoryTransfer: { sourceActorUuid: this.actor.uuid, sourceItemId: item.id },
+    };
+    const payload = JSON.stringify(data);
+    event.dataTransfer.effectAllowed = "move";
+    event.dataTransfer.setData("text/plain", payload);
+    event.dataTransfer.setData("application/json", payload);
   }
 
   _disableFields(form) {
@@ -179,6 +206,7 @@ class MKGroupSheet extends ActorSheetBase {
       ".mk-camping-assigned-chip",
       ".mk-group-actor-open[data-actor-available='true']",
       ".mk-boat-assignment-open[data-actor-available='true']",
+      ".mk-shared-item-row [data-action='open-item']",
     ];
 
     element.querySelectorAll(selectors.join(",")).forEach(control => {
@@ -755,6 +783,7 @@ class MKGroupSheet extends ActorSheetBase {
 
     const data = TextEditorImplementation.getDragEventData(event);
     if (!data) return false;
+    if (isGroupInventoryTransferData(data)) return false;
 
     const dropTarget = event.target?.closest?.("[data-party-member-dropzone='true']");
     const travelCard = event.target.closest?.("[data-travel-activity-key]");
@@ -1678,6 +1707,8 @@ class MKGroupSheet extends ActorSheetBase {
   }
 
   async _addItemToGroup(item) {
+    if (item.parent?.uuid === this.actor.uuid) return;
+
     const itemData = item.toObject();
     delete itemData._id;
     itemData.folder = null;

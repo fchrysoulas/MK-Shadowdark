@@ -88,6 +88,7 @@
     "scripts/detailed-wounds/history-runtime.js",
     "scripts/item-dashboard/item-dashboard.js",
     "scripts/weapon-upgrades/weapon-upgrades.js",
+    "scripts/libs/group-inventory-transfer.js",
     "scripts/character-dashboard/character-dashboard.js",
     "scripts/detailed-wounds/functional-consequences-runtime.js",
     "scripts/chat-reporting/chat-reporting.js",

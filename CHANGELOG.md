@@ -2,6 +2,7 @@
 
 ## 1.9.33
 
+- Enabled players with Observer access to move shared Group Sheet item stacks into their owned character inventories, including Character Dashboard slots, with GM-processed transfers, rollback on failure, and duplicate-drop protection.
 - Displayed warbands in a three-column grid of rectangular cards with live level, AC, HP, and assignment badges for following the group, boats, and bastions; Summary shows the same destinations and quantities.
 - Removed the View buttons from Summary cards.
 - Matched the Summary, Traveling, Camping, and Inventory panels, headings, dividers, and subtitles to the other Group Sheet asset tabs.

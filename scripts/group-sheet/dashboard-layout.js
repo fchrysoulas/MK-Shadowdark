@@ -1,4 +1,5 @@
 import { getSettingValue } from "./group-settings.js";
+import { getSheetTheme } from "../libs/sheet-themes.js";
 
 const MODULE_ID = "mk-shadowdark";
 const DASHBOARD_CLASS = "mk-group-command-dashboard";
@@ -108,10 +109,15 @@ function createSidebarHeader(app, form, partyCount, rosterCount) {
   const title = document.createElement("div");
   title.className = "mk-party-sidebar-title";
   title.innerHTML = `
-    <span class="mk-party-sidebar-title-icon"><i class="fas fa-users" aria-hidden="true"></i></span>
     <span class="mk-party-sidebar-title-text">Party</span>
     <strong class="mk-party-sidebar-count" title="Active party / roster">${partyCount}/${rosterCount}</strong>
   `;
+  title.prepend(createIconButton({
+    className: "mk-party-sidebar-title-icon mk-group-info-button",
+    icon: "fas fa-info",
+    label: game.i18n.localize("MK_SHADOWDARK.groupSheet.help.party.title"),
+    onClick: () => app._showSectionHelp("party"),
+  }));
 
   const actions = document.createElement("div");
   actions.className = "mk-party-sidebar-actions";
@@ -220,7 +226,7 @@ function openPartyContextMenu(app, form, card, event) {
   const name = String(card.querySelector(".mk-member-name")?.textContent ?? "Character").trim();
   const isActivePartyMember = card.dataset.partyActive === "true";
   const menu = document.createElement("div");
-  menu.className = "mk-party-member-context-menu";
+  menu.className = `mk-party-member-context-menu ${getSheetTheme("group").className}`;
   menu.setAttribute("role", "menu");
 
   const toggle = document.createElement("button");
@@ -395,17 +401,7 @@ function createMemberSummary(app, form, card) {
     <span class="${card.querySelector(".mk-side-stat.mk-danger") ? "mk-danger" : ""}">Slots <strong>${slots}</strong></span>
   `;
 
-  const openButton = document.createElement("button");
-  openButton.type = "button";
-  openButton.className = "mk-party-member-open";
-  openButton.innerHTML = '<i class="fas fa-up-right-from-square" aria-hidden="true"></i><span>Open Sheet</span>';
-  openButton.addEventListener("click", event => {
-    event.preventDefault();
-    event.stopPropagation();
-    forwardClick(findOriginalAction(form, uuid, "[data-action='open-member']"), event);
-  });
-
-  panel.append(abilityGrid, meta, openButton);
+  panel.append(abilityGrid, meta);
   details.append(summary, panel);
 
   details.addEventListener("toggle", () => {

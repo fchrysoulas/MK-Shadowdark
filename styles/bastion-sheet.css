@@ -15,11 +15,11 @@
 }
 
 .mk-bastion-sheet {
-  --mk-bastion-bg: rgba(10, 10, 10, 0.96);
-  --mk-bastion-text: #d8d8d8;
-  --mk-bastion-muted: #9b9b9b;
-  --mk-bastion-accent: #f2d085;
-  --mk-bastion-panel: rgba(255, 255, 255, 0.045);
+  --mk-bastion-bg: rgba(var(--mk-sheet-inset-rgb, 10, 10, 10), 0.96);
+  --mk-bastion-text: var(--mk-sheet-text, #d8d8d8);
+  --mk-bastion-muted: var(--mk-sheet-muted, #9b9b9b);
+  --mk-bastion-accent: var(--mk-sheet-gold, #f2d085);
+  --mk-bastion-panel: rgba(var(--mk-sheet-foreground-rgb, 255, 255, 255), 0.045);
 
   display: flex;
   flex-direction: column;
@@ -36,15 +36,15 @@
   gap: 14px;
   min-height: 76px;
   padding: 10px 14px;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.12);
-  background: rgba(0, 0, 0, 0.24);
+  border-bottom: 1px solid rgba(var(--mk-sheet-foreground-rgb, 255, 255, 255), 0.12);
+  background: rgba(var(--mk-sheet-shade-rgb, 0, 0, 0), 0.24);
 }
 
 .mk-bastion-image {
   width: 54px;
   height: 54px;
   object-fit: cover;
-  border: 1px solid rgba(255, 255, 255, 0.25);
+  border: 1px solid rgba(var(--mk-sheet-foreground-rgb, 255, 255, 255), 0.25);
   border-radius: 4px;
 }
 
@@ -57,7 +57,7 @@
   width: 100%;
   border: 0;
   background: transparent;
-  color: #f0f0f0;
+  color: var(--mk-sheet-strong, #f0f0f0);
   font-size: 24px;
   font-weight: 800;
 }
@@ -88,10 +88,10 @@
   flex: 1;
   padding: 2px 0;
   border: 0;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.16);
+  border-bottom: 1px solid rgba(var(--mk-sheet-foreground-rgb, 255, 255, 255), 0.16);
   border-radius: 0;
   background: transparent;
-  color: #eeeeee;
+  color: var(--mk-sheet-strong, #eeeeee);
   font-size: 12px;
   font-weight: 500;
   letter-spacing: normal;
@@ -125,15 +125,15 @@
 }
 
 .mk-bastion-stats strong {
-  color: #eeeeee;
+  color: var(--mk-sheet-strong, #eeeeee);
 }
 
 .mk-bastion-nav {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
   min-height: 42px;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.12);
-  background: rgba(0, 0, 0, 0.32);
+  border-bottom: 1px solid rgba(var(--mk-sheet-foreground-rgb, 255, 255, 255), 0.12);
+  background: rgba(var(--mk-sheet-shade-rgb, 0, 0, 0), 0.32);
 }
 
 .mk-bastion-nav.has-vault {
@@ -147,7 +147,7 @@
   gap: 7px;
   min-width: 0;
   padding-inline: 8px;
-  border-right: 1px solid rgba(255, 255, 255, 0.08);
+  border-right: 1px solid rgba(var(--mk-sheet-foreground-rgb, 255, 255, 255), 0.08);
   color: var(--mk-bastion-muted);
   font-size: 13px;
   font-weight: 800;
@@ -161,8 +161,8 @@
 }
 
 .mk-bastion-nav .item.active {
-  color: #f0f0f0;
-  text-shadow: 0 0 8px rgba(255, 255, 255, 0.35);
+  color: var(--mk-sheet-strong, #f0f0f0);
+  text-shadow: var(--mk-sheet-text-shadow, 0 0 8px rgba(var(--mk-sheet-foreground-rgb, 255, 255, 255), 0.35));
 }
 
 .mk-bastion-tab-count {
@@ -192,7 +192,7 @@
 .mk-bastion-type-control {
   margin-bottom: 12px;
   padding: 10px 12px;
-  border: 1px solid rgba(242, 208, 133, 0.25);
+  border: 1px solid rgba(var(--mk-sheet-gold-rgb, 242, 208, 133), 0.25);
   border-radius: 5px;
   background: rgba(185, 83, 24, 0.08);
 }
@@ -200,7 +200,7 @@
 .mk-bastion-type-control h2,
 .mk-bastion-section-header h2 {
   margin: 0;
-  color: #f0f0f0;
+  color: var(--mk-sheet-strong, #f0f0f0);
   font-size: 17px;
   font-weight: 900;
   letter-spacing: 0.04em;
@@ -245,17 +245,17 @@
   min-height: 30px;
   padding: 4px 32px 4px 9px;
   box-sizing: border-box;
-  border: 1px solid rgba(242, 208, 133, 0.28);
+  border: 1px solid rgba(var(--mk-sheet-gold-rgb, 242, 208, 133), 0.28);
   border-radius: 4px;
-  background-color: #0b0b0b;
+  background-color: var(--mk-sheet-field, #0b0b0b);
   background-image:
     linear-gradient(45deg, transparent 50%, var(--mk-bastion-accent) 50%),
     linear-gradient(135deg, var(--mk-bastion-accent) 50%, transparent 50%);
   background-position: calc(100% - 14px) 50%, calc(100% - 9px) 50%;
   background-repeat: no-repeat;
   background-size: 5px 5px, 5px 5px;
-  color: #eeeeee;
-  color-scheme: dark;
+  color: var(--mk-sheet-strong, #eeeeee);
+  color-scheme: inherit;
   cursor: pointer;
   font-size: 12px;
   line-height: 1.25;
@@ -263,13 +263,13 @@
 }
 
 .mk-bastion-type-select:hover {
-  border-color: rgba(242, 208, 133, 0.55);
-  background-color: #111111;
+  border-color: rgba(var(--mk-sheet-gold-rgb, 242, 208, 133), 0.55);
+  background-color: var(--mk-sheet-field, #111111);
 }
 
 .mk-bastion-type-select:focus {
   border-color: var(--mk-bastion-accent);
-  box-shadow: 0 0 0 2px rgba(242, 208, 133, 0.14);
+  box-shadow: 0 0 0 2px rgba(var(--mk-sheet-gold-rgb, 242, 208, 133), 0.14);
   outline: none;
 }
 
@@ -280,8 +280,8 @@
 
 .mk-bastion-type-select option,
 .mk-bastion-type-select optgroup {
-  background: #0b0b0b;
-  color: #eeeeee;
+  background: var(--mk-sheet-field, #0b0b0b);
+  color: var(--mk-sheet-strong, #eeeeee);
 }
 
 .mk-bastion-overview-grid {
@@ -293,14 +293,14 @@
 .mk-bastion-card {
   min-width: 0;
   padding: 12px;
-  border: 1px solid rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(var(--mk-sheet-foreground-rgb, 255, 255, 255), 0.1);
   border-radius: 5px;
   background: var(--mk-bastion-panel);
 }
 
 .mk-bastion-card h3 {
   margin: 0 0 10px;
-  color: #eeeeee;
+  color: var(--mk-sheet-strong, #eeeeee);
   font-size: 14px;
   font-weight: 900;
   letter-spacing: 0.04em;
@@ -324,7 +324,7 @@
 
 .mk-bastion-rules strong,
 .mk-bastion-type-notes strong {
-  color: #f0f0f0;
+  color: var(--mk-sheet-strong, #f0f0f0);
   font-weight: 900;
 }
 
@@ -349,7 +349,7 @@
 .mk-bastion-table th,
 .mk-bastion-table td {
   padding: 5px 6px;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.14);
+  border-bottom: 1px solid rgba(var(--mk-sheet-foreground-rgb, 255, 255, 255), 0.14);
   text-align: left;
   vertical-align: top;
 }
@@ -364,7 +364,7 @@
 }
 
 .mk-bastion-table tbody th {
-  color: #f0f0f0;
+  color: var(--mk-sheet-strong, #f0f0f0);
   font-weight: 800;
   white-space: nowrap;
 }
@@ -390,7 +390,7 @@
 .mk-bastion-upgrade-count {
   flex: 0 0 auto;
   padding: 6px 9px;
-  border: 1px solid rgba(242, 208, 133, 0.3);
+  border: 1px solid rgba(var(--mk-sheet-gold-rgb, 242, 208, 133), 0.3);
   border-radius: 4px;
   color: var(--mk-bastion-accent);
   font-size: 13px;
@@ -408,21 +408,21 @@
   min-height: 112px;
   gap: 7px;
   padding: 8px;
-  border: 1px solid rgba(255, 255, 255, 0.12);
+  border: 1px solid rgba(var(--mk-sheet-foreground-rgb, 255, 255, 255), 0.12);
   border-radius: 5px;
-  background: rgba(0, 0, 0, 0.22);
+  background: rgba(var(--mk-sheet-shade-rgb, 0, 0, 0), 0.22);
   transition: border-color 140ms ease, background 140ms ease, box-shadow 140ms ease;
 }
 
 .mk-bastion-upgrade-box:hover {
-  border-color: rgba(242, 208, 133, 0.42);
-  background: rgba(242, 208, 133, 0.06);
+  border-color: rgba(var(--mk-sheet-gold-rgb, 242, 208, 133), 0.42);
+  background: rgba(var(--mk-sheet-gold-rgb, 242, 208, 133), 0.06);
 }
 
 .mk-bastion-upgrade-box.is-installed {
-  border-color: rgba(242, 208, 133, 0.7);
-  background: rgba(242, 208, 133, 0.11);
-  box-shadow: inset 0 0 0 1px rgba(242, 208, 133, 0.14);
+  border-color: rgba(var(--mk-sheet-gold-rgb, 242, 208, 133), 0.7);
+  background: rgba(var(--mk-sheet-gold-rgb, 242, 208, 133), 0.11);
+  box-shadow: inset 0 0 0 1px rgba(var(--mk-sheet-gold-rgb, 242, 208, 133), 0.14);
 }
 
 .mk-bastion-upgrade-box.is-unavailable:not(.is-installed) {
@@ -435,9 +435,9 @@
   height: 38px;
   flex: 0 0 38px;
   place-items: center;
-  border: 1px solid rgba(242, 208, 133, 0.36);
+  border: 1px solid rgba(var(--mk-sheet-gold-rgb, 242, 208, 133), 0.36);
   border-radius: 5px;
-  background: rgba(242, 208, 133, 0.1);
+  background: rgba(var(--mk-sheet-gold-rgb, 242, 208, 133), 0.1);
   color: var(--mk-bastion-accent);
   font-size: 18px;
 }
@@ -460,7 +460,7 @@
 .mk-bastion-upgrade-heading h3 {
   min-width: 0;
   margin: 0;
-  color: #f0f0f0;
+  color: var(--mk-sheet-strong, #f0f0f0);
   font-size: 12px;
   font-weight: 900;
   line-height: 1.15;
@@ -494,10 +494,10 @@
   min-width: 28px;
   min-height: 27px;
   padding: 0;
-  border: 1px solid rgba(255, 255, 255, 0.16);
+  border: 1px solid rgba(var(--mk-sheet-foreground-rgb, 255, 255, 255), 0.16);
   border-radius: 50%;
-  background: rgba(255, 255, 255, 0.05);
-  color: #9b9b9b;
+  background: rgba(var(--mk-sheet-foreground-rgb, 255, 255, 255), 0.05);
+  color: var(--mk-sheet-muted, #9b9b9b);
   cursor: pointer;
   font-size: 15px;
   font-weight: 800;
@@ -507,21 +507,21 @@
 }
 
 .mk-bastion-upgrade-toggle:hover:not(:disabled) {
-  background: rgba(255, 255, 255, 0.1);
-  border-color: rgba(255, 255, 255, 0.3);
-  color: #d2d2d2;
+  background: rgba(var(--mk-sheet-foreground-rgb, 255, 255, 255), 0.1);
+  border-color: rgba(var(--mk-sheet-foreground-rgb, 255, 255, 255), 0.3);
+  color: var(--mk-sheet-soft, #d2d2d2);
 }
 
 .mk-bastion-upgrade-toggle.is-installed {
-  border-color: rgba(116, 221, 135, 0.7);
-  background: rgba(70, 174, 91, 0.2);
-  color: #8be69b;
+  border-color: rgba(var(--mk-sheet-success-rgb, 116, 221, 135), 0.7);
+  background: rgba(var(--mk-sheet-success-rgb, 70, 174, 91), 0.2);
+  color: var(--mk-sheet-success, #8be69b);
 }
 
 .mk-bastion-upgrade-toggle.is-installed:hover:not(:disabled) {
-  border-color: rgba(139, 230, 155, 0.95);
-  background: rgba(70, 174, 91, 0.34);
-  color: #b5f4bf;
+  border-color: rgba(var(--mk-sheet-success-rgb, 139, 230, 155), 0.95);
+  background: rgba(var(--mk-sheet-success-rgb, 70, 174, 91), 0.34);
+  color: var(--mk-sheet-success, #b5f4bf);
 }
 
 .mk-bastion-upgrade-toggle:disabled {
@@ -545,9 +545,9 @@
 }
 
 .mk-bastion-remove-button {
-  border: 1px solid rgba(242, 208, 133, 0.28);
+  border: 1px solid rgba(var(--mk-sheet-gold-rgb, 242, 208, 133), 0.28);
   border-radius: 4px;
-  background: rgba(242, 208, 133, 0.08);
+  background: rgba(var(--mk-sheet-gold-rgb, 242, 208, 133), 0.08);
   color: var(--mk-bastion-accent);
   cursor: pointer;
   font-size: 11px;
@@ -555,8 +555,8 @@
 }
 
 .mk-bastion-remove-button:hover:not(:disabled) {
-  border-color: rgba(242, 208, 133, 0.65);
-  background: rgba(242, 208, 133, 0.16);
+  border-color: rgba(var(--mk-sheet-gold-rgb, 242, 208, 133), 0.65);
+  background: rgba(var(--mk-sheet-gold-rgb, 242, 208, 133), 0.16);
 }
 
 .mk-bastion-remove-button:disabled {
@@ -566,7 +566,7 @@
 
 .mk-bastion-defense-card.is-drag-over {
   border-color: var(--mk-bastion-accent);
-  box-shadow: 0 0 0 2px rgba(242, 208, 133, 0.14);
+  box-shadow: 0 0 0 2px rgba(var(--mk-sheet-gold-rgb, 242, 208, 133), 0.14);
 }
 
 .mk-bastion-defense-list {
@@ -581,9 +581,9 @@
   gap: 4px 8px;
   margin-bottom: 12px;
   padding: 8px 10px;
-  border: 1px solid rgba(242, 208, 133, 0.28);
+  border: 1px solid rgba(var(--mk-sheet-gold-rgb, 242, 208, 133), 0.28);
   border-radius: 4px;
-  background: rgba(242, 208, 133, 0.08);
+  background: rgba(var(--mk-sheet-gold-rgb, 242, 208, 133), 0.08);
   font-size: 12px;
 }
 
@@ -608,19 +608,19 @@
   align-items: center;
   gap: 6px;
   padding: 4px 6px;
-  border: 1px solid rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(var(--mk-sheet-foreground-rgb, 255, 255, 255), 0.1);
   border-radius: 4px;
-  background: rgba(0, 0, 0, 0.2);
+  background: rgba(var(--mk-sheet-shade-rgb, 0, 0, 0), 0.2);
 }
 
 .mk-bastion-defense-row input,
 .mk-bastion-defense-row textarea {
   min-width: 0;
   box-sizing: border-box;
-  border: 1px solid rgba(255, 255, 255, 0.14);
+  border: 1px solid rgba(var(--mk-sheet-foreground-rgb, 255, 255, 255), 0.14);
   border-radius: 3px;
-  background: #0b0b0b;
-  color: #eeeeee;
+  background: var(--mk-sheet-field, #0b0b0b);
+  color: var(--mk-sheet-strong, #eeeeee);
   font-size: 12px;
 }
 
@@ -657,7 +657,7 @@
   border: 1px solid transparent;
   border-radius: 3px;
   background: transparent;
-  color: #eeeeee;
+  color: var(--mk-sheet-strong, #eeeeee);
   cursor: pointer;
   font-size: 12px;
   font-weight: 700;
@@ -665,8 +665,8 @@
 }
 
 .mk-bastion-defense-actor:hover {
-  border-color: rgba(242, 208, 133, 0.4);
-  background: rgba(242, 208, 133, 0.08);
+  border-color: rgba(var(--mk-sheet-gold-rgb, 242, 208, 133), 0.4);
+  background: rgba(var(--mk-sheet-gold-rgb, 242, 208, 133), 0.08);
   color: var(--mk-bastion-accent);
 }
 
@@ -674,7 +674,7 @@
   width: 30px;
   height: 30px;
   flex: 0 0 30px;
-  border: 1px solid rgba(255, 255, 255, 0.16);
+  border: 1px solid rgba(var(--mk-sheet-foreground-rgb, 255, 255, 255), 0.16);
   border-radius: 3px;
   object-fit: cover;
 }
@@ -713,16 +713,16 @@
   height: 6px;
   flex: 0 0 82px;
   overflow: hidden;
-  border: 1px solid rgba(255, 255, 255, 0.16);
+  border: 1px solid rgba(var(--mk-sheet-foreground-rgb, 255, 255, 255), 0.16);
   border-radius: 999px;
-  background: rgba(0, 0, 0, 0.6);
+  background: rgba(var(--mk-sheet-shade-rgb, 0, 0, 0), 0.6);
 }
 
 .mk-bastion-defense-hp-fill {
   display: block;
   height: 100%;
   border-radius: inherit;
-  background: linear-gradient(90deg, #8b2f2f, #d8a14b 65%, #7ecb83);
+  background: linear-gradient(90deg, #8b2f2f, var(--mk-sheet-gold, #d8a14b) 65%, var(--mk-sheet-success, #7ecb83));
   transition: width 160ms ease;
 }
 
@@ -738,7 +738,7 @@
 }
 
 .mk-bastion-defense-actor-missing i {
-  color: #d49a54;
+  color: var(--mk-sheet-warm, #d49a54);
 }
 
 .mk-bastion-defense-row textarea {
@@ -752,7 +752,7 @@
 .mk-bastion-defense-row input:focus,
 .mk-bastion-defense-row textarea:focus {
   border-color: var(--mk-bastion-accent);
-  box-shadow: 0 0 0 2px rgba(242, 208, 133, 0.12);
+  box-shadow: 0 0 0 2px rgba(var(--mk-sheet-gold-rgb, 242, 208, 133), 0.12);
   outline: none;
 }
 
@@ -782,7 +782,7 @@
 .mk-bastion-vault-capacity {
   flex: 0 0 auto;
   padding: 6px 9px;
-  border: 1px solid rgba(242, 208, 133, 0.3);
+  border: 1px solid rgba(var(--mk-sheet-gold-rgb, 242, 208, 133), 0.3);
   border-radius: 4px;
   color: var(--mk-bastion-accent);
   font-size: 12px;
@@ -797,16 +797,16 @@
   gap: 8px;
   min-height: 220px;
   padding: 8px;
-  border: 1px dashed rgba(242, 208, 133, 0.25);
+  border: 1px dashed rgba(var(--mk-sheet-gold-rgb, 242, 208, 133), 0.25);
   border-radius: 5px;
-  background: rgba(0, 0, 0, 0.18);
+  background: rgba(var(--mk-sheet-shade-rgb, 0, 0, 0), 0.18);
   transition: border-color 140ms ease, box-shadow 140ms ease, background 140ms ease;
 }
 
 .mk-bastion-vault-grid.is-drag-over {
   border-color: var(--mk-bastion-accent);
-  background: rgba(242, 208, 133, 0.06);
-  box-shadow: 0 0 0 2px rgba(242, 208, 133, 0.14);
+  background: rgba(var(--mk-sheet-gold-rgb, 242, 208, 133), 0.06);
+  box-shadow: 0 0 0 2px rgba(var(--mk-sheet-gold-rgb, 242, 208, 133), 0.14);
 }
 
 .mk-bastion-vault-item {
@@ -814,16 +814,16 @@
   display: flex;
   min-width: 0;
   min-height: 132px;
-  border: 1px solid rgba(255, 255, 255, 0.12);
+  border: 1px solid rgba(var(--mk-sheet-foreground-rgb, 255, 255, 255), 0.12);
   border-radius: 5px;
-  background: rgba(10, 10, 10, 0.74);
+  background: rgba(var(--mk-sheet-inset-rgb, 10, 10, 10), 0.74);
   cursor: grab;
   transition: border-color 140ms ease, background 140ms ease, transform 140ms ease;
 }
 
 .mk-bastion-vault-item:hover {
-  border-color: rgba(242, 208, 133, 0.52);
-  background: rgba(242, 208, 133, 0.08);
+  border-color: rgba(var(--mk-sheet-gold-rgb, 242, 208, 133), 0.52);
+  background: rgba(var(--mk-sheet-gold-rgb, 242, 208, 133), 0.08);
   transform: translateY(-1px);
 }
 
@@ -834,6 +834,8 @@
 .mk-bastion-vault-item-main {
   display: flex;
   width: 100%;
+  height: auto;
+  min-height: 130px;
   min-width: 0;
   flex-direction: column;
   align-items: center;
@@ -841,7 +843,7 @@
   padding: 10px 7px 8px;
   border: 0;
   background: transparent;
-  color: #eeeeee;
+  color: var(--mk-sheet-strong, #eeeeee);
   cursor: pointer;
   text-align: center;
 }
@@ -856,7 +858,7 @@
   width: 54px;
   height: 54px;
   flex: 0 0 54px;
-  border: 1px solid rgba(242, 208, 133, 0.35);
+  border: 1px solid rgba(var(--mk-sheet-gold-rgb, 242, 208, 133), 0.35);
   border-radius: 4px;
   object-fit: cover;
 }
@@ -864,7 +866,7 @@
 .mk-bastion-vault-item-name {
   width: 100%;
   overflow: hidden;
-  color: #f0f0f0;
+  color: var(--mk-sheet-strong, #f0f0f0);
   font-size: 12px;
   font-weight: 900;
   line-height: 1.15;
@@ -904,12 +906,12 @@
   height: 54px;
   flex: 0 0 54px;
   place-items: center;
-  border: 1px solid rgba(242, 208, 133, 0.45);
+  border: 1px solid rgba(var(--mk-sheet-gold-rgb, 242, 208, 133), 0.45);
   border-radius: 4px;
-  background: linear-gradient(145deg, rgba(242, 208, 133, 0.2), rgba(117, 71, 16, 0.45));
-  color: #f2d085;
+  background: linear-gradient(145deg, rgba(var(--mk-sheet-gold-rgb, 242, 208, 133), 0.2), rgba(117, 71, 16, 0.45));
+  color: var(--mk-sheet-gold, #f2d085);
   font-size: 26px;
-  text-shadow: 0 1px 3px #000000;
+  text-shadow: var(--mk-sheet-text-shadow, 0 1px 3px #000000);
 }
 
 .mk-bastion-vault-gold-amount {
@@ -926,17 +928,17 @@
   width: 58px;
   min-height: 22px;
   padding: 2px 4px;
-  border: 1px solid rgba(242, 208, 133, 0.28);
+  border: 1px solid rgba(var(--mk-sheet-gold-rgb, 242, 208, 133), 0.28);
   border-radius: 3px;
-  background: rgba(0, 0, 0, 0.54);
-  color: #f0f0f0;
+  background: rgba(var(--mk-sheet-shade-rgb, 0, 0, 0), 0.54);
+  color: var(--mk-sheet-strong, #f0f0f0);
   font-size: 11px;
   text-align: right;
 }
 
 .mk-bastion-vault-gold-amount input:focus {
   border-color: var(--mk-bastion-accent);
-  box-shadow: 0 0 0 2px rgba(242, 208, 133, 0.12);
+  box-shadow: 0 0 0 2px rgba(var(--mk-sheet-gold-rgb, 242, 208, 133), 0.12);
   outline: none;
 }
 
@@ -965,16 +967,16 @@
   border: 1px dashed rgba(216, 91, 91, 0.4);
   border-radius: 5px;
   background: rgba(80, 20, 20, 0.2);
-  color: #b6a0a0;
+  color: var(--mk-sheet-danger, #b6a0a0);
   text-align: center;
   transition: border-color 140ms ease, background 140ms ease, box-shadow 140ms ease, color 140ms ease;
 }
 
 .mk-bastion-vault-trash.is-drag-over {
-  border-color: #e38d8d;
+  border-color: var(--mk-sheet-danger, #e38d8d);
   background: rgba(130, 35, 35, 0.42);
   box-shadow: 0 0 0 2px rgba(216, 91, 91, 0.18);
-  color: #f0b0b0;
+  color: var(--mk-sheet-danger, #f0b0b0);
 }
 
 .mk-bastion-vault-trash i {
@@ -982,7 +984,7 @@
 }
 
 .mk-bastion-vault-trash strong {
-  color: #e0caca;
+  color: var(--mk-sheet-danger, #e0caca);
   font-size: 11px;
   text-transform: uppercase;
 }
@@ -999,9 +1001,9 @@
   align-content: center;
   gap: 7px;
   padding: 24px;
-  border: 1px dashed rgba(242, 208, 133, 0.25);
+  border: 1px dashed rgba(var(--mk-sheet-gold-rgb, 242, 208, 133), 0.25);
   border-radius: 5px;
-  background: rgba(0, 0, 0, 0.18);
+  background: rgba(var(--mk-sheet-shade-rgb, 0, 0, 0), 0.18);
   color: var(--mk-bastion-muted);
   text-align: center;
 }
@@ -1012,7 +1014,7 @@
 }
 
 .mk-bastion-vault-empty strong {
-  color: #eeeeee;
+  color: var(--mk-sheet-strong, #eeeeee);
   font-size: 13px;
 }
 

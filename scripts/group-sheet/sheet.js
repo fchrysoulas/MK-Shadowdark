@@ -1,5 +1,4 @@
 import {
-  ABILITIES,
   ACTIVITY_KIND_CAMPING,
   ACTIVITY_KIND_TRAVEL,
   ACTIVITY_KINDS,
@@ -72,6 +71,7 @@ import { clampNumber, escapeHtml, getDialogFieldValue, numberOrZero } from "./ut
 import { getPrimaryActiveGm } from "./users.js";
 import { getSettingValue } from "./group-settings.js";
 import { BASTION_ACTOR_TYPE } from "../bastion-sheet/constants.js";
+import { getSheetTheme, bindSheetThemeToggle } from "../libs/sheet-themes.js";
 
 const GROUP_ACTOR_LINKS = Object.freeze({
   warbands: { type: "NPC", label: "warband", dropLabel: "an NPC actor representing a warband" },
@@ -79,6 +79,10 @@ const GROUP_ACTOR_LINKS = Object.freeze({
   bastions: { type: BASTION_ACTOR_TYPE, label: "Bastion", dropLabel: "a Bastion actor" },
 });
 const BOAT_ASSIGNMENT_KINDS = ["crew", "warbands"];
+const GROUP_HELP_SECTIONS = new Set([
+  "party", "summary", "traveling", "camping", "inventory", "shared-items", "treasure",
+  "hirelings", "warbands", "mounts", "boats", "bastions", "active-torches",
+]);
 
 const ActorSheetBase = globalThis.foundry?.appv1?.sheets?.ActorSheet;
 const TextEditorImplementation = globalThis.foundry?.applications?.ux?.TextEditor?.implementation;
@@ -200,13 +204,13 @@ class MKGroupSheet extends ActorSheetBase {
     if (!element?.querySelectorAll) return;
 
     const selectors = [
-      ".mk-travel-roll[data-has-assigned='true']",
       ".mk-camping-roster-member[data-can-assign='true']",
       ".mk-travel-member-toggle[data-can-assign='true']",
       ".mk-camping-assigned-chip",
       ".mk-group-actor-open[data-actor-available='true']",
       ".mk-boat-assignment-open[data-actor-available='true']",
       ".mk-shared-item-row [data-action='open-item']",
+      "[data-action='section-help']",
     ];
 
     element.querySelectorAll(selectors.join(",")).forEach(control => {
@@ -324,6 +328,7 @@ class MKGroupSheet extends ActorSheetBase {
 
     context.mk = {
       isGroup: true,
+      theme: getSheetTheme("group"),
       sheetStyle: buildGroupSheetStyle(),
       summary: buildHeaderSummary(members),
       members: memberData,
@@ -394,14 +399,14 @@ class MKGroupSheet extends ActorSheetBase {
 
   async _buildWarbandDisplay(warbands, groupData, boats, bastions) {
     const assignments = new Map(warbands.map(warband => [warband.uuid, []]));
-    const addAssignment = (uuid, kind, location, quantity) => {
+    const addAssignment = (uuid, kind, location, quantity, hasGranary = false) => {
       const destinations = assignments.get(uuid);
       if (!destinations) return;
       const amount = Number(quantity);
       const count = Number.isFinite(amount) ? Math.max(1, Math.floor(amount)) : 1;
       const existing = destinations.find(entry => entry.kind === kind && entry.uuid === location.uuid);
       if (existing) existing.quantity += count;
-      else destinations.push({ kind, uuid: location.uuid, name: location.name, quantity: count });
+      else destinations.push({ kind, uuid: location.uuid, name: location.name, quantity: count, hasGranary });
     };
 
     for (const boat of boats) {
@@ -420,10 +425,11 @@ class MKGroupSheet extends ActorSheetBase {
       }
       // Bastion defenses own these assignments; the Group Sheet only reads them.
       const state = getModuleFlag(actor, "bastion", {});
+      const hasGranary = Array.isArray(state?.upgrades) && state.upgrades.includes("granary");
       const stationed = state?.defenses?.warbands;
       for (const warband of Array.isArray(stationed) ? stationed : []) {
         const uuid = String(warband?.actorUuid ?? warband?.uuid ?? "").trim();
-        addAssignment(uuid, "bastion", bastion, warband?.quantity);
+        addAssignment(uuid, "bastion", bastion, warband?.quantity, hasGranary);
       }
     }
 
@@ -474,8 +480,12 @@ class MKGroupSheet extends ActorSheetBase {
       const level = rawLevel === undefined || rawLevel === null || String(rawLevel).trim() === ""
         ? NaN
         : Number(rawLevel);
-      const hasWages = Number.isInteger(level) && level >= 0;
-      const weeklyWages = hasWages ? 3 * level : null;
+      const hasWages = Number.isInteger(level) && level >= 0
+        && !warband.deployments.some(entry => entry.kind === "unknown");
+      // Each destination can contain multiple units; only its own Granary discounts those units.
+      const weeklyWages = hasWages ? warband.deployments.reduce((total, entry) => (
+        total + Math.max(0, 3 * level - (entry.hasGranary ? 3 : 0)) * (entry.quantity ?? 1)
+      ), 0) : null;
       return {
         ...warband,
         hasWages,
@@ -529,7 +539,8 @@ class MKGroupSheet extends ActorSheetBase {
         hirelings: hirelingSalaries,
         warbands: warbandWages,
         total: hirelingSalaries + warbandWages,
-        incomplete: warbands.some(warband => !warband.hasWages),
+        incomplete: warbands.some(warband => !warband.hasWages)
+          || (data.warbands.hasUnavailableBastions && warbands.length > 0),
       },
       categories: categories.map(category => ({ ...category, count: category.entries.length })),
     };
@@ -537,9 +548,16 @@ class MKGroupSheet extends ActorSheetBase {
 
   activateListeners(html) {
     super.activateListeners(html);
+    bindSheetThemeToggle(html, "group");
     this._applyTabBackgrounds(html);
     this._normalizeCampingResetButton(html);
     this._enablePlayerCampingControls(html);
+
+    html.find("[data-action='section-help']").on("click", event => {
+      event.preventDefault();
+      event.stopPropagation();
+      this._showSectionHelp(event.currentTarget.dataset.helpSection);
+    });
 
     html.find(".mk-group-nav .item").on("keydown", event => {
       if (event.key !== "Enter" && event.key !== " ") return;
@@ -593,10 +611,6 @@ class MKGroupSheet extends ActorSheetBase {
 
     html.find("[data-action='reset-travel']").on("click", event => {
       this._onResetTravel(event);
-    });
-
-    html.find("[data-action='roll-travel-activity']").on("click", event => {
-      this._onRollTravelActivity(event);
     });
 
     html.find("[data-action='toggle-travel-participant']").on("click", event => {
@@ -688,6 +702,32 @@ class MKGroupSheet extends ActorSheetBase {
       card.addEventListener("dragleave", event => this._onMountRiderDragLeave(event), true);
       card.addEventListener("drop", event => this._onMountRiderDrop(event), true);
     });
+  }
+
+  _showSectionHelp(section) {
+    if (!GROUP_HELP_SECTIONS.has(section)) return null;
+    const DialogV2 = globalThis.foundry?.applications?.api?.DialogV2;
+    const i18n = globalThis.game?.i18n;
+    if (typeof DialogV2 !== "function" || !i18n) return null;
+
+    const prefix = "MK_SHADOWDARK.groupSheet.help";
+    let content = i18n.localize(`${prefix}.${section}.body`);
+    if (section === "traveling" || section === "camping") {
+      const kind = section === "traveling" ? ACTIVITY_KIND_TRAVEL : ACTIVITY_KIND_CAMPING;
+      const activities = getActivitiesForKind(kind).map(activity => `
+        <dt>${escapeHtml(activity.name)} <span>${escapeHtml(activity.abilityLabel)} · DC ${activity.dc}</span></dt>
+        <dd>${escapeHtml(activity.description)}</dd>
+      `).join("");
+      content += `<h3>${escapeHtml(i18n.localize(`${prefix}.activities`))}</h3><dl>${activities}</dl>`;
+    }
+
+    return new DialogV2({
+      window: { title: i18n.localize(`${prefix}.${section}.title`) },
+      position: { width: 560 },
+      classes: ["mk-group-help-dialog", ...getSheetTheme("group").classes],
+      content: `<article class="mk-group-section-help">${content}</article>`,
+      buttons: [{ action: "close", label: i18n.localize(`${prefix}.close`), default: true }],
+    }).render(true);
   }
 
   _normalizeCampingResetButton(root) {
@@ -1626,84 +1666,6 @@ class MKGroupSheet extends ActorSheetBase {
     return Boolean(this._campingDragActorUuid)
       || types.includes(CAMPING_MEMBER_DRAG_TYPE)
       || types.includes("text/plain");
-  }
-
-  async _pickTravelAbility(activity) {
-    if (activity.abilities.length === 1) return activity.abilities[0];
-
-    const options = activity.abilities
-      .map(ability => {
-        const label = ABILITIES.find(([key]) => key === ability)?.[1] ?? ability.toUpperCase();
-        return `<option value="${ability}">${label}</option>`;
-      })
-      .join("");
-
-    return Dialog.wait({
-      title: `Roll ${activity.name}`,
-      content: `
-        <form>
-          <div class="form-group">
-            <label>Ability</label>
-            <select name="ability">${options}</select>
-          </div>
-        </form>
-      `,
-      buttons: {
-        roll: {
-          icon: "<i class='fas fa-dice-d20'></i>",
-          label: "Roll",
-          callback: html => getDialogFieldValue(html, "[name='ability']"),
-        },
-        cancel: {
-          icon: "<i class='fas fa-times'></i>",
-          label: "Cancel",
-          callback: () => null,
-        },
-      },
-      default: "roll",
-      close: () => null,
-    });
-  }
-
-  async _onRollTravelActivity(event) {
-    event.preventDefault();
-
-    const card = event.currentTarget.closest("[data-travel-activity-key]");
-    const kind = this._getActivityKindFromElement(card);
-    const activityKey = card?.dataset?.travelActivityKey;
-    const activity = getActivitiesForKind(kind).find(existing => existing.key === activityKey);
-
-    if (!activity) return;
-
-    const groupData = getGroupData(this.actor);
-    const actorUuids = getActivityStore(groupData, kind)?.[activityKey]?.actorUuids ?? [];
-
-    if (actorUuids.length === 0) {
-      ui.notifications.warn(`Drop one or more characters on ${activity.name} first.`);
-      return;
-    }
-
-    const ability = await this._pickTravelAbility(activity);
-    if (!ability) return;
-
-    let rolled = 0;
-
-    for (const actorUuid of actorUuids) {
-      const actor = await resolveActorFromUuid(actorUuid);
-      if (!actor) continue;
-      if (!canUserControlActor(actor)) continue;
-
-      await rollActorAbility(actor, ability, {
-        event,
-        target: activity.dc,
-        fastForward: event.shiftKey,
-      });
-      rolled += 1;
-    }
-
-    if (rolled === 0) {
-      ui.notifications.warn(`You can only roll ${activity.name} for characters you control.`);
-    }
   }
 
   async _addItemToGroup(item) {

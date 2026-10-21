@@ -244,7 +244,7 @@
       hint: "Configure Group actors, member presentation, camping supplies, tab backgrounds, travel progress, and weather tables.",
       icon: "fas fa-users",
       settings: [
-        "enableGroupActors", "groupEncountersEnabled", "groupSheetAssignedTokenSize", "groupSheetMemberPortraitSize", "groupSheetActivityColumns", "groupSheetCampingFoodKeywords",
+        "enableGroupActors", "groupEncountersEnabled", "groupSheetTheme", "bastionSheetTheme", "groupSheetAssignedTokenSize", "groupSheetMemberPortraitSize", "groupSheetActivityColumns", "groupSheetCampingFoodKeywords",
         "groupSheetCampingTorchKeywords", "groupSheetTabBackgroundTraveling", "groupSheetTabBackgroundCamping", "groupSheetTabBackgroundInventory",
         "groupSheetTabBackgroundHirelings", "groupSheetTabBackgroundMounts", "groupSheetTravelProgressDurationMs",
         "groupSheetWeatherTemperatureTable", "groupSheetWeatherWindSpeedTable"
@@ -253,6 +253,10 @@
         {
           title: "General",
           settings: ["enableGroupActors", "groupEncountersEnabled", "groupSheetAssignedTokenSize", "groupSheetMemberPortraitSize", "groupSheetActivityColumns"]
+        },
+        {
+          title: "MK_SHADOWDARK.sheetTheme.appearance",
+          settings: ["groupSheetTheme", "bastionSheetTheme"]
         },
         {
           title: "Camping",
@@ -434,7 +438,7 @@
       : [{ title: "", settings: feature.settings }];
 
     return sections.map(section => ({
-      title: section.title ?? "",
+      title: localize(section.title ?? ""),
       settings: section.settings.map(settingDescriptor).filter(Boolean)
     }));
   }
@@ -1872,6 +1876,22 @@
       type: Boolean,
       default: true
     });
+
+    for (const [key, sheet] of [["groupSheetTheme", "group"], ["bastionSheetTheme", "bastion"]]) {
+      registerSetting(key, {
+        name: `MK_SHADOWDARK.sheetTheme.${sheet}Name`,
+        hint: `MK_SHADOWDARK.sheetTheme.${sheet}Hint`,
+        scope: "client",
+        config: true,
+        type: String,
+        choices: {
+          dark: "MK_SHADOWDARK.sheetTheme.dark",
+          light: "MK_SHADOWDARK.sheetTheme.light"
+        },
+        default: "dark",
+        onChange: refreshOpenActorSheets
+      });
+    }
 
     registerSetting("groupSheetAssignedTokenSize", {
       name: "Group Sheet | Assigned Token Size",

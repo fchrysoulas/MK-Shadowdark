@@ -176,7 +176,7 @@ test("Bastion actors have a dedicated type, sheet, and upgrade controls", () => 
   assert.match(dataModel, /coins:\s*new fields\.SchemaField/);
   assert.match(registration, /types:\s*\[BASTION_ACTOR_TYPE\]/);
   assert.match(css, /\.mk-bastion-sheet-window/);
-  assert.match(css, /color-scheme:\s*dark/);
+  assert.match(css, /color-scheme:\s*inherit/);
   assert.match(css, /\.mk-bastion-type-select\s*\{[\s\S]*?width:\s*100%[\s\S]*?text-align:\s*left/);
   assert.match(css, /\.mk-bastion-type-select option,\n\.mk-bastion-type-select optgroup/);
 });

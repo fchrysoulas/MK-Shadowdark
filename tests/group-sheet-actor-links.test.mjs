@@ -16,6 +16,7 @@ globalThis.foundry = {
   utils: { deepClone: structuredClone },
 };
 const { MKGroupSheet } = await import("../scripts/group-sheet/sheet.js");
+const { MKBastionSheet } = await import("../scripts/bastion-sheet/sheet.js");
 
 function setup(initial = {}) {
   const warnings = [];
@@ -142,7 +143,7 @@ test("Summary handles empty groups and unavailable asset links for observers", a
   assert.equal(f.saves.length, 0);
 });
 
-test("Summary payroll charges each hireling 1 gp and each group-linked warband 3 gp per level weekly", async () => {
+test("Summary payroll charges each hireling 1 gp and each group-linked warband 3 gp per level and assigned unit weekly", async () => {
   const f = setup({
     companions: [
       { id: "porter", name: "Porter", carrySlots: 8 },
@@ -165,19 +166,133 @@ test("Summary payroll charges each hireling 1 gp and each group-linked warband 3
   f.actor.system.coins = { gp: 100, sp: 0, cp: 0 };
   const before = structuredClone(f.actor.getFlag());
   const { mk } = await f.sheet.getData();
-  assert.deepEqual(mk.assets.wages, { hirelings: 2, warbands: 12, total: 14, incomplete: false });
+  assert.deepEqual(mk.assets.wages, { hirelings: 2, warbands: 15, total: 17, incomplete: false });
   const hirelings = mk.assets.categories.find(category => category.tab === "hirelings");
   assert.ok(hirelings.entries.every(entry => entry.detail.includes("1 gp/week")));
   const warbands = mk.assets.categories.find(category => category.tab === "warbands");
-  assert.deepEqual(warbands.entries.map(entry => entry.weeklyWages), [3, 9]);
+  assert.deepEqual(warbands.entries.map(entry => entry.weeklyWages), [6, 9]);
   assert.equal(warbands.entries[1].detail, "Level 3 · 9 gp/week");
   second.system.level.value = 4;
-  assert.equal((await f.sheet.getData()).mk.assets.wages.total, 17);
+  assert.equal((await f.sheet.getData()).mk.assets.wages.total, 20);
   assert.deepEqual(f.actor.system.coins, { gp: 100, sp: 0, cp: 0 }, "displaying payroll never deducts money");
   assert.deepEqual(f.actor.getFlag(), before);
   assert.equal(f.saves.length, 0);
   await f.sheet._onRemoveGroupActor(f.cardEvent("warbands", second.uuid));
-  assert.equal((await f.sheet.getData()).mk.assets.wages.total, 5);
+  assert.equal((await f.sheet.getData()).mk.assets.wages.total, 8);
+});
+
+test("Summary Granary wages match Bastion Defenses for assigned quantities without changing stored data", async () => {
+  const f = setup({ warbands: ["Actor.guards", "Actor.veterans"], bastions: ["Actor.keep"] });
+  f.linkedActor("guards").system.level = { value: 2 };
+  f.linkedActor("veterans").system.level = { value: 5 };
+  const keep = f.linkedActor("keep", "mk-shadowdark.bastion");
+  const state = { upgrades: ["granary"], defenses: { warbands: [
+    { actorUuid: "Actor.guards", quantity: 3 },
+    { actorUuid: "Actor.veterans", quantity: 2 },
+  ] } };
+  keep.getFlag = () => state;
+  keep.items = [];
+  const before = structuredClone({ group: f.actor.getFlag(), bastion: state });
+  const { mk } = await f.sheet.getData();
+  const bastion = (await new MKBastionSheet(keep).getData()).mk.bastion;
+  const warbands = mk.assets.categories.find(category => category.tab === "warbands");
+  assert.deepEqual(warbands.entries.map(entry => entry.weeklyWages), [9, 24]);
+  assert.equal(warbands.entries[0].detail, "Level 2 · 9 gp/week");
+  assert.equal(mk.assets.wages.warbands, bastion.warbandWages.weeklyTotal);
+  assert.deepEqual(mk.assets.wages, { hirelings: 0, warbands: 33, total: 33, incomplete: false });
+  assert.deepEqual({ group: f.actor.getFlag(), bastion: state }, before);
+  assert.equal(f.saves.length, 0);
+});
+
+test("Summary applies the Granary discount only to units at that bastion across mixed destinations", async () => {
+  const f = setup({
+    warbands: ["Actor.guards", "Actor.following"],
+    boats: ["Actor.boat"], bastions: ["Actor.keep", "Actor.outpost"],
+    boatAssignments: [{ actorUuid: "Actor.boat", warbands: [{ actorUuid: "Actor.guards", quantity: 1 }] }],
+  });
+  f.linkedActor("guards").system.level = { value: 3 };
+  f.linkedActor("following").system.level = { value: 2 };
+  f.linkedActor("boat");
+  f.linkedActor("keep", "mk-shadowdark.bastion").getFlag = () => ({
+    upgrades: ["granary", "granary"], defenses: { warbands: [
+      { uuid: "Actor.guards", quantity: 1 }, { actorUuid: "Actor.guards", quantity: 2 },
+      { actorUuid: "Actor.outside", quantity: 20 },
+    ] },
+  });
+  f.linkedActor("outpost", "mk-shadowdark.bastion").getFlag = () => ({
+    upgrades: [], defenses: { warbands: [{ actorUuid: "Actor.guards", quantity: 1 }] },
+  });
+  const { mk } = await f.sheet.getData();
+  const warbands = mk.assets.categories.find(category => category.tab === "warbands");
+  assert.deepEqual(warbands.entries.map(entry => entry.weeklyWages), [36, 6]);
+  assert.equal(mk.assets.wages.total, 42);
+  assert.equal(mk.warbands.count, 2);
+  assert.equal(f.saves.length, 0);
+});
+
+test("Summary updates Granary wages after upgrades, levels, quantities and assignments change", async () => {
+  const f = setup({ warbands: ["Actor.guards"], bastions: ["Actor.keep"] });
+  const guards = f.linkedActor("guards");
+  guards.system.level = { value: 2 };
+  const state = { upgrades: [], defenses: { warbands: [{ actorUuid: guards.uuid, quantity: 2 }] } };
+  f.linkedActor("keep", "mk-shadowdark.bastion").getFlag = () => state;
+  const wages = async () => (await f.sheet.getData()).mk.assets.wages.total;
+  assert.equal(await wages(), 12);
+  state.upgrades = ["granary"];
+  assert.equal(await wages(), 6);
+  guards.system.level.value = 4;
+  assert.equal(await wages(), 18);
+  state.defenses.warbands[0].quantity = 3;
+  assert.equal(await wages(), 27);
+  state.upgrades = [];
+  assert.equal(await wages(), 36);
+  state.upgrades = ["granary"];
+  state.defenses.warbands = [];
+  assert.equal(await wages(), 12, "an unassigned warband receives no Granary discount");
+  state.upgrades = "granary";
+  state.defenses.warbands = [{ actorUuid: guards.uuid, quantity: 1 }];
+  assert.equal(await wages(), 12, "malformed upgrade data does not count as a built Granary");
+  assert.equal(f.saves.length, 0);
+});
+
+test("Summary Granary wages stay at zero for levels zero and one and preserve unavailable wages", async () => {
+  const f = setup({
+    warbands: ["Actor.zero", "Actor.one", "Actor.invalid", "Actor.hidden", "Actor.missing"],
+    bastions: ["Actor.keep"],
+  });
+  f.linkedActor("zero").system.level = { value: 0 };
+  f.linkedActor("one").system.level = { value: 1 };
+  f.linkedActor("invalid").system.level = { value: "unknown" };
+  f.linkedActor("hidden").visible = false;
+  f.linkedActor("keep", "mk-shadowdark.bastion").getFlag = () => ({
+    upgrades: ["granary"], defenses: { warbands: [
+      { actorUuid: "Actor.zero", quantity: 2 }, { actorUuid: "Actor.one", quantity: 3 },
+      { actorUuid: "Actor.invalid" }, { actorUuid: "Actor.hidden" }, { actorUuid: "Actor.missing" },
+    ] },
+  });
+  const { mk } = await f.sheet.getData();
+  const warbands = mk.assets.categories.find(category => category.tab === "warbands");
+  assert.deepEqual(warbands.entries.map(entry => entry.weeklyWages), [0, 0, null, null, null]);
+  assert.deepEqual(mk.assets.wages, { hirelings: 0, warbands: 0, total: 0, incomplete: true });
+});
+
+test("Summary marks inaccessible bastion assignments as incomplete without reading hidden upgrades", async () => {
+  const f = setup({
+    warbands: ["Actor.guards", "Actor.sailors"],
+    boats: ["Actor.boat"], bastions: ["Actor.hidden"],
+    boatAssignments: [{ actorUuid: "Actor.boat", warbands: [{ actorUuid: "Actor.sailors", quantity: 2 }] }],
+  });
+  f.linkedActor("guards").system.level = { value: 3 };
+  f.linkedActor("sailors").system.level = { value: 2 };
+  f.linkedActor("boat");
+  const hidden = f.linkedActor("hidden", "mk-shadowdark.bastion");
+  hidden.visible = false;
+  hidden.getFlag = () => { throw new Error("Hidden bastion flags must not be read"); };
+  const { mk } = await f.sheet.getData();
+  const warbands = mk.assets.categories.find(category => category.tab === "warbands");
+  assert.deepEqual(warbands.entries.map(entry => entry.weeklyWages), [null, 12]);
+  assert.deepEqual(mk.assets.wages, { hirelings: 0, warbands: 12, total: 12, incomplete: true });
+  assert.equal(f.saves.length, 0);
 });
 
 test("Summary payroll marks missing actors and invalid levels as incomplete while allowing level zero", async () => {

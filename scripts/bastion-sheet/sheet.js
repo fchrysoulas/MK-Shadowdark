@@ -9,6 +9,7 @@ import {
 import { buildVaultData, getVaultItemSlots } from "./vault.js";
 import { buildUpgradeData, getUpgradeBuildKey, normalizeBastionUpgrades, queueUpgradeUpdate } from "./upgrades.js";
 import { canManageActorItems, getVaultTransferData, vaultPermissionMessage } from "../libs/bastion-vault-transfer.js";
+import { getSheetTheme, bindSheetThemeToggle } from "../libs/sheet-themes.js";
 
 const ActorSheetBase = globalThis.foundry?.appv1?.sheets?.ActorSheet;
 const TextEditorImplementation = globalThis.foundry?.applications?.ux?.TextEditor?.implementation;
@@ -260,6 +261,7 @@ class MKBastionSheet extends ActorSheetBase {
 
     context.mk = {
       isBastion: true,
+      theme: getSheetTheme("bastion"),
       canEditBastion: canEdit,
       canManageVault: canManageVault(this),
       bastion: {
@@ -298,6 +300,7 @@ class MKBastionSheet extends ActorSheetBase {
 
   activateListeners(html) {
     super.activateListeners(html);
+    bindSheetThemeToggle(html, "bastion");
 
     html.find("[data-action='change-bastion-type']").on("change", event => {
       this._onChangeBastionType(event);

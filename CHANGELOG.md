@@ -2,7 +2,17 @@
 
 ## 1.9.33
 
+- Scoped `npm test` to the maintained test suite, preventing archived release snapshots under `build/` from running duplicate tests and reporting stale failures.
+- Added Dark and Light themes to the Group and Bastion sheets, with header toggles and separate appearance preferences saved for each user.
+- Kept Bastion Vault item labels visible when Foundry applies its native button height.
+- Removed the d20 roll buttons from Traveling and Camping task panels and reclaimed their header space.
+- Moved Inventory, Mounts, Warbands, Boats, and Bastion drop instructions into their information popups, removing instruction banners while preserving section and assignment drop targets; empty shared inventory now uses a compact status message.
+- Compacted all Group Sheet tab headers into one row with the title, muted short description, and information button, and removed title underlines.
+- Added information buttons throughout the Group Sheet with section controls and rules, including read-only player access; moved mount and campfire rules into their help windows.
+- Changed Group Sheet shared inventory to a Bastion Vault-style grid of item slot cards showing icons, names, slot costs, and quantity controls.
+- Reduced the height of Group Sheet party stat roll buttons and removed the duplicate Open Sheet button; character portraits open their sheets.
 - Enabled players with Observer access to move shared Group Sheet item stacks into their owned character inventories, including Character Dashboard slots, with GM-processed transfers, rollback on failure, and duplicate-drop protection.
+- Fixed Summary warband payroll to include boat and bastion assignment quantities and the Granary's 3 gp discount per unit stationed at that bastion, with a minimum of 0 gp and subtotals for unavailable assignments.
 - Displayed warbands in a three-column grid of rectangular cards with live level, AC, HP, and assignment badges for following the group, boats, and bastions; Summary shows the same destinations and quantities.
 - Removed the View buttons from Summary cards.
 - Matched the Summary, Traveling, Camping, and Inventory panels, headings, dividers, and subtitles to the other Group Sheet asset tabs.

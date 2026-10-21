@@ -1,4 +1,4 @@
-<form class="mk-group-sheet {{cssClass}}" autocomplete="off" style="{{mk.sheetStyle}}">
+<form class="mk-group-sheet {{mk.theme.className}} {{cssClass}}" autocomplete="off" style="{{mk.sheetStyle}}">
   <header class="mk-group-header">
     <img class="mk-group-image" src="{{actor.img}}" data-edit="img" title="{{actor.name}}" alt="{{actor.name}}">
 
@@ -12,11 +12,13 @@
         <span><i class="fas fa-arrow-up"></i> Avg LVL <strong>{{mk.summary.level}}</strong></span>
       </div>
     </div>
+    <button type="button" class="mk-sheet-theme-toggle" data-action="toggle-sheet-theme" title="{{mk.theme.toggleLabel}}" aria-label="{{mk.theme.toggleLabel}}" aria-pressed="{{mk.theme.isLight}}"><i class="fas {{mk.theme.toggleIcon}}" aria-hidden="true"></i></button>
   </header>
 
   <section class="mk-active-torches" aria-label="Active torches">
     <header class="mk-active-torches-header">
       <span><i class="fas fa-fire"></i> Active Torches</span>
+      <button type="button" class="mk-group-info-button" data-action="section-help" data-help-section="active-torches" title="{{localize 'MK_SHADOWDARK.groupSheet.help.active-torches.title'}}" aria-label="{{localize 'MK_SHADOWDARK.groupSheet.help.active-torches.title'}}"><i class="fas fa-info" aria-hidden="true"></i></button>
       <strong>{{mk.activeTorches.count}}</strong>
     </header>
     {{#if mk.activeTorches.hasEntries}}
@@ -97,9 +99,10 @@
     <div class="tab mk-group-tab mk-group-tab-body active" data-group="primary" data-tab="summary">
       <section class="mk-companions-panel">
         <header class="mk-companions-header">
-          <div>
-            <h2>Summary</h2>
-            <p>Group assets and weekly payroll.</p>
+          <div class="mk-group-section-title">
+            <h2 class="mk-group-section-heading">Summary</h2>
+            <p class="mk-group-section-description" title="{{localize 'MK_SHADOWDARK.groupSheet.help.summary.description'}}">{{localize 'MK_SHADOWDARK.groupSheet.help.summary.description'}}</p>
+            <button type="button" class="mk-group-info-button" data-action="section-help" data-help-section="summary" title="{{localize 'MK_SHADOWDARK.groupSheet.help.summary.title'}}" aria-label="{{localize 'MK_SHADOWDARK.groupSheet.help.summary.title'}}"><i class="fas fa-info" aria-hidden="true"></i></button>
           </div>
         </header>
         <div class="mk-group-summary-resources">
@@ -116,7 +119,7 @@
           {{#each mk.assets.categories}}
           <section class="mk-group-summary-category">
             <header>
-              <h3><i class="fas {{icon}}" aria-hidden="true"></i> {{label}}</h3>
+              <h3 class="mk-group-section-heading"><i class="fas {{icon}}" aria-hidden="true"></i> {{label}} <button type="button" class="mk-group-info-button" data-action="section-help" data-help-section="{{tab}}" title="{{localize 'MK_SHADOWDARK.groupSheet.help.open'}}" aria-label="{{label}}: {{localize 'MK_SHADOWDARK.groupSheet.help.open'}}"><i class="fas fa-info" aria-hidden="true"></i></button></h3>
               <strong class="mk-group-summary-count">{{count}}</strong>
             </header>
             {{#if count}}
@@ -144,9 +147,10 @@
     <div class="tab mk-group-tab mk-group-tab-body" data-group="primary" data-tab="traveling">
       <section class="mk-companions-panel">
         <header class="mk-companions-header">
-          <div>
-            <h2>Traveling</h2>
-            <p>Assign party members to travel tasks and track the journey.</p>
+          <div class="mk-group-section-title">
+            <h2 class="mk-group-section-heading">Traveling</h2>
+            <p class="mk-group-section-description" title="{{localize 'MK_SHADOWDARK.groupSheet.help.traveling.description'}}">{{localize 'MK_SHADOWDARK.groupSheet.help.traveling.description'}}</p>
+            <button type="button" class="mk-group-info-button" data-action="section-help" data-help-section="traveling" title="{{localize 'MK_SHADOWDARK.groupSheet.help.traveling.title'}}" aria-label="{{localize 'MK_SHADOWDARK.groupSheet.help.traveling.title'}}"><i class="fas fa-info" aria-hidden="true"></i></button>
           </div>
         </header>
         <div class="mk-travel-toolbar">
@@ -249,9 +253,6 @@
                 <span class="mk-travel-meta">{{abilityLabel}} <b>DC {{dc}}</b></span>
               </div>
 
-              <button type="button" class="mk-travel-roll" data-action="roll-travel-activity" data-has-assigned="{{#if hasAssigned}}true{{else}}false{{/if}}" title="{{#if hasAssigned}}Roll {{name}}{{else}}Assign a character to roll {{name}}{{/if}}" {{#unless hasAssigned}}disabled{{/unless}}>
-                <i class="fas fa-dice-d20"></i>
-              </button>
             </header>
 
             <div class="mk-camping-assignment-row" data-action="toggle-travel-picker" title="Choose assigned members">
@@ -298,15 +299,15 @@
     <div class="tab mk-group-tab mk-group-tab-body" data-group="primary" data-tab="camping">
       <section class="mk-companions-panel">
         <header class="mk-companions-header">
-          <div>
-            <h2>Camping</h2>
-            <p>Assign camp tasks and manage the party's rest.</p>
+          <div class="mk-group-section-title">
+            <h2 class="mk-group-section-heading">Camping</h2>
+            <p class="mk-group-section-description" title="{{localize 'MK_SHADOWDARK.groupSheet.help.camping.description'}}">{{localize 'MK_SHADOWDARK.groupSheet.help.camping.description'}}</p>
+            <button type="button" class="mk-group-info-button" data-action="section-help" data-help-section="camping" title="{{localize 'MK_SHADOWDARK.groupSheet.help.camping.title'}}" aria-label="{{localize 'MK_SHADOWDARK.groupSheet.help.camping.title'}}"><i class="fas fa-info" aria-hidden="true"></i></button>
           </div>
         </header>
         <section class="mk-camping-info">
           <div class="mk-campfire-note">
-            <strong>Campfire</strong>
-            <p>The PCs can make a campfire using 3 torches; it lasts 8 hours while a PC remains near to it and casts light out to a near distance.</p>
+            <strong>{{localize 'MK_SHADOWDARK.groupSheet.help.supplies'}}</strong>
             <div class="mk-campfire-resources">
               <span title="Total food and rations carried by members plus shared group inventory">
                 <i class="fas fa-utensils"></i>
@@ -367,9 +368,6 @@
                 <span class="mk-travel-meta">{{abilityLabel}} <b>DC {{dc}}</b></span>
               </div>
 
-              <button type="button" class="mk-travel-roll" data-action="roll-travel-activity" data-has-assigned="{{#if hasAssigned}}true{{else}}false{{/if}}" title="{{#if hasAssigned}}Roll {{name}}{{else}}Assign a character to roll {{name}}{{/if}}" {{#unless hasAssigned}}disabled{{/unless}}>
-                <i class="fas fa-dice-d20"></i>
-              </button>
             </header>
 
             <div class="mk-camping-assignment-row" data-action="toggle-travel-picker" title="Choose assigned members">
@@ -416,53 +414,43 @@
     <div class="tab mk-group-tab mk-group-tab-body" data-group="primary" data-tab="inventory">
       <section class="mk-companions-panel">
         <header class="mk-companions-header">
-          <div>
-            <h2>Inventory</h2>
-            <p>Manage the group's shared gear and party treasure.</p>
+          <div class="mk-group-section-title">
+            <h2 class="mk-group-section-heading">Inventory</h2>
+            <p class="mk-group-section-description" title="{{localize 'MK_SHADOWDARK.groupSheet.help.inventory.description'}}">{{localize 'MK_SHADOWDARK.groupSheet.help.inventory.description'}}</p>
+            <button type="button" class="mk-group-info-button" data-action="section-help" data-help-section="inventory" title="{{localize 'MK_SHADOWDARK.groupSheet.help.inventory.title'}}" aria-label="{{localize 'MK_SHADOWDARK.groupSheet.help.inventory.title'}}"><i class="fas fa-info" aria-hidden="true"></i></button>
           </div>
         </header>
         <div class="mk-inventory-layout">
           <section class="mk-shared-items-panel">
             <header class="mk-inventory-panel-header">
               <button type="button" class="mk-panel-add-button" data-action="create-group-item" title="Add gear"><i class="fas fa-plus"></i></button>
-              <h2>Shared Items</h2>
-              <span class="mk-inventory-slots {{#if mk.inventory.slots.over}}mk-danger{{/if}}"><i class="fas fa-weight-hanging"></i> <strong>{{mk.inventory.slots.total}}/{{mk.inventory.slots.max}}</strong></span>
+              <h2 class="mk-group-section-heading">Shared Items <button type="button" class="mk-group-info-button" data-action="section-help" data-help-section="shared-items" title="{{localize 'MK_SHADOWDARK.groupSheet.help.shared-items.title'}}" aria-label="{{localize 'MK_SHADOWDARK.groupSheet.help.shared-items.title'}}"><i class="fas fa-info" aria-hidden="true"></i></button></h2>
+              <span class="mk-inventory-slots {{#if mk.inventory.slots.over}}mk-danger{{/if}}"><i class="fas fa-weight-hanging" aria-hidden="true"></i> <strong>{{mk.inventory.slots.total}}/{{mk.inventory.slots.max}}</strong> slots</span>
             </header>
 
-            <div class="mk-shared-items-table">
-              <div class="mk-shared-items-table-header">
-                <span>Item</span>
-                <span>Qty</span>
-                <span>Slots</span>
-              </div>
-
-              <div class="mk-shared-items-table-body">
-                {{#if mk.inventory.hasItems}}
-                {{#each mk.inventory.items}}
-                <div class="mk-shared-item-row" data-item-id="{{id}}">
-                  <div class="mk-shared-item-name-cell">
-                    <img src="{{img}}" alt="{{name}}" data-action="open-item" draggable="false">
-                    <button type="button" class="mk-inventory-name" data-action="open-item">{{name}}</button>
-                  </div>
-
-                  <div class="mk-shared-item-qty-cell">
-                    <button type="button" data-action="item-decrement" title="Decrease quantity"><i class="fas fa-minus"></i></button>
-                    <strong>{{quantity}}</strong>
-                    <button type="button" data-action="item-increment" title="Increase quantity"><i class="fas fa-plus"></i></button>
-                  </div>
-
-                  <div class="mk-shared-item-slots-cell">{{slots}}</div>
+            <div class="mk-shared-items-grid {{#unless mk.inventory.hasItems}}is-empty{{/unless}}" aria-label="Shared inventory items">
+              {{#each mk.inventory.items}}
+              <article class="mk-shared-item-row" data-item-id="{{id}}" title="Drag to move {{name}} to a character sheet you own">
+                <div class="mk-shared-item-name-cell">
+                  <img src="{{img}}" alt="{{name}}" data-action="open-item" draggable="false">
+                  <button type="button" class="mk-inventory-name" data-action="open-item" title="Open {{name}}">{{name}}</button>
+                  <span class="mk-shared-item-meta">{{type}} · {{slots}} slot{{#unless (eq slots 1)}}s{{/unless}}</span>
                 </div>
-                {{/each}}
-                {{else}}
-                <div class="mk-shared-items-empty">No shared items. Drop gear here or press +.</div>
-                {{/if}}
-              </div>
+
+                <div class="mk-shared-item-qty-cell">
+                  <button type="button" data-action="item-decrement" title="Decrease quantity" aria-label="Decrease {{name}} quantity"><i class="fas fa-minus" aria-hidden="true"></i></button>
+                  <strong>Qty {{quantity}}</strong>
+                  <button type="button" data-action="item-increment" title="Increase quantity" aria-label="Increase {{name}} quantity"><i class="fas fa-plus" aria-hidden="true"></i></button>
+                </div>
+              </article>
+              {{else}}
+              <div class="mk-shared-items-empty">{{localize 'MK_SHADOWDARK.groupSheet.help.shared-items.empty'}}</div>
+              {{/each}}
             </div>
           </section>
 
           <aside class="mk-party-treasure-panel">
-            <h2>Party Treasure</h2>
+            <h2 class="mk-group-section-heading">Party Treasure <button type="button" class="mk-group-info-button" data-action="section-help" data-help-section="treasure" title="{{localize 'MK_SHADOWDARK.groupSheet.help.treasure.title'}}" aria-label="{{localize 'MK_SHADOWDARK.groupSheet.help.treasure.title'}}"><i class="fas fa-info" aria-hidden="true"></i></button></h2>
 
             <label class="mk-coin-row"><span>GP</span><input type="number" value="{{mk.inventory.coins.gp}}" min="0" data-action="change-group-coin" data-coin="gp"></label>
             <label class="mk-coin-row"><span>SP</span><input type="number" value="{{mk.inventory.coins.sp}}" min="0" data-action="change-group-coin" data-coin="sp"></label>
@@ -479,9 +467,10 @@
     <div class="tab mk-group-tab mk-group-tab-body" data-group="primary" data-tab="hirelings">
       <section class="mk-companions-panel">
         <header class="mk-companions-header">
-          <div>
-            <h2>Hirelings</h2>
-            <p>Hireling carry slots contribute directly to the shared inventory limit.</p>
+          <div class="mk-group-section-title">
+            <h2 class="mk-group-section-heading">Hirelings</h2>
+            <p class="mk-group-section-description" title="{{localize 'MK_SHADOWDARK.groupSheet.help.hirelings.description'}}">{{localize 'MK_SHADOWDARK.groupSheet.help.hirelings.description'}}</p>
+            <button type="button" class="mk-group-info-button" data-action="section-help" data-help-section="hirelings" title="{{localize 'MK_SHADOWDARK.groupSheet.help.hirelings.title'}}" aria-label="{{localize 'MK_SHADOWDARK.groupSheet.help.hirelings.title'}}"><i class="fas fa-info" aria-hidden="true"></i></button>
           </div>
           <strong class="mk-companion-capacity"><i class="fas fa-weight-hanging"></i> {{mk.hirelings.totalCarrySlots}} slots</strong>
         </header>
@@ -534,9 +523,10 @@
     <div class="tab mk-group-tab mk-group-tab-body" data-group="primary" data-tab="warbands" data-group-actor-kind="warbands">
       <section class="mk-group-linked-panel">
         <header class="mk-companions-header">
-          <div>
-            <h2>Warbands</h2>
-            <p>Track warbands following the group or assigned to boats and bastions.</p>
+          <div class="mk-group-section-title">
+            <h2 class="mk-group-section-heading">Warbands</h2>
+            <p class="mk-group-section-description" title="{{localize 'MK_SHADOWDARK.groupSheet.help.warbands.description'}}">{{localize 'MK_SHADOWDARK.groupSheet.help.warbands.description'}}</p>
+            <button type="button" class="mk-group-info-button" data-action="section-help" data-help-section="warbands" title="{{localize 'MK_SHADOWDARK.groupSheet.help.warbands.title'}}" aria-label="{{localize 'MK_SHADOWDARK.groupSheet.help.warbands.title'}}"><i class="fas fa-info" aria-hidden="true"></i></button>
           </div>
           <strong class="mk-companion-capacity"><i class="fas fa-people-group" aria-hidden="true"></i> {{mk.warbands.count}}</strong>
         </header>
@@ -546,11 +536,6 @@
           <span><i class="fas fa-chess-rook" aria-hidden="true"></i> Bastions <strong>{{mk.warbands.counts.bastion}}</strong></span>
         </div>
         {{#if mk.warbands.hasUnavailableBastions}}<p class="mk-warband-assignment-warning">Some linked bastions are unavailable. Warbands without a known assignment are marked as unavailable.</p>{{/if}}
-        <div class="mk-group-actor-dropzone">
-          <i class="fas fa-people-group" aria-hidden="true"></i>
-          <span>Drop an NPC warband anywhere in this tab</span>
-          <small>Click a warband to open its sheet. Assign it in the Boats tab or a bastion's Defenses tab.</small>
-        </div>
         {{#if mk.warbands.hasEntries}}
         <div class="mk-group-actor-list mk-warband-grid">
           {{#each mk.warbands.entries}}
@@ -575,7 +560,7 @@
           {{/each}}
         </div>
         {{else}}
-        <p class="mk-companions-empty">No warbands yet. Drop an NPC warband into this tab to link it to the group.</p>
+        <p class="mk-companions-empty">{{localize 'MK_SHADOWDARK.groupSheet.help.warbands.empty'}}</p>
         {{/if}}
       </section>
     </div>
@@ -583,24 +568,13 @@
     <div class="tab mk-group-tab mk-group-tab-body" data-group="primary" data-tab="mounts">
       <section class="mk-mounts-panel" data-mount-dropzone="true">
         <header class="mk-companions-header">
-          <div>
-            <h2>Mounts</h2>
+          <div class="mk-group-section-title">
+            <h2 class="mk-group-section-heading">Mounts</h2>
+            <p class="mk-group-section-description" title="{{localize 'MK_SHADOWDARK.groupSheet.help.mounts.description'}}">{{localize 'MK_SHADOWDARK.groupSheet.help.mounts.description'}}</p>
+            <button type="button" class="mk-group-info-button" data-action="section-help" data-help-section="mounts" title="{{localize 'MK_SHADOWDARK.groupSheet.help.mounts.title'}}" aria-label="{{localize 'MK_SHADOWDARK.groupSheet.help.mounts.title'}}"><i class="fas fa-info" aria-hidden="true"></i></button>
           </div>
           <strong class="mk-companion-capacity"><i class="fas fa-weight-hanging"></i> {{mk.mounts.totalCarrySlots}} free slots</strong>
         </header>
-
-        <div class="mk-mount-rules">
-          <span><i class="fas fa-shield-halved"></i> Acts on the rider's initiative; the rider chooses the mount's action.</span>
-          <span><i class="fas fa-person-walking-arrow-right"></i> Mounting or dismounting uses the rider's entire movement.</span>
-          <span><i class="fas fa-weight-hanging"></i> Gear slots equal 5 x the mount's STR bonus. A rider and their carried gear use 10 slots.</span>
-          <span><i class="fas fa-drumstick-bite"></i> Needs 1 ration each day in an unfamiliar environment.</span>
-        </div>
-
-        <div class="mk-mount-dropzone" data-mount-dropzone="true">
-          <i class="fas fa-horse" aria-hidden="true"></i>
-          <span>Drop an NPC mount here</span>
-          <small>Then drag an active party member onto the mount to assign its rider.</small>
-        </div>
 
         {{#if mk.mounts.hasEntries}}
         <div class="mk-mounts-list">
@@ -619,7 +593,7 @@
                 {{#if ../mk.canEditGroup}}<button type="button" data-action="clear-mount-rider" title="Remove rider" aria-label="Remove rider"><i class="fas fa-xmark"></i></button>{{/if}}
                 {{else}}
                 <i class="fas fa-user mk-mount-rider-placeholder" aria-hidden="true"></i>
-                <em>Drop an active party member here</em>
+                <em>{{localize 'MK_SHADOWDARK.groupSheet.help.mounts.noRider'}}</em>
                 {{/if}}
               </div>
               <div class="mk-mount-gear-summary">
@@ -636,18 +610,19 @@
           {{/each}}
         </div>
         {{else}}
-        <p class="mk-companions-empty">No mounts yet. Drop a mount actor in the area above.</p>
+        <p class="mk-companions-empty">{{localize 'MK_SHADOWDARK.groupSheet.help.mounts.empty'}}</p>
         {{/if}}
       </section>
     </div>
     <div class="tab mk-group-tab mk-group-tab-body" data-group="primary" data-tab="boats" data-group-actor-kind="boats">
       <section class="mk-group-linked-panel">
-        <header class="mk-companions-header"><h2>Boats</h2></header>
-        <div class="mk-group-actor-dropzone">
-          <i class="fas fa-ship" aria-hidden="true"></i>
-          <span>Drop an NPC boat here or in an empty part of this tab</span>
-          <small>Click a boat to open its actor sheet. Assign NPCs in its Crew and Warbands areas below.</small>
-        </div>
+        <header class="mk-companions-header">
+          <div class="mk-group-section-title">
+            <h2 class="mk-group-section-heading">Boats</h2>
+            <p class="mk-group-section-description" title="{{localize 'MK_SHADOWDARK.groupSheet.help.boats.description'}}">{{localize 'MK_SHADOWDARK.groupSheet.help.boats.description'}}</p>
+            <button type="button" class="mk-group-info-button" data-action="section-help" data-help-section="boats" title="{{localize 'MK_SHADOWDARK.groupSheet.help.boats.title'}}" aria-label="{{localize 'MK_SHADOWDARK.groupSheet.help.boats.title'}}"><i class="fas fa-info" aria-hidden="true"></i></button>
+          </div>
+        </header>
         {{#if mk.boats.hasEntries}}
         <div class="mk-group-actor-list">
           {{#each mk.boats.entries}}
@@ -679,7 +654,6 @@
               {{#each assignmentSections}}
               <section class="mk-boat-assignment-section" data-boat-assignment-kind="{{kind}}" aria-label="{{label}} assignments">
                 <header><strong>{{label}}</strong><small>{{slotRule}}</small></header>
-                <p class="mk-boat-assignment-hint">Drop an NPC here to assign {{label}}.</p>
                 {{#if hasEntries}}
                 <div class="mk-boat-assignment-list">
                   {{#each entries}}
@@ -705,19 +679,20 @@
           {{/each}}
         </div>
         {{else}}
-        <p class="mk-companions-empty">No boats yet. Drop an NPC boat into this tab to link it to the group.</p>
+        <p class="mk-companions-empty">{{localize 'MK_SHADOWDARK.groupSheet.help.boats.empty'}}</p>
         {{/if}}
       </section>
     </div>
 
     <div class="tab mk-group-tab mk-group-tab-body" data-group="primary" data-tab="bastions" data-group-actor-kind="bastions">
       <section class="mk-group-linked-panel">
-        <header class="mk-companions-header"><h2>Bastion</h2></header>
-        <div class="mk-group-actor-dropzone">
-          <i class="fas fa-chess-rook" aria-hidden="true"></i>
-          <span>Drop a Bastion actor anywhere in this tab</span>
-          <small>Click a bastion to open its Bastion Sheet.</small>
-        </div>
+        <header class="mk-companions-header">
+          <div class="mk-group-section-title">
+            <h2 class="mk-group-section-heading">Bastion</h2>
+            <p class="mk-group-section-description" title="{{localize 'MK_SHADOWDARK.groupSheet.help.bastions.description'}}">{{localize 'MK_SHADOWDARK.groupSheet.help.bastions.description'}}</p>
+            <button type="button" class="mk-group-info-button" data-action="section-help" data-help-section="bastions" title="{{localize 'MK_SHADOWDARK.groupSheet.help.bastions.title'}}" aria-label="{{localize 'MK_SHADOWDARK.groupSheet.help.bastions.title'}}"><i class="fas fa-info" aria-hidden="true"></i></button>
+          </div>
+        </header>
         {{#if mk.bastions.hasEntries}}
         <div class="mk-group-actor-list">
           {{#each mk.bastions.entries}}
@@ -731,7 +706,7 @@
           {{/each}}
         </div>
         {{else}}
-        <p class="mk-companions-empty">No bastions yet. Drop a Bastion actor into this tab to link it to the group.</p>
+        <p class="mk-companions-empty">{{localize 'MK_SHADOWDARK.groupSheet.help.bastions.empty'}}</p>
         {{/if}}
       </section>
     </div>

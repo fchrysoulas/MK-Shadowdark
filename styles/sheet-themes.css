@@ -1,0 +1,111 @@
+.mk-themed-sheet {
+  color-scheme: dark;
+  --mk-group-text: var(--mk-sheet-text, #d8d8d8);
+  --mk-group-muted: var(--mk-sheet-muted, #9b9b9b);
+  --button-background-color: rgba(11, 10, 19, 0.5);
+  --button-border-color: #9f8475;
+  --button-text-color: #e7d1b1;
+  --button-hover-background-color: #c9593f;
+  --button-hover-border-color: #e7d1b1;
+  --button-hover-text-color: #f7f3e8;
+  --button-focus-outline-color: #c9593f;
+  --table-background-color: rgba(11, 10, 19, 0.5);
+  --table-header-bg-color: #302831;
+  --table-header-text-color: #f0f0f0;
+  --table-header-border-color: #302831;
+  --table-row-color-even: rgba(255, 255, 255, 0.1);
+  --table-row-color-odd: transparent;
+  --table-row-color-highlight: #584a75;
+}
+
+.mk-themed-sheet.mk-sheet-theme-light {
+  color-scheme: light;
+  --mk-sheet-foreground-rgb: 43, 37, 31;
+  --mk-sheet-shade-rgb: 255, 255, 255;
+  --mk-sheet-shadow-rgb: 70, 52, 32;
+  --mk-sheet-inset-rgb: 244, 239, 229;
+  --mk-sheet-surface-rgb: 250, 247, 240;
+  --mk-sheet-panel-rgb: 255, 252, 246;
+  --mk-sheet-sidebar-rgb: 233, 226, 214;
+  --mk-sheet-gold-rgb: 128, 86, 24;
+  --mk-sheet-action-rgb: 166, 51, 20;
+  --mk-sheet-success-rgb: 42, 113, 58;
+  --mk-sheet-strong: #29241e;
+  --mk-sheet-text: #3f3830;
+  --mk-sheet-soft: #575048;
+  --mk-sheet-muted: #6a6258;
+  --mk-sheet-field: #fffdf9;
+  --mk-sheet-floating: #fffaf1;
+  --mk-sheet-disabled: #ded5c7;
+  --mk-sheet-inverse: #fffaf1;
+  --mk-sheet-gold: #805618;
+  --mk-sheet-warm: #984411;
+  --mk-sheet-success: #286437;
+  --mk-sheet-danger: #a0263c;
+  --mk-sheet-info: #24546f;
+  --mk-sheet-text-shadow: none;
+  --button-background-color: rgba(43, 37, 31, 0.05);
+  --button-border-color: rgba(43, 37, 31, 0.24);
+  --button-text-color: var(--mk-sheet-strong);
+  --button-hover-background-color: rgba(43, 37, 31, 0.12);
+  --button-hover-border-color: var(--mk-sheet-gold);
+  --button-hover-text-color: var(--mk-sheet-strong);
+  --button-focus-outline-color: var(--mk-sheet-gold);
+  --table-background-color: rgba(255, 255, 255, 0.5);
+  --table-header-bg-color: #ded5c7;
+  --table-header-text-color: var(--mk-sheet-strong);
+  --table-header-border-color: rgba(43, 37, 31, 0.18);
+  --table-row-color-even: rgba(43, 37, 31, 0.05);
+  --table-row-color-odd: transparent;
+  --table-row-color-highlight: rgba(128, 86, 24, 0.12);
+}
+
+.mk-themed-sheet button.mk-sheet-theme-toggle {
+  display: inline-grid;
+  flex: 0 0 30px;
+  place-items: center;
+  width: 30px;
+  height: 30px;
+  min-height: 30px;
+  margin: 0;
+  padding: 0;
+  border: 1px solid rgba(var(--mk-sheet-foreground-rgb, 255, 255, 255), 0.22);
+  border-radius: 50%;
+  background: rgba(var(--mk-sheet-foreground-rgb, 255, 255, 255), 0.04);
+  color: var(--mk-sheet-strong, #e8e8e8);
+  font-size: 14px;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.mk-themed-sheet button.mk-sheet-theme-toggle:is(:hover, :focus-visible) {
+  border-color: currentColor;
+  background: rgba(var(--mk-sheet-foreground-rgb, 255, 255, 255), 0.12);
+  outline: 2px solid currentColor;
+  outline-offset: 2px;
+}
+
+.mk-themed-sheet button.mk-sheet-theme-toggle i {
+  margin: 0;
+}
+
+.mk-group-sheet.mk-sheet-theme-light :is(.mk-travel-activity-icon, .mk-travel-progress-node) img {
+  filter: brightness(0) opacity(0.78);
+}
+
+.mk-themed-sheet.mk-sheet-theme-light :is(
+  .mk-group-image, .mk-party-member-portrait img, .mk-group-summary-list li > img,
+  .mk-shared-item-name-cell img, .mk-group-actor-open img, .mk-boat-assignment-open img,
+  .mk-bastion-image, .mk-bastion-vault-item-main img, .mk-bastion-defense-actor img
+)[src$=".svg"] {
+  background: #3f3830;
+}
+
+.mk-group-sheet.mk-sheet-theme-light .mk-member-remove {
+  color: #fff;
+}
+
+.mk-group-sheet.mk-sheet-theme-light select option:checked,
+.mk-group-sheet.mk-sheet-theme-light select option:hover {
+  color: #fff;
+}

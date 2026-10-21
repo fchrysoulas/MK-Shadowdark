@@ -1,3 +1,4 @@
+import { getSheetTheme } from "../libs/sheet-themes.js";
 import {
   ACTIVITY_KIND_TRAVEL,
   GROUP_SHEET_CHAT_FLAG_TRAVEL_PROMPT,
@@ -263,6 +264,7 @@ async function showTravelRollPrompt(payload = {}) {
 
   const wrap = document.createElement("div");
   wrap.id = TRAVEL_PROMPT_ELEMENT_ID;
+  wrap.classList.add(...getSheetTheme("group").classes);
   wrap.dataset.promptId = payload.promptId ?? "";
   wrap.dataset.groupActorUuid = payload.groupActorUuid ?? "";
   wrap.innerHTML = `

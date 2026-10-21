@@ -165,6 +165,8 @@ The native MK-Shadowdark **Group Sheet** remains the authoritative party/procedu
 
 Create an Actor and choose **Group** in the Actor creation dialog. MK-Shadowdark creates a normal Foundry Actor using the Group sheet and module flags rather than introducing another core Actor document type.
 
+Both the Group Sheet and Bastion Sheet offer **Dark** (default) and **Light** themes. Use the sun/moon button in either sheet's header to switch. Each user's choices are saved separately for the two sheet types and also appear under **Module Settings → Group Sheet → Appearance**. Changing appearance does not change the actor or other users' preferences.
+
 The Group Sheet structure is intentionally stable. Its main areas remain:
 
 - party / roster member cards
@@ -178,11 +180,17 @@ The Group Sheet structure is intentionally stable. Its main areas remain:
 - Boats
 - Bastion
 
-The Group Sheet uses Montserrat throughout. Its nine-tab rail uses icons at every width, with tab names shown on hover, accessible labels, and Enter/Space keyboard activation. Summary opens first and shows party treasure, weekly wages and salaries, hirelings with their owners, warbands, mounts with their riders, boats with their captains and crew/warband assignments, and bastions. Hirelings cost **1 gp each per week**; warbands linked in the group's Warbands tab cost **3 gp per level per week**. Summary shows each cost and the combined weekly payroll, with a clearly marked subtotal when warband levels or actors are unavailable. Warbands follows Hirelings, with Boats after Mounts, followed by Bastion; the rail scrolls horizontally when needed.
+The Group Sheet uses Montserrat throughout. Its nine-tab rail uses icons at every width, with tab names shown on hover, accessible labels, and Enter/Space keyboard activation. Summary opens first and shows party treasure, weekly wages and salaries, hirelings with their owners, warbands, mounts with their riders, boats with their captains and crew/warband assignments, and bastions. Hirelings cost **1 gp each per week**; warbands linked in the group's Warbands tab cost **3 gp per level per unit per week**, using assigned quantities on boats and in bastions, or one unit when unassigned. A built **Granary** in a linked bastion reduces wages by **3 gp per stationed unit per week**, with a minimum of 0 gp; other destinations receive no discount. Summary includes these discounts in each warband's cost and the combined weekly payroll, with a clearly marked subtotal when warband levels, actors, or bastion assignments are unavailable. Warbands follows Hirelings, with Boats after Mounts, followed by Bastion; the rail scrolls horizontally when needed.
+
+Party sidebar cards use compact stat roll buttons. Click a character portrait to open their sheet; click the rest of the card header to expand or collapse their stats.
+
+Each Group Sheet tab uses a compact header with its title, grey short description, and **i** button on one line. The Party sidebar, Active Torches, Shared Items, and Party Treasure also have **i** buttons explaining their controls and rules. These help windows are available to players with read-only group access. Inventory, Mounts, Warbands, Boats, and Bastion keep drop and assignment instructions in their help windows so their content stays compact. Empty shared inventory shows a short status message. Mount initiative, movement, carrying capacity, and ration rules are in the Mounts help window; campfire rules and task benefits are in Camping help.
+
+Traveling and Camping task panels show activity requirements and assignments. Submit travel checks through **Prompt Travelling**; make camping checks from the assigned character's sheet using the displayed ability and DC.
 
 Hirelings have a free-text Background / Profession field and an Owner dropdown listing the group's player characters, including inactive party members. GMs can assign an owner or leave the hireling Unassigned. Removing a character from the group clears their hireling ownership; changing the active party does not.
 
-Players with Observer or Owner permission on the group can drag a shared item's image or name from **Inventory** onto a character sheet they own, including the Character Dashboard's equipment and Quick Slots. This moves the full item stack out of shared inventory while preserving its quantity and item data. An active GM processes transfers in sequence to prevent simultaneous players taking the same stack; if source removal fails, the destination copy is rolled back. Dropping an item back onto the same group leaves it in place.
+Shared **Inventory** uses a slot-card grid like the Bastion Vault, with item icons, names, slot costs, and quantity controls alongside Party Treasure. Players with Observer or Owner permission on the group can drag a shared item's image or name onto a character sheet they own, including the Character Dashboard's equipment and Quick Slots. This moves the full item stack out of shared inventory while preserving its quantity and item data. An active GM processes transfers in sequence to prevent simultaneous players taking the same stack; if source removal fails, the destination copy is rolled back. Dropping an item back onto the same group leaves it in place.
 
 GMs can drag NPC actors representing warbands into the Warbands tab, NPC boats into the Boats tab, and Bastion actors into the Bastion tab, either onto the tab header or anywhere in its content area. These are links to the original actors: click a card to open its sheet, or use its trash button to remove the group link without deleting the actor. Duplicate drops do not add extra links.
 
@@ -552,6 +560,7 @@ Verify the item is actually held/equipped according to Shadowdark data and Token
 
 ## Notes
 
+- Development checks: run `npm run syntax`, `npm run lint`, and `npm test`. The test command runs the maintained `tests/*.test.mjs` suite and excludes archived release snapshots under `build/`.
 - Settings are grouped in Foundry's module settings menu.
 - Base Management was removed from MK-Shadowdark; old compatibility API calls warn instead of creating the removed actor type.
 - The standalone encounter UI and the old GM Screen Mock prototype are retired.

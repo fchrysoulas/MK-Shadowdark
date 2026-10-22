@@ -27,7 +27,7 @@ function element() {
 }
 
 let nextMessageId = 0;
-async function attack({ accept = true, ranged = false, spell = false, success = true, hp = 12, secondTarget = false, ownerOnline = true } = {}) {
+async function attack({ accept = true, ranged = false, spell = false, success = true, hp = 12, secondTarget = false, ownerOnline = true, unavailableProperties = false } = {}) {
   const gm = { id: "gm", active: true, isGM: true };
   const player = { id: "player", active: ownerOnline, isGM: false };
   const users = [gm, player];
@@ -36,6 +36,16 @@ async function attack({ accept = true, ranged = false, spell = false, success = 
   const actors = [0, ...(secondTarget ? [1] : [])].map(index => {
     const items = index === 0 ? [{ id: "shield", name: "Shield", type: "Armor",
       system: { equipped: true, stashed: false, propertyNames: ["Sundering"] } }] : [];
+    if (index === 0 && unavailableProperties) {
+      items[0].system.properties = ["Compendium.props.Item.sundering"];
+      items.unshift({ id: "sword", name: "Sword", type: "Weapon",
+        system: { equipped: true, properties: ["Compendium.props.Item.missing"] } });
+      for (const item of items) {
+        Object.defineProperty(item.system, "propertyNames", {
+          get() { throw new TypeError("Property is not loaded"); }
+        });
+      }
+    }
     items.get = id => items.find(item => item.id === id);
     return {
       id: `actor${index}`, name: `Hero ${index}`, type: "Player", items,
@@ -81,7 +91,11 @@ async function attack({ accept = true, ranged = false, spell = false, success = 
   globalThis.foundry = { utils: { getProperty: (object, path) => path.split(".").reduce((value, key) => value?.[key], object) } };
   globalThis.document = { createElement: element };
   globalThis.ui = {};
-  globalThis.fromUuid = async uuid => uuid === "Item.attack" ? source : tokens.find(token => token.uuid === uuid);
+  globalThis.fromUuid = async uuid => {
+    if (uuid === "Item.attack") return source;
+    if (uuid === "Compendium.props.Item.sundering") return { type: "Property", name: "Sundering" };
+    return tokens.find(token => token.uuid === uuid);
+  };
   const message = {
     id: `attack-${++nextMessageId}`, author: gm, content: "Native attack",
     rollConfig: {
@@ -119,6 +133,18 @@ test("native melee Auto Damage cancels a sundered hit before HP, Death Timer, an
   assert.equal(message.getFlag("shadowdark", "damageApplied"), true);
   assert.equal(message.getFlag("mk-shadowdark", "autoDamageProcessed"), true);
   assert.match(message.content, /sundering.cancelled/);
+});
+
+test("an unavailable equipment Property does not block the melee Sundering decision or damage resolution", async () => {
+  const { actors, calls, message } = await attack({ unavailableProperties: true });
+  assert.deepEqual(calls.decisions, ["player"]);
+  assert.deepEqual(calls.deletion, [{ actor: "actor0", ids: ["shield"] }]);
+  assert.deepEqual(actors[0].items.map(item => item.id), ["sword"]);
+  assert.equal(actors[0].system.attributes.hp.value, 12);
+  assert.deepEqual(calls.damage, []);
+  assert.deepEqual(calls.deathTimer, []);
+  assert.deepEqual(calls.shake, []);
+  assert.equal(message.getFlag("mk-shadowdark", "autoDamageProcessing").status, "complete");
 });
 
 test("declining in the native damage flow keeps the item and applies critical damage normally", async () => {

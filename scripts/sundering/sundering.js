@@ -53,7 +53,11 @@ async function sunderingItems(actor, resolveUuid = globalThis.fromUuid) {
   const items = [];
   for (const item of actor.items ?? []) {
     if (!isEquipped(item) || isStashed(item)) continue;
-    let sundering = hasProperty(item, "Sundering");
+    let sundering = false;
+    try { sundering = hasProperty(item, "Sundering"); } catch (_error) {
+      // Shadowdark's synchronous Property getters can throw before a compendium is loaded.
+      // Resolve stored UUIDs below so one unavailable Property cannot suppress the offer.
+    }
     if (!sundering && typeof resolveUuid === "function") {
       for (const uuid of item.system?.properties ?? []) {
         if (typeof uuid !== "string") continue;
@@ -128,6 +132,7 @@ async function promptForItem(target, { expiresAt = decisionTime() + DECISION_TIM
   };
   try {
     const result = await DialogV2.wait({
+      modal: true,
       window: { title: localize("title"), resizable: false },
       position: { width: 360 },
       classes: ["mk-sundering-dialog"],

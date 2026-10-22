@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.9.35
+
+### Fixed
+
+- Fixed Sundering offers being blocked by unavailable equipment Property names; the timed prompt now opens above other dialogs.
+
 ## 1.9.34
 
 ### Added

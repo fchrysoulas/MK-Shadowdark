@@ -48,7 +48,7 @@ For manual installation, download the [latest module ZIP](https://github.com/fch
 | --- | --- |
 | Auto Damage | Applies targeted native attack and spell damage or healing, including damage traits and optional token feedback. |
 | Damage Traits | Property-based Resistance, Immunity, and Vulnerability for weapons, spells, and NPC attacks. |
-| Sundering | Offers eligible characters 10 seconds to destroy equipped Sundering gear and cancel incoming melee damage. A compact prompt shows the countdown; closing it or letting time run out takes damage. Requires Auto Damage. |
+| Sundering | Offers eligible characters 10 seconds to destroy equipped Sundering gear and cancel incoming melee damage. A compact modal prompt shows the countdown; closing it or letting time run out takes damage. Requires Auto Damage. |
 | Targeting Assistant | Keeps attack and spell targets valid, supports multiple targets, and automatically targets the caster for Self spells. |
 | Spell Area Templates | Places cubes, lines, circles, or straight walls to select affected tokens before casting, including sized bases on the isometric board. Near cubes are 6 × 6 cells; Far lines are 12 × 1. |
 | Spell Effects | Applies linked Spell Effect items to successful spell targets and removes Focus-linked effects when Focus ends. |

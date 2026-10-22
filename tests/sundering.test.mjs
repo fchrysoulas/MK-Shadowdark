@@ -85,6 +85,31 @@ test("Sundering uses equipped and stashed rules and resolves linked Property UUI
   assert.deepEqual(await sunderingItems(f.actor), []);
 });
 
+test("unavailable native Property names do not suppress a linked Sundering offer", async t => {
+  const unrelated = equippedItem("sword", []);
+  unrelated.system.properties = ["Compendium.props.Item.missing"];
+  const shield = equippedItem("shield", []);
+  shield.system.properties = ["Compendium.props.Item.sundering"];
+  for (const item of [unrelated, shield]) {
+    // Shadowdark's synchronous getter dereferences unavailable Property documents.
+    Object.defineProperty(item.system, "propertyNames", {
+      get() { throw new TypeError("Cannot read properties of null (reading 'name')"); }
+    });
+    item.system.hasProperty = () => { throw new TypeError("Property is not loaded"); };
+  }
+  const f = fixture([unrelated, shield]);
+  const previousResolver = globalThis.fromUuid;
+  t.after(() => {
+    if (previousResolver === undefined) delete globalThis.fromUuid;
+    else globalThis.fromUuid = previousResolver;
+  });
+  globalThis.fromUuid = async uuid => uuid.endsWith(".sundering")
+    ? { type: "Property", name: "Sundering" } : null;
+  const offer = await createOffer(f.message, f.target, f.actor);
+  assert.deepEqual(offer.items, [{ id: "shield", name: "shield" }]);
+  assert.equal(offer.userId, f.player.id);
+});
+
 test("offers go to an active owner, with GM fallback, and exclude healing and zero damage", async () => {
   const f = fixture();
   assert.equal(decisionUser(f.actor), f.player);
@@ -246,6 +271,7 @@ test("the prompt defaults to damage on close and escapes item and actor names", 
   await f.plan();
   f.target.actorName = "<script>bad()</script>";
   foundry.applications = { api: { DialogV2: { wait: async config => {
+    assert.equal(config.modal, true, "The timed decision must appear above other open dialogs");
     assert.ok(config.buttons.find(button => button.action === "damage").default);
     assert.equal(config.close(), null);
     assert.equal(config.rejectClose, false);

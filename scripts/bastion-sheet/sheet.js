@@ -1,3 +1,4 @@
+import { queueLinkedSheetRefresh } from "../libs/linked-sheet-refresh.js";
 import {
   BASTION_ACTOR_TYPE,
   BASTION_DEFENSE_KINDS,
@@ -153,7 +154,7 @@ function rerenderOpenBastionSheets(updatedActor) {
     const state = getBastionState(app.actor);
     if (Object.values(state.defenses).some(entries => (
       entries.some(entry => entry.actorUuid === updatedActor.uuid)
-    ))) app.render(false);
+    ))) queueLinkedSheetRefresh(app);
   }
 }
 

@@ -9,7 +9,7 @@ import { installBaseTokenRuler } from "./token-ruler.js";
 const MODULE_ID = "mk-shadowdark";
 const FLAG = "isometricBoard";
 const TOOL = "mk-isometric-board";
-const MOVE_TOOL = "mk-isometric-board-move";
+const SETTINGS_TOOL = "mk-isometric-board-settings";
 const COLORS = { grid: 0xc8bda4, near: 0x4ea9cb, close: 0xdbab58, self: 0x8bcbd7, enemyClose: 0xd95858 };
 const OPACITY_SETTING = "isometricBoardOpacity";
 
@@ -30,7 +30,10 @@ export class IsometricBoardOverlay {
     this.env = environment;
     this.root = null;
     this.hud = null;
+    this.settingsVisible = false;
     this.frame = null;
+    this.gridGeometry = null;
+    this.gridDrawKey = null;
     this.hover = null;
     this.moveMode = false;
     this.gridMoveMode = false;
@@ -409,17 +412,36 @@ export class IsometricBoardOverlay {
 
   registerControls(controls) {
     const tokenTools = controls?.tokens?.tools;
-    if (!tokenTools || !this.canvas?.scene) return;
-    if (this.game?.user?.isGM) tokenTools[TOOL] = {
+    if (!tokenTools) return;
+    // SceneControls may reuse a tool collection across refreshes and roles.
+    for (const name of [TOOL, SETTINGS_TOOL, "mk-isometric-board-move"]) delete tokenTools[name];
+    if (!this.canvas?.scene || !this.game?.user?.isGM) return;
+    tokenTools[TOOL] = {
       name: TOOL, title: this.text("toggle"), icon: "fa-solid fa-chess-board",
       order: Object.keys(tokenTools).length, toggle: true, active: this.enabled,
       onChange: () => { void this.toggle().catch(error => this.reportError(error)); }
     };
-    if (this.enabled) tokenTools[MOVE_TOOL] = {
-      name: MOVE_TOOL, title: this.text("moveTitle"), icon: "fa-solid fa-person-walking",
-      order: Object.keys(tokenTools).length, toggle: true, active: this.moveMode,
-      onChange: (_event, active) => this.setMoveMode(typeof active === "boolean" ? active : !this.moveMode)
+    if (this.enabled) tokenTools[SETTINGS_TOOL] = {
+      name: SETTINGS_TOOL, title: this.text("settingsToggle"), icon: "fa-solid fa-sliders",
+      order: Object.keys(tokenTools).length, toggle: true, active: this.settingsVisible,
+      onChange: (_event, active) => this.setSettingsVisible(typeof active === "boolean" ? active : !this.settingsVisible)
     };
+  }
+
+  setSettingsVisible(visible = !this.settingsVisible) {
+    this.settingsVisible = Boolean(visible && this.enabled && this.game?.user?.isGM && this.hud);
+    if (!this.settingsVisible) {
+      this.setGridMoveMode(false);
+      if (this.moveMode) this.setMoveMode(false);
+    }
+    this.syncSettingsPanel();
+    if (this.settingsVisible) this.schedule();
+    this.refreshControls();
+    return this.settingsVisible;
+  }
+
+  syncSettingsPanel() {
+    if (this.hud) this.hud.hidden = !(this.settingsVisible && this.enabled && this.game?.user?.isGM);
   }
 
   refreshControls() {
@@ -646,6 +668,7 @@ export class IsometricBoardOverlay {
     if (!document?.body) return;
     this.hud = document.createElement("aside");
     this.hud.id = "mk-isometric-board-hud";
+    this.hud.hidden = true;
     this.hud.setAttribute("aria-label", this.text("title"));
     const heading = document.createElement("strong");
     heading.textContent = this.text("title");
@@ -738,6 +761,7 @@ export class IsometricBoardOverlay {
     this.hud.append(heading, this.scaleLabel, this.moveButton, positionControl, opacityControl, colorControl, boardSizeControl,
       tiltControl, rotationControl, this.status, this.ranges, legend);
     document.body.append(this.hud);
+    this.syncSettingsPanel();
   }
 
   schedule() {
@@ -855,24 +879,41 @@ export class IsometricBoardOverlay {
     const opacity = this.opacity / 100;
     const gridColor = Number.parseInt(this.gridColor.slice(1), 16);
     if (!this.canMove(token) && this.moveMode) this.setMoveMode(false);
-    graphics.clear();
-    for (let row = 0; row < layout.size; row++) for (let column = 0; column < layout.size; column++) {
-      const cell = { column, row };
-      const band = footprint ? rangeBand(footprint, cell) : null;
-      const enemyClose = band !== "self" && enemiesInClose.has(row * layout.size + column);
-      graphics.lineStyle(1, gridColor, 0.6 * opacity);
-      // Leave ordinary cells transparent; only the selected token's ranges tint the map.
-      graphics.beginFill(enemyClose ? COLORS.enemyClose : COLORS[band] ?? COLORS.grid,
-        (enemyClose || band === "self" ? 0.6 : band === "close" ? 0.3 : band === "near" ? 0.125 : 0) * opacity);
-      graphics.drawPolygon(this.polygon(cell, layout));
-      graphics.endFill();
+    const geometryKey = [layout.size, layout.originX, layout.originY, layout.cellWidth, layout.cellHeight,
+      layout.centerX, layout.centerY, layout.cos, layout.sin].join("|");
+    if (geometryKey !== this.gridGeometry?.key) {
+      const cells = [];
+      for (let row = 0; row < layout.size; row++) for (let column = 0; column < layout.size; column++) {
+        const cell = { column, row };
+        cells.push({ cell, polygon: this.polygon(cell, layout) });
+      }
+      this.gridGeometry = { key: geometryKey, cells };
+    }
+    // Hover, ruler and refreshToken events can repeat without changing any cell.
+    const drawKey = [geometryKey, opacity, gridColor, from?.column, from?.row, size,
+      [...enemiesInClose].sort((a, b) => a - b).join(",")].join("|");
+    if (drawKey !== this.gridDrawKey) {
+      graphics.clear();
+      for (const [index, { cell, polygon }] of this.gridGeometry.cells.entries()) {
+        const band = footprint ? rangeBand(footprint, cell) : null;
+        const enemyClose = band !== "self" && enemiesInClose.has(index);
+        graphics.lineStyle(1, gridColor, 0.6 * opacity);
+        // Leave ordinary cells transparent; only the selected token's ranges tint the map.
+        graphics.beginFill(enemyClose ? COLORS.enemyClose : COLORS[band] ?? COLORS.grid,
+          (enemyClose || band === "self" ? 0.6 : band === "close" ? 0.3 : band === "near" ? 0.125 : 0) * opacity);
+        graphics.drawPolygon(polygon);
+        graphics.endFill();
+      }
+      this.gridDrawKey = drawKey;
     }
     this.drawGridHandles(layout);
-    this.updateHud(token, from);
+    this.updateHud(token, from, layout);
   }
 
-  updateHud(token, from) {
+  updateHud(token, from, layout = this.layout) {
     if (!this.hud) return;
+    this.syncSettingsPanel();
+    if (this.hud.hidden) return;
     this.syncGridMoveControls();
     this.moveButton.disabled = this.moving || !this.canMove(token);
     this.moveButton.setAttribute("aria-pressed", String(this.moveMode));
@@ -888,7 +929,7 @@ export class IsometricBoardOverlay {
     const labels = [];
     if (from) for (const other of this.canvas.tokens?.placeables ?? []) {
       if (other === token || !this.canSee(other)) continue;
-      const to = tokenCell(other.document, this.layout, {}, this.env);
+      const to = tokenCell(other.document, layout, {}, this.env);
       if (!to) continue;
       const distance = footprintDistance({ ...from, size: tokenFootprintSize(token.document) },
         { ...to, size: tokenFootprintSize(other.document) }) * this.feetPerCell;
@@ -911,10 +952,16 @@ export class IsometricBoardOverlay {
   handlePointerMove(event) {
     if (this.gridMoveMode) {
       const point = this.eventPoint(event);
-      if (!this.gridDrag && point) this.gridResizeCorner = this.gridCornerAt(point);
-      this.syncGridMoveControls();
+      if (!this.gridDrag && point) {
+        const corner = this.gridCornerAt(point);
+        if (corner !== this.gridResizeCorner) {
+          this.gridResizeCorner = corner;
+          this.syncGridMoveControls();
+        }
+      }
       return;
     }
+    if (!this.settingsVisible && !this.moveMode) return;
     const token = this.selectedToken();
     if (!this.enabled || !token) return;
     const next = pointToTokenCell(token.document, this.layout, this.eventPoint(event));
@@ -980,6 +1027,7 @@ export class IsometricBoardOverlay {
 
   isOccupied(document, cell, operation, dimensions = {}) {
     if (!cell) return false;
+    const layout = this.layout;
     const candidate = { ...cell, size: tokenFootprintSize(document, dimensions) };
     const matches = other => other && footprintDistance(candidate, other) === 0;
     for (const other of this.tokenDocuments()) {
@@ -987,9 +1035,9 @@ export class IsometricBoardOverlay {
       const planned = operation?.movement?.[other.id]?.waypoints?.at(-1);
       // During animation the document's rendered coordinates can lag its saved
       // destination. Keep that destination occupied until the next actual move.
-      if ((other._source && matches(tokenFootprint(other, this.layout, other._source, this.env)))
-        || matches(tokenFootprint(other, this.layout, {}, this.env))
-        || (planned && matches(tokenFootprint(other, this.layout, { ...other._source, ...planned }, this.env)))) return true;
+      if ((other._source && matches(tokenFootprint(other, layout, other._source, this.env)))
+        || matches(tokenFootprint(other, layout, {}, this.env))
+        || (planned && matches(tokenFootprint(other, layout, { ...other._source, ...planned }, this.env)))) return true;
     }
     for (const [id, destination] of this.pendingDestinations) {
       if (id !== document.id && matches(destination)) return true;
@@ -1024,6 +1072,7 @@ export class IsometricBoardOverlay {
   }
 
   destroy() {
+    this.settingsVisible = false;
     this.setGridMoveMode(false);
     this.animatedArrows.clear();
     this.stopSelectionAnimation();
@@ -1045,6 +1094,8 @@ export class IsometricBoardOverlay {
     if (this.root && !this.root.destroyed) this.root.destroy({ children: true });
     this.root = null;
     this.graphics = null;
+    this.gridGeometry = null;
+    this.gridDrawKey = null;
     this.hud?.remove();
     this.hud = null;
     this.opacityInput = null;

@@ -1096,7 +1096,7 @@ test("players read the shared grid size but cannot change it, with snapping and 
   assert.equal(ruler._getWaypointLabelContext({ ...second, stage: "planned", previous: first }, {}).cost.total, "5");
 });
 
-test("legacy 10-foot scenes use 5-foot native drag labels, paths and HUD movement distances for players", () => {
+test("legacy 10-foot scenes use 5-foot native drag labels and paths for players without updating a hidden HUD", () => {
   const { environment, hooks, token, scene, setFlag } = harness({ gm: false });
   setFlag({ enabled: true, feetPerCell: 10 });
   const board = registerIsometricBoard(environment);
@@ -1111,7 +1111,8 @@ test("legacy 10-foot scenes use 5-foot native drag labels, paths and HUD movemen
   assert.deepEqual(measureBasePath(token.document, board.layout, [first, second], environment), { total: 5, delta: 5 });
   board.hover = { column: 6, row: 5 };
   board.draw();
-  assert.match(board.status.textContent, /nearMove:5\|G6/);
+  assert.equal(board.hud.hidden, true);
+  assert.equal(board.status.textContent, undefined);
 });
 
 test("native token bases, including resized tokens, align to the destination cell", () => {
@@ -1196,6 +1197,7 @@ test("Large placement, destination outlines, native rulers, and collisions share
   const board = registerIsometricBoard(environment);
   hooks.get("setup")[0]();
   hooks.get("ready")[0]();
+  board.setMoveMode(true);
   Object.assign(token.document, tokenPosition(token.document, board.layout, { column: 3, row: 3 }, {}, environment));
   const first = { x: token.document.x, y: token.document.y, width: 2, height: 4 };
   const target = { column: 9, row: 8 };
@@ -1232,6 +1234,7 @@ test("odd and even creature bases clamp inside board edges and Board Move agrees
     Object.assign(token.document, { width, height: width + 2 });
     const board = registerIsometricBoard(environment);
     hooks.get("ready")[0]();
+    board.setMoveMode(true);
     Object.assign(token.document, tokenPosition(token.document, board.layout, { column: 0, row: 0 }));
     for (const [pointer, expected] of [
       [project(board.layout, 0.1, 0.1), { column: 0, row: 0 }],
@@ -1259,6 +1262,8 @@ test("ranges and selected highlights use the full base and nearest occupied edge
   Object.assign(token.document, tokenPosition(token.document, board.layout, { column: 4, row: 4 }));
   addOccupant(context, { column: 7, row: 6 }, { width: 2, height: 3 });
   board.refresh();
+  board.setSettingsVisible(true);
+  board.draw();
   assert.equal(board.graphics.fillAlphas.filter(alpha => alpha === 0.6 * 0.2).length, 9);
   assert.match(board.status.textContent, /selectedSized:Adventurer\|E5\|3/);
   assert.match(board.ranges.textContent, /close\|5/);
@@ -1944,7 +1949,7 @@ test("grid resizing cannot merge occupied cells and never moves existing tokens"
   assert.equal(calls.moves.length, 0);
 });
 
-test("player range HUD never reveals hidden, invisible, or preview tokens", () => {
+test("a player's hidden settings panel performs no range-label work", () => {
   const { environment, TokenDocument } = harness({ gm: false });
   environment.canvas.tokens.placeables.push(
     { document: new TokenDocument({ id: "visible" }), name: "Visible Raider", visible: true, isVisible: true },
@@ -1953,9 +1958,14 @@ test("player range HUD never reveals hidden, invisible, or preview tokens", () =
     { document: new TokenDocument({ id: "preview" }), name: "Preview Raider", isPreview: true }
   );
   const board = new IsometricBoardOverlay(environment);
+  let formats = 0;
+  const format = environment.game.i18n.format;
+  environment.game.i18n.format = (...args) => { if (args[0].endsWith(".range")) formats++; return format(...args); };
   board.refresh();
-  assert.match(board.ranges.textContent, /Visible Raider/);
-  assert.doesNotMatch(board.ranges.textContent, /Hidden|Unseen|Preview/);
+  board.draw();
+  assert.equal(board.hud.hidden, true);
+  assert.equal(board.ranges.textContent, undefined);
+  assert.equal(formats, 0);
 });
 
 test("teardown restores original grid visibility, destroys graphics, and removes listeners", () => {
@@ -2209,6 +2219,7 @@ test("hover and Board Move show neither destination boxes nor lines, retaining n
   const { environment, token, calls } = harness();
   const board = new IsometricBoardOverlay(environment);
   board.refresh();
+  board.setSettingsVisible(true);
   const destination = { column: 7, row: 8 };
   for (const moveMode of [false, true]) {
     board.setMoveMode(moveMode);
@@ -2374,15 +2385,215 @@ test("native base rulers preserve hidden movement privacy and obey zero opacity"
   assert.equal(ruler.basePath.visible, false);
 });
 
-test("feature controls expose the scene toggle only to GMs", () => {
-  for (const gm of [false, true]) {
-    const { environment } = harness({ gm });
+test("unchanged refreshes reuse cell geometry and hover updates only the open settings panel", () => {
+  const { environment, calls, token } = harness();
+  const board = new IsometricBoardOverlay(environment);
+  board.refresh();
+  if (board.frame !== null) calls.frames.at(-1)();
+  let clears = 0;
+  let polygons = 0;
+  const clear = board.graphics.clear.bind(board.graphics);
+  const polygon = board.polygon.bind(board);
+  board.graphics.clear = () => { clears++; return clear(); };
+  board.polygon = (...args) => { polygons++; return polygon(...args); };
+  const frames = calls.frames.length;
+  for (let i = 0; i < 100; i++) {
+    board.draw();
+    const point = cellCenter(board.layout, { column: 5 + i % 2, row: 5 });
+    board.handlePointerMove(gridPointer(board, point.x + 10, point.y + 20));
+  }
+  assert.equal(clears, 0);
+  assert.equal(polygons, 0);
+  assert.equal(calls.frames.length, frames);
+  assert.equal(board.hover, null);
+  board.setSettingsVisible(true);
+  const point = cellCenter(board.layout, { column: 6, row: 5 });
+  board.handlePointerMove(gridPointer(board, point.x + 10, point.y + 20));
+  calls.frames.at(-1)();
+  assert.match(board.status.textContent, /nearMove:5\|G6/);
+  assert.equal(clears, 0);
+  assert.equal(polygons, 0);
+  Object.assign(token.document, tokenPosition(token.document, board.layout, { column: 6, row: 5 }));
+  board.draw();
+  assert.equal(clears, 1);
+  assert.equal(polygons, 0);
+  assert.equal(board.graphics.fillColors[5 * 18 + 6], 0x8bcbd7);
+});
+
+test("cached cells update for enemies, opacity, color and layout changes and release on teardown", async () => {
+  const context = harness();
+  const { environment, token, setFlag } = context;
+  const enemy = addOccupant(context, { column: 6, row: 5 }, { id: "enemy", disposition: -1 });
+  const board = new IsometricBoardOverlay(environment);
+  board.refresh();
+  const original = board.gridGeometry;
+  const index = 5 * 18 + 6;
+  assert.equal(board.graphics.fillColors[index], 0xd95858);
+  enemy.document.isSecret = true;
+  board.draw();
+  assert.equal(board.graphics.fillColors[index], 0xdbab58);
+  assert.equal(board.gridGeometry, original);
+  await board.setOpacity(60, { persist: false });
+  board.draw();
+  assert.equal(board.graphics.lineAlphas[0], 0.6 * 0.6);
+  await board.setGridColor("#123456", { persist: false });
+  board.draw();
+  assert.equal(board.graphics.lineColors[0], 0x123456);
+  assert.equal(board.gridGeometry, original);
+  setFlag({ enabled: true, rotation: 35, scaleX: 1.2, scaleY: 0.7, offsetY: 200 });
+  board.draw();
+  assert.notEqual(board.gridGeometry, original);
+  assert.deepEqual(board.graphics.polygonPoints[0], board.polygon({ column: 0, row: 0 }));
+  environment.canvas.tokens.controlled = [];
+  board.draw();
+  assert.ok(board.graphics.fillAlphas.every(alpha => alpha === 0));
+  environment.canvas.tokens.controlled = [token];
+  board.destroy();
+  assert.equal(board.gridGeometry, null);
+  assert.equal(board.gridDrawKey, null);
+  board.refresh();
+  assert.equal(board.graphics.polygons, 324);
+});
+
+test("collision scans calculate the board layout once while checking all live and saved bases", () => {
+  const { environment, TokenDocument, token, scene } = harness();
+  const documents = Array.from({ length: 100 }, (_, i) => {
+    const document = new TokenDocument({ id: `other-${i}`, cell: { column: i % 18, row: Math.floor(i / 18) } });
+    document._source = { x: document.x, y: document.y };
+    return document;
+  });
+  scene.tokens = { contents: [token.document, ...documents] };
+  const board = new IsometricBoardOverlay(environment);
+  board.refresh();
+  let reads = 0;
+  const getFlag = scene.getFlag;
+  scene.getFlag = (...args) => { reads++; return getFlag(...args); };
+  assert.equal(board.isOccupied(token.document, { column: 17, row: 17 }), false);
+  assert.equal(reads, 1);
+  Object.assign(documents[0], tokenPosition(documents[0], board.layout, { column: 17, row: 17 }));
+  assert.equal(board.isOccupied(token.document, { column: 17, row: 17 }), true);
+});
+
+test("hidden GM panel skips token-range formatting and fills current ranges when reopened", () => {
+  const context = harness();
+  const { environment, calls } = context;
+  addOccupant(context, { column: 6, row: 5 }, { id: "visible" });
+  addOccupant(context, { column: 7, row: 5 }, { id: "hidden", hidden: true });
+  const board = new IsometricBoardOverlay(environment);
+  board.refresh();
+  let ranges = 0;
+  const format = environment.game.i18n.format;
+  environment.game.i18n.format = (...args) => { if (args[0].endsWith(".range")) ranges++; return format(...args); };
+  board.draw();
+  assert.equal(ranges, 0);
+  board.setSettingsVisible(true);
+  calls.frames.at(-1)();
+  assert.equal(ranges, 1);
+  assert.match(board.ranges.textContent, /range:/);
+  board.setSettingsVisible(false);
+  ranges = 0;
+  board.draw();
+  assert.equal(ranges, 0);
+});
+
+test("board and settings tools are GM-only and replace stale Board Move controls", () => {
+  for (const gm of [false, true]) for (const enabled of [false, true]) {
+    const { environment } = harness({ gm, enabled });
     const board = new IsometricBoardOverlay(environment);
-    const controls = { tokens: { tools: {} } };
+    const controls = { tokens: { tools: { "mk-isometric-board-move": {}, "mk-isometric-board-settings": {},
+      "mk-isometric-board": {}, native: { name: "native" } } } };
     board.registerControls(controls);
     assert.equal(Boolean(controls.tokens.tools["mk-isometric-board"]), gm);
-    assert.ok(controls.tokens.tools["mk-isometric-board-move"]);
+    assert.equal(Boolean(controls.tokens.tools["mk-isometric-board-settings"]), gm && enabled);
+    assert.equal(controls.tokens.tools["mk-isometric-board-move"], undefined);
+    assert.equal(controls.tokens.tools.native.name, "native");
+    if (!gm) {
+      board.refresh();
+      assert.equal(board.setSettingsVisible(true), false);
+      if (enabled) assert.equal(board.hud.hidden, true);
+    }
   }
+});
+
+test("the GM settings tool toggles only its local panel and refreshes preserve an open panel", async () => {
+  const { environment, calls, token } = harness();
+  const board = new IsometricBoardOverlay(environment);
+  board.refresh();
+  const controls = { tokens: { tools: {} } };
+  board.registerControls(controls);
+  const tool = controls.tokens.tools["mk-isometric-board-settings"];
+  assert.equal(tool.active, false);
+  assert.equal(board.hud.hidden, true);
+  token.document.isOwner = false;
+  environment.canvas.tokens.controlled = [];
+  assert.equal(tool.onChange(null, true), true);
+  assert.equal(board.hud.hidden, false);
+  assert.equal(board.moveMode, false);
+  board.registerControls(controls);
+  assert.equal(controls.tokens.tools["mk-isometric-board-settings"].active, true);
+  assert.equal(calls.flags.length, 0);
+  assert.equal(calls.moves.length, 0);
+  await board.setGridColor("#abcdef");
+  assert.equal(board.settingsVisible, true);
+  assert.equal(board.hud.hidden, false);
+  const writes = calls.flags.length;
+  assert.equal(tool.onChange(null, false), false);
+  assert.equal(board.hud.hidden, true);
+  assert.equal(board.enabled, true);
+  assert.equal(calls.flags.length, writes);
+  assert.equal(board.graphics.polygons, 324);
+  assert.equal(calls.moves.length, 0);
+});
+
+test("closing the settings panel cancels unfinished grid editing and click-to-move", () => {
+  const { environment, calls, token } = harness();
+  const board = new IsometricBoardOverlay(environment);
+  board.refresh();
+  board.setSettingsVisible(true);
+  board.setGridMoveMode(true);
+  board.handlePointerDown(gridPointer(board, 110, 120));
+  board.handleGridPointerMove(gridPointer(board, 160, 180));
+  assert.equal(board.offsetX, 50);
+  assert.equal(board.offsetY, 60);
+  board.setSettingsVisible(false);
+  assert.equal(board.hud.hidden, true);
+  assert.equal(board.gridMoveMode, false);
+  assert.equal(board.gridDrag, null);
+  assert.equal(board.positionPreview, null);
+  assert.equal(board.gridHandles, null);
+  assert.equal(board.view.hasPointerCapture(1), false);
+  assert.equal(environment.document.listeners.has("pointermove"), false);
+  assert.equal(board.offsetX, 0);
+  assert.equal(board.offsetY, 0);
+  assert.equal(board.allowMovement(token.document, { method: "keyboard", destination: token.document }), undefined);
+  board.setSettingsVisible(true);
+  board.setMoveMode(true);
+  board.setSettingsVisible(false);
+  assert.equal(board.moveMode, false);
+  assert.equal(calls.flags.length, 0);
+  assert.equal(calls.moves.length, 0);
+});
+
+test("settings close on board shutdown, Scene teardown and loss of GM visibility", async () => {
+  const { environment, hooks } = harness();
+  const board = registerIsometricBoard(environment);
+  hooks.get("ready")[0]();
+  board.setSettingsVisible(true);
+  assert.equal(await board.toggle(), false);
+  assert.equal(board.settingsVisible, false);
+  assert.equal(board.hud, null);
+  assert.equal(await board.toggle(), true);
+  assert.equal(board.hud.hidden, true);
+  board.setSettingsVisible(true);
+  hooks.get("canvasTearDown")[0]();
+  board.refresh();
+  assert.equal(board.hud.hidden, true);
+  board.setSettingsVisible(true);
+  environment.game.user.isGM = false;
+  board.draw();
+  assert.equal(board.hud.hidden, true);
+  assert.equal(board.setSettingsVisible(true), false);
+  assert.equal(board.settingsVisible, false);
 });
 
 test("opacity slider previews grid and range changes live and saves only on release", () => {
@@ -2417,7 +2628,7 @@ test("saved client opacity survives board recreation and zero leaves movement co
   board.draw();
   assert.ok(board.graphics.lineAlphas.every(alpha => alpha === 0));
   assert.ok(board.graphics.fillAlphas.every(alpha => alpha === 0));
-  assert.equal(board.moveButton.disabled, false);
+  assert.equal(board.hud.hidden, true);
   assert.equal(await board.moveSelected({ column: 2, row: 2 }), true);
   assert.equal(calls.moves.length, 1);
   board.destroy();
@@ -2449,6 +2660,7 @@ test("manifest and localized controls include the isometric board runtime", asyn
   assert.ok(manifest.esmodules.includes("scripts/isometric-board/token-ruler.js"));
   assert.ok(manifest.styles.includes("styles/isometric-board.css"));
   assert.ok(language["MK_SHADOWDARK.isometricBoard.toggle"]);
+  assert.ok(language["MK_SHADOWDARK.isometricBoard.settingsToggle"]);
   for (const key of ["gridSize", "gridSizeValue", "gridSizeHint", "topLimit", "topLimitPixels", "topLimitHint", "topLimitMax", "pixelValue"]) {
     assert.equal(language[`MK_SHADOWDARK.isometricBoard.${key}`], undefined);
   }

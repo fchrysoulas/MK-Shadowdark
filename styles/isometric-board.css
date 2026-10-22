@@ -21,6 +21,8 @@
   pointer-events: auto;
 }
 
+#mk-isometric-board-hud[hidden] { display: none; }
+
 #mk-isometric-board-hud .mk-isometric-board-scale {
   color: #c5bdad;
   font-size: 12px;

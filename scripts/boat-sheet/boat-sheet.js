@@ -2,6 +2,7 @@ import { BOAT_ACTOR_TYPE, BOAT_SHEET_ID } from "./constants.js";
 import { getBoatCrew } from "./crew.js";
 import { registerBoatSheet } from "./registration.js";
 import { MKBoatSheet } from "./sheet.js";
+import { queueLinkedSheetRefresh } from "../libs/linked-sheet-refresh.js";
 
 Hooks.once("init", registerBoatSheet);
 for (const hook of ["updateActor", "deleteActor"]) {
@@ -9,7 +10,7 @@ for (const hook of ["updateActor", "deleteActor"]) {
     if (!actor?.uuid) return;
     for (const sheet of Object.values(globalThis.ui?.windows ?? {})) {
       if (sheet instanceof MKBoatSheet && sheet.rendered
-        && getBoatCrew(sheet.actor).some(entry => entry.actorUuid === actor.uuid)) sheet.render(false);
+        && getBoatCrew(sheet.actor).some(entry => entry.actorUuid === actor.uuid)) queueLinkedSheetRefresh(sheet);
     }
   });
 }

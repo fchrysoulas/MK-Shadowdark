@@ -5,6 +5,7 @@
   const SHADOW_PROP = "_sdeTokenShadow";
   const SHADOW_FILTER_PROP = "_sdeTokenShadowBlurFilter";
   const SHADOW_NAME = "sde-token-shadow";
+  const shadowDrawStates = new WeakMap();
 
   function getModuleVersion() {
     const mod = game.modules.get(MODULE_ID);
@@ -167,12 +168,17 @@
 
     const x = tokenW / 2;
     const y = tokenH - radiusY * offsetYFactor;
+    const drawState = [x, y, radiusX, radiusY, alpha, blurStrength, blurQuality, getBlurFilterClass()];
+    const previous = shadowDrawStates.get(shadow);
+    // Moving, hovering and refreshing a token do not change its local shadow.
+    if (previous && drawState.every((value, index) => value === previous[index])) return;
 
     shadow.clear();
 
     if (alpha <= 0) {
       shadow.visible = false;
       shadow.filters = null;
+      shadowDrawStates.set(shadow, drawState);
       return;
     }
 
@@ -184,6 +190,7 @@
     shadow.endFill();
 
     applyBlurToShadow(shadow, blurStrength, blurQuality);
+    shadowDrawStates.set(shadow, drawState);
   }
 
   function applyBlurToShadow(shadow, blurStrength, blurQuality) {

@@ -36,11 +36,12 @@ import { travelPromptChatMessagesSeen } from "./state.js";
 import { applyTravelPlayerRollResult, handleTravelPromptTransport } from "./travel-prompt.js";
 import { mkGroupLog } from "./utils.js";
 import { getGameUserById, isPrimaryActiveGm } from "./users.js";
+import { queueLinkedSheetRefresh } from "../libs/linked-sheet-refresh.js";
+import { actorChangesAffectGroupLight, itemChangesAffectGroupLight, isGroupLightSource,
+  syncGroupTokenLight, syncGroupTokenLightsForActor } from "./lighting.js";
 
 const GROUP_ACTOR_DIALOG_TYPE = "Group";
 const OBSOLETE_ACTOR_DIALOG_TYPES = new Set(["Base", "base"]);
-const LIGHT_SOURCE_MAP_PATH = "systems/shadowdark/assets/mappings/map-light-sources.json";
-const NO_LIGHT = Object.freeze({ dim: 0, bright: 0 });
 let actorCreateDialogPatched = false;
 
 function isGroupSheetEnabled() {
@@ -263,7 +264,7 @@ function patchActorCreateDialog() {
 function rerenderOpenGroupSheets(updatedActor) {
   if (!updatedActor?.uuid) return;
   for (const app of Object.values(ui.windows)) {
-    if (!(app instanceof MKGroupSheet)) continue;
+    if (!(app instanceof MKGroupSheet) || !app.rendered) continue;
 
     const groupData = getGroupData(app.actor);
 
@@ -284,58 +285,9 @@ function rerenderOpenGroupSheets(updatedActor) {
       assignedActivityActors.includes(updatedActor.uuid) ||
       app.actor.id === updatedActor.id
     ) {
-      app.render(false);
+      queueLinkedSheetRefresh(app);
     }
   }
-}
-
-async function getGroupActiveLight(groupActor) {
-  const groupData = getGroupData(groupActor);
-
-  for (const memberUuid of groupData.activeMembers) {
-    const member = await resolveActorFromUuid(memberUuid);
-    const light = member?.items?.find(item => (
-      item.system?.light?.isSource === true && item.system.light.active === true
-    ));
-
-    if (light) return light;
-  }
-
-  return groupActor.items?.find(item => (
-    item.system?.light?.isSource === true && item.system.light.active === true
-  )) ?? null;
-}
-
-async function syncGroupTokenLight(groupActor) {
-  if (!isGroupSheetEnabled() || !isPrimaryActiveGm() || !isGroupActor(groupActor) || !canvas?.scene) return;
-
-  const activeLight = await getGroupActiveLight(groupActor);
-  let lightData = NO_LIGHT;
-
-  if (activeLight) {
-    const template = String(activeLight.system?.light?.template ?? "");
-    const mappings = await foundry.utils.fetchJsonWithTimeout(LIGHT_SOURCE_MAP_PATH);
-    lightData = mappings?.[template]?.light ?? NO_LIGHT;
-  }
-
-  const tokenDocuments = canvas.scene.tokens?.filter?.(token => (
-    token.actorId === groupActor.id || token.actor?.id === groupActor.id
-  )) ?? [];
-
-  await Promise.all(tokenDocuments.map(token => token.update({ light: foundry.utils.deepClone(lightData) })));
-}
-
-async function syncGroupTokenLightsForActor(actor) {
-  if (!isGroupSheetEnabled() || !isPrimaryActiveGm() || !actor) return;
-
-  const groups = (game.actors ?? []).filter(groupActor => {
-    if (!isGroupActor(groupActor)) return false;
-    if (groupActor.id === actor.id) return true;
-
-    return getGroupData(groupActor).activeMembers.includes(actor.uuid);
-  });
-
-  await Promise.all(groups.map(groupActor => syncGroupTokenLight(groupActor)));
 }
 
 async function handleTravelAssignmentSocketRequest(data) {
@@ -499,8 +451,9 @@ function registerGroupSheet() {
   });
 
   patchActorCreateDialog();
-  Hooks.on("updateActor", actor => {
+  Hooks.on("updateActor", (actor, changes) => {
     rerenderOpenGroupSheets(actor);
+    if (!actorChangesAffectGroupLight(changes)) return;
     syncGroupTokenLightsForActor(actor).catch(error => {
       console.error(`${MODULE_ID} | ${SUBMODULE} | Failed to sync group token light`, error);
     });
@@ -510,13 +463,15 @@ function registerGroupSheet() {
 
   Hooks.on("createItem", item => {
     rerenderOpenGroupSheets(item.actor);
+    if (!isGroupLightSource(item)) return;
     syncGroupTokenLightsForActor(item.actor).catch(error => {
       console.error(`${MODULE_ID} | ${SUBMODULE} | Failed to sync group token light`, error);
     });
   });
 
-  Hooks.on("updateItem", item => {
+  Hooks.on("updateItem", (item, changes) => {
     rerenderOpenGroupSheets(item.actor);
+    if (!itemChangesAffectGroupLight(changes, item)) return;
     syncGroupTokenLightsForActor(item.actor).catch(error => {
       console.error(`${MODULE_ID} | ${SUBMODULE} | Failed to sync group token light`, error);
     });
@@ -524,6 +479,7 @@ function registerGroupSheet() {
 
   Hooks.on("deleteItem", item => {
     rerenderOpenGroupSheets(item.actor);
+    if (!isGroupLightSource(item)) return;
     syncGroupTokenLightsForActor(item.actor).catch(error => {
       console.error(`${MODULE_ID} | ${SUBMODULE} | Failed to sync group token light`, error);
     });

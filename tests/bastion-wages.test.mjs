@@ -130,7 +130,9 @@ test("missing actors and invalid levels produce an explicit subtotal rather than
   assert.equal(data.defenses.warbands[1].actorExists, false);
 });
 
-test("NPC update and deletion refresh only open Bastions with a matching defense", async () => {
+test("NPC update and deletion refresh only open Bastions with a matching defense", async context => {
+  const timers = [];
+  context.mock.method(globalThis, "setTimeout", callback => { timers.push(callback); return timers.length; });
   const f = fixture();
   const npc = f.add("guards", 2);
   const unrelated = new MKBastionSheet({ getFlag: () => ({}) });
@@ -139,10 +141,13 @@ test("NPC update and deletion refresh only open Bastions with a matching defense
   ui.windows = { bastion: f.sheet, unrelated, closed, other: { rendered: true } };
   npc.system.level.value = 4;
   rerenderOpenBastionSheets(npc);
+  assert.equal(f.sheet.renders, undefined);
+  timers.shift()();
   assert.deepEqual(f.sheet.renders, [false]);
   assert.equal((await f.data()).warbandWages.weeklyTotal, 12);
   f.actors.delete(npc.uuid);
   rerenderOpenBastionSheets(npc);
+  timers.shift()();
   assert.deepEqual(f.sheet.renders, [false, false]);
   assert.deepEqual((await f.data()).warbandWages, { weeklyTotal: 0, incomplete: true });
   rerenderOpenBastionSheets({ uuid: "Actor.unrelated" });

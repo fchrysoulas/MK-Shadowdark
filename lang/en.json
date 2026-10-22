@@ -1,6 +1,7 @@
 {
   "MK_SHADOWDARK.isometricBoard.title": "Isometric Encounter Board",
   "MK_SHADOWDARK.isometricBoard.toggle": "Toggle Isometric Encounter Board for this Scene",
+  "MK_SHADOWDARK.isometricBoard.settingsToggle": "Toggle Isometric Board Settings",
   "MK_SHADOWDARK.isometricBoard.scale": "{size} × {size} · {distance} ft per space · diagonals {distance} ft",
   "MK_SHADOWDARK.isometricBoard.boardSize": "Grid size",
   "MK_SHADOWDARK.isometricBoard.boardSizeValue": "{size} × {size}",

@@ -1,75 +1,36 @@
 # Changelog
 
+## 1.9.34
+
+### Added
+
+- Isometric encounter board with 6 × 6 to 18 × 18 cells, fixed 5-ft distances, native tokens, snapping, collision checks, and Close/Near ranges.
+- Spell area targeting with Near-sized 6 × 6 cubes, Far-sized 12 × 1 lines, circles, and walls on normal and isometric Scenes.
+- Fire Wall placement across six connected cells, including bends, with a persistent shaped tile on a successful cast and automatic removal when Focus ends. Damage and wall blocking remain GM-managed.
+- Built-in animated fire for Fire Wall tiles, with a per-spell toggle and static fallback for reduced-motion and photosensitive settings.
+- Standalone Boat Actors with a Command Deck, hull statistics, crew assignments, cargo, passenger capacity, and Dark/Light themes.
+- Per-user Dark/Light themes for Group and Bastion sheets.
+
+### Improved
+
+- Board controls now include a movable GM settings panel, independent width/height resizing, grid positioning, tilt, rotation, line color, and opacity.
+- Tokens use bottom-center bases, size-aware occupied cells, drag-only rulers, animated selection arrows, and live red Close-enemy highlights.
+- Group Inventory and Boat Cargo share compact item cards, slot counting, individual-card transfers, and discard controls. Observers can transfer shared Group items to their own characters with GM processing.
+- Group Sheet headers, asset records, information popups, and totals are more compact; Boat records show live hull, AC, crew, and cargo use.
+- Sundering prompts show a 10-second countdown; unanswered prompts take damage. The Death Timer skull follows the portrait crop, and the DTP control uses an hourglass icon.
+- Reduced repeated board drawing, token-shadow geometry work, linked-sheet refreshes, and Group light updates; limited tests to the maintained suite.
+- Condensed the README and changelog into feature summaries.
+
+### Fixed
+
+- Fixed actor preparation errors from spellcasting-class Active Effects and Item Piles compatibility for Boat and Bastion sheets.
+- Corrected Group Inventory card slot costs and warband payroll across boat/bastion assignments, including Granary discounts.
+
 ## 1.9.33
 
-- Added built-in animated fire to Fire Wall tiles, clipped to their exact shape and retained through tile movement, resizing, rotation and Scene reloads. Animation uses the native tile shader with no extra modules, timers, or repeated document updates; reduced-motion and photosensitive settings keep the static tile, and a per-spell Animated fire checkbox can disable it. Focus cleanup still removes the complete wall.
-- Fire Wall now targets an area without requiring creatures: choose six edge-connected cells within range, including bends, then cast normally. A successful cast creates one persistent transparent Scene tile matching the selected shape and isometric projection; failed or cancelled casts create nothing. Focus Tracker removes its tile automatically after failed or critical Focus checks and when the caster ends Focus, including player casts and tiles on other Scenes. Slow creations cannot restore an ended wall, and returning GMs clean up walls whose Focus ended while they were offline. Damage and wall blocking remain GM-managed.
-- Added spell area targeting before native casting: automatic 6 × 6 Near cubes, 12 × 1 Far lines, caster-centered Burning Hands, and configurable cubes, lines, circles, and straight walls on spell Details sheets. Previews follow the isometric board or normal Scene scale, select visible intersecting creature bases (including allies), support target exclusions, rotation, range checks, and cancellation, and retain all affected UUIDs for native rolls, targeted DCs, damage, and Spell Effects. Focus checks and manual-target spells keep their existing workflow; ongoing area effects, elevation, and wall blocking remain GM-managed.
-- Compacted and restyled the Sunder prompt with an incoming-damage badge and a visible 10-second countdown; unanswered prompts automatically take damage without destroying gear.
-- Centered the Death Timer skull on cropped character portraits and gave its overlay slight transparency.
-- Replaced the character sheet's DTP button text with an hourglass icon and a "Downtime activities" hover tooltip.
-- Made the GM's isometric settings panel draggable by its title bar, with a remembered client position, viewport limits, keyboard movement, and a close button. Grouped its controls into Grid layout, Appearance, and expandable Token ranges; removed the token Move button while retaining Move Grid and Fit scene.
-- Reorganized the README into brief feature summaries, with concise installation, setup, and Active Effect instructions.
-- Reduced repeated scene and sheet work across the module: token shadows reuse unchanged geometry and blur settings; linked Group, Boat and Bastion sheets batch document notifications; Group lighting ignores unrelated HP/inventory edits, shares its mapping fetch, collapses overlapping syncs and skips unchanged token light writes. Light-source changes still synchronize from the primary active GM, with retries after failures and authority/Scene checks after asynchronous work.
-- Reduced isometric-board work during hovering, dragging and repeated token refreshes: reuse cell geometry and unchanged highlights, skip hover/range-label work for the closed GM settings panel, and calculate the layout once per collision scan. Live enemy visibility, selection, grid parameters, colors and opacity still update immediately.
-- Replaced the Token Controls Board Move tool with a GM-only settings-panel toggle. Both the board toggle and settings toggle are hidden from players. The settings panel starts hidden, stays local to the GM, and closing it exits grid editing and click-to-move mode; native token dragging and board ranges remain available to players.
-- Added a rectangular resize frame with four gold corner handles in Move Grid mode. Dragging changes width and height independently in the board's rotated frame while keeping the opposite corner fixed. The square count, rotation, and 5-ft distances stay unchanged; both dimensions and position save per Scene, older proportional sizes carry over, and Fit scene resets both dimensions. Handles follow camera zoom, remain visible at 0% opacity, and share movement's cancellation and occupied-base checks.
-- Replaced Top limit with a GM-only Move Grid button. Drag the overlay in any direction, release to save its position per Scene, and click Done to finish; Escape cancels unfinished drags. Tokens stay in place, Fit scene recenters the board, and snapping, ranges, and collision checks follow the saved position. Camera zoom, pointer capture, cancellation, and failed saves are handled without native token dragging.
-- Fixed actor preparation failures caused by spellcasting-class Active Effects being parsed as dice formulas. Literal class grants now reach Foundry's native effect application before initial world preparation, including transferred talents and unlinked token actors; other effect formulas retain Shadowdark's handling.
-- Fixed Item Piles' Boat and Bastion sheet-wrapper paths with non-enumerated aliases for their namespaced actor types, preserving existing actors, sheet registrations, and inventory behavior.
-- Removed the isometric board's 10-ft scale and Cell distance control. All cells, diagonals, movement rulers, and engagement ranges now use a fixed 5-ft scale, including Scenes with older saved distance settings.
-- Updated red Close-enemy squares live from the selected token's snapped, reachable drag destination, including sized bases. Dropping or canceling restores highlights from the actual position; remote plans and retained ruler history do not change the preview.
-- Highlighted visible enemies' occupied isometric squares in red when within Close (5 ft) of the selected token, measuring between whole creature bases. Enemy detection follows opposing Friendly/Hostile dispositions, preserves Neutral tokens, updates with movement and selection, and respects visibility and overlay opacity.
-- Added a Scene-shared grid-line color picker with a live local preview.
-- Animated isometric selection arrows with a gentle 6-pixel bob over 1.6 seconds. The animation stops when arrows are hidden, tokens are dragged or deselected, or the board closes; reduced-motion and Foundry photosensitivity preferences keep the arrow static.
-- Replaced Boat Cargo trash buttons with the Group Inventory-style right-click Trash Item menu and confirmation dialog. Boat owners and GMs discard only the selected card, with ownership and stale-card checks repeated after confirmation; card drag-and-drop transfers are preserved.
-- Split Boat Cargo into the same individual item cards and capped items-per-slot stacks as Group Inventory. Card badges show current/per-slot quantities; dragging or discarding affects only the selected card. Transfers to character sheets, Character Dashboard slots, other Boats, Group Inventory, and Bastion Vaults preserve remaining cargo, reject stale cards, and roll back failed source changes. Stored quantities remain editable through the item sheet.
-- Replaced the token's square selection/hover border with a small gold arrow above each locally selected token while the isometric board is enabled. The square border appears during dragging; arrows follow visible artwork bounds and disappear on deselection, and disabling the board restores Foundry's normal borders.
-- Unified Boat Cargo slot counting with Group Inventory, including items-per-slot limits, slot size, free carry, and zero cost for stashed, nonphysical, and zero-slot items. Cargo cards, capacity checks, quantity edits, and linked Group Sheet Boat totals share the same calculation; full-stack drag-and-drop transfers retain ownership checks and rollback support.
-- Fixed Group Inventory cards incorrectly showing 0 slots for physical items by retaining Shadowdark's inherited item data when calculating each card's slot cost. Card costs now agree with the shared inventory total while preserving free-carry, stashed-item, and nonphysical-item rules.
-- Show isometric movement lines, destination selection boxes, and ruler labels only during active token dragging, clearing them on drop or cancellation. Hovering still shows HUD distances and ranges without drawing destination boxes or past routes.
-- Added separate Scene-shared GM Tilt (5–85°) and Rotation (-180–180°) sliders to the isometric board, with Fit scene restoring automatic tilt and zero rotation. Manual angles stay centered and fit within Scene bounds; snapping, movement previews, ranges, and sized-base collisions use the transformed grid.
-- Positioned Large creatures' artwork lower in their 2 × 2 isometric base, placing their feet halfway from the base center toward its bottom tip. Dragging, Board Move, movement previews, and footprint detection share this placement while retaining the same four occupied cells.
-- Sized isometric creature bases from Token width: Small/Medium occupy 1 × 1 cells, Large 2 × 2, Huge 3 × 3, and Gargantuan 4 × 4. Snapping and previews center the whole base; collision checks, placement, grid resizing, and engagement ranges use every occupied cell and the nearest base edges.
-- Added a Scene-shared GM Grid size slider for 6 × 6 through 18 × 18 spaces, preserving full-Scene coverage and the fixed 5-ft distance scale. Occupied cells block token drag destinations, Board Move, native user movement, and token placement; grid changes that would merge occupied spaces are rejected.
-- Sized the 18 × 18 isometric board automatically from the full Scene width and height, with independent tile dimensions that reach all four Scene edges and no dependency on the native grid size.
-- Made native token drag previews and drops snap the token's bottom-center base to the destination isometric cell center, including gridless Scenes and Shift-dragging; Board Move uses the same centered destination.
-- Moved Boat Cargo instructions into a themed information popup beside the Cargo hold heading, available to owners and read-only viewers, keeping the item grid compact.
-- Moved the isometric grid, range highlights, and movement paths beneath token artwork. Native dragging now follows the token base under the cursor; snapping, Board Move, and rulers account for texture fitting, scale, anchors, rotation, and transparent artwork margins.
-- Kept the isometric board centered on current Scene bounds after resizing or padding changes, ignoring legacy saved positions; kept movement, native drag-ruler, and range calculations on the fixed 5-ft scale.
-- Matched Boat Cargo to the compact Group Inventory item cards, with smaller icons, single-line names, slot costs, and compact quantity/discard controls. Existing full-stack drag-and-drop transfers and capacity checks are preserved.
-- Anchored isometric movement, snapping, and engagement ranges at each token's bottom-center base; the native token drag ruler uses the same base points and board distances while the board is enabled, restoring its configured behavior when disabled.
-- Replaced the Boat sheet overview with the Command Deck design: nautical portrait and class header, editable AC and hull HP, editable crew/cargo/passenger capacities, a live crew preview, responsive layouts, and coordinated Dark/Light themes. Existing crew, cargo, and rich-text notes controls remain available in their tabs.
-- Added a live 0–100% Opacity slider to the isometric board HUD for its grid, range highlights, and movement preview, with a saved client preference and a subtle 20% default.
-- Made the isometric board's ordinary cells fully transparent, softened grid lines and movement paths, and reduced range-highlight opacity to keep the Scene map visible.
-- Displayed each Boat's editable class beneath its name in the compact Group Sheet record.
-- Narrowed the Group Inventory Party Treasure panel to give item cards more horizontal space.
-- Added live AC and used/maximum cargo slots beside Hull HP and Crew in compact Group Sheet Boat records.
-- Added a GM-toggleable, Scene-owned 18 × 18 isometric encounter board using native scene tokens, cell snapping, permission-aware Board Move, and live Close/Near movement and engagement highlights.
-- Reduced Group Inventory cards' minimum width and height to fit more items on the sheet, with smaller icons and spacing; removed item type labels while retaining slot costs and stack counts.
-- Compacted Group Sheet Boat records into one row, with left-aligned portraits and names, hull and crew stats on the right, and the sheet-management instruction moved out of the card.
-- Group Inventory now displays one item per card, allowing stacks only up to the configured items-per-slot limit; removed quantity buttons and added GM right-click trashing. Transfers and trashing affect only the selected card, with stale-transfer checks and rollback support.
-- Added a standalone Boat actor type with a Bastion-style sheet, independently editable hull stats and capacities, linked Player/NPC crew with roles, transferable cargo with gear-slot limits, rich-text notes, and a separate Dark/Light theme. Group Sheets accept Boat actors alongside existing NPC boats.
-- Removed the Shared Items heading, custom-item add button, duplicate slot count, and information bar above Group Inventory cards; totals and inventory help remain in the tab header.
-- Excluded Group inventories from Quickdraw controls, highlighting, sorting, and summary cards, including cleanup of previously injected lightning toggles.
-- Added matching totals badges to every Group Sheet tab header, including total weekly wages and salaries in Summary, active travel/camp members, shared inventory slot use, and linked boat and bastion counts.
-- Scoped `npm test` to the maintained test suite, preventing archived release snapshots under `build/` from running duplicate tests and reporting stale failures.
-- Added Dark and Light themes to the Group and Bastion sheets, with header toggles and separate appearance preferences saved for each user.
-- Kept Bastion Vault item labels visible when Foundry applies its native button height.
-- Removed the d20 roll buttons from Traveling and Camping task panels and reclaimed their header space.
-- Moved Inventory, Mounts, Warbands, Boats, and Bastion drop instructions into their information popups, removing instruction banners while preserving section and assignment drop targets; empty shared inventory now uses a compact status message.
-- Compacted all Group Sheet tab headers into one row with the title, muted short description, and information button, and removed title underlines.
-- Added information buttons throughout the Group Sheet with section controls and rules, including read-only player access; moved mount and campfire rules into their help windows.
-- Changed Group Sheet shared inventory to a Bastion Vault-style grid of item slot cards showing icons, names, slot costs, and quantity controls.
-- Reduced the height of Group Sheet party stat roll buttons and removed the duplicate Open Sheet button; character portraits open their sheets.
-- Enabled players with Observer access to move shared Group Sheet item stacks into their owned character inventories, including Character Dashboard slots, with GM-processed transfers, rollback on failure, and duplicate-drop protection.
-- Fixed Summary warband payroll to include boat and bastion assignment quantities and the Granary's 3 gp discount per unit stationed at that bastion, with a minimum of 0 gp and subtotals for unavailable assignments.
-- Displayed warbands in a three-column grid of rectangular cards with live level, AC, HP, and assignment badges for following the group, boats, and bastions; Summary shows the same destinations and quantities.
-- Removed the View buttons from Summary cards.
-- Matched the Summary, Traveling, Camping, and Inventory panels, headings, dividers, and subtitles to the other Group Sheet asset tabs.
-- Fixed Group Sheet tab hover highlights to fill the rail evenly, center each icon, and use a crisp active-tab underline instead of a glow.
-- Unified Group Sheet text in Montserrat, made every tab icon-only with hover labels, and added a default Summary tab showing party treasure, weekly payroll, hirelings, warbands, mounts, boats and assignments, and bastions.
-- Summary payroll includes 1 gp per hireling per week and 3 gp per level per group-owned warband per week, with individual costs and a combined total; removed its carrying-capacity, rations, torches, party-roster, and shared-inventory views.
+- Added the Group Sheet Summary tab for party treasure, payroll, hirelings, warbands, mounts, boats, and bastions. Weekly payroll includes 1 gp per hireling and 3 gp per warband level.
+- Added warband cards with live level, AC, HP, and group, boat, or bastion assignments.
+- Unified Group Sheet typography, icon tabs, panel headings, and selection styling; removed redundant View buttons.
 
 ## 1.9.32
 
@@ -148,155 +109,51 @@
 
 ## 1.9.17
 
-- Updated the GM Screen Magic Item Generator to use Type, Qualities, and Personality RollTables.
-- Added a standalone Bastion Actor sheet with bastion rules, types, construction costs, build times, and upgrades.
-- Added a Bastion Defenses tab that accepts NPC actor drag-and-drop for siege weapons and warbands.
-- Redesigned Bastion upgrades as icon cards with install states and costs.
-- Installed Bastion upgrades now use a green checkmark control.
-- Available Bastion upgrades now use a grey checkmark control instead of an Install label.
-- Added a conditional 100-slot Vault tab when the Vault upgrade is installed.
-- Added a drag-and-drop Vault item grid that stores Items against the Bastion and tracks gear-slot capacity.
-- Vault items dragged onto another character sheet now transfer there and are removed from the Bastion.
-- Items dragged from a character sheet into the Vault now transfer there and are removed from the character.
-- Replaced per-item Vault trash buttons with a bottom trash drop area for discarding stored Items.
-- Redesigned the Group Sheet tab rail to keep its five operational tabs on the desktop row, scroll cleanly at medium widths, and collapse to icon-only tabs when narrow.
-- Reduced Group Sheet tab title sizing for a tighter five-tab desktop rail.
-
-- Added the selectable Character Dashboard and dashboard-styled Item sheets.
-- Added independent world-level runtime switches for the Journal Sheet, Character Dashboard, Quickdraw, GM Screen, Group Sheet and Group Encounters, Targeting and Spell Automation, Chat Reporting, Torch Attack, Source Tables, and Automated Animations compatibility; disabled features preserve their existing data.
-- Improved Focus Tracker, Auto Damage, Death Timer, Corpse Token, Character Sheet Tweaks, Summary Bar, Targeting Assistant, and Detailed Wounds presentation and reliability.
-- Removed the Survival Wound Profile feature and the standalone Encounter Engine surface.
-- Added the production GM Screen with a Scene-owned Encounter Zone editor, manual Roll Encounter workflow, Danger Level and supporting RollTable slots, GM-only Journal reports, and optional roll debug details.
-- Split Trap and Hazard configuration into separate GM Screen generator tabs with three Scene-owned RollTable assignments each; normal Encounter rolls no longer include Trap or Hazard tables.
-- Made GM Screen Settings Home feature cards data-driven with consistent typography and per-GM Quick Action visibility controls for every generator/settings feature, including Trap and Hazard.
-- Replaced the GM Screen Settlement and Session Log tabs with a permanent four-zone layout: Active Party, Quick Actions, Pinned Documents, and Tables.
-- Added an Encounters Quick Action preview dialog with Create, Reroll, and Cancel controls before the GM-only Journal Entry is created.
-- Automatically pinned Journals and NPC Actors created by GM Screen generators to the current GM's Pinned Documents zone.
-- Changed Trap and Hazard Quick Actions to resolve their assigned generator RollTables and preview Create, Reroll, and Cancel before creating their Journals instead of only opening Settings.
-- Replaced GM Screen Settings Home drag sources with per-GM Show in Quick Actions checkboxes that immediately control Quick Action visibility.
-- Encounter Zone groups now display collapsed by default in GM Screen Settings.
-- Removed the separate Group Management action and moved standalone Time Passes and Roll Encounter actions into the Scene Context row. Roll Encounter now derives its die from Danger (Unsafe 1d6, Risky 2d6, Deadly 3d6) while retaining the legacy grid fallback for other values.
-- Matched the Scene Context Time Passes and Roll Encounter controls to the full-height accented button treatment used by the GM Screen strip.
-- Added a Shop Generator Settings tab with five Scene-owned linked RollTable assignments for Poor, Standard, and Wealthy shop types, Shop Name/Known For, and Interesting Customer results.
-- Split the linked Shop Generator name and Known For assignments into separate First Part, Second Part, and Known For RollTables.
-- Shop quality is now rolled from a linked Quality RollTable instead of selected; legacy imported tables use a 1d3 quality roll.
-- Rearranged Shop Generator assignments into a compact Title, Description, and Assigned RollTable grid, with a reusable template for other generators.
-- Applied the compact Title, Description, and Assigned RollTable template to Trap, Hazard, Tavern, and Location Generator assignments.
-- Applied the same compact assignment layout to NPC Name Composition and NPC Traits, with two Possible Syllable rows and three NPC Feature rows.
-- Added a Location Generator Settings tab with Scene-owned Descriptor, Location, and Feature RollTable assignments; Create Location now resolves linked tables before its Create/Reroll/Cancel preview.
-- Added a Monster Generator Settings tab and Quick Action with Scene-owned Combat, Quality, Strength, Weakness, and three Mutation RollTable assignments; generated monsters are previewed, created as native Shadowdark NPC Actors, and pinned like the other GM Screen generators. Their AC uses the active party's average level + 10, Combat supplies attack bonus and level, and each NPC receives a rolled 1d4 attack count with 1d8 damage.
-- Added a Magic Item Generator Settings tab and Quick Action with Scene-owned Name, Bonus, Benefit, Curse, and Personality RollTable assignments; generated results are previewed, created as native Shadowdark Basic Items, and pinned to the current GM's Pinned Documents.
-- Removed the legacy Location source-table import prompt and blank-journal fallback; Create Location now requires all three linked Location Generator RollTables.
-- Removed the Combat/Round tracker from the GM Screen header.
-- Made the right-side Tables zone collapsible so the remaining GM Screen zones can use the freed space.
-- Added debounced GM Screen Active Party updates for member hit points and active torch/light changes.
-- Removed the GM Status inspect buttons, dialog, and API; Active Party keeps only its compact inline indicators.
-- Shortened the Active Party heading to Party and narrowed the party rail further.
-- Removed the Party heading and member counter so the party rail header contains only the Group dropdown.
-- Moved wound and active-torch counts into the compact HP/AC stats row.
-- Fixed Party and Quick Actions to equal-width columns; only Pinned Documents grows with available space.
-- Changed Pinned Documents to use two columns when the flexible zone has room.
-- Set GM context action buttons to a 40px minimum height with 5px margins instead of forcing full-height stretch.
-- Moved the Scene Context dropdowns and Time Passes/Roll Encounter controls into the GM Screen header and darkened the header background.
-- Matched the Active Party, Quick Actions, Pinned Documents, and Tables header heights while keeping the party selector compact.
-- Moved active Group selection into the Active Party zone as a dropdown listing every available Group, and removed the Group buttons from the GM Screen header.
-- Removed displayed dice-formula metadata from GM Screen Tables rows while preserving table search, rolling, and native sheet actions.
-- Added GM Screen Session Log tools and source-table browsing improvements.
-- Added editable named Encounter Zone groups with multiple collapsible Scene-owned grids and group-specific Roll Zone actions.
-- Removed Group elapsed-time/turn tracking and automatic exploration/rest encounter checks; encounter rolls are now explicit GM actions with no pending check queue.
-- Removed the GM Screen Procedure control and replaced it with an Encounter Zone selector plus a separate final Roll Encounter header control.
-- Enabled Settlement creation for the **NPC Generator** and source-driven Point-of-Interest Location Journals; the generator uses the linked Scene RollTables configured in Compositions.
-- Added Scene-owned NPC name and trait compositions with multiple Possible Syllables and NPC Feature tables, configurable second- and third-syllable chances, an optional NPC Identifier table rolled as the second name part, and linked Ancestry, Age, Alignment, Wealth, and Occupation tables.
-- Replaced the NPC Generator's single Two-syllable chance with independent 33% defaults for adding a second and a third syllable.
-- NPC generation now uses only the linked Scene RollTables; the imported Core NPC table fallback and import/update prompt have been removed. Missing linked tables leave their profile entries blank, and only the NPC name is required.
-- NPC generation now rolls Strength, Dexterity, Constitution, Intelligence, Wisdom, and Charisma in order using 3d6, records each roll and Shadowdark modifier in the NPC description, and writes the calculated native modifiers to the NPC sheet.
-- Simplified generated NPC ability display to show each final score with its modifier in parentheses.
-- Reordered generated NPC profile details so Name and Identifier lead, followed by Features and the remaining traits.
-- Removed the Tables-tab Import / Update control; existing RollTables remain searchable, rollable, and editable without source or grouping assumptions in the browser.
-- RollTable browser entries now retain Foundry folder paths as groups and display each table's document icon.
-- RollTable folder groups in the Tables tab are independently collapsible and start collapsed.
-- Added GM Screen configuration Import and Export controls for Scene-owned Encounter Zones, supporting encounter tables, environment context, NPC Compositions, and Tavern Generator assignments.
-- Moved GM Screen configuration Import and Export controls from the live GM Screen header to GM Screen Settings Home.
-- GM Screen exports now use Foundry's native file-save workflow, matching MK-Compendiums.
-- Moved the GM Screen NPC Generator into a separate gear-button Settings window with left-side navigation.
-- Added draggable Encounters, NPC Generator, and Tavern Generator shortcuts to the end of their GM Screen Settings Home cards for pinning on Overview; removed the separate Open buttons.
-- Added a Tavern Generator Settings tab with Scene-owned drag-and-drop assignments for First Part, Second Part, Known For, Wealth, Poor/Standard/Wealthy Food, and Poor/Standard/Wealthy Drinks RollTables; linked Wealth rolls now choose the matching tier tables and complete food and drink procedure.
-- Tavern food and drink generation now rerolls duplicate results so every generated list contains distinct options, with a clear failure when the assigned tables cannot supply enough unique entries.
-- Tidied Tavern Journal pages with a Tavern Overview, readable Food and Drinks sections, editable GM Notes, and optional Tavern Generator debug details; generated text now preserves ampersands correctly.
-- Hardened Overview shortcut drag-and-drop handling across Foundry drag payload formats and ApplicationV2 identifiers.
-- Pinned GM Screen actions now execute Roll Encounter, NPC Generator, and Tavern Generator directly from Overview.
-- Moved GM Screen Encounters into the Settings window and removed the Encounters tab from the main GM Screen navigation.
-- Removed the Session Log GM Tools button panel and its unused controls.
-- Simplified the Tables workspace by removing its redundant RollTables header, keeping search fixed at the top, and limiting scrolling to the folder/table list.
-- Fixed the GM Screen RollTable browser to preserve and display contextual source formulas such as `d*` while keeping their native fallback formulas internal and non-rollable.
-- Removed unreachable retired GM Screen and Survival Wound Profile runtime files, and retargeted validation coverage to the active Group Encounter services and 1.9.17 GM Screen.
-- Changed the Summary Bar shortcut row to a per-player preference controlled by a button in the character-sheet header; the row now always contains 12 slots.
-- Set the shortcut-enabled player-sheet header to a fixed 130px minimum while lifting the character name and Summary Bar's main row.
-- Removed Summary Bar Position X and Position Y settings; the Summary Bar is fixed 20px above the navigation and 30px from the sheet's right edge.
-- Removed the gap between the Summary Bar and its shortcut row.
-- Adjusted the Summary Bar to use the tighter fixed header position: `clamp(141px, 10%, 108px)` from the left, 5px from the right, and 10px above the navigation.
-- Hid empty shortcut-slot plus indicators until an item is dragged over a shortcut slot.
-- Removed the shortcut row border and added a 1px top margin.
-- Resized the shortcut-row toggle to 22px by 21px and removed its rounded corners.
-- Changed the Time Passes Font Family setting from free text to a dropdown with common Foundry/module fonts, generic CSS families, and browser-registered font families.
+- Added the Character Dashboard, dashboard-styled Item sheets, and presentation and reliability improvements for wounds, Focus, damage, death, and targeting.
+- Added standalone Bastion Actors with construction, upgrades, NPC defenses, and a transferable 100-slot Vault.
+- Rebuilt the GM Screen around Active Party, Quick Actions, Pinned Documents, and Tables, with compact Scene Context controls and a collapsible table browser.
+- Added manual Encounter Zone rolls, editable zone grids, Danger-based dice, preview dialogs, and GM-only Journal reports. Removed automatic exploration/rest encounter checks and Group elapsed-time tracking.
+- Added linked-table generators for NPCs, shops, taverns, locations, monsters, magic items, traps, and hazards, with Create/Reroll/Cancel previews.
+- Added configurable NPC names, traits, and 3d6 ability scores; NPC generation uses Scene-linked tables and leaves unavailable profile fields blank.
+- Added tavern wealth-based menus with distinct food and drink results, readable Journal pages, and editable GM notes.
+- Updated Magic Item generation to use Type, Qualities, and Personality RollTables.
+- Added configurable Quick Actions, draggable generator shortcuts, automatic pinning of generated documents, and Scene configuration import/export from Settings Home.
+- Standardized generator table assignments and improved RollTable browsing with collapsed folder groups, document icons, fixed search, and contextual source formulas.
+- Added independent feature runtime switches and a Time Passes font selector; disabled features retain their data.
+- Made the Summary Bar shortcut row a per-player preference with 12 slots and a compact fixed header position.
+- Improved the Group Sheet's responsive tab rail and kept standalone Time Passes separate from encounter automation.
+- Removed retired Survival Wound Profile and standalone Encounter Engine interfaces and runtime files.
 
 ## 1.9.16
 
-- Added a body-centric **Character Dashboard** opened from player sheets, with a central figure, live Detailed Wounds markers, worn/held and carried gear, and drag-and-drop item assignment to body slots.
-- Player characters whose effective CON falls to 0 are now marked Dead; HP healing no longer clears Dead while CON remains at 0.
-- Replaced the Detailed Wounds character-sheet tab with an active-wounds summary below Stats; clicking Wounds now opens the full body-location board in a separate window.
-- Reworked Detailed Wounds into the requested six-zone location distribution with location-specific severity tables, stored concussion/rest durations, Heart CON saves, fatal wound handling, and exact ability penalties.
-- Updated Group Sheet wound summaries to recognize six-zone result records, ignore scars, and show named consequences.
-- Added the **Journal Sheet | Use as Default** world setting to enable or disable the MK-Shadowdark Journal sheet as the default for all Journal Entries.
-- Set Journal page `h1`, `h2`, and `h3` headings to the dark journal text color.
-- Added Journal Entry page categories to the MK-Shadowdark Journal sidebar, with uncategorized pages grouped separately.
-- Left-aligned the Journal sidebar title, type, category labels, and page rows.
-- The custom Journal Sheet remains display-only; page editing continues through Foundry's native Journal Page editor.
-- Temporarily disabled the GM Screen: its Scene Controls button, module API, scripts, and styles no longer load. Group Management, encounter services, and standalone Time Passes remain available.
+- Added the body-centric Character Dashboard with live wound markers, equipment slots, and drag-and-drop inventory assignment.
+- Moved Detailed Wounds into a separate board opened from the character-sheet summary, with six wound zones, location-specific severity, recovery durations, fatal wounds, and ability penalties.
+- Marked characters Dead at effective CON 0 and prevented HP healing from clearing that state while CON remains 0.
+- Updated Group wound summaries to show named consequences and ignore scars.
+- Added Journal page categories, heading and sidebar styling, and the Use as Default setting; editing remains in Foundry's native page editor.
+- Temporarily disabled the GM Screen while preserving Group Management, encounter services, and standalone Time Passes.
 
 ## 1.9.15
 
-- Added a custom Journal Entry sheet matching MK Sandbox Journal's two-pane page browser, including its dark sidebar, muted-gold accents, light content area, and responsive layout.
-- Simplified the GM Screen Tables workspace to show only imported source RollTables; Encounter Setup is no longer rendered there.
-- Removed the GM Screen Tools workspace, manual generator configuration, and its NPC/Journal creation actions.
-- Removed the source-driven NPC and Location generators and their creation buttons from the GM Screen workspaces.
-- Removed the hardcoded Overview NPC creation button and its missing-table hover status.
-- Removed the NPC Script Macro and its module API surface.
-- Split Core NPC Qualities into independent **Appearance**, **Does**, and **Secret** RollTables and rolls.
-- Finalized the GM Screen top strip as the authoritative at-table control surface: Terrain, Danger, and Period now save immediately when changed, and the old Save Context action is gone.
-- Added **Safe** danger as a real no-encounter state. Safe Exploration accrues no checks, direct encounter checks do not roll, and a rest begun while Safe snapshots zero encounter checks.
-- Reworked GM Screen time controls so clicking **Elapsed** advances exactly one canonical turn with no popup or custom-time dialog: Exploration advances 6 minutes, an active Rest advances 1 hour, Combat advances 6 seconds, and elapsed display is limited to hours/minutes.
-- Moved session controls into Session Log with a free-text starting date/time label, **Start Session**, and **Reset Timer**. Starting a session records its boundary and Session Log now shows only encounter history from that session onward before applying the existing recent-history cap.
-- Bound the GM Screen Resting procedure to the canonical Group rest workflow. Resting can no longer be manually entered or exited from the Procedure selector, while Elapsed remains available during a real active rest.
-- Removed the GM Screen presentation-only Hide/Show Active Party and Reset Presentation controls, widened the Time Passes dice selector, and kept Time Passes presentation-only and separate from canonical encounter scheduling.
-- Simplified Exploration to actionable pressure only: Turns, Next Check, Due, Encounter Table, and latest check. Terrain, Danger, Period, Turn Length, and Cadence are no longer duplicated inside the workspace.
-- Renamed the visible Downtime workspace to **Settlement** while preserving the internal `downtime` compatibility id; the workspace now focuses on Tavern and Shop generation and no longer displays Resting/Camp status.
-- Compacted the permanent Active Party rail without restoring collapse controls, keeping HP, AC, status, wounds, Focus, light, effects, Death Timer, and sheet access visible in a denser layout.
-- Upgraded Overview into a true home dashboard with compact Procedure/Elapsed, Light, Encounter pressure, and Session summary above the existing per-GM pinned Foundry document shortcuts; pin/unpin remains local and does not force a full GM Screen rerender.
-- Added a persistent warning when Scene Danger is changed to Safe while an already-active rest still retains snapshotted encounter checks from the danger cadence that existed when that rest began.
-- Preserved the GM Screen's explicit-update architecture: no ambient Actor/Scene/Combat refresh hooks, no duplicate gameplay-state owner, Group Management remains authoritative for marching order/roles/watches/rest controls, Foundry Combat remains authoritative for combat state, and Scene Context remains authoritative for encounter environment state.
+- Added the custom two-pane Journal sheet with a dark sidebar, light content area, and responsive layout.
+- Simplified GM Screen Tables to source RollTables; removed the old Tools workspace, NPC Script Macro, and NPC/Location creation controls.
+- Split Core NPC Qualities into Appearance, Does, and Secret tables.
+- Made Scene Context changes save immediately and added Safe danger with no new encounter checks; active rests retain their original cadence.
+- Made Elapsed advance one canonical turn and tied Resting to the Group rest workflow.
+- Added session start/reset controls and filtered encounter history to the current session.
+- Compacted the permanent Party rail and Overview status cards, retained per-GM document shortcuts, and renamed Downtime to Settlement.
+- Kept Time Passes separate from encounter scheduling and preserved explicit GM Screen updates without ambient refresh hooks.
 
 ## 1.9.14
 
-- Moved GM Screen Terrain, Danger, and Period editing into the persistent top strip with a staged **Save Context** action; no Scene Context field auto-saves, and one explicit rerender occurs only after a successful save.
-- Replaced the Overview status dashboard with a per-GM drag/drop shortcut canvas for UUID-backed Foundry documents such as Journals, Actors, Items, and RollTables; clicking opens the original document and pin/remove operations update locally without a full GM Screen rerender.
-- Aligned and vertically corrected Overview shortcut interaction hitboxes.
-- Replaced the GM Screen Group Procedure popup with an immediate top-bar dropdown selector.
-- Added icons to GM Screen workspace navigation and merged the Resting status surface into Downtime.
-- Removed the dedicated GM Screen Rules workspace and its navigation tab; the remaining GM Screen workspaces retain their existing controls.
-- Removed Scene Context, Encounter Pressure, Resting, Combat/Morale, and Light summary cards from rendered Overview; active-party Light pressure remains in the persistent top strip.
-- Simplified the GM Screen into an explicit-update surface: removed ambient Actor/Scene/Combat/workflow refresh hooks and the generic Refresh button, removed GM Screen Marching Order/role, camp-watch, rest-start/resume, Group Traveling, and Group Camping controls, and kept those authoritative workflows in Group Management.
-- Changed Tables Encounter Setup to stage Encounter Zone and Encounter Table until **Save Encounter Setup** is pressed; selecting an Encounter Zone still previews its imported terrain columns without persisting them.
-- Removed automatic GM Screen presentation persistence. Selected Group/workspace and party-rail state are now application-local only; party-rail controls remain available without silently writing preferences. Overview document pins are the exception: they are explicit per-GM presentation shortcuts stored as document UUIDs.
-- Reorganized the GM Screen into Overview, Exploration, Combat, Resting, Downtime, Rules, Tables, and Session Log; removed GM-facing environment profiles and the dedicated Encounter/Environment tabs, and preserved canonical Encounter Pressure processing in Exploration.
-- Fixed Group Exploration so due encounter checks remain due when a missing/invalid encounter table is configured later; ordinary Scene Context edits and no-op saves no longer consume scheduled checks.
-- Fixed active Rest cadence so the required encounter-check turns are snapshotted when the rest begins; later Danger changes cannot create retroactive checks or silently skip future checks.
-- Reduced persisted Scene Context to the canonical Terrain, Danger, Period, and Encounter Table fields, migrated legacy `profileId` state away from Scenes, removed Profile from Group Traveling and encounter-card presentation, and retained old Profile settings only as hidden compatibility storage.
-- Cached RollTable discovery for Encounter Setup, retained explicit world-time resolution for automatic day/night Scene Context, and corrected Combat's human-facing turn number to start at 1.
-- Expanded source-table detection/import support to Shadowdark RPG Core v4.9, Player's Guide to the Western Reaches V1, and Cursed Scrolls 1-6 with stable source keys and idempotent RollTable updates.
-- Restyled GM Screen dialogs for readable dark-theme controls and migrated its opened menus to Foundry Application V2.
-- Added canonical encounter-card parity, recent encounter history, active-party light pressure, Shadowdark procedure quick rules, corrected encounter-pressure labels, and direct encounter actions to the GM Screen.
-- Added optional Automated Animations compatibility for Shadowdark 4.x chat messages by mirroring the roll-config item UUID into the top-level Shadowdark flag expected by Foundry v13 AA 6.x; Automated Animations remains optional.
+- Reorganized GM Screen workspaces and controls, with staged Scene Context saves, a Procedure dropdown, and drag-and-drop document shortcuts on Overview.
+- Consolidated status displays and retained Group Management as the owner of travel, camping, marching order, and rest controls.
+- Removed generic refresh controls and automatic presentation persistence; document pins remain saved per GM.
+- Staged Encounter Zone and table assignments until Save Encounter Setup, while retaining zone previews.
+- Fixed due encounter checks surviving missing-table configuration and preserved the encounter cadence captured when a rest begins.
+- Reduced Scene Context to Terrain, Danger, Period, and Encounter Table, with legacy profile migration.
+- Expanded source-table support to Core v4.9, Western Reaches, and Cursed Scrolls 1–6; cached table discovery and improved encounter history, pressure, quick rules, and actions.
+- Migrated GM Screen dialogs to Application V2 and added optional Automated Animations compatibility for Shadowdark 4.x chat messages.
 
 ## 1.9.12
 
@@ -458,19 +315,11 @@
 
 ## 1.1.1
 
-- Refactored Quickdraw controls and per-group inventory sorting, and added safe per-character limit expressions with ability references, minimum/maximum functions, and carried gear counts.
-- Revised Encounter Engine Phase 1 to follow the Shadowdark random encounter procedure by default.
-- Added Unsafe, Risky, and Deadly danger levels with checks every 3, 2, or 1 crawling rounds/travel hours and encounters on 1 on 1d6.
-- Corrected starting distance to 1 Close, 2-4 Near, and 5-6 Far on 1d6.
-- Replaced the default activity table with Shadowdark's 2d6 Hunting, Eating, Building/Nesting, Socializing/Playing, Guarding, and Sleeping results.
-- Corrected reactions to the Shadowdark 2d6 attitude ranges and added optional interacting-character CHA modifiers that record the character revealing their presence and position.
-- Replaced default random surprise rolls with GM-selected awareness states based on the fiction, hiding, and detection checks.
-- Added the 50% wandering-monster treasure check.
-- Replaced generated morale scores with Shadowdark morale guidance: DC 15 WIS at half group strength or half solo HP, including morale immunity detection.
-- Made Intent and dice-based surprise optional expanded procedures, disabled in the Shadowdark Core profile.
-- Added automatic migration of the original default profile's terrain and RollTable assignments into the revised Shadowdark Core profile.
-- Retained the Time Passes prompt for 1d6, 2d6, or 3d6; an encounter occurs if any selected die shows 1.
-- Updated the Encounter Engine API to version 2 with separate `check` and `resolve` methods.
+- Added Quickdraw limit expressions using ability scores, minimum/maximum functions, and carried gear counts, with improved controls and inventory sorting.
+- Aligned the Encounter Engine with Shadowdark's danger cadence, starting distances, activities, 2d6 reactions, treasure chance, and morale rules.
+- Added optional interacting-character CHA modifiers and replaced random surprise with GM-selected awareness.
+- Made Intent and dice-based surprise optional, disabled in the Core profile, and migrated existing table assignments.
+- Retained the Time Passes dice prompt and introduced Encounter Engine API v2 with separate check and resolve methods.
 
 ## 1.1.0
 
@@ -515,28 +364,12 @@
 
 ## 1.0.3
 
-- Fixed Death Timer token effect icons in Foundry VTT v13 by using ActiveEffect `img` data and a status id.
-- Added larger Death Timer/Dead icons in a two-column chat message layout, using `blood-drop-red.png` for Death Timer roll chat icons.
-- Added Traveling task assignments to the Group Sheet with Pathfind, March, Lookout, and Scavenge tasks.
-- Added a GM-triggered Traveling roll progress splash for all active clients with player token/activity cards and ordered travel progress.
-- Added automatic left-to-right Traveling resolution, using each character's best relevant ability, defaulting unassigned group members to Lookout, and marking empty travel stages as failures.
-- Fixed the Travelling splash broadcast so active player and observer clients receive it through a chat-flag fallback in addition to module sockets.
-- Added a settings-driven Travelling progress animation that resolves rolls at each icon breakpoint and shows success/failure marks under the progress bar.
-- Added double Travelling result marks for critical successes and critical failures.
-- Fixed Travelling result marks so successful automatic rolls render as green V markers instead of fallback failure X markers.
-- Fixed Travelling prompts clearing stale success/failure marks before each new prompt starts.
-- Added automatic Travelling splash close after 20 seconds.
-- Updated Travelling rolls so Pathfind always uses WIS and Scavenge always uses INT.
-- Added a configurable Travelling prep delay, defaulting to 10 seconds, where players can roll their assigned/default travel stat before automatic breakpoint rolls begin.
-- Tightened the Travelling splash player cards to fit five per row on desktop and added success/failure outcome labels to Travelling roll chat messages.
-- Updated player-triggered Travelling rolls to open the standard Shadowdark ability check dialog with ADV/DISADV choices.
-- Fixed the standard Travelling player roll dialog layering so it opens above the Travelling splash.
-- Updated automatic Travelling fallback rolls to use the same Shadowdark ability-check chat cards as player rolls, fast-forwarded as standard rolls.
-- Updated resolved Travelling progress labels to show Success or Failure based on V/X totals while keeping all result marks visible.
-- Fixed Travelling Shadowdark roll outcome parsing so successful check cards are counted as V marks instead of false failures.
-- Fixed Travelling roll resolution to wait for the matching Shadowdark chat card before counting manual or automatic rolls, preventing completed players from being rolled again at the timer breakpoint.
-- Updated Token Shadows default values to start enabled with a wider, taller, softer-positioned shadow profile.
-- Updated Character Sheet default values for the summary bar layout, font scale, value font size, button radius, position, and logo visibility.
+- Fixed Death Timer status icons for Foundry v13 and improved death-related chat cards.
+- Added Traveling assignments for Pathfind, March, Lookout, and Scavenge, with synchronized player/observer splashes and ordered result displays.
+- Added configurable preparation and progress timing, compact party cards, critical-result marks, and automatic splash closing.
+- Used WIS for Pathfind and INT for Scavenge, with native check dialogs and improved ADV/DISADV and dialog layering.
+- Fixed stale result marks, success/failure parsing, and chat-card synchronization during manual and automatic roll resolution.
+- Updated Token Shadows and character-sheet default appearance settings.
 
 ## 1.0.2
 

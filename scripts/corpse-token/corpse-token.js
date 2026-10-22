@@ -130,6 +130,7 @@ function isNpc(actor) {
 
 function shouldProcessActor(actor) {
   if (!actor) return false;
+  if (actor.type === "mk-shadowdark.boat") return false;
   if (getSetting(SETTINGS.onlyNpcs) && !isNpc(actor)) return false;
   return true;
 }

@@ -1,0 +1,113 @@
+<form class="mk-boat-sheet mk-boat-command-deck {{mk.theme.className}} {{cssClass}}" autocomplete="off">
+  <div class="mk-boat-titlebar">
+    <span><i class="fas fa-anchor" aria-hidden="true"></i> MK-Shadowdark</span>
+    <span>{{localize "MK_SHADOWDARK.boat.sheetTitle"}}</span>
+  </div>
+  <header class="mk-boat-sheet-header">
+    <img class="mk-boat-image" src="{{actor.img}}" data-edit="img" title="{{actor.name}}" alt="{{actor.name}}">
+    <div class="mk-boat-title-block">
+      <span class="mk-boat-eyebrow">{{localize "MK_SHADOWDARK.boat.vessel"}}</span>
+      <input class="mk-boat-name" name="name" type="text" value="{{actor.name}}" aria-label="{{localize 'MK_SHADOWDARK.boat.name'}}">
+      {{#if mk.system.vesselType}}<span class="mk-boat-subtitle">{{mk.system.vesselType}}</span>{{/if}}
+    </div>
+    <label class="mk-boat-ac-field">
+      <span>{{localize "MK_SHADOWDARK.boat.ac"}}</span>
+      <input name="system.attributes.ac.value" type="number" min="0" step="1" value="{{mk.system.attributes.ac.value}}" aria-label="{{localize 'MK_SHADOWDARK.boat.ac'}}" {{#unless mk.canEdit}}disabled{{/unless}}>
+    </label>
+    <button type="button" class="mk-sheet-theme-toggle" data-action="toggle-sheet-theme" title="{{mk.theme.toggleLabel}}" aria-label="{{mk.theme.toggleLabel}}" aria-pressed="{{mk.theme.isLight}}"><i class="fas {{mk.theme.toggleIcon}}" aria-hidden="true"></i></button>
+  </header>
+  <nav class="mk-boat-nav tabs" data-group="primary">
+    <a class="item active" data-tab="overview"><i class="fas fa-ship" aria-hidden="true"></i> {{localize "MK_SHADOWDARK.boat.overview"}}</a>
+    <a class="item" data-tab="crew"><i class="fas fa-users" aria-hidden="true"></i> {{localize "MK_SHADOWDARK.boat.crew"}} <small>{{mk.crew.length}}</small></a>
+    <a class="item" data-tab="cargo"><i class="fas fa-boxes-stacked" aria-hidden="true"></i> {{localize "MK_SHADOWDARK.boat.cargo"}} <small>{{mk.cargo.used}}/{{mk.cargo.capacity}}</small></a>
+    <a class="item" data-tab="notes"><i class="fas fa-book-open" aria-hidden="true"></i> {{localize "MK_SHADOWDARK.boat.notes"}}</a>
+  </nav>
+  <section class="mk-boat-content">
+    <div class="tab mk-boat-tab-body active" data-group="primary" data-tab="overview">
+      <section class="mk-boat-hull-panel">
+        <div class="mk-boat-hull-heading">
+          <div>
+            <h2>{{localize "MK_SHADOWDARK.boat.hullIntegrity"}}</h2>
+            <span class="mk-boat-hint">{{localize "MK_SHADOWDARK.boat.hullValues"}}</span>
+          </div>
+          <div class="mk-boat-hull-values">
+            <input name="system.attributes.hp.value" type="number" min="0" step="1" value="{{mk.system.attributes.hp.value}}" aria-label="{{localize 'MK_SHADOWDARK.boat.currentHull'}}" {{#unless mk.canEdit}}disabled{{/unless}}>
+            <span aria-hidden="true">/</span>
+            <input name="system.attributes.hp.max" type="number" min="0" step="1" value="{{mk.system.attributes.hp.max}}" aria-label="{{localize 'MK_SHADOWDARK.boat.maxHull'}}" {{#unless mk.canEdit}}disabled{{/unless}}>
+          </div>
+        </div>
+        <div class="mk-boat-hull-track" role="progressbar" aria-label="{{localize 'MK_SHADOWDARK.boat.hull'}}" aria-valuenow="{{mk.system.attributes.hp.value}}" aria-valuemin="0" aria-valuemax="{{mk.system.attributes.hp.max}}"><span style="width: {{mk.hpPercent}}%;"></span></div>
+      </section>
+      <div class="mk-boat-capacity-grid" title="{{localize 'MK_SHADOWDARK.boat.statsHint'}}">
+        <label class="mk-boat-capacity-stat">
+          <span>{{localize "MK_SHADOWDARK.boat.crewAboard"}}</span>
+          <span class="mk-boat-capacity-value {{#if mk.crewOverCapacity}}is-over-capacity{{/if}}"><strong>{{mk.crew.length}}</strong><span aria-hidden="true">/</span><input name="system.crewCapacity" type="number" min="0" step="1" value="{{mk.system.crewCapacity}}" aria-label="{{localize 'MK_SHADOWDARK.boat.crewCapacity'}}" {{#unless mk.canEdit}}disabled{{/unless}}></span>
+        </label>
+        <label class="mk-boat-capacity-stat">
+          <span>{{localize "MK_SHADOWDARK.boat.cargoSlots"}}</span>
+          <span class="mk-boat-capacity-value {{#if mk.cargo.overCapacity}}is-over-capacity{{/if}}"><strong>{{mk.cargo.used}}</strong><span aria-hidden="true">/</span><input name="system.cargoCapacity" type="number" min="0" step="1" value="{{mk.system.cargoCapacity}}" aria-label="{{localize 'MK_SHADOWDARK.boat.cargoCapacity'}}" {{#unless mk.canEdit}}disabled{{/unless}}></span>
+        </label>
+        <label class="mk-boat-capacity-stat">
+          <span>{{localize "MK_SHADOWDARK.boat.passengers"}}</span>
+          <span class="mk-boat-capacity-value mk-boat-passengers"><input name="system.passengerCapacity" type="number" min="0" step="1" value="{{mk.system.passengerCapacity}}" aria-label="{{localize 'MK_SHADOWDARK.boat.passengers'}}" {{#unless mk.canEdit}}disabled{{/unless}}></span>
+        </label>
+      </div>
+      {{#if mk.crewOverCapacity}}<p class="mk-boat-warning" role="status">{{localize "MK_SHADOWDARK.boat.crewOverCapacity"}}</p>{{/if}}
+      {{#if mk.cargo.overCapacity}}<p class="mk-boat-warning" role="status">{{localize "MK_SHADOWDARK.boat.cargoOverCapacity"}}</p>{{/if}}
+      <div class="mk-boat-fields">
+        <label><span>{{localize "MK_SHADOWDARK.boat.vesselType"}}</span><input name="system.vesselType" type="text" value="{{mk.system.vesselType}}" {{#unless mk.canEdit}}disabled{{/unless}}></label>
+        <label><span>{{localize "MK_SHADOWDARK.boat.speed"}}</span><input name="system.speed" type="text" value="{{mk.system.speed}}" {{#unless mk.canEdit}}disabled{{/unless}}></label>
+      </div>
+      <section class="mk-boat-overview-crew">
+        <div class="mk-boat-section-header"><h2>{{localize "MK_SHADOWDARK.boat.crewAboard"}}</h2><span class="mk-boat-hint">{{mk.crew.length}} {{localize "MK_SHADOWDARK.boat.linkedActors"}}</span></div>
+        <div class="mk-boat-overview-roster">
+          {{#each mk.crew}}
+          <article class="mk-boat-overview-member {{#unless available}}is-missing{{/unless}}" data-crew-uuid="{{actorUuid}}">
+            <button type="button" class="mk-boat-link" data-action="open-crew" {{#unless available}}disabled{{/unless}}>
+              <img src="{{img}}" alt="">
+              <span><strong>{{name}}</strong><small>{{#if role}}{{role}}{{else}}{{localize "MK_SHADOWDARK.boat.unassignedRole"}}{{/if}}{{#unless available}} · {{localize "MK_SHADOWDARK.boat.unavailable"}}{{/unless}}</small></span>
+              <i class="fas fa-link" aria-hidden="true"></i>
+            </button>
+          </article>
+          {{else}}<p class="mk-boat-empty">{{localize "MK_SHADOWDARK.boat.noCrew"}}</p>{{/each}}
+        </div>
+      </section>
+    </div>
+    <div class="tab mk-boat-tab-body" data-group="primary" data-tab="crew">
+      <section class="mk-boat-sheet-card">
+        <div class="mk-boat-section-header"><h2>{{localize "MK_SHADOWDARK.boat.crewManifest"}}</h2><span class="mk-boat-section-total">{{mk.crew.length}} / {{mk.system.crewCapacity}}</span></div>
+        <p class="mk-boat-hint">{{localize "MK_SHADOWDARK.boat.crewHint"}}</p>
+        {{#if mk.crewOverCapacity}}<p class="mk-boat-warning" role="status">{{localize "MK_SHADOWDARK.boat.crewOverCapacity"}}</p>{{/if}}
+        <div class="mk-boat-crew-list">
+          {{#each mk.crew}}
+          <article class="mk-boat-crew-row {{#unless available}}is-missing{{/unless}}" data-crew-uuid="{{actorUuid}}">
+            <button type="button" class="mk-boat-link" data-action="open-crew" {{#unless available}}disabled{{/unless}}><img src="{{img}}" alt=""><strong>{{name}}</strong>{{#unless available}}<small>{{localize "MK_SHADOWDARK.boat.unavailable"}}</small>{{/unless}}</button>
+            <label class="mk-boat-role"><span>{{localize "MK_SHADOWDARK.boat.role"}}</span><input type="text" value="{{role}}" data-action="crew-role" {{#unless ../mk.canEdit}}disabled{{/unless}}></label>
+            <button type="button" class="mk-boat-remove" data-action="remove-crew" title="{{localize 'MK_SHADOWDARK.boat.removeCrew'}}" aria-label="{{localize 'MK_SHADOWDARK.boat.removeCrew'}}" {{#unless ../mk.canEdit}}disabled{{/unless}}><i class="fas fa-trash" aria-hidden="true"></i></button>
+          </article>
+          {{else}}<p class="mk-boat-empty">{{localize "MK_SHADOWDARK.boat.noCrew"}}</p>{{/each}}
+        </div>
+      </section>
+    </div>
+    <div class="tab mk-boat-tab-body" data-group="primary" data-tab="cargo">
+      <section class="mk-boat-sheet-card">
+        <div class="mk-boat-section-header"><div class="mk-boat-section-title"><h2>{{localize "MK_SHADOWDARK.boat.cargoHold"}}</h2><button type="button" class="mk-boat-info-button" data-action="cargo-help" title="{{localize 'MK_SHADOWDARK.boat.cargoHelpTitle'}}" aria-label="{{localize 'MK_SHADOWDARK.boat.cargoHelpTitle'}}"><i class="fas fa-info" aria-hidden="true"></i></button></div><strong>{{mk.cargo.used}}/{{mk.cargo.capacity}} {{localize "MK_SHADOWDARK.boat.slots"}}</strong></div>
+        {{#if mk.cargo.overCapacity}}<p class="mk-boat-warning" role="status">{{localize "MK_SHADOWDARK.boat.cargoOverCapacity"}}</p>{{/if}}
+        <div class="mk-boat-cargo-grid">
+          {{#each mk.cargo.items}}
+          <article class="mk-boat-cargo-item" data-cargo-item-id="{{id}}" data-item-quantity="{{quantity}}" data-source-quantity="{{sourceQuantity}}" draggable="{{../mk.canEdit}}">
+            <button type="button" class="mk-boat-cargo-open" data-action="open-cargo" title="{{name}}"><img src="{{img}}" alt="" draggable="false"><strong>{{name}}</strong><small>{{slots}} {{#if (eq slots 1)}}{{localize "MK_SHADOWDARK.boat.slot"}}{{else}}{{localize "MK_SHADOWDARK.boat.slots"}}{{/if}}</small></button>
+            {{#if stackable}}<span class="mk-boat-cargo-stack" title="{{localize 'MK_SHADOWDARK.boat.cargoStackHint'}}">{{quantity}}/{{stackLimit}}</span>{{/if}}
+          </article>
+          {{else}}<p class="mk-boat-empty">{{localize "MK_SHADOWDARK.boat.noCargo"}}</p>{{/each}}
+        </div>
+      </section>
+    </div>
+    <div class="tab mk-boat-tab-body" data-group="primary" data-tab="notes">
+      <section class="mk-boat-sheet-card mk-boat-notes">
+        <h2>{{localize "MK_SHADOWDARK.boat.shipLog"}}</h2>
+        {{editor mk.notesHTML target="system.notes" button=true editable=mk.canEdit engine="prosemirror" collaborate=false}}
+      </section>
+    </div>
+  </section>
+</form>

@@ -9,6 +9,9 @@
   },
   "documentTypes": {
     "Actor": {
+      "boat": {
+        "htmlFields": ["notes"]
+      },
       "bastion": {
         "htmlFields": [
           "notes"
@@ -88,6 +91,7 @@
     "scripts/detailed-wounds/history-runtime.js",
     "scripts/item-dashboard/item-dashboard.js",
     "scripts/weapon-upgrades/weapon-upgrades.js",
+    "scripts/libs/group-inventory-items.js",
     "scripts/libs/group-inventory-transfer.js",
     "scripts/character-dashboard/character-dashboard.js",
     "scripts/detailed-wounds/functional-consequences-runtime.js",
@@ -106,6 +110,7 @@
     "scripts/token-equipment-display/token-equipment-display.js",
     "scripts/libs/sheet-themes.js",
     "scripts/bastion-sheet/bastion-sheet.js",
+    "scripts/boat-sheet/boat-sheet.js",
     "scripts/group-sheet/group-sheet.js",
     "scripts/quickdraw/quickdraw-icons.js",
     "scripts/sheet-style-editor/sheet-style-editor.js",
@@ -161,6 +166,7 @@
     "styles/group-sheet.css",
     "styles/group-sheet-dashboard.css",
     "styles/bastion-sheet.css",
+    "styles/boat-sheet.css",
     "styles/quickdraw-icons.css",
     "styles/group-encounters.css",
     "styles/gm-screen.css",

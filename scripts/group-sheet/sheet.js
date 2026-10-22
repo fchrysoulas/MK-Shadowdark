@@ -50,7 +50,7 @@ import {
   buildActiveTorches,
   buildCampingResources,
   buildHeaderSummary,
-  buildInventoryItemData,
+  buildInventoryItemCards,
   calculateCompanionCarrySlots,
   buildMemberData,
   calculateCoinSlots,
@@ -66,16 +66,22 @@ import {
   showTravelRollPrompt,
 } from "./travel-prompt.js";
 import { getRestMode, reportRest, restActor } from "../libs/resting.js";
-import { isGroupInventoryTransferData } from "../libs/group-inventory-transfer.js";
+import { isGroupInventoryTransferData, queueGroupInventoryMutation } from "../libs/group-inventory-transfer.js";
+import { getGroupItemSelection } from "../libs/group-inventory-items.js";
+import { confirmGmDialog } from "../libs/dialog-v2.js";
 import { clampNumber, escapeHtml, getDialogFieldValue, numberOrZero } from "./utils.js";
 import { getPrimaryActiveGm } from "./users.js";
 import { getSettingValue } from "./group-settings.js";
 import { BASTION_ACTOR_TYPE } from "../bastion-sheet/constants.js";
+import { BOAT_ACTOR_TYPE } from "../boat-sheet/constants.js";
+import { getBoatCrew } from "../boat-sheet/crew.js";
+import { buildGearInventoryData } from "../libs/inventory-slots.js";
 import { getSheetTheme, bindSheetThemeToggle } from "../libs/sheet-themes.js";
+import { isVaultTransferData, transferVaultItemToActor } from "../libs/bastion-vault-transfer.js";
 
 const GROUP_ACTOR_LINKS = Object.freeze({
   warbands: { type: "NPC", label: "warband", dropLabel: "an NPC actor representing a warband" },
-  boats: { type: "NPC", label: "boat", dropLabel: "an NPC actor representing a boat" },
+  boats: { type: ["NPC", BOAT_ACTOR_TYPE], label: "boat", dropLabel: "a Boat actor or an NPC actor representing a boat" },
   bastions: { type: BASTION_ACTOR_TYPE, label: "Bastion", dropLabel: "a Bastion actor" },
 });
 const BOAT_ASSIGNMENT_KINDS = ["crew", "warbands"];
@@ -184,9 +190,21 @@ class MKGroupSheet extends ActorSheetBase {
       return;
     }
     const data = item.toDragData();
+    const row = event.currentTarget.dataset;
+    const hasSelection = row.itemQuantity !== undefined || row.sourceQuantity !== undefined;
+    const selection = hasSelection ? getGroupItemSelection(item, {
+      quantity: row.itemQuantity, sourceQuantity: row.sourceQuantity,
+    }) : null;
+    if (hasSelection && !selection) {
+      event.preventDefault();
+      return;
+    }
     data[MODULE_ID] = {
       ...data[MODULE_ID],
-      groupInventoryTransfer: { sourceActorUuid: this.actor.uuid, sourceItemId: item.id },
+      groupInventoryTransfer: {
+        sourceActorUuid: this.actor.uuid, sourceItemId: item.id,
+        ...(selection ? { quantity: selection.quantity, sourceQuantity: selection.sourceQuantity } : {}),
+      },
     };
     const payload = JSON.stringify(data);
     event.dataTransfer.effectAllowed = "move";
@@ -247,7 +265,7 @@ class MKGroupSheet extends ActorSheetBase {
     const members = rosterMembers.filter(isActivePartyMember);
     const memberActors = rosterActors.filter(isActivePartyMember);
 
-    const inventoryItems = [...this.actor.items].map(buildInventoryItemData);
+    const inventoryItems = [...this.actor.items].flatMap(buildInventoryItemCards);
     const companions = normalizeCompanions(groupData.companions);
     const inventorySlots = calculateGroupInventorySlots(this.actor, companions);
     const activeTorches = buildActiveTorches(memberActors, this.actor);
@@ -640,17 +658,7 @@ class MKGroupSheet extends ActorSheetBase {
       this._onOpenItem(event);
     });
 
-    html.find("[data-action='item-increment']").on("click", event => {
-      this._onChangeItemQuantity(event, 1);
-    });
-
-    html.find("[data-action='item-decrement']").on("click", event => {
-      this._onChangeItemQuantity(event, -1);
-    });
-
-    html.find("[data-action='create-group-item']").on("click", event => {
-      this._onCreateGroupItem(event);
-    });
+    this._activateInventoryContextMenu(html);
 
     html.find("[data-action='change-group-coin']").on("change", event => {
       this._onChangeGroupCoin(event);
@@ -911,6 +919,13 @@ class MKGroupSheet extends ActorSheetBase {
     }
 
     if (data.type === "Item" || data.uuid) {
+      if (isVaultTransferData(data)) {
+        if (this.isEditable && game.user?.isGM) {
+          try { await transferVaultItemToActor(this.actor, data); }
+          catch (error) { console.error(`${MODULE_ID} | Could not move stored gear into the group`, error); ui.notifications?.error?.(error.message); }
+        }
+        return false;
+      }
       const droppedItem = await resolveItemFromDropData(data);
       if (droppedItem) {
         await this._addItemToGroup(droppedItem);
@@ -1087,6 +1102,25 @@ class MKGroupSheet extends ActorSheetBase {
     for (const uuid of groupData[kind]) {
       const card = await this._buildLinkedActorCard(uuid, definition.type, definition.label);
       if (kind === "boats") {
+        const linkedBoat = card.available ? await this._resolveLinkedActor(uuid, definition.type) : null;
+        if (linkedBoat?.type === BOAT_ACTOR_TYPE) {
+          const crew = getBoatCrew(linkedBoat);
+          card.isBoatActor = true;
+          card.vesselType = String(linkedBoat.system?.vesselType ?? "").trim();
+          card.captainName = "";
+          card.crewSlotsUsed = crew.length;
+          card.crewSlotCapacity = Number(linkedBoat.system?.crewCapacity ?? 0);
+          card.hull = linkedBoat.system?.attributes?.hp ?? {};
+          card.ac = linkedBoat.system?.attributes?.ac?.value ?? 0;
+          card.cargo = buildGearInventoryData(linkedBoat.items, linkedBoat.system?.cargoCapacity);
+          card.assignmentSections = [{ kind: "crew", label: "Crew", hasEntries: crew.length > 0,
+            entries: await Promise.all(crew.map(async entry => ({
+              ...await this._buildLinkedActorCard(entry.actorUuid, ["Player", "NPC"], "crew member"), quantity: 1,
+            }))),
+          }];
+          entries.push(card);
+          continue;
+        }
         const assignment = groupData.boatAssignments.find(entry => entry.actorUuid === uuid);
         card.captainName = assignment.captainName;
         card.assignmentSections = [];
@@ -1121,7 +1155,8 @@ class MKGroupSheet extends ActorSheetBase {
   async _resolveLinkedActor(uuid, type) {
     try {
       const actor = await resolveActorFromUuid(uuid);
-      return actor?.type === type && actor.visible !== false ? actor : null;
+      return (Array.isArray(type) ? type.includes(actor?.type) : actor?.type === type)
+        && actor?.visible !== false ? actor : null;
     } catch {
       // Deleted compendium documents must leave a removable link on the group.
       return null;
@@ -1240,7 +1275,8 @@ class MKGroupSheet extends ActorSheetBase {
     if (!this._canManageGroupActorLinks()) return false;
     if (!Object.hasOwn(GROUP_ACTOR_LINKS, kind)) return false;
     const definition = GROUP_ACTOR_LINKS[kind];
-    if (!actor?.uuid || actor.type !== definition.type || actor.id === this.actor.id) {
+    const validType = Array.isArray(definition.type) ? definition.type.includes(actor?.type) : actor?.type === definition.type;
+    if (!actor?.uuid || !validType || actor.id === this.actor.id) {
       ui.notifications.warn(`Drop ${definition.dropLabel} into this tab.`);
       return false;
     }
@@ -1690,37 +1726,55 @@ class MKGroupSheet extends ActorSheetBase {
     item?.sheet?.render(true);
   }
 
-  async _onChangeItemQuantity(event, delta) {
-    event.preventDefault();
-
-    const row = event.currentTarget.closest("[data-item-id]");
-    const itemId = row?.dataset?.itemId;
-    const item = this.actor.items.get(itemId);
-
-    if (!item) return;
-
-    const current = Number(item.system?.quantity ?? 1) || 1;
-    const next = Math.max(0, current + delta);
-
-    if (next <= 0) {
-      const confirmed = await Dialog.confirm({
-        title: "Delete Item",
-        content: `<p>Quantity reached 0. Delete <strong>${item.name}</strong>?</p>`,
-        yes: () => true,
-        no: () => false,
-        defaultYes: false,
-      });
-
-      if (confirmed) {
-        await this.actor.deleteEmbeddedDocuments("Item", [itemId]);
+  _activateInventoryContextMenu(html) {
+    if (this._inventoryContextMenu?.element?.isConnected) void this._inventoryContextMenu.close({ animate: false });
+    const ContextMenu = globalThis.foundry?.applications?.ux?.ContextMenu;
+    const root = html?.nodeType === 1 ? html : html?.[0];
+    if (!ContextMenu || !root || !this.isEditable || !game.user?.isGM) return;
+    class InventoryContextMenu extends ContextMenu {
+      _setPosition(menu, target, options) {
+        menu.classList.add("mk-group-item-context-menu", ...getSheetTheme("group").classes);
+        return super._setPosition(menu, target, options);
       }
-
-      this.render(false);
-      return;
     }
+    this._inventoryContextMenu = new InventoryContextMenu(root, ".mk-shared-item-row[data-item-id]", [{
+      name: "MK_SHADOWDARK.groupSheet.inventory.trash",
+      icon: '<i class="fas fa-trash" aria-hidden="true"></i>',
+      condition: row => Boolean(this.isEditable && game.user?.isGM && this.actor.items.has(row.dataset.itemId)),
+      callback: row => this._onTrashInventoryCard(row).catch(error => {
+        console.error(`${MODULE_ID} | Could not trash shared inventory item`, error);
+        ui.notifications?.error?.(game.i18n.localize("MK_SHADOWDARK.groupSheet.inventory.trashFailed"));
+      }),
+    }], { jQuery: false, fixed: true });
+  }
 
-    await item.update({
-      "system.quantity": next,
+  async _onTrashInventoryCard(row) {
+    if (!this.isEditable || !game.user?.isGM) return false;
+    const { itemId, itemQuantity: quantity, sourceQuantity } = row?.dataset ?? {};
+    const item = this.actor.items.get(itemId);
+    const selection = item && getGroupItemSelection(item, { quantity, sourceQuantity });
+    if (!selection) return false;
+    const confirmed = await confirmGmDialog({
+      title: game.i18n.localize("MK_SHADOWDARK.groupSheet.inventory.trashTitle"),
+      content: game.i18n.format("MK_SHADOWDARK.groupSheet.inventory.trashPrompt", {
+        name: escapeHtml(item.name), quantity: selection.quantity,
+      }),
+      yes: { label: game.i18n.localize("MK_SHADOWDARK.groupSheet.inventory.trash") },
+      no: { label: game.i18n.localize("MK_SHADOWDARK.groupSheet.help.close"), default: true },
+      classes: ["mk-group-item-trash-dialog", ...getSheetTheme("group").classes],
+    });
+    if (!confirmed) return false;
+    return queueGroupInventoryMutation(async () => {
+      // Recheck after confirmation and serialize with player transfers on the GM client.
+      const current = this.actor.items.get(itemId);
+      const selected = current === item && getGroupItemSelection(current, { quantity, sourceQuantity });
+      if (!this.isEditable || !game.user?.isGM || !selected) {
+        ui.notifications?.warn?.(game.i18n.localize("MK_SHADOWDARK.groupSheet.inventory.changed"));
+        return false;
+      }
+      if (selected.remaining > 0) await current.update({ "system.quantity": selected.remaining });
+      else await this.actor.deleteEmbeddedDocuments("Item", [itemId]);
+      return true;
     });
   }
 
@@ -2003,30 +2057,6 @@ class MKGroupSheet extends ActorSheetBase {
     groupData.companions = groupData.companions.filter(entry => entry.id !== id);
     await this._saveGroupData(groupData);
     this.render(false);
-  }
-
-  async _onCreateGroupItem(event) {
-    event.preventDefault();
-
-    const treasure = event.currentTarget.dataset.treasure === "true";
-
-    const itemData = {
-      name: treasure ? "New Treasure" : "New Gear",
-      type: "Basic",
-      system: {
-        quantity: 1,
-        treasure,
-        isPhysical: true,
-        slots: {
-          slots_used: 1,
-          per_slot: 1,
-          free_carry: 0,
-        },
-      },
-    };
-
-    const [item] = await this.actor.createEmbeddedDocuments("Item", [itemData]);
-    item.sheet.render(true);
   }
 
   async _onChangeGroupCoin(event) {

@@ -244,7 +244,7 @@
       hint: "Configure Group actors, member presentation, camping supplies, tab backgrounds, travel progress, and weather tables.",
       icon: "fas fa-users",
       settings: [
-        "enableGroupActors", "groupEncountersEnabled", "groupSheetTheme", "bastionSheetTheme", "groupSheetAssignedTokenSize", "groupSheetMemberPortraitSize", "groupSheetActivityColumns", "groupSheetCampingFoodKeywords",
+        "enableGroupActors", "groupEncountersEnabled", "groupSheetTheme", "bastionSheetTheme", "boatSheetTheme", "groupSheetAssignedTokenSize", "groupSheetMemberPortraitSize", "groupSheetActivityColumns", "groupSheetCampingFoodKeywords",
         "groupSheetCampingTorchKeywords", "groupSheetTabBackgroundTraveling", "groupSheetTabBackgroundCamping", "groupSheetTabBackgroundInventory",
         "groupSheetTabBackgroundHirelings", "groupSheetTabBackgroundMounts", "groupSheetTravelProgressDurationMs",
         "groupSheetWeatherTemperatureTable", "groupSheetWeatherWindSpeedTable"
@@ -256,7 +256,7 @@
         },
         {
           title: "MK_SHADOWDARK.sheetTheme.appearance",
-          settings: ["groupSheetTheme", "bastionSheetTheme"]
+          settings: ["groupSheetTheme", "bastionSheetTheme", "boatSheetTheme"]
         },
         {
           title: "Camping",
@@ -1877,7 +1877,7 @@
       default: true
     });
 
-    for (const [key, sheet] of [["groupSheetTheme", "group"], ["bastionSheetTheme", "bastion"]]) {
+    for (const [key, sheet] of [["groupSheetTheme", "group"], ["bastionSheetTheme", "bastion"], ["boatSheetTheme", "boat"]]) {
       registerSetting(key, {
         name: `MK_SHADOWDARK.sheetTheme.${sheet}Name`,
         hint: `MK_SHADOWDARK.sheetTheme.${sheet}Hint`,

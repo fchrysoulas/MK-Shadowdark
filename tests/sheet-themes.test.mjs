@@ -23,7 +23,7 @@ function fixture(initial = {}) {
 test("sheet themes default to Dark before settings are ready and reject invalid stored values", () => {
   for (const game of [undefined, {}, { settings: { get() { throw new Error("not ready"); } } }]) {
     globalThis.game = game;
-    for (const kind of ["group", "bastion"]) {
+    for (const kind of ["group", "bastion", "boat"]) {
       const theme = getSheetTheme(kind);
       assert.equal(theme.value, "dark");
       assert.equal(theme.isLight, false);
@@ -104,7 +104,7 @@ test("shared settings register separate client themes and refresh open actor she
   };
   vm.runInNewContext(readFileSync(new URL("../scripts/libs/settings.js", import.meta.url), "utf8"), context);
   init();
-  for (const key of ["groupSheetTheme", "bastionSheetTheme"]) {
+  for (const key of ["groupSheetTheme", "bastionSheetTheme", "boatSheetTheme"]) {
     const setting = registered.get(`mk-shadowdark.${key}`);
     assert.equal(setting.scope, "client");
     assert.equal(setting.default, "dark");
@@ -114,5 +114,5 @@ test("shared settings register separate client themes and refresh open actor she
     assert.ok(translations[setting.hint]);
     setting.onChange("light");
   }
-  assert.deepEqual(renders, [["group", false], ["bastion", false], ["group", false], ["bastion", false]]);
+  assert.deepEqual(renders, [["group", false], ["bastion", false], ["group", false], ["bastion", false], ["group", false], ["bastion", false]]);
 });

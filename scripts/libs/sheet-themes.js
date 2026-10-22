@@ -1,5 +1,5 @@
 const MODULE_ID = "mk-shadowdark";
-const THEME_SETTINGS = Object.freeze({ group: "groupSheetTheme", bastion: "bastionSheetTheme" });
+const THEME_SETTINGS = Object.freeze({ group: "groupSheetTheme", bastion: "bastionSheetTheme", boat: "boatSheetTheme" });
 
 function themeLabel(key, fallback) {
   const translated = globalThis.game?.i18n?.localize?.(key);

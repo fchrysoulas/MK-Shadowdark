@@ -12,6 +12,8 @@ import {
   getGemsPerSlot,
 } from "./actors.js";
 import { getSettingValue } from "./group-settings.js";
+import { buildInventoryItemData, buildInventoryItemCards } from "../libs/group-inventory-items.js";
+import { calculateItemSlots } from "../libs/inventory-slots.js";
 import { clampPercent, hasOwn, numberOrZero, signed } from "./utils.js";
 function quantityOrOne(item) {
   const raw = item?.system?.quantity?.value ?? item?.system?.quantity;
@@ -299,22 +301,6 @@ function calculateActorGearSlots(actor) {
   };
 }
 
-function calculateItemSlots(item) {
-  const system = item.system ?? {};
-
-  if (!system.isPhysical || !system.slots) return 0;
-  if (system.stashed) return 0;
-
-  const perSlot = Number(system.slots.per_slot ?? 1) || 1;
-  const quantity = Number(system.quantity ?? 1) || 1;
-  const slotsUsed = Number(system.slots.slots_used ?? 0) || 0;
-  const freeCarry = Number(system.slots.free_carry ?? 0) || 0;
-
-  const used = Math.ceil(quantity / perSlot) * slotsUsed - freeCarry * slotsUsed;
-
-  return Math.max(0, used);
-}
-
 function calculateGroupInventorySlots(actor, companions = []) {
   const total = [...actor.items].reduce((sum, item) => {
     return sum + calculateItemSlots(item);
@@ -443,24 +429,6 @@ function buildHeaderSummary(members) {
   };
 }
 
-function buildInventoryItemData(item) {
-  const system = item.system ?? {};
-  const slots = calculateItemSlots(item);
-
-  return {
-    id: item.id,
-    uuid: item.uuid,
-    name: item.name,
-    img: item.img,
-    type: item.type,
-    quantity: Number(system.quantity ?? 1) || 1,
-    treasure: !!system.treasure,
-    stashed: !!system.stashed,
-    lost: !!system.lost,
-    slots,
-  };
-}
-
 function calculateCompanionCarrySlots(companion) {
   if (companion?.type !== "mount") {
     return Math.max(0, Math.floor(Number(companion?.carrySlots) || 0));
@@ -484,4 +452,5 @@ export {
   buildMemberData,
   buildHeaderSummary,
   buildInventoryItemData,
+  buildInventoryItemCards,
 };

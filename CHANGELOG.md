@@ -2,6 +2,23 @@
 
 ## 1.9.33
 
+- Replaced Boat Cargo trash buttons with the Group Inventory-style right-click Trash Item menu and confirmation dialog. Boat owners and GMs discard only the selected card, with ownership and stale-card checks repeated after confirmation; card drag-and-drop transfers are preserved.
+- Split Boat Cargo into the same individual item cards and capped items-per-slot stacks as Group Inventory. Card badges show current/per-slot quantities; dragging or discarding affects only the selected card. Transfers to character sheets, Character Dashboard slots, other Boats, Group Inventory, and Bastion Vaults preserve remaining cargo, reject stale cards, and roll back failed source changes. Stored quantities remain editable through the item sheet.
+- Unified Boat Cargo slot counting with Group Inventory, including items-per-slot limits, slot size, free carry, and zero cost for stashed, nonphysical, and zero-slot items. Cargo cards, capacity checks, quantity edits, and linked Group Sheet Boat totals share the same calculation; full-stack drag-and-drop transfers retain ownership checks and rollback support.
+- Fixed Group Inventory cards incorrectly showing 0 slots for physical items by retaining Shadowdark's inherited item data when calculating each card's slot cost. Card costs now agree with the shared inventory total while preserving free-carry, stashed-item, and nonphysical-item rules.
+- Moved Boat Cargo instructions into a themed information popup beside the Cargo hold heading, available to owners and read-only viewers, keeping the item grid compact.
+- Matched Boat Cargo to the compact Group Inventory item cards, with smaller icons, single-line names, slot costs, and compact quantity/discard controls. Existing full-stack drag-and-drop transfers and capacity checks are preserved.
+- Replaced the Boat sheet overview with the Command Deck design: nautical portrait and class header, editable AC and hull HP, editable crew/cargo/passenger capacities, a live crew preview, responsive layouts, and coordinated Dark/Light themes. Existing crew, cargo, and rich-text notes controls remain available in their tabs.
+- Displayed each Boat's editable class beneath its name in the compact Group Sheet record.
+- Narrowed the Group Inventory Party Treasure panel to give item cards more horizontal space.
+- Added live AC and used/maximum cargo slots beside Hull HP and Crew in compact Group Sheet Boat records.
+- Reduced Group Inventory cards' minimum width and height to fit more items on the sheet, with smaller icons and spacing; removed item type labels while retaining slot costs and stack counts.
+- Compacted Group Sheet Boat records into one row, with left-aligned portraits and names, hull and crew stats on the right, and the sheet-management instruction moved out of the card.
+- Group Inventory now displays one item per card, allowing stacks only up to the configured items-per-slot limit; removed quantity buttons and added GM right-click trashing. Transfers and trashing affect only the selected card, with stale-transfer checks and rollback support.
+- Added a standalone Boat actor type with a Bastion-style sheet, independently editable hull stats and capacities, linked Player/NPC crew with roles, transferable cargo with gear-slot limits, rich-text notes, and a separate Dark/Light theme. Group Sheets accept Boat actors alongside existing NPC boats.
+- Removed the Shared Items heading, custom-item add button, duplicate slot count, and information bar above Group Inventory cards; totals and inventory help remain in the tab header.
+- Excluded Group inventories from Quickdraw controls, highlighting, sorting, and summary cards, including cleanup of previously injected lightning toggles.
+- Added matching totals badges to every Group Sheet tab header, including total weekly wages and salaries in Summary, active travel/camp members, shared inventory slot use, and linked boat and bastion counts.
 - Scoped `npm test` to the maintained test suite, preventing archived release snapshots under `build/` from running duplicate tests and reporting stale failures.
 - Added Dark and Light themes to the Group and Bastion sheets, with header toggles and separate appearance preferences saved for each user.
 - Kept Bastion Vault item labels visible when Foundry applies its native button height.

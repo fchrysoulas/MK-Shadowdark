@@ -1,6 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
+import vm from "node:vm";
 
 const runtimeUrl = new URL("../scripts/corpse-token/corpse-token.js", import.meta.url);
 const settingsUrl = new URL("../scripts/libs/settings.js", import.meta.url);
@@ -18,5 +19,16 @@ test("Corpse Token defaults auto-restore on and gates verbose logs behind debug 
   assert.match(featureSettings, /registerSetting\("corpseTokenAutoRestoreWhenHealed",/);
   assert.match(featureSettings, /registerSetting\("corpseTokenDebug",/);
   assert.match(featureSettings, /name: "Corpse Token: Debug Mode"/);
+});
+
+test("Boat hull damage never triggers corpse-token automation even with NPC-only filtering disabled", async () => {
+  const runtime = await readFile(runtimeUrl, "utf8");
+  const [functionSource] = runtime.match(/function shouldProcessActor\(actor\) \{[\s\S]*?\n\}/);
+  const shouldProcess = vm.runInNewContext(`(${functionSource})`, {
+    getSetting: () => false, SETTINGS: { onlyNpcs: "onlyNpcs" }, isNpc: actor => actor.type === "NPC",
+  });
+  assert.equal(shouldProcess({ type: "mk-shadowdark.boat" }), false);
+  assert.equal(shouldProcess({ type: "NPC" }), true);
+  assert.equal(shouldProcess({ type: "Player" }), true);
 });
 

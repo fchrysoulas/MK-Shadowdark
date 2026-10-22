@@ -144,8 +144,9 @@
 
 .mk-party-treasure-panel .mk-group-section-heading {
   justify-content: center;
-  gap: 6px;
-  font-size: 14px;
+  gap: 4px;
+  font-size: 12px;
+  letter-spacing: normal;
 }
 
 .mk-group-help-dialog {
@@ -905,8 +906,7 @@
   font-size: 14px;
 }
 
-.mk-side-stat.mk-danger strong,
-.mk-inventory-slots.mk-danger strong {
+.mk-side-stat.mk-danger strong {
   color: var(--mk-sheet-danger, #ff6378);
 }
 
@@ -945,7 +945,7 @@
 
 .mk-inventory-layout {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) 200px;
+  grid-template-columns: minmax(0, 1fr) 160px;
   gap: 14px;
   align-items: start;
 }
@@ -959,35 +959,6 @@
   overflow: hidden;
 }
 
-.mk-inventory-panel-header {
-  display: grid;
-  grid-template-columns: 22px 1fr auto;
-  gap: 6px;
-  align-items: center;
-  min-height: 38px;
-  padding: 6px 10px;
-  border-bottom: 1px solid rgba(var(--mk-sheet-foreground-rgb, 255, 255, 255), 0.1);
-}
-
-.mk-panel-add-button {
-  display: inline-grid;
-  place-items: center;
-  width: 17px;
-  height: 17px;
-  padding: 0;
-  border: 0;
-  border-radius: 2px;
-  background: rgba(var(--mk-sheet-foreground-rgb, 255, 255, 255), 0.8);
-  color: var(--mk-sheet-inverse, #111);
-  font-size: 11px;
-  cursor: pointer;
-}
-
-.mk-panel-add-button:hover {
-  background: var(--mk-sheet-strong, #fff);
-}
-
-.mk-inventory-panel-header h2,
 .mk-party-treasure-panel h2 {
   margin: 0;
   color: var(--mk-sheet-strong, #f0f0f0);
@@ -997,31 +968,12 @@
   text-transform: uppercase;
 }
 
-.mk-inventory-slots {
-  display: inline-flex;
-  align-items: center;
-  gap: 5px;
-  color: var(--mk-group-muted);
-  font-size: 12px;
-  font-weight: 800;
-  text-transform: uppercase;
-}
-
-.mk-inventory-slots strong {
-  color: var(--mk-sheet-text, #e5e5e5);
-}
-
-.mk-inventory-slots i {
-  color: rgba(var(--mk-sheet-foreground-rgb, 255, 255, 255), 0.35);
-  font-size: 13px;
-}
-
 .mk-shared-items-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
   align-content: start;
   gap: 8px;
-  min-height: 220px;
+  min-height: 124px;
   margin: 8px;
   padding: 8px;
   border: 1px dashed color-mix(in srgb, var(--mk-group-accent) 35%, transparent);
@@ -1036,10 +988,10 @@
 .mk-shared-item-row {
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  gap: 4px;
   min-width: 0;
-  min-height: 148px;
-  padding: 10px 7px 8px;
+  min-height: 104px;
+  padding: 6px 7px;
   border: 1px solid rgba(var(--mk-sheet-foreground-rgb, 255, 255, 255), 0.12);
   border-radius: 5px;
   background: rgba(var(--mk-sheet-inset-rgb, 10, 10, 10), 0.74);
@@ -1062,14 +1014,14 @@
   flex: 1;
   flex-direction: column;
   align-items: center;
-  gap: 4px;
+  gap: 3px;
   min-width: 0;
 }
 
 .mk-shared-item-name-cell img {
-  width: 54px;
-  height: 54px;
-  flex: 0 0 54px;
+  width: 40px;
+  height: 40px;
+  flex: 0 0 40px;
   object-fit: cover;
   border: 1px solid rgba(var(--mk-sheet-foreground-rgb, 255, 255, 255), 0.18);
   border-radius: 3px;
@@ -1107,38 +1059,36 @@
   white-space: nowrap;
 }
 
-.mk-shared-item-qty-cell {
+.mk-shared-item-stack {
   display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: 5px;
-}
-
-.mk-shared-item-qty-cell button {
-  display: inline-grid;
-  place-items: center;
-  width: 22px;
-  height: 22px;
-  min-height: 22px;
-  margin: 0;
-  padding: 0;
-  border: 0;
+  align-self: center;
+  margin-top: auto;
+  padding: 2px 6px;
   border-radius: 3px;
   background: rgba(var(--mk-sheet-foreground-rgb, 255, 255, 255), 0.1);
-  color: var(--mk-group-text);
-  font-size: 8px;
-  line-height: 1;
-}
-
-.mk-shared-item-qty-cell button:hover {
-  background: rgba(var(--mk-sheet-foreground-rgb, 255, 255, 255), 0.2);
-}
-
-.mk-shared-item-qty-cell strong {
-  color: var(--mk-group-accent);
+  color: var(--mk-sheet-strong, #e8e8e8);
   font-size: 10px;
   font-weight: 800;
-  text-align: center;
+  line-height: 1.2;
+}
+
+#context-menu.mk-group-item-context-menu,
+.mk-group-item-trash-dialog .window-content {
+  background: var(--mk-sheet-field, #171717);
+  color: var(--mk-sheet-text, #dedede);
+  font-family: "Montserrat-Medium", "Montserrat", sans-serif;
+}
+
+#context-menu.mk-group-item-context-menu .context-items {
+  background: transparent;
+}
+
+#context-menu.mk-group-item-context-menu .context-item {
+  color: var(--mk-sheet-danger, #ff9aa8);
+}
+
+#context-menu.mk-group-item-context-menu .context-item:hover {
+  background: rgba(var(--mk-sheet-foreground-rgb, 255, 255, 255), 0.1);
 }
 
 .mk-shared-items-empty {
@@ -1150,7 +1100,7 @@
 }
 
 .mk-party-treasure-panel {
-  padding: 12px;
+  padding: 8px;
 }
 
 .mk-party-treasure-panel h2 {
@@ -1160,8 +1110,8 @@
 
 .mk-coin-row {
   display: grid;
-  grid-template-columns: 32px 1fr;
-  gap: 8px;
+  grid-template-columns: 24px minmax(0, 1fr);
+  gap: 6px;
   align-items: center;
   margin-bottom: 8px;
 }
@@ -2090,6 +2040,36 @@ body.mk-travel-prompt-open #sd-roll-dialog {
   font-size: 13px;
   font-weight: 900;
   text-transform: uppercase;
+  white-space: nowrap;
+  line-height: 1.2;
+}
+
+.mk-companion-capacity small {
+  display: block;
+  font-size: 9px;
+  font-weight: 500;
+  line-height: 1.1;
+}
+
+.mk-companion-capacity.mk-danger {
+  border-color: currentColor;
+  color: var(--mk-sheet-danger, #ff9aa8);
+}
+
+.mk-companion-capacity.mk-danger i {
+  color: inherit;
+}
+
+@container (max-width: 560px) {
+  .mk-companions-header h2 {
+    font-size: 15px;
+  }
+
+  .mk-companion-capacity {
+    gap: 4px;
+    padding-inline: 7px;
+    font-size: 11px;
+  }
 }
 
 .mk-companion-capacity i,
@@ -2424,6 +2404,47 @@ body.mk-travel-prompt-open #sd-roll-dialog {
   justify-content: space-between;
   gap: 10px;
   min-width: 0;
+}
+
+.mk-group-sheet .mk-boat-header > .mk-group-actor-open {
+  justify-content: flex-start;
+  text-align: left;
+}
+
+.mk-boat-properties {
+  display: flex;
+  flex: 0 1 auto;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 4px 12px;
+  margin-inline-start: auto;
+  color: var(--mk-group-muted);
+  font-size: 12px;
+}
+
+.mk-boat-identity {
+  display: grid;
+  gap: 3px;
+  min-width: 0;
+  text-align: left;
+}
+
+.mk-boat-class {
+  color: var(--mk-group-muted);
+  font-size: 11px;
+  font-weight: 500;
+  line-height: 1.2;
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
+
+.mk-boat-properties > span {
+  white-space: nowrap;
+}
+
+.mk-boat-properties strong {
+  color: var(--mk-sheet-strong, #eeeeee);
 }
 
 .mk-boat-details,

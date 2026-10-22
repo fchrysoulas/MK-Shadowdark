@@ -14,6 +14,8 @@ import {
 import { BASTION_ACTOR_TYPE } from "../bastion-sheet/constants.js";
 import { registerBastionSheet } from "../bastion-sheet/registration.js";
 import { createBastionActor } from "../bastion-sheet/sheet.js";
+import { BOAT_ACTOR_TYPE, boatLabel } from "../boat-sheet/constants.js";
+import { createBoatActor } from "../boat-sheet/sheet.js";
 import {
   canUserControlActor,
   ensureGroupActorHpDefaults,
@@ -87,6 +89,7 @@ function getActorDocumentTypes() {
 function getActorTypeLabel(type) {
   if (type === GROUP_ACTOR_DIALOG_TYPE) return "Group";
   if (type === BASTION_ACTOR_TYPE) return "Bastion";
+  if (type === BOAT_ACTOR_TYPE) return boatLabel("type");
 
   const label = CONFIG.Actor?.typeLabels?.[type];
   if (label) return game.i18n.localize(label);
@@ -99,6 +102,7 @@ function getActorTypeLabel(type) {
 function getDefaultActorName(type) {
   if (type === GROUP_ACTOR_DIALOG_TYPE) return "New Group";
   if (type === BASTION_ACTOR_TYPE) return "New Bastion";
+  if (type === BOAT_ACTOR_TYPE) return boatLabel("newName");
 
   const typeLabel = getActorTypeLabel(type || "Actor") || "Actor";
   const localized = game.i18n.format("DOCUMENT.New", { type: typeLabel });
@@ -164,6 +168,7 @@ function buildActorCreateDialogContent(data = {}) {
     ...getActorDocumentTypes(),
     GROUP_ACTOR_DIALOG_TYPE,
     BASTION_ACTOR_TYPE,
+    BOAT_ACTOR_TYPE,
   ])]
     .map(type => `
       <option value="${escapeHtml(type)}" ${type === selectedType ? "selected" : ""}>
@@ -206,6 +211,10 @@ async function handleActorCreateDialog(actorClass, data, html) {
       name: actorName,
       folder: formData.folder || getFolderId(data.folder),
     });
+  }
+
+  if (actorType === BOAT_ACTOR_TYPE) {
+    return createBoatActor({ name: actorName, folder: formData.folder || getFolderId(data.folder) });
   }
 
   const createData = foundry.utils.mergeObject(foundry.utils.deepClone(data), formData);

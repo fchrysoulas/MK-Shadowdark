@@ -361,6 +361,67 @@ test("actor drops link boats and bastions, keeping their original documents", as
   assert.equal(f.sheet.renders, 2);
 });
 
+test("new Boat actors link to groups and display live class, hull, AC, crew and cargo without copying group assignments", async () => {
+  const f = setup();
+  const boat = f.linkedActor("vessel", "mk-shadowdark.boat");
+  const hero = f.linkedActor("captain", "Player");
+  boat.system.crew = [{ actorUuid: hero.uuid, name: hero.name, role: "Captain" }];
+  boat.system.crewCapacity = 7;
+  boat.system.vesselType = "  Sloop  ";
+  boat.system.attributes.ac = { value: 14 };
+  boat.system.cargoCapacity = 12;
+  boat.items = [{ id: "supplies", system: { isPhysical: true, quantity: 3, slots: { slots_used: 2, per_slot: 1 } } }];
+  await f.sheet._onDrop(f.event("boats", { type: "Actor", uuid: boat.uuid }));
+  const saves = f.saves.length;
+  const [card] = await f.sheet._buildGroupActorLinks(getGroupData(f.actor), "boats");
+  assert.equal(card.isBoatActor, true);
+  assert.equal(card.vesselType, "Sloop");
+  assert.equal(card.crewSlotsUsed, 1);
+  assert.equal(card.crewSlotCapacity, 7);
+  assert.equal(card.hull.max, 80);
+  assert.equal(card.ac, 14);
+  assert.equal(card.cargo.used, 6);
+  assert.equal(card.cargo.capacity, 12);
+  assert.equal(card.assignmentSections[0].entries[0].name, hero.name);
+  assert.equal(f.saves.length, saves);
+  assert.equal(getGroupData(f.actor).boatAssignments[0].crew.length, 0);
+  await f.sheet._onOpenGroupActor(f.cardEvent("boats", boat.uuid));
+  assert.equal(boat.sheet.opens, 1);
+  boat.items[0].system.quantity = 4;
+  boat.system.cargoCapacity = 5;
+  boat.system.attributes.ac.value = 16;
+  boat.system.vesselType = "Longship";
+  game.user.isGM = false;
+  f.sheet.isEditable = false;
+  const before = structuredClone({ system: boat.system, items: boat.items });
+  const [updated] = await f.sheet._buildGroupActorLinks(getGroupData(f.actor), "boats");
+  assert.equal(updated.ac, 16);
+  assert.equal(updated.vesselType, "Longship");
+  assert.equal(updated.cargo.used, 8);
+  assert.equal(updated.cargo.capacity, 5);
+  assert.equal(updated.cargo.overCapacity, true);
+  assert.deepEqual({ system: boat.system, items: boat.items }, before);
+  assert.equal(f.saves.length, saves);
+});
+
+test("linked Boat cargo totals honor Group Inventory free carry and zero-slot rules", async () => {
+  const f = setup({ boats: ["Actor.vessel"] });
+  const boat = f.linkedActor("vessel", "mk-shadowdark.boat");
+  boat.system.crew = [];
+  boat.system.cargoCapacity = 2;
+  boat.items = [
+    { id: "arrows", system: { isPhysical: true, quantity: 45, slots: { per_slot: 20, slots_used: 1, free_carry: 1 } } },
+    { id: "stashed", system: { isPhysical: true, stashed: true, slots: { slots_used: 1 } } },
+    { id: "spell", system: { isPhysical: false } },
+    { id: "weightless", system: { isPhysical: true, slots: { slots_used: 0 } } },
+  ];
+  const [card] = await f.sheet._buildGroupActorLinks(getGroupData(f.actor), "boats");
+  assert.equal(card.cargo.used, 2);
+  assert.equal(card.cargo.overCapacity, false);
+  assert.deepEqual(card.cargo.items.map(item => item.slots), [2, 0, 0, 0]);
+  assert.equal(f.saves.length, 0);
+});
+
 test("repeat actor and token drops share one boat link", async () => {
   const f = setup();
   const boat = f.linkedActor("boat");

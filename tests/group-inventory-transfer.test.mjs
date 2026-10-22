@@ -1,5 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
+import { storeBoatCargo } from "../scripts/boat-sheet/cargo.js";
 
 const hooks = new Map();
 globalThis.Hooks = {
@@ -91,7 +92,16 @@ function fixture() {
   };
   f.item = {
     id: "gear", uuid: `${f.source.uuid}.Item.gear`, parent: f.source,
+    get system() { return f.itemData.system; },
     toObject: () => structuredClone(f.itemData),
+    async update(changes) {
+      operations.push("update:party-item");
+      if (this.failUpdate) throw new Error("Item quantity update failed");
+      if (this.cancelUpdate) return this;
+      f.itemData.system.quantity = changes["system.quantity"];
+      if (this.failAfterUpdate) throw new Error("A post-update hook failed");
+      return this;
+    },
   };
   f.source.items.set(f.item.id, f.item);
   documents.set(f.item.uuid, f.item);
@@ -317,7 +327,7 @@ test("a failed chat request leaves inventories unchanged and clears its pending 
   assert.deepEqual(f.operations, []);
 });
 
-test("Character Dashboard Quick Slots await a shared item move without falling back to a second import", async () => {
+test("Character Dashboard Quick Slots await Group and selected Boat moves without a second import", async () => {
   const f = fixture();
   f.target.items.set("gear", { id: "gear", parent: f.target, name: "An unrelated item with the same id" });
   let Sheet;
@@ -344,4 +354,160 @@ test("Character Dashboard Quick Slots await a shared item move without falling b
   assert.equal(f.target.items.size, 2);
   const item = [...f.target.items].find(item => item.id !== "gear");
   assert.deepEqual(f.target.changes, { "flags.mk-shadowdark.quickSlots": [item.id, null, null] });
+
+  f.source.type = "mk-shadowdark.boat";
+  f.source.group = false;
+  f.itemData.system.quantity = 4;
+  f.itemData.system.slots = { per_slot: 1 };
+  f.source.items.set(f.item.id, f.item);
+  f.documents.set(f.item.uuid, f.item);
+  f.drag[MODULE_ID] = { cargoTransfer: {
+    sourceActorUuid: f.source.uuid, sourceItemId: f.item.id, sourceItemUuid: f.item.uuid,
+    quantity: 1, sourceQuantity: 4,
+  } };
+  await new Sheet(f.target)._onDrop(drop);
+  assert.equal(f.source.items.size, 1);
+  assert.equal(f.itemData.system.quantity, 3);
+  assert.equal(f.target.items.size, 3);
+  const cargo = [...f.target.items].find(entry => entry.id !== "gear" && entry.id !== item.id);
+  assert.equal(cargo.system.quantity, 1);
+  assert.deepEqual(cargo.flags, f.itemData.flags);
+  assert.deepEqual(cargo.effects, f.itemData.effects);
+  assert.deepEqual(f.target.changes, { "flags.mk-shadowdark.quickSlots": [cargo.id, null, null] });
+});
+
+test("a selected card transfers one ordinary item or one per-slot ammunition bundle", async () => {
+  for (const [quantity, perSlot, count] of [[4, 1, 1], [45, 20, 20], [45, 20, 5]]) {
+    const f = fixture();
+    f.itemData.system.quantity = quantity;
+    f.itemData.system.slots = { per_slot: perSlot };
+    Object.assign(f.drag[MODULE_ID][FLAG], { quantity: count, sourceQuantity: quantity });
+    const moved = await transferGroupInventoryItemToActor(f.target, f.drag);
+    assert.equal(moved.system.quantity, count);
+    assert.equal(f.itemData.system.quantity, quantity - count);
+    assert.equal(f.source.items.size, 1);
+    assert.deepEqual(f.operations, ["create:hero", "update:party-item"]);
+  }
+});
+
+test("a final selected card removes its source Item", async () => {
+  const f = fixture();
+  f.itemData.system.slots = { per_slot: 20 };
+  Object.assign(f.drag[MODULE_ID][FLAG], { quantity: 4, sourceQuantity: 4 });
+  const moved = await transferGroupInventoryItemToActor(f.target, f.drag);
+  assert.equal(moved.system.quantity, 4);
+  assert.equal(f.source.items.size, 0);
+  assert.deepEqual(f.operations, ["create:hero", "delete:party"]);
+});
+
+test("stale or oversized cards cannot move inventory", async () => {
+  for (const selection of [
+    { quantity: 1, sourceQuantity: 3 }, { quantity: 2, sourceQuantity: 4 },
+    { quantity: 0, sourceQuantity: 4 }, { quantity: 1.5, sourceQuantity: 4 },
+    { quantity: 1 }, { sourceQuantity: 4 },
+  ]) {
+    const f = fixture();
+    Object.assign(f.drag[MODULE_ID][FLAG], selection);
+    assert.equal(await transferGroupInventoryItemToActor(f.target, f.drag), null);
+    assert.deepEqual(f.operations, []);
+    assert.equal(f.itemData.system.quantity, 4);
+  }
+});
+
+test("simultaneous drags of an old card consume only the first selected item", async () => {
+  const f = fixture();
+  Object.assign(f.drag[MODULE_ID][FLAG], { quantity: 1, sourceQuantity: 4 });
+  const first = f.message();
+  const second = f.message();
+  await Promise.all([handleGroupInventoryTransferRequest(first), handleGroupInventoryTransferRequest(second)]);
+  assert.equal(first.getFlag(MODULE_ID, FLAG).status, "moved");
+  assert.equal(second.getFlag(MODULE_ID, FLAG).status, "failed");
+  assert.equal(f.itemData.system.quantity, 3);
+  assert.equal(f.target.items.size, 1);
+});
+
+test("failed or cancelled quantity updates roll back a partial transfer", async () => {
+  for (const cancel of [false, true]) {
+    const f = fixture();
+    Object.assign(f.drag[MODULE_ID][FLAG], { quantity: 1, sourceQuantity: 4 });
+    f.item.failUpdate = !cancel;
+    f.item.cancelUpdate = cancel;
+    await assert.rejects(transferGroupInventoryItemToActor(f.target, f.drag), /update failed|not updated/);
+    assert.equal(f.itemData.system.quantity, 4);
+    assert.equal(f.target.items.size, 0);
+    assert.deepEqual(f.operations, ["create:hero", "update:party-item", "delete:hero"]);
+  }
+});
+
+test("a post-update hook failure retains the successfully moved card", async () => {
+  const f = fixture();
+  Object.assign(f.drag[MODULE_ID][FLAG], { quantity: 1, sourceQuantity: 4 });
+  f.item.failAfterUpdate = true;
+  const moved = await transferGroupInventoryItemToActor(f.target, f.drag);
+  assert.equal(moved.system.quantity, 1);
+  assert.equal(f.itemData.system.quantity, 3);
+  assert.equal(f.target.items.size, 1);
+});
+
+test("source changes during destination creation roll back without consuming another card", async () => {
+  const f = fixture();
+  Object.assign(f.drag[MODULE_ID][FLAG], { quantity: 1, sourceQuantity: 4 });
+  const create = f.target.createEmbeddedDocuments.bind(f.target);
+  f.target.createEmbeddedDocuments = async (...args) => {
+    const created = await create(...args);
+    f.itemData.system.quantity = 3;
+    return created;
+  };
+  await assert.rejects(transferGroupInventoryItemToActor(f.target, f.drag), /inventory changed/);
+  assert.equal(f.itemData.system.quantity, 3);
+  assert.equal(f.target.items.size, 0);
+  assert.deepEqual(f.operations, ["create:hero", "delete:hero"]);
+});
+
+test("a Group card cannot be consumed by concurrent character and Boat transfers", async () => {
+  const f = fixture();
+  Object.assign(f.drag[MODULE_ID][FLAG], { quantity: 1, sourceQuantity: 4 });
+  f.item.type = "Basic";
+  f.itemData.system.isPhysical = true;
+  f.itemData.system.slots = { per_slot: 1, slots_used: 1 };
+  const boat = f.makeActor("boat");
+  boat.type = "mk-shadowdark.boat";
+  boat.system = { cargoCapacity: 10 };
+  let release;
+  let started;
+  const gate = new Promise(resolve => { release = resolve; });
+  const updating = new Promise(resolve => { started = resolve; });
+  const update = f.item.update.bind(f.item);
+  f.item.update = async changes => { started(); await gate; return update(changes); };
+  const characterMove = transferGroupInventoryItemToActor(f.target, f.drag);
+  await updating;
+  const boatMove = storeBoatCargo(boat, f.item, { quantity: 1, sourceQuantity: 4 });
+  release();
+  await Promise.all([characterMove, boatMove]);
+  assert.equal(f.target.items.size + boat.items.size, 1);
+  assert.equal(f.itemData.system.quantity, 3);
+});
+
+test("player requests preserve the selected card quantity through GM acknowledgement", async () => {
+  const f = fixture();
+  Object.assign(f.drag[MODULE_ID][FLAG], { quantity: 1, sourceQuantity: 4 });
+  game.user = f.player;
+  const pending = transferGroupInventoryItemToActor(f.target, f.drag);
+  let completed = false;
+  void pending.then(() => { completed = true; });
+  const [message] = f.messages;
+  assert.equal(message.getFlag(MODULE_ID, FLAG).quantity, 1);
+  assert.equal(message.getFlag(MODULE_ID, FLAG).sourceQuantity, 4);
+  game.user = f.gm;
+  await handleGroupInventoryTransferRequest(message);
+  game.user = f.player;
+  message.getFlag(MODULE_ID, FLAG).quantity = 4;
+  receiveGroupInventoryTransfer(message, {}, {}, f.gm.id);
+  await Promise.resolve();
+  assert.equal(completed, false, "an acknowledgement of a different selection is ignored");
+  message.getFlag(MODULE_ID, FLAG).quantity = 1;
+  receiveGroupInventoryTransfer(message, {}, {}, f.gm.id);
+  const moved = await pending;
+  assert.equal(moved.system.quantity, 1);
+  assert.equal(f.itemData.system.quantity, 3);
 });

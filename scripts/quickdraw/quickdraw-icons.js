@@ -651,6 +651,12 @@ import { evaluateQuickdrawLimitDetails } from "./quickdraw-limit.js";
     const $html = asJQuery(html);
     if (!$html?.length) return;
 
+    // Groups use Shadowdark's Player type, but shared gear has no Quickdraw allocation.
+    if (app.actor.getFlag?.(MODULE_ID, "isGroup") || app.actor.flags?.[MODULE_ID]?.isGroup) {
+      clearQuickdrawUi($html);
+      return;
+    }
+
     processSheet(app, $html);
   }
 

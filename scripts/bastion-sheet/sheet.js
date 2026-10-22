@@ -8,7 +8,7 @@ import {
 } from "./constants.js";
 import { buildVaultData, getVaultItemSlots } from "./vault.js";
 import { buildUpgradeData, getUpgradeBuildKey, normalizeBastionUpgrades, queueUpgradeUpdate } from "./upgrades.js";
-import { canManageActorItems, getVaultTransferData, vaultPermissionMessage } from "../libs/bastion-vault-transfer.js";
+import { canManageActorItems, getVaultTransferData, transferVaultItemToActor, vaultPermissionMessage } from "../libs/bastion-vault-transfer.js";
 import { getSheetTheme, bindSheetThemeToggle } from "../libs/sheet-themes.js";
 
 const ActorSheetBase = globalThis.foundry?.appv1?.sheets?.ActorSheet;
@@ -687,6 +687,28 @@ class MKBastionSheet extends ActorSheetBase {
 
     if (!isItemDropData(data)) {
       ui.notifications?.warn?.("Drop an Item into the Vault grid.");
+      return false;
+    }
+
+    if (data?.[MODULE_ID]?.cargoTransfer) {
+      try {
+        await transferVaultItemToActor(this.actor, data, {
+          allowStorage: true,
+          canReceive: (item, selection) => {
+            if (!canManageVault(this) || !getBastionState(this.actor).upgrades.includes("vault")) return false;
+            const incoming = item.toObject();
+            incoming.system.quantity = selection.quantity;
+            const vault = buildVaultData(this.actor.items);
+            const slots = getVaultItemSlots(incoming);
+            if (vault.used + slots <= vault.capacity) return true;
+            ui.notifications?.warn?.(`The Vault has only ${vault.remaining} slot(s) remaining; this Item needs ${slots}.`);
+            return false;
+          },
+        });
+      } catch (error) {
+        console.error(`${MODULE_ID} | Could not move cargo into the Vault`, error);
+        ui.notifications?.error?.(error.message);
+      }
       return false;
     }
 

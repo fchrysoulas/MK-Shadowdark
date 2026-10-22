@@ -1,5 +1,9 @@
+import { moveStoredInventoryItem, queueStoredInventoryMutation } from "./stored-inventory-queue.js";
+import { getGroupItemSelection } from "./group-inventory-items.js";
+
 const MODULE_ID = "mk-shadowdark";
 const BASTION_ACTOR_TYPE = `${MODULE_ID}.bastion`;
+const BOAT_ACTOR_TYPE = `${MODULE_ID}.boat`;
 
 function canManageActorItems(actor) {
   const user = globalThis.game?.user;
@@ -21,7 +25,7 @@ function vaultPermissionMessage(key) {
 }
 
 function getVaultTransferData(data) {
-  const transfer = data?.[MODULE_ID]?.vaultTransfer;
+  const transfer = data?.[MODULE_ID]?.vaultTransfer ?? data?.[MODULE_ID]?.cargoTransfer;
   if (!transfer || typeof transfer !== "object") return null;
 
   const sourceActorUuid = String(transfer.sourceActorUuid ?? "").trim();
@@ -29,7 +33,10 @@ function getVaultTransferData(data) {
   const sourceItemId = String(transfer.sourceItemId ?? "").trim();
   if (!sourceActorUuid || (!sourceItemUuid && !sourceItemId)) return null;
 
-  return { sourceActorUuid, sourceItemUuid, sourceItemId };
+  return {
+    sourceActorUuid, sourceItemUuid, sourceItemId,
+    ...(data?.[MODULE_ID]?.cargoTransfer ? { quantity: transfer.quantity, sourceQuantity: transfer.sourceQuantity } : {}),
+  };
 }
 
 function isVaultTransferData(data) {
@@ -46,7 +53,8 @@ async function resolveVaultSource(data) {
   } catch (_error) {
     return null;
   }
-  if (sourceActor?.type !== BASTION_ACTOR_TYPE) return null;
+  const expectedType = data?.[MODULE_ID]?.vaultTransfer ? BASTION_ACTOR_TYPE : BOAT_ACTOR_TYPE;
+  if (sourceActor?.type !== expectedType) return null;
 
   let sourceItem = null;
   if (transfer.sourceItemUuid) {
@@ -59,53 +67,47 @@ async function resolveVaultSource(data) {
   sourceItem ??= sourceActor.items?.get?.(transfer.sourceItemId)
     ?? Array.from(sourceActor.items ?? []).find(item => item.id === transfer.sourceItemId);
 
-  if (!sourceItem || sourceItem.parent?.uuid !== sourceActor.uuid) return null;
+  if (!sourceItem || sourceItem.parent?.uuid !== sourceActor.uuid
+    || !sourceActor.items?.get?.(sourceItem.id)) return null;
   return { sourceActor, sourceItem };
 }
 
-async function transferVaultItemToActor(actor, data) {
-  if (!actor || actor.type === BASTION_ACTOR_TYPE || !isVaultTransferData(data)) return null;
+function transferVaultItemToActor(actor, data, options = {}) {
+  return queueStoredInventoryMutation(() => moveStoredItemToActor(actor, data, options));
+}
+
+async function moveStoredItemToActor(actor, data, { allowStorage = false, canReceive } = {}) {
+  if (!actor || (!allowStorage && [BASTION_ACTOR_TYPE, BOAT_ACTOR_TYPE].includes(actor.type)) || !isVaultTransferData(data)) return null;
   if (!actor.createEmbeddedDocuments || !canManageActorItems(actor)) return null;
 
   const source = await resolveVaultSource(data);
   if (!source || source.sourceActor.uuid === actor.uuid) return null;
   if (!canManageActorItems(source.sourceActor)) {
-    globalThis.ui?.notifications?.warn?.(vaultPermissionMessage("transferOwnership"));
+    globalThis.ui?.notifications?.warn?.(data?.[MODULE_ID]?.cargoTransfer
+      ? globalThis.game?.i18n?.localize?.("MK_SHADOWDARK.boat.transferOwnership")
+      : vaultPermissionMessage("transferOwnership"));
     return null;
   }
 
-  const itemData = typeof source.sourceItem.toObject === "function"
-    ? source.sourceItem.toObject()
-    : (globalThis.foundry?.utils?.deepClone
-      ? foundry.utils.deepClone(source.sourceItem)
-      : JSON.parse(JSON.stringify(source.sourceItem)));
-  if (!itemData || typeof itemData !== "object" || !itemData.type) return null;
-
-  delete itemData._id;
-  delete itemData.id;
-
-  let createdItem;
-  try {
-    [createdItem] = await actor.createEmbeddedDocuments("Item", [itemData], { renderSheet: false });
-    if (!createdItem) return null;
-    await source.sourceActor.deleteEmbeddedDocuments("Item", [source.sourceItem.id]);
-    return createdItem;
-  } catch (error) {
-    if (createdItem?.id && actor.deleteEmbeddedDocuments) {
-      try {
-        await actor.deleteEmbeddedDocuments("Item", [createdItem.id], { renderSheet: false });
-      } catch (_rollbackError) {
-        // Preserve the original error while avoiding a second user-facing failure.
-      }
-    }
-    throw error;
+  const selection = data?.[MODULE_ID]?.cargoTransfer
+    ? getGroupItemSelection(source.sourceItem, getVaultTransferData(data))
+    : getGroupItemSelection(source.sourceItem, {}, { allowWholeStack: true });
+  if (!selection) {
+    if (data?.[MODULE_ID]?.cargoTransfer) globalThis.ui?.notifications?.warn?.(
+      globalThis.game?.i18n?.localize?.("MK_SHADOWDARK.boat.cargoChanged")
+    );
+    return null;
   }
+  if (typeof source.sourceItem.toObject !== "function" || (canReceive && !canReceive(source.sourceItem, selection))) return null;
+  return moveStoredInventoryItem(actor, source.sourceItem, selection, {
+    canCommit: () => canManageActorItems(actor) && canManageActorItems(source.sourceActor),
+  });
 }
 
 function handleVaultTransferDrop(actor, _sheet, data) {
   if (!isVaultTransferData(data)) return undefined;
 
-  if (actor?.type === BASTION_ACTOR_TYPE) return undefined;
+  if ([BASTION_ACTOR_TYPE, BOAT_ACTOR_TYPE].includes(actor?.type)) return undefined;
   if (!canManageActorItems(actor)) {
     globalThis.ui?.notifications?.warn?.(vaultPermissionMessage("transferOwnership"));
     return false;

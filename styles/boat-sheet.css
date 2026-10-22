@@ -1,0 +1,840 @@
+.mk-boat-sheet-window .window-content {
+  padding: 0 !important;
+  overflow: hidden !important;
+  background: transparent !important;
+}
+
+.mk-boat-sheet {
+  --mk-boat-bg: #14191a;
+  --mk-boat-panel: #1b2324;
+  --mk-boat-inset: #101617;
+  --mk-boat-text: #eee8dc;
+  --mk-boat-muted: #adb5ad;
+  --mk-boat-line: #36403c;
+  --mk-boat-accent: #d7b36e;
+  --mk-boat-danger: #f1a180;
+  container: mk-boat / inline-size;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  height: 100%;
+  overflow: hidden;
+  background: var(--mk-boat-bg);
+  color: var(--mk-boat-text);
+  font-family: "Montserrat-Medium", "Montserrat", "Segoe UI", sans-serif;
+  font-size: 13px;
+}
+
+.mk-boat-sheet.mk-sheet-theme-light {
+  --mk-boat-bg: #f6f1e7;
+  --mk-boat-panel: #fffaf0;
+  --mk-boat-inset: #eae4d7;
+  --mk-boat-text: #302d25;
+  --mk-boat-muted: #706857;
+  --mk-boat-line: #d6ccba;
+  --mk-boat-accent: #8c651f;
+  --mk-boat-danger: #a0263c;
+}
+
+.mk-boat-sheet .mk-boat-titlebar {
+  display: flex;
+  flex: 0 0 auto;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  padding: 9px 22px;
+  border-bottom: 1px solid var(--mk-boat-line);
+  color: var(--mk-boat-muted);
+  font-size: 11px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.mk-boat-sheet .mk-boat-titlebar i {
+  margin-right: 6px;
+  color: var(--mk-boat-accent);
+}
+
+.mk-boat-sheet .mk-boat-sheet-header {
+  display: flex;
+  flex: 0 0 auto;
+  align-items: center;
+  gap: 18px;
+  padding: 22px;
+}
+
+.mk-boat-sheet .mk-boat-image {
+  flex: 0 0 72px;
+  width: 72px;
+  height: 72px;
+  border: 1px solid var(--mk-boat-line);
+  border-radius: 50%;
+  object-fit: cover;
+  background: var(--mk-boat-inset);
+  cursor: pointer;
+}
+
+.mk-boat-sheet .mk-boat-image[src$=".svg"] {
+  padding: 12px;
+  background: #26302d;
+}
+
+.mk-boat-sheet .mk-boat-title-block {
+  flex: 1;
+  min-width: 0;
+}
+
+.mk-boat-sheet .mk-boat-eyebrow {
+  color: var(--mk-boat-muted);
+  font-size: 11px;
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+}
+
+.mk-boat-sheet :is(input, textarea) {
+  padding: 7px 9px;
+  border: 1px solid var(--mk-boat-line);
+  border-radius: 4px;
+  background: var(--mk-boat-inset);
+  color: var(--mk-boat-text);
+  font-family: inherit;
+  font-size: 13px;
+}
+
+.mk-boat-sheet input {
+  height: 34px;
+}
+
+.mk-boat-sheet :is(input, textarea):focus-visible {
+  outline: 2px solid var(--mk-boat-accent);
+  outline-offset: 2px;
+  box-shadow: none;
+}
+
+.mk-boat-sheet input.mk-boat-name {
+  width: 100%;
+  height: 44px;
+  margin: 2px 0;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--mk-boat-text);
+  font: 32px/1.25 Georgia, "Times New Roman", serif;
+}
+
+.mk-boat-sheet .mk-boat-subtitle {
+  display: block;
+  overflow-wrap: anywhere;
+  color: var(--mk-boat-accent);
+  font-size: 12px;
+}
+
+.mk-boat-sheet .mk-boat-ac-field {
+  display: grid;
+  flex: 0 0 64px;
+  gap: 4px;
+  text-align: center;
+}
+
+.mk-boat-sheet .mk-boat-ac-field > span {
+  color: var(--mk-boat-muted);
+  font-size: 11px;
+  letter-spacing: 0.1em;
+}
+
+.mk-boat-sheet .mk-boat-ac-field input {
+  width: 64px;
+  height: 40px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  text-align: center;
+  font: 30px Georgia, "Times New Roman", serif;
+}
+
+.mk-boat-sheet .mk-sheet-theme-toggle {
+  align-self: flex-start;
+  border-color: var(--mk-boat-line);
+  background: var(--mk-boat-panel);
+  color: var(--mk-boat-muted);
+}
+
+.mk-boat-sheet .mk-boat-nav {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  flex: 0 0 46px;
+  padding: 0 12px;
+  border-top: 1px solid var(--mk-boat-line);
+  border-bottom: 1px solid var(--mk-boat-line);
+}
+
+.mk-boat-sheet .mk-boat-nav .item {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  min-width: 0;
+  padding: 12px 6px;
+  border-bottom: 2px solid transparent;
+  color: var(--mk-boat-muted);
+  font-size: 12px;
+  font-weight: 500;
+  text-transform: none;
+}
+
+.mk-boat-sheet .mk-boat-nav .item:hover {
+  background: var(--mk-boat-panel);
+  color: var(--mk-boat-text);
+  text-shadow: none;
+}
+
+.mk-boat-sheet .mk-boat-nav .item.active {
+  border-bottom-color: var(--mk-boat-accent);
+  color: var(--mk-boat-accent);
+  text-shadow: none;
+}
+
+.mk-boat-sheet .mk-boat-nav small {
+  color: var(--mk-boat-accent);
+  font-size: 11px;
+  font-variant-numeric: tabular-nums;
+}
+
+.mk-boat-sheet .mk-boat-content {
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.mk-boat-sheet .mk-boat-tab-body {
+  height: 100%;
+  overflow-y: auto;
+  padding: 22px;
+  scrollbar-color: var(--mk-boat-line) var(--mk-boat-bg);
+}
+
+.mk-boat-sheet .tab[data-tab]:not(.active) {
+  display: none !important;
+}
+
+.mk-boat-sheet .tab[data-tab].active {
+  display: block;
+}
+
+.mk-boat-sheet :is(.mk-boat-hull-panel, .mk-boat-sheet-card, .mk-boat-overview-crew) h2 {
+  margin: 0;
+  padding: 0;
+  border: 0;
+  color: var(--mk-boat-text);
+  font-family: "Montserrat-Medium", "Montserrat", "Segoe UI", sans-serif;
+  font-size: 15px;
+  font-weight: 500;
+  line-height: 1.4;
+}
+
+.mk-boat-sheet .mk-boat-hull-panel {
+  padding: 18px;
+  border: 1px solid var(--mk-boat-line);
+  border-radius: 6px;
+  background: var(--mk-boat-panel);
+}
+
+.mk-boat-sheet .mk-boat-hull-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.mk-boat-sheet .mk-boat-hull-values {
+  display: flex;
+  flex: 0 0 auto;
+  align-items: baseline;
+  gap: 4px;
+  color: var(--mk-boat-muted);
+  font: 28px Georgia, "Times New Roman", serif;
+}
+
+.mk-boat-sheet .mk-boat-hull-values input {
+  width: 5ch;
+  height: 38px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  font: inherit;
+  text-align: right;
+}
+
+.mk-boat-sheet .mk-boat-hull-values input:last-child {
+  color: var(--mk-boat-muted);
+  text-align: left;
+}
+
+.mk-boat-sheet .mk-boat-hull-track {
+  height: 5px;
+  margin-top: 15px;
+  overflow: hidden;
+  border-radius: 3px;
+  background: var(--mk-boat-inset);
+}
+
+.mk-boat-sheet .mk-boat-hull-track > span {
+  display: block;
+  height: 100%;
+  background: var(--mk-boat-accent);
+}
+
+.mk-boat-sheet .mk-boat-capacity-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 18px;
+  margin: 24px 0;
+}
+
+.mk-boat-sheet .mk-boat-capacity-stat {
+  display: grid;
+  gap: 8px;
+  min-width: 0;
+}
+
+.mk-boat-sheet .mk-boat-capacity-stat > span:first-child {
+  color: var(--mk-boat-muted);
+  font-size: 11px;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+
+.mk-boat-sheet .mk-boat-capacity-value {
+  display: flex;
+  align-items: baseline;
+  gap: 5px;
+  min-width: 0;
+  color: var(--mk-boat-muted);
+  font-variant-numeric: tabular-nums;
+}
+
+.mk-boat-sheet .mk-boat-capacity-value strong,
+.mk-boat-sheet .mk-boat-passengers input {
+  color: var(--mk-boat-text);
+  font: 28px Georgia, "Times New Roman", serif;
+}
+
+.mk-boat-sheet .mk-boat-capacity-value input {
+  width: 5ch;
+  height: 34px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--mk-boat-muted);
+  font: 20px Georgia, "Times New Roman", serif;
+}
+
+.mk-boat-sheet .mk-boat-passengers input {
+  color: var(--mk-boat-text);
+  font-size: 28px;
+}
+
+.mk-boat-sheet :is(.mk-boat-ac-field, .mk-boat-hull-values, .mk-boat-capacity-value) input {
+  appearance: textfield;
+  -moz-appearance: textfield;
+}
+
+.mk-boat-sheet :is(.mk-boat-ac-field, .mk-boat-hull-values, .mk-boat-capacity-value) input::-webkit-inner-spin-button,
+.mk-boat-sheet :is(.mk-boat-ac-field, .mk-boat-hull-values, .mk-boat-capacity-value) input::-webkit-outer-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+
+.mk-boat-sheet .mk-boat-fields {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 20px;
+  padding-top: 22px;
+  border-top: 1px solid var(--mk-boat-line);
+}
+
+.mk-boat-sheet .mk-boat-fields label,
+.mk-boat-sheet .mk-boat-role {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 0;
+  color: var(--mk-boat-muted);
+  font-size: 12px;
+  font-weight: 400;
+}
+
+.mk-boat-sheet .mk-boat-fields input {
+  width: 100%;
+}
+
+.mk-boat-sheet .mk-boat-overview-crew {
+  margin-top: 26px;
+}
+
+.mk-boat-sheet .mk-boat-section-header {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
+.mk-boat-sheet .mk-boat-section-header > strong,
+.mk-boat-sheet .mk-boat-section-total {
+  flex: 0 0 auto;
+  color: var(--mk-boat-accent);
+  font-size: 12px;
+  font-weight: 500;
+  white-space: nowrap;
+}
+
+.mk-boat-sheet .mk-boat-section-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+
+.mk-boat-sheet button.mk-boat-info-button {
+  display: inline-grid;
+  flex: 0 0 22px;
+  place-items: center;
+  width: 22px;
+  height: 22px;
+  min-height: 22px;
+  margin: 0;
+  padding: 0;
+  border: 1px solid var(--mk-boat-line);
+  border-radius: 50%;
+  background: var(--mk-boat-panel);
+  color: var(--mk-boat-muted);
+  font-size: 12px;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.mk-boat-sheet button.mk-boat-info-button:is(:hover, :focus-visible) {
+  border-color: var(--mk-boat-accent);
+  color: var(--mk-boat-accent);
+  outline: 2px solid var(--mk-boat-accent);
+  outline-offset: 2px;
+}
+
+.mk-boat-sheet button.mk-boat-info-button i {
+  margin: 0;
+}
+
+.mk-boat-help-dialog {
+  max-width: calc(100vw - 32px);
+}
+
+.mk-boat-help-dialog .window-content {
+  background: var(--mk-sheet-field, #171717);
+  color: var(--mk-sheet-text, #dedede);
+}
+
+.mk-boat-help-dialog .mk-boat-cargo-help {
+  max-height: 65vh;
+  overflow-y: auto;
+  font-family: "Montserrat-Medium", "Montserrat", "Segoe UI", sans-serif;
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+.mk-boat-help-dialog .mk-boat-cargo-help p {
+  margin: 0;
+}
+
+.mk-boat-sheet .mk-boat-hint,
+.mk-boat-sheet .mk-boat-empty {
+  color: var(--mk-boat-muted);
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+.mk-boat-sheet .mk-boat-warning,
+.mk-boat-sheet .is-over-capacity strong {
+  color: var(--mk-boat-danger);
+  font-size: 12px;
+}
+
+.mk-boat-sheet .is-over-capacity strong {
+  font-size: 28px;
+}
+
+.mk-boat-sheet .mk-boat-crew-list,
+.mk-boat-sheet .mk-boat-overview-roster {
+  display: grid;
+}
+
+.mk-boat-sheet .mk-boat-crew-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(110px, 0.45fr) 30px;
+  align-items: center;
+  gap: 14px;
+  padding: 14px 0;
+  border-bottom: 1px solid var(--mk-boat-line);
+}
+
+.mk-boat-sheet .mk-boat-overview-member {
+  padding: 11px 0;
+  border-bottom: 1px solid var(--mk-boat-line);
+}
+
+.mk-boat-sheet .mk-boat-overview-member:last-child,
+.mk-boat-sheet .mk-boat-crew-row:last-child {
+  border-bottom: 0;
+}
+
+.mk-boat-sheet button.mk-boat-link {
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 12px;
+  width: 100%;
+  min-width: 0;
+  min-height: 40px;
+  height: auto;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--mk-boat-text);
+  text-align: left;
+  line-height: 1.4;
+  box-shadow: none;
+}
+
+.mk-boat-sheet button.mk-boat-link:hover {
+  color: var(--mk-boat-accent);
+  text-shadow: none;
+}
+
+.mk-boat-sheet .mk-boat-link img {
+  flex: 0 0 38px;
+  width: 38px;
+  height: 38px;
+  border: 0;
+  border-radius: 50%;
+  object-fit: cover;
+}
+
+.mk-boat-sheet .mk-boat-link > span {
+  flex: 1;
+  min-width: 0;
+}
+
+.mk-boat-sheet .mk-boat-link strong {
+  font-family: "Montserrat-Medium", "Montserrat", "Segoe UI", sans-serif;
+  font-size: 13px;
+  font-weight: 500;
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
+
+.mk-boat-sheet .mk-boat-link small {
+  display: block;
+  margin-top: 3px;
+  color: var(--mk-boat-muted);
+  font-size: 11px;
+}
+
+.mk-boat-sheet .mk-boat-link > i {
+  flex: 0 0 auto;
+  margin-left: auto;
+  color: var(--mk-boat-muted);
+  font-size: 12px;
+}
+
+.mk-boat-sheet button.mk-boat-remove {
+  flex: 0 0 30px;
+  width: 30px;
+  height: 30px;
+  min-height: 30px;
+  margin: 0;
+  padding: 0;
+  border: 1px solid transparent;
+  background: transparent;
+  color: var(--mk-boat-muted);
+  line-height: 1;
+}
+
+.mk-boat-sheet button.mk-boat-remove:hover {
+  border-color: var(--mk-boat-line);
+  color: var(--mk-boat-danger);
+}
+
+.mk-boat-sheet .mk-boat-cargo-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
+  align-content: start;
+  gap: 8px;
+  margin-top: 12px;
+  padding: 8px;
+  border: 1px dashed color-mix(in srgb, var(--mk-boat-accent) 35%, transparent);
+  border-radius: 5px;
+  background: var(--mk-boat-panel);
+}
+
+.mk-boat-sheet .mk-boat-cargo-item {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+  min-height: 104px;
+  padding: 6px 7px;
+  overflow: hidden;
+  border: 1px solid var(--mk-boat-line);
+  border-radius: 5px;
+  background: var(--mk-boat-inset);
+  transition: border-color 140ms ease, background 140ms ease, transform 140ms ease;
+}
+
+.mk-boat-sheet .mk-boat-cargo-item[draggable="true"] {
+  cursor: grab;
+}
+
+.mk-boat-sheet .mk-boat-cargo-item[draggable="true"]:active {
+  cursor: grabbing;
+}
+
+.mk-boat-sheet .mk-boat-cargo-item:hover {
+  border-color: var(--mk-boat-accent);
+  background: color-mix(in srgb, var(--mk-boat-accent) 8%, var(--mk-boat-inset));
+  transform: translateY(-1px);
+}
+
+.mk-boat-sheet button.mk-boat-cargo-open {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  align-items: center;
+  gap: 3px;
+  width: 100%;
+  height: auto;
+  min-width: 0;
+  min-height: 0;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--mk-boat-text);
+  line-height: 1.15;
+}
+
+.mk-boat-sheet button.mk-boat-cargo-open:hover {
+  color: var(--mk-boat-accent);
+}
+
+.mk-boat-sheet .mk-boat-cargo-open img {
+  width: 40px;
+  height: 40px;
+  flex: 0 0 40px;
+  border: 1px solid var(--mk-boat-line);
+  border-radius: 3px;
+  object-fit: cover;
+}
+
+.mk-boat-sheet .mk-boat-cargo-open strong {
+  width: 100%;
+  font-family: "Montserrat-Medium", "Montserrat", "Segoe UI", sans-serif;
+  overflow: hidden;
+  font-size: 12px;
+  font-weight: 900;
+  text-align: center;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.mk-boat-sheet .mk-boat-cargo-open small {
+  max-width: 100%;
+  overflow: hidden;
+  color: var(--mk-boat-muted);
+  font-size: 10px;
+  line-height: 1.1;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.mk-boat-sheet .mk-boat-cargo-stack {
+  display: inline-flex;
+  align-self: center;
+  align-items: center;
+  margin-top: auto;
+  min-width: 0;
+  padding: 2px 6px;
+  border-radius: 3px;
+  background: var(--mk-boat-panel);
+  color: var(--mk-boat-text);
+  font-size: 10px;
+  font-weight: 800;
+  line-height: 1.2;
+}
+
+#context-menu.mk-boat-item-context-menu,
+.mk-boat-item-trash-dialog .window-content {
+  background: var(--mk-sheet-field, #171717);
+  color: var(--mk-sheet-text, #dedede);
+  font-family: "Montserrat-Medium", "Montserrat", "Segoe UI", sans-serif;
+}
+
+#context-menu.mk-boat-item-context-menu .context-items {
+  background: transparent;
+}
+
+#context-menu.mk-boat-item-context-menu .context-item {
+  color: var(--mk-sheet-danger, #ff9aa8);
+}
+
+#context-menu.mk-boat-item-context-menu .context-item:hover {
+  background: rgba(var(--mk-sheet-foreground-rgb, 255, 255, 255), 0.1);
+}
+
+.mk-boat-sheet .mk-boat-cargo-grid > .mk-boat-empty {
+  grid-column: 1 / -1;
+}
+
+.mk-boat-sheet .mk-boat-notes {
+  display: flex;
+  flex-direction: column;
+  min-height: 100%;
+}
+
+.mk-boat-sheet .mk-boat-notes h2 {
+  margin-bottom: 18px;
+}
+
+.mk-boat-sheet .mk-boat-notes .editor {
+  flex: 1;
+  min-height: 350px;
+}
+
+.mk-boat-sheet .mk-boat-notes :is(.editor-content, .prosemirror, prose-mirror) {
+  min-height: 320px;
+  color: var(--mk-boat-text);
+}
+
+.mk-boat-sheet .mk-boat-notes .editor-content {
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: 15px;
+  line-height: 1.8;
+}
+
+.mk-boat-sheet :is(input, textarea):disabled {
+  opacity: 0.8;
+}
+
+.mk-boat-sheet.mk-sheet-theme-light :is(.mk-boat-link img, .mk-boat-cargo-open img)[src$=".svg"] {
+  background: #3f3830;
+}
+
+@container mk-boat (max-width: 540px) {
+  .mk-boat-sheet .mk-boat-titlebar {
+    padding: 9px 14px;
+    letter-spacing: 0.07em;
+  }
+
+  .mk-boat-sheet .mk-boat-sheet-header {
+    gap: 10px;
+    padding: 16px 14px;
+  }
+
+  .mk-boat-sheet .mk-boat-image {
+    flex-basis: 48px;
+    width: 48px;
+    height: 48px;
+  }
+
+  .mk-boat-sheet input.mk-boat-name {
+    height: 36px;
+    font-size: 24px;
+  }
+
+  .mk-boat-sheet .mk-boat-ac-field {
+    flex-basis: 42px;
+  }
+
+  .mk-boat-sheet .mk-boat-ac-field input {
+    width: 42px;
+    font-size: 25px;
+  }
+
+  .mk-boat-sheet .mk-sheet-theme-toggle {
+    flex-basis: 26px;
+    width: 26px;
+    height: 26px;
+    min-height: 26px;
+  }
+
+  .mk-boat-sheet .mk-boat-nav {
+    padding: 0 4px;
+  }
+
+  .mk-boat-sheet .mk-boat-nav .item {
+    gap: 4px;
+    padding-inline: 3px;
+    font-size: 11px;
+  }
+
+  .mk-boat-sheet .mk-boat-tab-body {
+    padding: 16px 14px;
+  }
+
+  .mk-boat-sheet .mk-boat-hull-panel {
+    padding: 14px;
+  }
+
+  .mk-boat-sheet .mk-boat-hull-heading {
+    gap: 8px;
+  }
+
+  .mk-boat-sheet .mk-boat-hull-values {
+    font-size: 24px;
+  }
+
+  .mk-boat-sheet .mk-boat-hull-values input {
+    width: 4ch;
+  }
+
+  .mk-boat-sheet .mk-boat-capacity-grid {
+    gap: 12px;
+  }
+
+  .mk-boat-sheet .mk-boat-capacity-stat > span:first-child {
+    min-height: 2.6em;
+  }
+
+  .mk-boat-sheet .mk-boat-capacity-value strong,
+  .mk-boat-sheet .mk-boat-passengers input {
+    font-size: 24px;
+  }
+
+  .mk-boat-sheet .mk-boat-capacity-value input {
+    width: 4ch;
+    font-size: 18px;
+  }
+
+  .mk-boat-sheet .mk-boat-passengers input {
+    font-size: 24px;
+  }
+
+  .mk-boat-sheet .mk-boat-fields {
+    grid-template-columns: 1fr;
+    gap: 14px;
+  }
+
+  .mk-boat-sheet .mk-boat-crew-row {
+    grid-template-columns: minmax(0, 1fr) 30px;
+  }
+
+  .mk-boat-sheet .mk-boat-role {
+    grid-row: 2;
+    grid-column: 1 / -1;
+  }
+
+  .mk-boat-sheet .mk-boat-crew-row > .mk-boat-remove {
+    grid-column: 2;
+    grid-row: 1;
+  }
+}

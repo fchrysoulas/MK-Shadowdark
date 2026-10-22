@@ -1,13 +1,14 @@
 import { isGroupActor } from "../group-sheet/actors.js";
 import { getSettingValue } from "../group-sheet/group-settings.js";
 import { getGameUserById, getPrimaryActiveGm, isPrimaryActiveGm } from "../group-sheet/users.js";
+import { getGroupItemQuantity, getGroupItemSelection } from "./group-inventory-items.js";
+import { queueStoredInventoryMutation } from "./stored-inventory-queue.js";
 
 const MODULE_ID = "mk-shadowdark";
 const TRANSFER_FLAG = "groupInventoryTransfer";
 const REQUEST_LIFETIME_MS = 25000;
 const pendingTransfers = new Map();
 const handledRequests = new Set();
-let transferQueue = Promise.resolve();
 
 function isGroupInventoryTransferData(data) {
   return Boolean(data?.[MODULE_ID]?.[TRANSFER_FLAG]);
@@ -19,9 +20,7 @@ function canUseActor(actor, user, permission) {
 }
 
 function queueTransfer(callback) {
-  const next = transferQueue.catch(() => {}).then(callback);
-  transferQueue = next;
-  return next;
+  return queueStoredInventoryMutation(callback);
 }
 
 async function moveSharedItem(transfer, user, expiresAt = Infinity) {
@@ -37,22 +36,35 @@ async function moveSharedItem(transfer, user, expiresAt = Infinity) {
   // Resolve and read the source inside the GM queue, so two players cannot take the same stack.
   if (!isPrimaryActiveGm() || Date.now() >= expiresAt) return null;
   const itemData = item.toObject();
+  const selection = getGroupItemSelection(itemData, transfer, { allowWholeStack: true });
+  if (!selection) return null;
+  itemData.system ??= {};
+  itemData.system.quantity = selection.quantity;
   delete itemData._id;
   delete itemData.id;
   itemData.folder = null;
   itemData.sort = 0;
 
   let created;
+  let sourceCommitStarted = false;
+  const sourceWasConsumed = () => selection.remaining === 0
+    ? !source.items.has(item.id)
+    : source.items.has(item.id) && getGroupItemQuantity(item.toObject()) === selection.remaining;
   try {
     [created] = await target.createEmbeddedDocuments("Item", [itemData], { renderSheet: false });
     if (!created) return null;
     if (!isPrimaryActiveGm()) throw new Error("The authoritative GM changed during the transfer.");
-    await source.deleteEmbeddedDocuments("Item", [item.id]);
-    if (source.items.has(item.id)) throw new Error("The shared Item was not removed.");
+    if (source.items.get(item.id) !== item || getGroupItemQuantity(item.toObject()) !== selection.sourceQuantity) {
+      throw new Error("The shared inventory changed. Refresh it before trying again.");
+    }
+    sourceCommitStarted = true;
+    if (selection.remaining > 0) await item.update({ "system.quantity": selection.remaining });
+    else await source.deleteEmbeddedDocuments("Item", [item.id]);
+    if (!sourceWasConsumed()) throw new Error("The shared Item was not removed or its quantity was not updated.");
     return created;
   } catch (error) {
-    // A post-delete failure can occur after the source was actually removed; keep its destination.
-    if (created?.id && !source.items.has(item.id)) return created;
+    // Post-update/delete hooks can throw after committing the source change; retain its destination.
+    if (created?.id && sourceCommitStarted && sourceWasConsumed()) return created;
     if (created?.id) {
       try {
         await target.deleteEmbeddedDocuments("Item", [created.id], { renderSheet: false });
@@ -109,6 +121,8 @@ function receiveGroupInventoryTransfer(message, _changes, _options, userId) {
     || data.sourceActorUuid !== pending.transfer.sourceActorUuid
     || data.sourceItemId !== pending.transfer.sourceItemId
     || data.targetActorUuid !== pending.transfer.targetActorUuid
+    || data.quantity !== pending.transfer.quantity
+    || data.sourceQuantity !== pending.transfer.sourceQuantity
     || !["moved", "failed"].includes(data.status)) return;
   clearTimeout(pending.timer);
   pendingTransfers.delete(data.requestId);
@@ -127,6 +141,8 @@ async function transferGroupInventoryItemToActor(actor, data) {
   }
   const request = {
     sourceActorUuid: transfer.sourceActorUuid, sourceItemId: transfer.sourceItemId, targetActorUuid: actor.uuid,
+    ...(transfer.quantity !== undefined || transfer.sourceQuantity !== undefined
+      ? { quantity: transfer.quantity, sourceQuantity: transfer.sourceQuantity } : {}),
   };
   if (isPrimaryActiveGm()) return queueTransfer(() => moveSharedItem(request, game.user));
   const authority = getPrimaryActiveGm();
@@ -181,4 +197,5 @@ export {
   isGroupInventoryTransferData,
   receiveGroupInventoryTransfer,
   transferGroupInventoryItemToActor,
+  queueTransfer as queueGroupInventoryMutation,
 };

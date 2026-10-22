@@ -1,0 +1,56 @@
+.mk-spell-template-settings {
+  grid-column: 1 / -1;
+  padding: 12px;
+  border: 1px solid var(--color-border-light-primary, #82745b);
+  border-radius: 5px;
+}
+.mk-spell-template-settings h3 { margin: 0 0 10px; }
+.mk-spell-template-fields { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px 16px; }
+.mk-spell-template-fields label { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.mk-spell-template-fields input[type="number"] { width: 60px; }
+.mk-spell-template-fields input[type="color"] { width: 60px; height: 26px; }
+.mk-spell-template-fields select { max-width: 155px; }
+.mk-spell-template-hint { margin: 8px 0 0; font-size: 12px; opacity: 0.85; }
+#mk-spell-template-placement {
+  position: fixed;
+  bottom: 80px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 110;
+  width: min(440px, calc(100vw - 32px));
+  max-height: calc(100vh - 160px);
+  overflow: auto;
+  padding: 14px;
+  border: 1px solid #b79b68;
+  border-radius: 7px;
+  background: #191d23f5;
+  color: #ede5d6;
+  box-shadow: 0 5px 22px #0009;
+  font-size: 13px;
+  pointer-events: auto;
+}
+#mk-spell-template-placement strong { color: #dfbd83; }
+#mk-spell-template-placement p { margin: 6px 0; }
+#mk-spell-template-placement small { color: #c5bdad; }
+#mk-spell-template-placement .mk-spell-template-targets {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 5px 10px;
+  max-height: 130px;
+  overflow: auto;
+  margin: 8px 0;
+}
+#mk-spell-template-placement .mk-spell-template-targets label { display: flex; align-items: center; gap: 6px; min-width: 0; }
+#mk-spell-template-placement .mk-spell-template-targets span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+#mk-spell-template-placement .mk-spell-template-actions { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 10px; }
+#mk-spell-template-placement button {
+  flex: 1;
+  width: auto;
+  margin: 0;
+  padding: 5px 8px;
+  border: 1px solid #82745b;
+  background: #303844;
+  color: #ede5d6;
+  font-size: 12px;
+}
+#mk-spell-template-placement button:last-child { border-color: #dfbd83; }

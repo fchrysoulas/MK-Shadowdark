@@ -277,6 +277,7 @@ button.mk-death-timer-portrait {
   border-radius: 8px;
   background: rgba(0, 0, 0, 0.82);
   color: #fff;
+  opacity: 0.85;
   line-height: 1;
   transform: translate(-50%, -50%);
   cursor: pointer;
@@ -300,7 +301,7 @@ button.mk-death-timer-portrait:focus-visible {
 }
 
 button.mk-death-timer-portrait:disabled {
-  opacity: 1;
+  opacity: 0.85;
   cursor: default;
 }
 

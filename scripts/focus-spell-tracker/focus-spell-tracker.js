@@ -618,6 +618,12 @@ import {
     state.sessions = state.sessions.filter(entry => entry.id !== session.id);
     if (!await setState(actor, state)) return false;
     await removeTrackedSpellEffect(session);
+    // Area spells have no creature targets, so their tiles need independent Focus cleanup.
+    const areaApi = game.modules.get(MODULE_ID)?.api?.spellTemplates;
+    if (session.effectCastId && typeof areaApi?.removeForFocus === "function") {
+      try { await areaApi.removeForFocus({ actorUuid: actor.uuid, castId: session.effectCastId }); }
+      catch (error) { warn(`Could not remove the tracked area tile for ${session.name}`, error); }
+    }
 
     const reason = options.reason ?? "manual";
     const reasonText = {

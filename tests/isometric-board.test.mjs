@@ -10,16 +10,18 @@ import {
 import { IsometricBoardOverlay, registerIsometricBoard } from "../scripts/isometric-board/isometric-board.js";
 
 class Element {
-  constructor() {
+  constructor(tagName = "div") {
+    this.tagName = tagName.toUpperCase();
     this.children = [];
     this.attributes = {};
     this.dataset = {};
+    this.style = { setProperty(key, value) { this[key] = value; }, removeProperty(key) { delete this[key]; } };
     this.classList = { toggle() {}, remove() {} };
     this.listeners = new Map();
     this.listenerOptions = new Map();
     this.capturedPointers = new Set();
   }
-  append(...children) { this.children.push(...children); }
+  append(...children) { for (const child of children) child.parentElement = this; this.children.push(...children); }
   appendChild(child) { this.append(child); return child; }
   setAttribute(key, value) { this.attributes[key] = value; }
   addEventListener(key, callback, options) { this.listeners.set(key, callback); this.listenerOptions.set(key, options); }
@@ -28,6 +30,7 @@ class Element {
   hasPointerCapture(id) { return this.capturedPointers.has(id); }
   releasePointerCapture(id) { this.capturedPointers.delete(id); this.listeners.get("lostpointercapture")?.({ pointerId: id }); }
   remove() { this.removed = true; }
+  closest(selector) { return selector === this.tagName.toLowerCase() ? this : this.parentElement?.closest(selector) ?? null; }
   getBoundingClientRect() { return { left: 10, top: 20, width: 1000, height: 800 }; }
 }
 
@@ -124,7 +127,7 @@ function harness({ gm = true, enabled = true, paused = false, opacity = 20, grid
   token.mesh = primary.addChild(Object.assign(new Container(), { elevation: 0, sortLayer: 700 }));
   const dom = new Element();
   dom.body = new Element();
-  dom.createElement = () => new Element();
+  dom.createElement = tagName => new Element(tagName);
   const view = new Element();
   const module = { api: { existingFeature: true } };
   class NativeRuler {
@@ -883,7 +886,7 @@ test("players see shared angles but cannot change the view or reset it", async (
   assert.equal(board.rotationInput.value, "45");
   assert.equal(board.tiltInput.disabled, true);
   assert.equal(board.rotationInput.disabled, true);
-  assert.equal(board.fitButton.disabled, true);
+  assert.equal(board.fitButton, null);
   assert.equal(await board.setTilt(50), false);
   assert.equal(await board.setRotation(-45), false);
   assert.equal(await board.resetView(), false);
@@ -1290,7 +1293,7 @@ test("Close enemies turn red, including diagonals, and legacy 10-foot scales do 
   assert.equal(board.graphics.fillColors[5 * 18 + 5], 0x8bcbd7);
   for (const index of [5 * 18 + 4, 6 * 18 + 5, 6 * 18 + 6]) assert.equal(board.graphics.fillColors[index], 0xdbab58);
   assert.equal(board.graphics.fillColors[5 * 18 + 7], 0x4ea9cb);
-  assert.ok(board.hud.children.at(-1).children.some(child => child.dataset.band === "enemyClose"));
+  assert.ok(board.rangeLegend.children.some(child => child.dataset.band === "enemyClose"));
   setFlag({ enabled: true, feetPerCell: 10 });
   board.refresh();
   assert.deepEqual(redCells(), [4 * 18 + 4, 5 * 18 + 6]);
@@ -2494,6 +2497,169 @@ test("hidden GM panel skips token-range formatting and fills current ranges when
   ranges = 0;
   board.draw();
   assert.equal(ranges, 0);
+});
+
+function panelFixture({ storage = new Map(), userId = "local", blocked = false, gm = true } = {}) {
+  const context = harness({ gm });
+  const { environment } = context;
+  const writes = [];
+  const windowEvents = new Map();
+  environment.game.user.id = userId;
+  environment.innerWidth = 1200;
+  environment.innerHeight = 800;
+  environment.localStorage = {
+    getItem(key) { if (blocked) throw new Error("blocked storage"); return storage.get(key) ?? null; },
+    setItem(key, value) { if (blocked) throw new Error("blocked storage"); writes.push(key); storage.set(key, value); }
+  };
+  environment.addEventListener = (type, handler) => {
+    if (!windowEvents.has(type)) windowEvents.set(type, new Set());
+    windowEvents.get(type).add(handler);
+  };
+  environment.removeEventListener = (type, handler) => {
+    windowEvents.get(type)?.delete(handler);
+    if (!windowEvents.get(type)?.size) windowEvents.delete(type);
+  };
+  const board = new IsometricBoardOverlay(environment);
+  board.refresh();
+  board.hud.getBoundingClientRect = () => ({ left: Number.parseFloat(board.hud.style.left ?? "410"),
+    top: Number.parseFloat(board.hud.style.top ?? "85"), width: Math.min(380, environment.innerWidth - 16),
+    height: Math.min(500, environment.innerHeight - 16) });
+  board.setSettingsVisible(true);
+  return { ...context, board, storage, writes, windowEvents };
+}
+
+function panelPointer(board, clientX = 430, clientY = 100, extra = {}) {
+  return { target: board.panelHeader, button: 0, pointerId: 7, clientX, clientY,
+    preventDefault() { this.prevented = true; }, stopImmediatePropagation() { this.stopped = true; }, ...extra };
+}
+
+test("settings group layout and appearance controls without a token Move button, and close leaves the board active", () => {
+  const { board, calls } = panelFixture();
+  const elements = [];
+  const visit = element => { elements.push(element); for (const child of element.children) visit(child); };
+  visit(board.hud);
+  assert.equal(elements.some(element => element.tagName === "BUTTON" && element.textContent === "move"), false);
+  assert.equal(board.moveButton, undefined);
+  assert.equal(board.boardSizeInput.parentElement.parentElement.dataset.section, "layoutSection");
+  assert.equal(board.tiltInput.parentElement.parentElement.dataset.section, "layoutSection");
+  assert.equal(board.rotationInput.parentElement.parentElement.dataset.section, "layoutSection");
+  assert.equal(board.gridMoveButton.parentElement, board.fitButton.parentElement);
+  assert.equal(board.opacityInput.parentElement.parentElement.dataset.section, "appearanceSection");
+  assert.equal(board.gridColorInput.parentElement.parentElement.dataset.section, "appearanceSection");
+  assert.equal(board.rangeLegend.parentElement.tagName, "DETAILS");
+  const close = elements.find(element => element.attributes["aria-label"] === "closeSettings");
+  close.listeners.get("click")();
+  assert.equal(board.hud.hidden, true);
+  assert.equal(board.enabled, true);
+  assert.equal(calls.flags.length, 0);
+  assert.equal(calls.moves.length, 0);
+});
+
+test("header dragging tracks only its pointer, remembers a client/user position and never changes tokens or Scene settings", () => {
+  const { board, calls, environment, storage, writes } = panelFixture();
+  const originalCanvasListeners = new Map(environment.document.listeners);
+  const down = panelPointer(board);
+  board.panelHeader.listeners.get("pointerdown")(down);
+  assert.ok(down.prevented && down.stopped);
+  assert.equal(board.panelHeader.hasPointerCapture(7), true);
+  board.panelHeader.listeners.get("pointermove")(panelPointer(board, 600, 200, { pointerId: 8 }));
+  assert.deepEqual(board.panelPosition, { left: 410, top: 85 });
+  board.panelHeader.listeners.get("pointermove")(panelPointer(board, 530, 160));
+  assert.deepEqual(board.panelPosition, { left: 510, top: 145 });
+  assert.equal(board.hud.style.left, "510px");
+  assert.equal(writes.length, 0);
+  board.panelHeader.listeners.get("pointerup")(panelPointer(board, 530, 160));
+  assert.equal(board.panelDrag, null);
+  assert.equal(board.panelHeader.hasPointerCapture(7), false);
+  assert.equal(writes.length, 1);
+  assert.deepEqual(JSON.parse(storage.get(board.panelStorageKey)), { left: 510, top: 145 });
+  board.setSettingsVisible(false);
+  board.setSettingsVisible(true);
+  board.refresh();
+  assert.deepEqual(board.panelPosition, { left: 510, top: 145 });
+  assert.deepEqual(environment.document.listeners, originalCanvasListeners);
+  assert.equal(calls.flags.length, 0);
+  assert.equal(calls.moves.length, 0);
+  board.destroy();
+  const restored = panelFixture({ storage });
+  assert.deepEqual(restored.board.panelPosition, { left: 510, top: 145 });
+  restored.board.destroy();
+  const otherUser = panelFixture({ storage, userId: "another-gm" });
+  assert.deepEqual(otherUser.board.panelPosition, { left: 410, top: 85 });
+  otherUser.board.destroy();
+});
+
+test("the dragged panel stays inside the viewport and remains reachable after window resizing", () => {
+  const { board, environment, windowEvents } = panelFixture();
+  board.startPanelDrag(panelPointer(board));
+  board.movePanelDrag(panelPointer(board, -10000, -10000));
+  assert.deepEqual(board.panelPosition, { left: 8, top: 8 });
+  board.movePanelDrag(panelPointer(board, 10000, 10000));
+  assert.deepEqual(board.panelPosition, { left: 812, top: 292 });
+  board.finishPanelDrag(panelPointer(board));
+  environment.innerWidth = 500;
+  environment.innerHeight = 360;
+  for (const handler of windowEvents.get("resize")) handler();
+  assert.deepEqual(board.panelPosition, { left: 112, top: 8 });
+  assert.equal(board.hud.hidden, false);
+});
+
+test("unfinished panel drags cancel on Escape, cancellation, lost capture, blur, closing, teardown and role changes", () => {
+  for (const ending of ["escape", "cancel", "capture", "blur", "close", "destroy", "scene", "role"]) {
+    const { board, environment, windowEvents, writes, calls, setFlag } = panelFixture();
+    const header = board.panelHeader;
+    board.startPanelDrag(panelPointer(board));
+    board.movePanelDrag(panelPointer(board, 530, 160));
+    if (ending === "escape") board.onKeyDown({ ...panelPointer(board), key: "Escape" });
+    if (ending === "cancel") header.listeners.get("pointercancel")({ pointerId: 7 });
+    if (ending === "capture") header.releasePointerCapture(7);
+    if (ending === "blur") for (const handler of windowEvents.get("blur")) handler();
+    if (ending === "close") board.setSettingsVisible(false);
+    if (ending === "destroy") board.destroy();
+    if (ending === "scene") { setFlag({ enabled: false }); board.refresh(); }
+    if (ending === "role") { environment.game.user.isGM = false; board.draw(); }
+    assert.equal(board.panelDrag, null, ending);
+    assert.equal(header.hasPointerCapture(7), false, ending);
+    assert.deepEqual(board.panelPosition, { left: 410, top: 85 }, ending);
+    assert.equal(writes.length, 0, ending);
+    assert.equal(calls.moves.length, 0, ending);
+    assert.equal(calls.flags.length, 0, ending);
+    board.destroy();
+    assert.equal(windowEvents.size, 0, ending);
+  }
+});
+
+test("panel keyboard movement is limited to its header and header buttons never start a drag", () => {
+  const { board, calls } = panelFixture();
+  board.handlePanelKeyDown({ ...panelPointer(board), key: "ArrowLeft" });
+  board.handlePanelKeyDown({ ...panelPointer(board), key: "ArrowDown", shiftKey: true });
+  assert.deepEqual(board.panelPosition, { left: 400, top: 125 });
+  board.handlePanelKeyDown({ ...panelPointer(board), target: board.tiltInput, key: "ArrowLeft" });
+  assert.deepEqual(board.panelPosition, { left: 400, top: 125 });
+  const closeIcon = board.panelHeader.children.at(-1).children[0];
+  for (const extra of [{ target: closeIcon }, { button: 2 }, { isPrimary: false }]) {
+    board.startPanelDrag(panelPointer(board, 430, 100, extra));
+    assert.equal(board.panelDrag, null);
+  }
+  assert.equal(calls.moves.length, 0);
+  assert.equal(calls.flags.length, 0);
+});
+
+test("corrupt or blocked position storage does not break settings, and players cannot drag the panel", () => {
+  const storage = new Map([["mk-shadowdark.isometricBoardPanelPosition.local", "{broken"]]);
+  for (const options of [{ storage }, { blocked: true }]) {
+    const { board } = panelFixture(options);
+    assert.deepEqual(board.panelPosition, { left: 410, top: 85 });
+    board.startPanelDrag(panelPointer(board));
+    board.movePanelDrag(panelPointer(board, 530, 160));
+    assert.equal(board.finishPanelDrag(panelPointer(board)), true);
+    assert.deepEqual(board.panelPosition, { left: 510, top: 145 });
+    board.destroy();
+  }
+  const { board } = panelFixture({ gm: false });
+  board.startPanelDrag(panelPointer(board));
+  assert.equal(board.panelDrag, null);
+  assert.equal(board.hud.hidden, true);
 });
 
 test("board and settings tools are GM-only and replace stale Board Move controls", () => {

@@ -494,6 +494,9 @@ test("the DTP button opens the option menu and cancel does not spend", async () 
   const button = grid.children[0].querySelector(".mk-dtp-open");
   assert.equal(button.tagName, "button");
   assert.equal(button.type, "button");
+  assert.equal(button.title, "Downtime activities");
+  assert.equal(button.attributes["aria-label"], "Downtime activities");
+  assert.equal(button.querySelector(".fa-hourglass-half").attributes["aria-hidden"], "true");
   assert.equal(typeof button.listeners.click, "function");
   const dialog = await openDowntimeMenu(app.actor);
   const dialogConfig = dialog.options;

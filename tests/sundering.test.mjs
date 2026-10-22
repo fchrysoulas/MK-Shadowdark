@@ -256,6 +256,195 @@ test("the prompt defaults to damage on close and escapes item and actor names", 
   assert.equal(await promptForItem(f.target), null);
 });
 
+function installTimedPrompt() {
+  let config;
+  let resolve;
+  let closes = 0;
+  const countdown = {};
+  const progress = {};
+  const timer = {
+    expiring: false,
+    classList: { toggle: (_name, value) => { timer.expiring = value; } },
+    querySelector: selector => selector === "progress" ? progress : countdown
+  };
+  const dialog = {
+    element: { querySelector: () => timer },
+    async close() { closes++; resolve(config.close()); }
+  };
+  foundry.applications = { api: { DialogV2: { wait(options) {
+    config = options;
+    const result = new Promise(finish => { resolve = finish; });
+    options.render({}, dialog);
+    return result;
+  } } } };
+  const format = game.i18n.format;
+  game.i18n.format = (key, data) => key.endsWith(".countdown") ? `${data.seconds}s` : format(key, data);
+  return {
+    countdown, progress, timer, dialog,
+    get config() { return config; },
+    get closes() { return closes; },
+    submit(action, itemId = "shield") {
+      const button = config.buttons.find(button => button.action === action);
+      const result = button.callback({}, { form: { elements: { sunderingItem: { value: itemId } } } });
+      // Foundry uses the action name when a button callback returns null.
+      resolve(result ?? action);
+      config.close();
+    }
+  };
+}
+
+test("the compact prompt counts down for ten seconds, then closes as Take damage", async t => {
+  t.mock.timers.enable({ apis: ["setTimeout", "setInterval", "Date"], now: 1_000_000 });
+  const f = fixture();
+  await f.plan();
+  const ui = installTimedPrompt();
+  const result = promptForItem(f.target);
+  assert.equal(ui.config.position.width, 360);
+  assert.equal(ui.countdown.textContent, "10s");
+  assert.equal(ui.progress.value, 10_000);
+  t.mock.timers.tick(1000);
+  assert.equal(ui.countdown.textContent, "9s");
+  t.mock.timers.tick(6000);
+  assert.equal(ui.timer.expiring, true);
+  assert.equal(ui.countdown.textContent, "3s");
+  t.mock.timers.tick(2999);
+  assert.equal(ui.closes, 0);
+  t.mock.timers.tick(1);
+  assert.equal(await result, null);
+  assert.equal(ui.closes, 1);
+  t.mock.timers.tick(20_000);
+  assert.equal(ui.closes, 1);
+  assert.deepEqual(f.actor.deletions, []);
+});
+
+test("selecting an item, taking damage or closing cancels every countdown timer", async t => {
+  t.mock.timers.enable({ apis: ["setTimeout", "setInterval", "Date"], now: 1_000_000 });
+  for (const action of ["sunder", "damage", "close"]) {
+    const f = fixture();
+    await f.plan();
+    const ui = installTimedPrompt();
+    const result = promptForItem(f.target);
+    t.mock.timers.tick(2000);
+    if (action === "close") await ui.dialog.close();
+    else ui.submit(action);
+    assert.equal(await result, action === "sunder" ? "shield" : null);
+    const closes = ui.closes;
+    t.mock.timers.tick(20_000);
+    assert.equal(ui.closes, closes);
+    assert.equal(ui.progress.value, 8000);
+  }
+});
+
+test("rerendering uses the shared server deadline and never restarts the countdown", async t => {
+  t.mock.timers.enable({ apis: ["setTimeout", "setInterval", "Date"], now: 1_000_000 });
+  const f = fixture();
+  await f.plan();
+  game.time = { get serverTime() { return Date.now() + 60_000; } };
+  const ui = installTimedPrompt();
+  const result = promptForItem(f.target, { expiresAt: game.time.serverTime + 5000 });
+  assert.equal(ui.countdown.textContent, "5s");
+  t.mock.timers.tick(2000);
+  ui.config.render({}, ui.dialog);
+  assert.equal(ui.countdown.textContent, "3s");
+  t.mock.timers.tick(3000);
+  assert.equal(await result, null);
+  assert.equal(ui.closes, 1);
+});
+
+test("a late Sunder click or an expired offer can never destroy an item", async t => {
+  t.mock.timers.enable({ apis: ["setTimeout", "setInterval", "Date"], now: 1_000_000 });
+  const f = fixture();
+  await f.plan();
+  let serverTime = Date.now();
+  game.time = { get serverTime() { return serverTime; } };
+  const ui = installTimedPrompt();
+  const result = promptForItem(f.target);
+  serverTime += 10_000;
+  ui.submit("sunder");
+  assert.equal(await result, null);
+  foundry.applications.api.DialogV2.wait = () => { throw new Error("An expired offer must not reopen"); };
+  assert.equal(await promptForItem(f.target, { expiresAt: serverTime }), null);
+});
+
+test("the GM times out an unanswered owner prompt and applies damage exactly once", async t => {
+  t.mock.timers.enable({ apis: ["setTimeout", "setInterval", "Date"], now: 1_000_000 });
+  const f = fixture();
+  const state = await f.plan();
+  globalThis.ChatMessage = { create: async data => {
+    const request = {
+      author: f.gm, flags: data.flags,
+      getFlag: (scope, key) => data.flags[scope]?.[key],
+      setFlag: async (scope, key, value) => { data.flags[scope][key] = value; }
+    };
+    game.messages.push(request);
+    return request;
+  } };
+  let resolved = false;
+  const resolution = resolvePlan(f.message, state, f.options).then(state => { resolved = true; return state; });
+  await new Promise(resolve => setImmediate(resolve));
+  const request = game.messages[0];
+  assert.equal(request.getFlag("mk-shadowdark", "sunderingOffer").expiresAt, Date.now() + 10_000);
+  t.mock.timers.tick(9999);
+  await Promise.resolve();
+  assert.equal(resolved, false);
+  t.mock.timers.tick(1);
+  handleChat({ author: f.player, flags: { "mk-shadowdark": { sunderingResponse: {
+    messageId: f.message.id, targetUuid: f.target.uuid,
+    requestId: f.target.sundering.requestId, itemId: "shield"
+  } } } });
+  const prepared = await resolution;
+  assert.equal(prepared.targets[0].sundering.status, "declined");
+  assert.equal(request.getFlag("mk-shadowdark", "sunderingOffer").resolved, true);
+  assert.deepEqual(f.actor.deletions, []);
+  let applications = 0;
+  const options = {
+    ...f.options, readCurrentHp: async () => f.actor.hp,
+    applyTarget: async target => { applications++; f.actor.hp = target.afterHp; }
+  };
+  const complete = await runProcessingState(prepared, options);
+  await runProcessingState(complete, options);
+  assert.equal(applications, 1);
+  assert.equal(f.actor.hp, 7);
+});
+
+test("a reloaded GM reuses an offer's deadline and loses timeout authority on handoff", async t => {
+  t.mock.timers.enable({ apis: ["setTimeout", "setInterval", "Date"], now: 1_000_000 });
+  for (const loseAuthority of [false, true]) {
+    const f = fixture();
+    const state = await f.plan();
+    let data = { messageId: f.message.id, target: f.target, resolved: false, expiresAt: Date.now() + 2000 };
+    const request = { author: f.gm, getFlag: () => data, setFlag: async (_scope, _key, value) => { data = value; } };
+    game.messages.push(request);
+    globalThis.ChatMessage = { create: async () => { throw new Error("Must reuse the existing offer"); } };
+    const resolution = resolvePlan(f.message, state, f.options);
+    await new Promise(resolve => setImmediate(resolve));
+    if (loseAuthority) game.user = f.other;
+    t.mock.timers.tick(2000);
+    if (loseAuthority) await assert.rejects(resolution, /authority changed/);
+    else assert.equal((await resolution).targets[0].sundering.status, "declined");
+    assert.deepEqual(f.actor.deletions, []);
+  }
+});
+
+test("an owner timeout sends one declined response through the existing chat transport", async t => {
+  t.mock.timers.enable({ apis: ["setTimeout", "setInterval", "Date"], now: 1_000_000 });
+  const f = fixture();
+  await f.plan();
+  game.user = f.player;
+  const ui = installTimedPrompt();
+  const replies = [];
+  globalThis.ChatMessage = { create: async data => { replies.push(data); } };
+  const data = { messageId: f.message.id, target: f.target, resolved: false, expiresAt: Date.now() + 10_000 };
+  const message = { author: f.gm, getFlag: () => data };
+  const response = showOffer(message);
+  await showOffer(message);
+  t.mock.timers.tick(10_000);
+  await response;
+  assert.equal(ui.closes, 1);
+  assert.equal(replies.length, 1);
+  assert.equal(replies[0].flags["mk-shadowdark"].sunderingResponse.itemId, null);
+});
+
 test("duplicate chat hooks open one owner prompt and closing records one decline", async () => {
   const f = fixture();
   await f.plan();

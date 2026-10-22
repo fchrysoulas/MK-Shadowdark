@@ -100,7 +100,7 @@ export function cellCenter(layout, cell) {
   return project(layout, cell.column + 0.5, cell.row + 0.5);
 }
 
-function unproject(layout, point) {
+export function unproject(layout, point) {
   if (!Number.isFinite(point?.x) || !Number.isFinite(point?.y)) return null;
   if (layout.rotation) {
     const x = point.x - layout.centerX;

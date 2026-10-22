@@ -47,6 +47,7 @@ function tokenUuid(target) {
 }
 
 function snapshotTargetUuids(message, author) {
+  if (shadowdarkRollConfig(message)?.["mk-shadowdark"]?.spellTemplate?.areaOnly === true) return [];
   const nativeTargets = extractShadowdarkTargetUuids(message);
   if (nativeTargets.length) return nativeTargets;
 

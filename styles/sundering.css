@@ -1,0 +1,213 @@
+.mk-sundering-dialog {
+  --mk-sundering-gold: #d4be88;
+  --mk-sundering-muted: #a9a9a7;
+  max-width: calc(100vw - 24px);
+  border: 1px solid #64563b;
+  border-radius: 10px;
+  background: #1b1d20;
+  color: #f1ece2;
+  box-shadow: 0 12px 36px #0009;
+}
+
+.mk-sundering-dialog .window-header {
+  min-height: 32px;
+  padding: 6px 12px;
+  border-bottom: 1px solid #d4be8826;
+  background: #121416;
+  color: var(--mk-sundering-gold);
+}
+
+.mk-sundering-dialog .window-content {
+  padding: 12px;
+  background: transparent;
+  color: inherit;
+}
+
+.mk-sundering-dialog .dialog-form,
+.mk-sundering-dialog .dialog-content {
+  gap: 10px;
+}
+
+.mk-sundering-dialog .mk-sundering-prompt {
+  display: grid;
+  gap: 10px;
+  font-size: 13px;
+  line-height: 1.4;
+}
+
+.mk-sundering-dialog .mk-sundering-threat {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding-bottom: 10px;
+  border-bottom: 1px solid #ffffff12;
+}
+
+.mk-sundering-dialog .mk-sundering-emblem {
+  display: grid;
+  place-items: center;
+  flex: 0 0 38px;
+  height: 38px;
+  border: 1px solid #d4be8838;
+  border-radius: 8px;
+  background: #d4be880d;
+  color: var(--mk-sundering-gold);
+  font-size: 22px;
+}
+
+.mk-sundering-dialog .mk-sundering-actor {
+  display: grid;
+  flex: 1;
+  min-width: 0;
+  gap: 2px;
+}
+
+.mk-sundering-dialog .mk-sundering-actor strong {
+  overflow: hidden;
+  font-size: 15px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.mk-sundering-dialog .mk-sundering-actor span,
+.mk-sundering-dialog .mk-sundering-item > span {
+  color: var(--mk-sundering-muted);
+  font-size: 11px;
+}
+
+.mk-sundering-dialog .mk-sundering-damage {
+  display: grid;
+  justify-items: center;
+  min-width: 52px;
+  padding: 4px 8px;
+  border: 1px solid #dc776c40;
+  border-radius: 7px;
+  background: #dc776c12;
+  color: #f0a197;
+}
+
+.mk-sundering-dialog .mk-sundering-damage strong {
+  font-size: 23px;
+  line-height: 1;
+}
+
+.mk-sundering-dialog .mk-sundering-damage span {
+  font-size: 10px;
+}
+
+.mk-sundering-dialog .mk-sundering-summary,
+.mk-sundering-dialog .mk-sundering-warning {
+  margin: 0;
+}
+
+.mk-sundering-dialog .mk-sundering-item {
+  display: grid;
+  gap: 4px;
+}
+
+.mk-sundering-dialog .mk-sundering-item select {
+  width: 100%;
+  height: 32px;
+  padding: 0 8px;
+  border: 1px solid #d4be884d;
+  border-radius: 5px;
+  background: #101214;
+  color: #f1ece2;
+  font: inherit;
+}
+
+.mk-sundering-dialog .mk-sundering-warning {
+  display: flex;
+  align-items: baseline;
+  gap: 5px;
+  color: #d8a18c;
+  font-size: 11px;
+}
+
+.mk-sundering-dialog .mk-sundering-timer {
+  color: var(--mk-sundering-muted);
+  font-size: 11px;
+}
+
+.mk-sundering-dialog .mk-sundering-timer > div {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 5px;
+}
+
+.mk-sundering-dialog [data-sundering-countdown] {
+  color: var(--mk-sundering-gold);
+  font-size: 14px;
+  font-variant-numeric: tabular-nums;
+}
+
+.mk-sundering-dialog progress {
+  display: block;
+  width: 100%;
+  height: 4px;
+  appearance: none;
+  border: 0;
+  border-radius: 2px;
+  overflow: hidden;
+  background: #ffffff12;
+  color: var(--mk-sundering-gold);
+  accent-color: var(--mk-sundering-gold);
+}
+
+.mk-sundering-dialog progress::-webkit-progress-bar {
+  background: #ffffff12;
+}
+
+.mk-sundering-dialog progress::-webkit-progress-value {
+  background: var(--mk-sundering-gold);
+  transition: width 0.1s linear;
+}
+
+.mk-sundering-dialog progress::-moz-progress-bar {
+  background: var(--mk-sundering-gold);
+}
+
+.mk-sundering-dialog .is-expiring {
+  --mk-sundering-gold: #ef9486;
+}
+
+.mk-sundering-dialog .form-footer {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+  margin: 0;
+}
+
+.mk-sundering-dialog .form-footer button {
+  min-height: 32px;
+  margin: 0;
+  padding: 6px 8px;
+  border: 1px solid #ffffff30;
+  border-radius: 5px;
+  background: #ffffff08;
+  color: #f1ece2;
+  font-size: 12px;
+  line-height: 1.2;
+}
+
+.mk-sundering-dialog .form-footer button[data-action="sunder"] {
+  border-color: #d4be8866;
+  background: #d4be881a;
+  color: var(--mk-sundering-gold);
+}
+
+.mk-sundering-dialog .form-footer button:hover,
+.mk-sundering-dialog .form-footer button:focus-visible,
+.mk-sundering-dialog .mk-sundering-item select:focus-visible {
+  outline: 1px solid var(--mk-sundering-gold);
+  outline-offset: 2px;
+  box-shadow: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .mk-sundering-dialog progress::-webkit-progress-value {
+    transition: none;
+  }
+}

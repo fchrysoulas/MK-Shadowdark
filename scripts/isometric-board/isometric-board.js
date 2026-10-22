@@ -1,6 +1,6 @@
 import {
   MIN_BOARD_SIZE, MAX_BOARD_SIZE, FEET_PER_CELL, CLOSE_DISTANCE, NEAR_DISTANCE, readLayout, readBoardSize, normalizeBoardSize,
-  MIN_TILT, MAX_TILT, normalizeTilt, normalizeRotation, normalizeOffset, normalizeScale, project,
+  MIN_TILT, MAX_TILT, normalizeTilt, normalizeRotation, normalizeOffset, normalizeScale, project, unproject,
   validCell, cellDistance, rangeBand, cellLabel, tokenCell, tokenPosition, tokenBase, tokenTop,
   tokenFootprintSize, tokenFootprint, footprintCells, footprintDistance, validFootprint, pointToTokenCell
 } from "./geometry.js";
@@ -31,6 +31,9 @@ export class IsometricBoardOverlay {
     this.root = null;
     this.hud = null;
     this.settingsVisible = false;
+    this.panelPosition = null;
+    this.panelDrag = null;
+    this.panelPositionLoaded = false;
     this.frame = null;
     this.gridGeometry = null;
     this.gridDrawKey = null;
@@ -62,7 +65,18 @@ export class IsometricBoardOverlay {
     this.onGridPointerUp = event => { void this.finishGridDrag(event).catch(error => this.reportError(error)); };
     this.onGridPointerCancel = event => { if (event.pointerId === this.gridDrag?.pointerId) this.cancelGridDrag(); };
     this.onGridBlur = () => this.cancelGridDrag();
+    this.onPanelPointerMove = event => this.movePanelDrag(event);
+    this.onPanelPointerUp = event => { this.movePanelDrag(event); this.finishPanelDrag(event); };
+    this.onPanelPointerCancel = event => this.finishPanelDrag(event, true);
+    this.onPanelBlur = () => this.finishPanelDrag(null, true);
+    this.onPanelResize = () => { this.finishPanelDrag(null, true); this.positionSettingsPanel(); };
     this.onKeyDown = event => {
+      if (event.key === "Escape" && this.panelDrag) {
+        event.preventDefault?.();
+        event.stopImmediatePropagation?.();
+        this.finishPanelDrag(null, true);
+        return;
+      }
       if (event.key === "Escape" && this.gridMoveMode) {
         event.preventDefault?.();
         event.stopImmediatePropagation?.();
@@ -307,6 +321,7 @@ export class IsometricBoardOverlay {
   }
 
   setGridMoveMode(enabled = !this.gridMoveMode) {
+    if (enabled && this.game?.modules?.get?.(MODULE_ID)?.api?.spellTemplates?.placing) return false;
     if (enabled && (!this.enabled || !this.game?.user?.isGM || !this.view || this.gridSaving || this.moving)) return false;
     if (enabled && this.moveMode) this.setMoveMode(false);
     if (!enabled) this.cancelGridDrag();
@@ -435,13 +450,94 @@ export class IsometricBoardOverlay {
       if (this.moveMode) this.setMoveMode(false);
     }
     this.syncSettingsPanel();
+    if (this.settingsVisible) this.positionSettingsPanel();
     if (this.settingsVisible) this.schedule();
     this.refreshControls();
     return this.settingsVisible;
   }
 
   syncSettingsPanel() {
-    if (this.hud) this.hud.hidden = !(this.settingsVisible && this.enabled && this.game?.user?.isGM);
+    if (!this.hud) return;
+    const visible = this.settingsVisible && this.enabled && this.game?.user?.isGM;
+    if (!visible) this.finishPanelDrag(null, true);
+    this.hud.hidden = !visible;
+  }
+
+  get panelStorageKey() { return `${MODULE_ID}.isometricBoardPanelPosition.${this.game?.user?.id ?? "local"}`; }
+
+  positionSettingsPanel(position, bounds) {
+    if (!this.hud || this.hud.hidden) return;
+    if (!this.panelPositionLoaded) {
+      this.panelPositionLoaded = true;
+      try {
+        const saved = JSON.parse(this.env.localStorage?.getItem(this.panelStorageKey) ?? "null");
+        if (Number.isFinite(saved?.left) && Number.isFinite(saved?.top)) this.panelPosition = saved;
+      } catch { /* Browser storage can be unavailable; keep the panel usable. */ }
+    }
+    const rect = bounds ?? this.hud.getBoundingClientRect();
+    const point = position ?? this.panelPosition ?? rect;
+    const width = this.env.innerWidth ?? this.env.document?.documentElement?.clientWidth;
+    const height = this.env.innerHeight ?? this.env.document?.documentElement?.clientHeight;
+    const left = Math.max(8, Math.min(point.left, Math.max(8, (width ?? rect.width + 16) - rect.width - 8)));
+    const top = Math.max(8, Math.min(point.top, Math.max(8, (height ?? rect.height + 16) - rect.height - 8)));
+    this.panelPosition = { left, top };
+    Object.assign(this.hud.style, { left: `${left}px`, top: `${top}px`, transform: "none" });
+    // Expanded ranges and grid-edit hints scroll inside the panel at its current position.
+    if (Number.isFinite(height)) this.hud.style.maxHeight = `${Math.max(0, height - top - 8)}px`;
+  }
+
+  savePanelPosition() {
+    try {
+      this.env.localStorage?.setItem(this.panelStorageKey, JSON.stringify(this.panelPosition));
+    } catch { /* Position remains available for this session when storage is blocked. */ }
+  }
+
+  startPanelDrag(event) {
+    if (event.button !== 0 || event.isPrimary === false || event.target?.closest?.("button")
+      || this.panelDrag || this.gridDrag || !this.enabled || !this.game?.user?.isGM || !this.hud || this.hud.hidden
+      || !Number.isFinite(event.clientX) || !Number.isFinite(event.clientY)) return;
+    event.preventDefault();
+    event.stopImmediatePropagation();
+    this.positionSettingsPanel();
+    const rect = this.hud.getBoundingClientRect();
+    this.panelDrag = { ...this.panelPosition, width: rect.width, height: rect.height,
+      pointerId: event.pointerId, x: event.clientX, y: event.clientY };
+    this.panelHeader.setPointerCapture?.(event.pointerId);
+    this.panelHeader.classList.toggle("mk-isometric-board-panel-dragging", true);
+  }
+
+  movePanelDrag(event) {
+    const drag = this.panelDrag;
+    if (!drag || event.pointerId !== drag.pointerId) return;
+    if (!this.enabled || !this.game?.user?.isGM || this.hud?.hidden) { this.finishPanelDrag(null, true); return; }
+    if (!Number.isFinite(event.clientX) || !Number.isFinite(event.clientY)) return;
+    event.preventDefault();
+    event.stopImmediatePropagation();
+    // Use the initial panel size during a drag instead of forcing layout on every pointer event.
+    this.positionSettingsPanel({ left: drag.left + event.clientX - drag.x, top: drag.top + event.clientY - drag.y }, drag);
+  }
+
+  finishPanelDrag(event, cancel = false) {
+    const drag = this.panelDrag;
+    if (!drag || (event && event.pointerId !== drag.pointerId)) return false;
+    this.panelDrag = null;
+    if (cancel) this.positionSettingsPanel({ left: drag.left, top: drag.top }, drag);
+    else this.savePanelPosition();
+    this.panelHeader?.classList.toggle("mk-isometric-board-panel-dragging", false);
+    if (this.panelHeader?.hasPointerCapture?.(drag.pointerId)) this.panelHeader.releasePointerCapture(drag.pointerId);
+    return true;
+  }
+
+  handlePanelKeyDown(event) {
+    if (event.target !== this.panelHeader || !this.enabled || !this.game?.user?.isGM || !this.hud || this.hud.hidden) return;
+    const delta = { ArrowLeft: [-1, 0], ArrowRight: [1, 0], ArrowUp: [0, -1], ArrowDown: [0, 1] }[event.key];
+    if (!delta || this.panelDrag) return;
+    event.preventDefault();
+    event.stopImmediatePropagation();
+    const rect = this.hud.getBoundingClientRect();
+    const step = event.shiftKey ? 40 : 10;
+    this.positionSettingsPanel({ left: rect.left + delta[0] * step, top: rect.top + delta[1] * step }, rect);
+    this.savePanelPosition();
   }
 
   refreshControls() {
@@ -622,16 +718,6 @@ export class IsometricBoardOverlay {
       });
     });
     control.append(label, input, output);
-    if (kind === "tilt") {
-      this.fitButton = document.createElement("button");
-      this.fitButton.type = "button";
-      this.fitButton.textContent = this.text("fitScene");
-      this.fitButton.title = this.text("fitSceneHint");
-      this.fitButton.addEventListener("click", () => {
-        void this.resetView().catch(error => this.reportError(error));
-      });
-      control.append(this.fitButton);
-    }
     return control;
   }
 
@@ -670,15 +756,51 @@ export class IsometricBoardOverlay {
     this.hud.id = "mk-isometric-board-hud";
     this.hud.hidden = true;
     this.hud.setAttribute("aria-label", this.text("title"));
+    this.panelHeader = document.createElement("header");
+    this.panelHeader.className = "mk-isometric-board-header";
+    this.panelHeader.tabIndex = 0;
+    this.panelHeader.title = this.text("panelDragHint");
+    this.panelHeader.setAttribute("aria-label", this.text("panelDragHint"));
+    const grip = document.createElement("i");
+    grip.className = "fa-solid fa-grip-vertical";
+    grip.setAttribute("aria-hidden", "true");
+    const titles = document.createElement("div");
+    titles.className = "mk-isometric-board-titles";
     const heading = document.createElement("strong");
     heading.textContent = this.text("title");
     this.scaleLabel = document.createElement("span");
     this.scaleLabel.className = "mk-isometric-board-scale";
-    this.moveButton = document.createElement("button");
-    this.moveButton.type = "button";
-    this.moveButton.textContent = this.text("move");
-    this.moveButton.title = this.text("moveTitle");
-    this.moveButton.addEventListener("click", () => this.setMoveMode());
+    titles.append(heading, this.scaleLabel);
+    const close = document.createElement("button");
+    close.type = "button";
+    close.className = "mk-isometric-board-close";
+    close.title = this.text("closeSettings");
+    close.setAttribute("aria-label", this.text("closeSettings"));
+    const closeIcon = document.createElement("i");
+    closeIcon.className = "fa-solid fa-xmark";
+    closeIcon.setAttribute("aria-hidden", "true");
+    close.append(closeIcon);
+    close.addEventListener("click", () => this.setSettingsVisible(false));
+    this.panelHeader.append(grip, titles, close);
+    this.panelHeader.addEventListener("pointerdown", event => this.startPanelDrag(event));
+    this.panelHeader.addEventListener("pointermove", this.onPanelPointerMove);
+    this.panelHeader.addEventListener("pointerup", this.onPanelPointerUp);
+    this.panelHeader.addEventListener("pointercancel", this.onPanelPointerCancel);
+    this.panelHeader.addEventListener("lostpointercapture", this.onPanelPointerCancel);
+    this.panelHeader.addEventListener("keydown", event => this.handlePanelKeyDown(event));
+    this.env.addEventListener?.("blur", this.onPanelBlur);
+    this.env.addEventListener?.("resize", this.onPanelResize);
+    const body = document.createElement("div");
+    body.className = "mk-isometric-board-body";
+    const section = (key, ...controls) => {
+      const group = document.createElement("fieldset");
+      group.className = "mk-isometric-board-section";
+      group.dataset.section = key;
+      const title = document.createElement("legend");
+      title.textContent = this.text(key);
+      group.append(title, ...controls);
+      return group;
+    };
     const positionControl = document.createElement("div");
     positionControl.className = "mk-isometric-board-position";
     positionControl.hidden = !this.game?.user?.isGM;
@@ -688,9 +810,16 @@ export class IsometricBoardOverlay {
       this.gridMoveButton.type = "button";
       this.gridMoveButton.title = this.text("moveGridHint");
       this.gridMoveButton.addEventListener("click", () => this.setGridMoveMode());
+      this.fitButton = document.createElement("button");
+      this.fitButton.type = "button";
+      this.fitButton.textContent = this.text("fitScene");
+      this.fitButton.title = this.text("fitSceneHint");
+      this.fitButton.addEventListener("click", () => {
+        void this.resetView().catch(error => this.reportError(error));
+      });
       this.gridMoveHint = document.createElement("span");
-      this.gridMoveHint.textContent = this.text("moveGridHint");
-      positionControl.append(this.gridMoveButton, this.gridMoveHint);
+      this.gridMoveHint.textContent = this.text("gridEditHint");
+      positionControl.append(this.gridMoveButton, this.fitButton, this.gridMoveHint);
     }
     const opacityControl = document.createElement("label");
     opacityControl.className = "mk-isometric-board-opacity";
@@ -750,7 +879,7 @@ export class IsometricBoardOverlay {
     this.status.setAttribute("aria-live", "polite");
     this.ranges = document.createElement("div");
     this.ranges.className = "mk-isometric-board-ranges";
-    const legend = document.createElement("div");
+    const legend = this.rangeLegend = document.createElement("div");
     legend.className = "mk-isometric-board-legend";
     for (const band of ["close", "near", "far", "enemyClose"]) {
       const label = document.createElement("span");
@@ -758,8 +887,14 @@ export class IsometricBoardOverlay {
       label.textContent = this.text(`${band}Legend`);
       legend.append(label);
     }
-    this.hud.append(heading, this.scaleLabel, this.moveButton, positionControl, opacityControl, colorControl, boardSizeControl,
-      tiltControl, rotationControl, this.status, this.ranges, legend);
+    const ranges = document.createElement("details");
+    ranges.className = "mk-isometric-board-range-details";
+    const rangeHeading = document.createElement("summary");
+    rangeHeading.textContent = this.text("rangesSection");
+    ranges.append(rangeHeading, this.ranges, legend);
+    body.append(section("layoutSection", boardSizeControl, tiltControl, rotationControl, positionControl),
+      section("appearanceSection", opacityControl, colorControl), this.status, ranges);
+    this.hud.append(this.panelHeader, body);
     document.body.append(this.hud);
     this.syncSettingsPanel();
   }
@@ -915,8 +1050,6 @@ export class IsometricBoardOverlay {
     this.syncSettingsPanel();
     if (this.hud.hidden) return;
     this.syncGridMoveControls();
-    this.moveButton.disabled = this.moving || !this.canMove(token);
-    this.moveButton.setAttribute("aria-pressed", String(this.moveMode));
     const status = !token ? this.text("selectToken") : !from ? this.text("outside", { name: token.name })
       : this.text(tokenFootprintSize(token.document) > 1 ? "selectedSized" : "selected",
         { name: token.name, cell: cellLabel(from), size: tokenFootprintSize(token.document) });
@@ -1072,6 +1205,7 @@ export class IsometricBoardOverlay {
   }
 
   destroy() {
+    this.finishPanelDrag(null, true);
     this.settingsVisible = false;
     this.setGridMoveMode(false);
     this.animatedArrows.clear();
@@ -1098,6 +1232,10 @@ export class IsometricBoardOverlay {
     this.gridDrawKey = null;
     this.hud?.remove();
     this.hud = null;
+    this.panelHeader = null;
+    this.rangeLegend = null;
+    this.env.removeEventListener?.("blur", this.onPanelBlur);
+    this.env.removeEventListener?.("resize", this.onPanelResize);
     this.opacityInput = null;
     this.opacityOutput = null;
     this.scaleLabel = null;
@@ -1164,6 +1302,11 @@ export function registerIsometricBoard(environment = globalThis) {
         setTilt: value => board.setTilt(value), setRotation: value => board.setRotation(value),
         setPosition: (x, y) => board.setPosition(x, y), setGridColor: value => board.setGridColor(value),
         resetView: () => board.resetView(),
+        project: (column, row) => project(board.layout, column, row),
+        coordinates: point => unproject(board.layout, point),
+        tokenFootprint: document => document?.parent?.id === board.canvas?.scene?.id
+          ? tokenFootprint(document, board.layout, document._source ?? {}, environment) : null,
+        stopInteraction: () => { board.setMoveMode(false); board.setGridMoveMode(false); },
         get tilt() { return board.tilt; },
         get rotation() { return board.rotation; },
         get offsetX() { return board.offsetX; },

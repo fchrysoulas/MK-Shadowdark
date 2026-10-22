@@ -1,627 +1,158 @@
 # MK-Shadowdark
 
-Modular quality-of-life tools, gameplay automation, party management, GM tools, and character-sheet enhancements for the **Shadowdark RPG** system on **Foundry VTT**.
-
-MK-Shadowdark uses a **Group-first procedure architecture** with Group Management as its active GM-facing party/procedure workspace.
-
-The Group Sheet remains the gameplay owner for party/procedure state. The GM Screen is available alongside it as a GM-facing control surface.
+Quality-of-life tools, combat automation, party management, and themed sheets for **Shadowdark RPG** on **Foundry VTT**.
 
 ## Compatibility
 
-- Foundry VTT v13+
-- Shadowdark RPG system 4.0.0+ (verified with 4.0.6)
-
-Spellcasting-class Active Effects preserve literal class identifiers during actor preparation, including effects transferred from talents and effects on unlinked tokens. Boat and Bastion sheets support Item Piles' sheet wrappers while keeping their existing actor types and sheet selections.
+- Foundry VTT v13+ (verified with v14).
+- Shadowdark RPG system 4.0.0+ (verified with 4.0.6).
+- Boat and Bastion sheets support Item Piles integration.
 
 ## Installation
 
-Manifest URL:
+Install the module in Foundry using this manifest URL, then enable it in your world:
 
 ```text
 https://github.com/fchrysoulas/MK-Shadowdark/releases/latest/download/module.json
 ```
 
-Manual release download:
+For manual installation, download the [latest module ZIP](https://github.com/fchrysoulas/MK-Shadowdark/releases/latest/download/mk-shadowdark.zip).
 
-```text
-https://github.com/fchrysoulas/MK-Shadowdark/releases/latest/download/mk-shadowdark.zip
-```
+## Getting started
 
-The old **MK-Shadowdark GM Screen Mock** prototype is not a dependency and is not required for the production GM Screen or any current MK-Shadowdark feature.
+- **Settings:** open **Configure Settings → Module Settings → MK-Shadowdark** to configure individual features.
+- **Character Dashboard:** select **MK-Shadowdark: Character Dashboard** in the character's **Sheet Configuration**.
+- **Group, Boat, or Bastion:** create an Actor and choose the corresponding type.
+- **GM Screen:** GMs open it with the **shield** button in **Token Scene Controls**; its gear button opens generator and encounter settings.
+- **Isometric board:** the GM uses the **chessboard** button to toggle the Scene overlay and the **sliders** button to open its settings.
+- **In-app help:** use the sheets' **i** buttons for controls, assignment rules, and activity details.
 
----
+## Features
 
-# Features
+### Character sheets and downtime
 
-## Character and combat automation
+| Feature | Summary |
+| --- | --- |
+| Character Dashboard | Alternative player sheet with equipment slots, Quick Slots, spells, injuries, and Midnight Cyan or Ashen OSR themes. |
+| Dashboard Item Sheet | Matching item sheets that retain Shadowdark's native editing controls. |
+| Character Sheet Tweaks | Native sheet enhancements, clearer weapon properties, and configurable styling. |
+| Summary Bar | Compact HP, Luck, ability, rest, and inventory controls, with a sheet-collapse option. |
+| Downtime Points (DTP) | The hourglass button ("Downtime activities" on hover) opens Spiritualism, Skulduggery, Martial Training, Magical Research, and Learning Skills activities through native check dialogs; tracks downtime balances. |
+| Learning Skills | Supports paid trainers or another character as teacher, with DTP costs and shared-treasure payment options where applicable. |
+| Carousing | GM-managed events with individual or group rolls, contributions, automatic XP/DTP/Luck updates, and campaign-time advancement. |
+| Weapon Downtime Upgrades | GM controls for weapon-specific hit bonuses, damage bonuses, and damage-die increases. |
 
-- **DTP** -- a compact value box before Languages on the native Player sheet Details tab. It starts at 0 and persists on the actor. GMs can edit the balance; click the DTP label (or the read-only value) to open Carousing, Spiritualism, Skulduggery, Martial Training, Magical Research, and Learning Skills. For check activities, character owners choose an option and proceed directly to Shadowdark's native check dialog with editable modifiers and advantage/disadvantage. Required facilities remain listed in the menu. Each check attempt deducts **1 DTP**, and its starred (*) options normally also cost **10 gp × PC level**, on success or failure. Closing a dialog spends nothing. Class hit die and spellcasting ability determine eligible training and research. Compact chat results show the activity, outcome, check, costs and remaining DTP without a luck-token notice or reroll controls; the GM applies rewards, training limits, created items, and narrative consequences.
-- **Weapon Downtime Upgrades** -- weapon item sheets, including the Dashboard Item Sheet, show a compact **Downtime Upgrades** list in **Details**: **+1 to hit**, **+1 to hit and damage**, and **Increase damage die**. Fixed checkbox widths, aligned labels, and a separate damage-die row keep the controls readable. GMs choose either hit-bonus option and can separately record 0–2 damage-die increases (maximum d12). One managed Active Effect applies the upgrades only to that weapon through Shadowdark's native attack and damage rolls. It preserves base damage, other effects, and the weapon's magical-item state. Clearing options removes their bonuses; players can view the recorded upgrades.
-- DTP activity categories start collapsed. The activity window stays open after attempts, refreshes gold and DTP balances and available options, and preserves selected activities and expanded categories. Skulduggery's CHA checks include **DC 12*: Gain a local rumor**, **DC 20*: Gain a world rumor**, and **DC 20*: Seed a rumor**; these use the usual starred activity costs.
-- DTP check fees use the character's gold first. If it cannot cover the full fee, **Party Treasure** pays the full fee from a Group Sheet that contains that character and that the trying player can access. Multiple eligible groups require a selection in the activity window. A GM must be online to process shared payments; DTP always comes from the character. The menu refreshes both balances and the roll result names the paying group. Carousing keeps its separate contribution rules.
-- **Learning Skills** has a **Teacher** selector. Keep **Paid trainer** for the usual gold fee, or choose another accessible player character who knows the skill or language. The learner makes the normal **DC 18 INT check**. Each submitted attempt costs the learner and teacher **1 DTP each**, on success or failure, and uses **no gold** from either character or Party Treasure. Cancelling spends nothing. A GM must be online to process both DTP costs and confirms what the teacher can teach; the menu and result show the updated balances.
-- **Carousing\*** -- select it in the DTP menu, then choose **Attempt selected activity** to open its event form and outcome table. The GM enters participants, individual contributions toward the total cost, the bonus (a number or `1d6`), and duration in days. Events require a suitable sanctuary with a Tavern. A selected Bastion must have a built Tavern, allows at most **100 gp total**, and adds **+1** for a built Brewery. Individual mode rolls `1d8 + bonus` per character; group mode shares one chosen participant's roll. Each participant gains the listed **XP** and pays the rolled **DTP cost** (3–8). Participants must hold enough DTP for the highest possible result; only the actual result's cost is deducted. Event gold, XP, DTP and luck tokens are applied automatically. The GM handles additional fines, CON/disease checks, allies, bans, debts and item rewards; **Item (80–100)** and **Item (90–100)** are reward-table ranges. Final review confirms the location and advances Foundry campaign time once for the event. Cancelling either dialog spends nothing. Owners can view the form and table; the GM resolves events.
-- **Sundering** -- with Auto Damage enabled, a Player character hit by a melee weapon or NPC attack can destroy an equipped, unstashed item with the Sundering Property to cancel that attack's damage. The active owning player receives the item-choice prompt; the GM decides when no owner is online. Declining or closing the prompt applies damage normally. Ranged attacks, spells, healing, and attacks that deal no damage do not prompt. The active GM rechecks the item and performs its deletion; saved decisions prevent duplicate destruction during retries.
-- **Character Dashboard paper-doll layout** -- the enlarged figure uses consistent equipment slot sizing, a compact centered AC badge, and an item-style Spells slot above Right Hand.
-- The character class value in the dashboard header can be edited with the native Shadowdark class selector.
-- Paper-doll and Backpack item cards use full-area artwork.
-- Item controls and values remain interactive above the expanded artwork.
-- The Languages panel uses the same dashboard panel layout as Conditions and retains native language editing.
-- The Vitals panel presents stat labels and values above compact progress bars.
-- The paper-doll panel supports a narrower minimum width and a larger central character image.
-- The dashboard left panel uses a fixed 220-pixel width.
-- The three Quick Slots are arranged horizontally below the paper-doll image.
-- The side hand and torso slots stay in the upper paper-doll area while Quick Slots use the full row width below it.
-- The paper-doll panel uses a shorter minimum height with Quick Slots positioned higher beneath the image.
-- Luck is toggled from an icon-only control in the upper-right character header.
-- The Luck icon uses a larger borderless presentation with a hover highlight.
-- Luck hover feedback is applied to the icon itself without a visible button rectangle.
-- Left-click a weapon in the Right Hand paper-doll slot to use the native Shadowdark attack roll; Shift-click skips its prompt.
-- Injuries appear below Conditions, while compact paper-doll Backpack and Spells controls expand and collapse a floating extension beside the sheet. Backpack uses fixed-size slots and item cards span their required slot count. Hovering an equipped weapon shows its native actor-derived attack bonus, damage, and properties.
-- The Inventory tab uses the same dark cyan dashboard styling as the Character tab while retaining native inventory controls.
-- The Spells, Notes, and Effects tabs use the same dark cyan dashboard styling while retaining native controls and editors.
-- Choose the Character Dashboard theme from the module's Character Dashboard settings menu: Midnight Cyan preserves the current look, while Ashen OSR adds a darker soot-and-brass treatment for gritty OSR tables.
+### Combat and spellcasting
 
-- **Dashboard Item Sheet** -- when Character Dashboard is enabled, Shadowdark Items open in the same dashboard visual language while retaining native item editing and tabs; disabling Character Dashboard restores the default item sheets.
+| Feature | Summary |
+| --- | --- |
+| Auto Damage | Applies targeted native attack and spell damage or healing, including damage traits and optional token feedback. |
+| Damage Traits | Property-based Resistance, Immunity, and Vulnerability for weapons, spells, and NPC attacks. |
+| Sundering | Offers eligible characters 10 seconds to destroy equipped Sundering gear and cancel incoming melee damage. A compact prompt shows the countdown; closing it or letting time run out takes damage. Requires Auto Damage. |
+| Targeting Assistant | Keeps attack and spell targets valid, supports multiple targets, and automatically targets the caster for Self spells. |
+| Spell Area Templates | Places cubes, lines, circles, or straight walls to select affected tokens before casting, including sized bases on the isometric board. Near cubes are 6 × 6 cells; Far lines are 12 × 1. |
+| Spell Effects | Applies linked Spell Effect items to successful spell targets and removes Focus-linked effects when Focus ends. |
+| Focus Tracker | Tracks active Focus spells, capacity, maintenance checks, and spell loss, with sheet and chat controls. |
+| Targeted Spell DC | Uses target Active Effects to set the spellcasting DC; multiple targets use the highest applicable value. |
+| Death Timer | Centered, slightly translucent portrait controls for dying characters, death checks, damage penalties, and native Dead status. |
+| Detailed Wounds | GM-managed player injuries with location, severity, recovery, automatic penalties, and editable wound history. |
+| Initiative | Individual player initiative with one shared hostile NPC roll and enemy turn. |
+| Morale Automation | Checks a hostile force at half strength, or a solo enemy at half HP; supports a morale leader, immunity, and Fleeing status. |
+| Torch Attack | Runs torch attacks through Shadowdark's native attack workflow. |
 
-- **Character Dashboard talents** -- the Talents tab uses the dashboard theme and includes Boons alongside ancestry, class, and level talents.
+On a spell's **Details** tab, use **Spell area template** to keep automatic core presets, configure a custom area, or choose manual token targets. Place or aim the preview, rotate with **R**, and confirm to open the normal casting dialog. **Escape** cancels and restores earlier targets. You can exclude affected creatures when the spell limits its targets. **Fire Wall** selects six connected cells (30 ft), can bend, and needs no creature targets. A successful cast creates one shaped tile with animated fire; a GM must be online. The animation needs no extra modules, respects reduced-motion settings, and can be disabled with **Animated fire** on a custom contiguous-wall template. With Focus Tracker enabled, the tile disappears when the caster fails a Focus check or chooses **End Focus**. The GM can also move or delete it in Tile Controls. Available with Targeting Assistant enabled; ongoing damage, elevation, and wall blocking remain GM-managed.
 
-- **Character Dashboard progression controls** -- edit current/max HP from the Core Stats card and see a level-up indicator when XP reaches the next-level threshold.
+### Equipment and tokens
 
-- **Character Dashboard spell casting** -- self-range spells selected from the paper-doll Spells popup automatically target the caster's active token.
+| Feature | Summary |
+| --- | --- |
+| Editable Quantity | Direct quantity editing in inventory lists. |
+| Equipment Hands | Checks weapons, shields, and other held gear against the character's available hands. |
+| Quickdraw | Marks ready items, highlights inventory entries, and supports configurable limits such as `max(1, @dex.mod)`. |
+| Token Equipment Display | Displays held and Quickdraw gear around tokens, with configurable appearance and click actions. |
+| Corpse Token Automation | Replaces dead NPC token artwork and restores the standing token when revived. |
+| Token Shadows | Adjustable shadows beneath tokens, with controls for size, offset, opacity, and blur. |
+| Isometric Encounter Board | Scene overlay using actual tokens, snapped creature bases, occupied-cell collision checks, and live movement and engagement ranges. |
 
-- **Auto Damage** — applies targeted attack/spell damage or healing from Shadowdark's native main and damage rolls, routes HP changes through the native `Actor.applyDamage` API, and supports Shadowdark damage properties with optional token shake feedback. Custom chat text without a native damage roll is ignored. Enable Auto Damage Debug Mode when detailed browser-console processing logs are needed.
-- **Damage Traits** — Resistance, Immunity, and Vulnerability through Shadowdark Properties and transferring effects.
-- **Targeting Assistant** — validates and preserves selected targets for attack/spell automation. Self-range spells automatically use the casting character's active token and do not require a manual target.
-- **Spell Effects** — successful targeted spells apply linked Shadowdark Spell Effect items to every selected target, including their duration and embedded Active Effects. Focus sessions retain their cast targets and remove the linked effect when Focus ends or breaks.
-- **Death Timer** — at 0 HP, a large skull control and remaining-turn count appear over the player portrait on native and Character Dashboard sheets. Click it to start or advance the timer; Dead remains visible without a click action. It works with the Summary Bar disabled, and HP stays visible in the bar. Death itself uses Foundry's native Dead status. Death checks use Shadowdark's normal/advantage/disadvantage prompt. Damage reduces an active timer by 1, or by 2 for a critical hit, with the reduction posted to chat. Auto Damage retry recovery also handles HP changes that completed before a pending transaction resumed. Enable Death Timer Debug Mode for detailed browser-console diagnostics.
-- Player characters are marked Dead when their effective CON reaches 0, including reductions from wound penalties.
-- **Detailed Wounds** — shows active injuries below character Stats and opens a GM-managed six-zone wound board. A `2d10` roll selects one of Head, Right/Left Arm, Body, or Right/Left Leg and then resolves a location-specific severity result, including stored rest durations, CON saves, native Dead status, automatic ability penalties, and named consequences in Group status summaries. The collapsed Wound History panel records optional informational timestamps, session markers, source notes, and outcome transitions; GMs can add, edit, or remove history without changing the mechanical wound record.
-- **Character Dashboard** — an alternative player sheet selected through **Sheet Configuration → This Sheet → MK-Shadowdark: Character Dashboard**. Its themeable Midnight Cyan or Ashen OSR overview shows the character portrait, core stats, a paper-doll Armor Class badge, a side Luck toggle, clickable ability checks, live Detailed Wounds markers, hand equipment, body armor, three paper-doll Quick Slots, a Backpack with empty boxes for available gear slots, and the editable character details. Drag existing gear onto the hand or torso slots to assign it; drag any Item type into a Quick Slot for one-click access, including items from native inventory lists, other actors, world items, or compendiums. Other body locations appear only when wounded. Native Shadowdark combat, inventory, spells, talents, effects and notes remain available in the top tabs. No launch button is added to the standard sheet.
-- **Editable Quantity** — inventory quantity editing with direct controls.
-- **Equipment Hands** — validates equipped weapons, shields, and hand-occupying gear against available hands.
-- **Token Equipment Display** — shows held equipment and Quickdraw gear around player tokens.
-- **Focus Tracker** — tracks active Focus spells, capacity, maintenance checks, and loss state.
-- **Initiative** — grouped hostile initiative while preserving individual player initiatives.
-- **Morale Automation** — hostile-force morale, morale leader support, Fleeing, and morale immunity.
-- **Targeted Spell DC Effects** — lets targets impose spellcasting DCs through Active Effects.
-- **Torch Attack** — uses supported Shadowdark attack APIs for torch attacks.
-- **Corpse Token Automation** — replaces dead NPC token art while preserving/restoring token state.
-- **Token Shadows** — configurable canvas shadows beneath tokens.
-- **Isometric Encounter Board** — GM-toggleable 6 × 6 to 18 × 18 scene overlay with native tokens, board snapping, occupied-cell collision checks, and live movement and engagement ranges.
+#### Isometric board controls
 
-The module's feature menus include enabled-by-default world-level master switches for the Character Dashboard, Journal Sheet availability, Quickdraw, GM Screen, Group Sheet, Group Encounters, Targeting Assistant, Targeted Spell DC, Spell Effects, Chat Reporting, Torch Attack, Source Tables, and Automated Animations compatibility. Disabling a feature stops its runtime controls while preserving its flags, imported tables, and other stored data. The Journal Sheet's availability switch is separate from its default-sheet switch; disabling the Character Dashboard also restores the native Item sheet. Targeting and spell-automation switches may require a reload after they change.
+Choose **6 × 6 through 18 × 18 cells**, each representing **5 ft**. Adjust tilt, rotation, grid color, and opacity; use **Move Grid** and drag its corners to change width and height independently without changing the cell count. **Fit scene** resets the board view.
 
-## Group Management
+Drag the settings panel by its title bar to reposition it; its location is remembered on this client. Controls are grouped into **Grid layout**, **Appearance**, and expandable **Token ranges**. Move tokens by dragging them on the board.
 
-- **Group Sheet** — members, active party, hirelings, warbands, mounts, linked boats and bastions, shared inventory, Traveling, Camping, and party resources.
-- **Camping Tasks** — Bed Down, Cook, Craft, Entertain, Scavenge, Hunt, Keep Watch, and Predict.
-- **Shared Scene Context** — terrain, danger, and day/night period belong to the active Scene context.
-- **Marching / Role Context** — Front, Middle, Rear, Scout, Light Bearer, and ordered camp watches.
-- **Encounter Staging** — preview-first deployment into the Scene with optional Foundry Combat handoff.
-- **Time Passes** — a standalone GM public roll with synchronized v1.6 visual cues and no encounter automation; the action opens its existing dice-choice flow.
+Controls are GM-only; players see the board and drag their own tokens normally. Bases scale with token width. Nearby enemies highlight red during dragging, and movement lines and destination outlines appear only while dragging. Selected tokens use an animated arrow.
 
-## GM Screen
+### Party and campaign management
 
-The GM Screen is available to GMs through its shield button in the Token Scene Controls. The `mk.gmScreen` API is also loaded for macros and integrations. Group Management remains the authoritative owner of party and procedure state; encounter services, source-table import, and standalone Time Passes remain available alongside it.
+| Feature | Summary |
+| --- | --- |
+| Group Sheet | Shared party workspace for active members, status, treasure, inventory, activities, and linked campaign assets. |
+| Shared Inventory | Slot-based item cards with drag-and-drop transfers to owned characters and GM-managed disposal. |
+| Traveling | Assign Pathfind, March, Lookout, and Scavenge; submit native checks through Prompt Travelling and reveal progress at activity breakpoints. |
+| Camping | Assign Bed Down, Cook, Craft, Entertain, Scavenge, Hunt, Keep Watch, and Predict, with resource handling and reset controls. |
+| Party Roles and Roster | Manage marching order, exploration roles, watches, hirelings, warbands, mounts, assignments, and weekly payroll. |
+| Boat Actors | Command Deck sheets for hull HP, AC, crew, passengers, cargo, and ship notes; link boats to a Group Sheet. |
+| Bastion Actors | Stronghold sheets for construction, upgrades, defenses, warband wages, and an optional 100-slot Vault. |
 
-The GM Screen implementation is a native Foundry ApplicationV2 surface. It is not a replacement for the Group Sheet and it does not own duplicate gameplay state.
+Traveling, Camping, marching order, and watches are managed in the Group Sheet. Group, Boat, and Bastion sheets offer Dark and Light themes.
 
-The **GM Screen | Encounter Roll Debug Mode** setting is disabled by default. Roll Encounter Journal pages use a readable encounter-report layout with the selected table and its three encounter supporting tables separated into category groups: Danger Level, Starting Distance, and Activity. When enabled, the report includes dice formulas, roll totals, and result numbers; otherwise it retains the encounter context and table result text while hiding dice, roll details, and result numbers. Trap and Hazard generator tables are independent and are never rolled by Roll Encounter.
+### GM tools and generators
 
-The **GM Screen | Tavern Generator Debug Mode** setting is disabled by default. Tavern Journal pages show a tidy Tavern Overview, distinct food and drinks lists, and editable GM Notes without source tables, dice formulas, or roll totals. When enabled, the page adds the source and full roll details for troubleshooting.
+| Feature | Summary |
+| --- | --- |
+| GM Screen | Four zones: Active Party, Quick Actions, Pinned Documents, and Tables, with Scene context controls above them. |
+| Scene Context | Scene-owned Encounter Zone, Terrain, Danger, and Period selections; dropdown changes save automatically. |
+| Manual Encounter Zone Rolls | Rolls the selected zone and terrain tables, plus configured Danger Level, Starting Distance, and Activity tables, into a GM Journal. |
+| Encounter Staging | Preview creature counts, formations, spacing, and visibility before Deploy; optionally add tokens to Foundry Combat. |
+| NPC Generator | Creates NPCs with generated names, traits, and ability scores. |
+| Monster Generator | Previews generated combat traits, qualities, strengths, weaknesses, and mutations before creating an NPC. |
+| Magic Item Generator | Previews type, qualities, and personality before creating a magical Item. |
+| Trap Generator | Previews trap results from three separately assigned RollTables before creating a Journal. |
+| Hazard Generator | Previews hazard results from its own three assigned RollTables before creating a Journal. |
+| Tavern Generator | Generates a named tavern with its defining trait, wealth, food, drinks, and GM notes. |
+| Shop Generator | Generates a shop's name, quality, stock, distinguishing trait, and interesting customer. |
+| Create Location | Previews a descriptor, location, and feature from linked tables before creating a Journal. |
+| Pinned Documents | Per-GM shortcuts to Journals, Actors, Items, and RollTables; removing a pin preserves the original document. |
+| RollTable Browser | Searches and rolls existing world RollTables, grouped by their Foundry folders. |
+| Source Tables | Imports supported tables from owned source files into world RollTables. |
+| GM Screen Transfer | Exports and imports Scene encounter and generator configuration, with RollTable reference remapping. |
+| Time Passes | Public 1d6, 2d6, or 3d6 roll after a synchronized splash. Any die showing 1 displays the ENCOUNTER! skull as a visual cue only. |
 
-The GM Screen is intentionally a **manual-update surface** for outside changes. It does not subscribe to ambient Scene, Combat, or MK workflow changes in order to force background rerenders, and it does not expose a generic Refresh button. The Active Party is a narrow exception: member HP and active light/torch changes rerender the open screen after a short debounce. Direct GM Screen actions rerender when they complete. The former Hide/Show Active Party rail and Reset GM Screen Presentation controls are retired.
+Configure linked RollTables through **GM Screen → gear**. Encounter, Trap, and Hazard tables have separate assignments. Encounter rolls are manual; Foundry world time and Combat track time and rounds. Time Passes operates independently of Group Time and encounter automation.
 
-Its production layout contains:
+### Presentation and integrations
 
-- a persistent active-party/status rail
-- a persistent Scene Context strip within the darker header
-- **Encounter Zone, Terrain, Danger, and Period selectors in the top strip**
-- the active Group selector in the **Active Party** zone
-- standalone **Time Passes** and **Roll Encounter** actions in the top strip
-- a gear button that opens **GM Screen Settings** in a separate window
-- four permanent main-screen zones: **Active Party**, **Quick Actions**, **Pinned Documents**, and **Tables**
+| Feature | Summary |
+| --- | --- |
+| Paper Chat | Twelve paper-inspired chat themes with a GM visual editor and synchronized styling. |
+| Sheet Style Editor | GM controls for character-sheet typography, spacing, and presentation. |
+| Chat Reporting | Posts character Luck changes to chat. |
+| Journal Sheet | Two-pane journal reader with sidebar navigation; edit pages through Foundry's native editor. |
+| Automated Animations Compatibility | Exposes Shadowdark roll item references for Automated Animations when that module is enabled. |
 
-Terrain, Danger, and Period **save immediately when their dropdown changes**. There is no Save Context button. The saved Scene Context then rerenders the GM Screen once so all four zones use the new values.
+## Active Effects setup
 
-The top strip selects the Scene's Encounter Zone, Terrain, Danger, and Period for the manual **Roll Encounter** action. Roll Encounter uses **1d6** for Unsafe, **2d6** for Risky, and **3d6** for Deadly; other danger values retain the configured Encounter Zone grid fallback. The module does not maintain a Group elapsed-time clock or a GM Screen turn counter; Foundry world time and Foundry Combat remain the authoritative time/round surfaces.
+For damage traits, use the same Shadowdark **Property** on the damage source and the target's trait effect. On an NPC Feature's **Effects** tab, enable **Transfer** so the effect applies to its owner.
 
-The main screen always shows these four zones from left to right:
+Resistance halves damage with a minimum of 1; Vulnerability doubles it. Matching Resistance and Vulnerability cancel, while Immunity takes precedence. Healing bypasses damage traits.
 
-- **Active Party** — a Group selector listing every available Group, followed by the selected Group's members with HP, AC, and compact status indicators. There is no separate GM Status inspect button or dialog.
-- **Quick Actions** — Encounters, Trap Generator, Hazard Generator, NPC Generator, Monster Generator, Magic Item Generator, Tavern Generator, Shop Generator, and Create Location. These actions run their generators directly, and the Settings Home checkboxes control which actions are visible on the main GM Screen. Encounters, Trap, Hazard, Monster, and Magic Item preview their generated results in a GM dialog with **Create**, **Reroll**, and **Cancel** before creating their Journal Entries, NPC Actors, or Items.
-- **Pinned Documents** — a per-GM workspace for Journal entries/pages, Actors, Items, RollTables, and other UUID-backed Foundry documents. Drag a document into the zone to pin it; removing a pin deletes only that shortcut.
-- **Tables** — existing world RollTables with a fixed search control, rolling, native sheet access, independently collapsible Foundry folder grouping that starts collapsed, and document icons. The entire Tables zone can be collapsed into a right-side rail when more room is needed for the other zones. Only the folder/table list scrolls. The browser does not import or update tables or infer source metadata; existing imported RollTables remain usable like any other world table.
+The module also provides these predefined effects:
 
-Every GM Screen Settings feature card on Home provides a **Show in Quick Actions** checkbox for **Encounters**, **Trap Generator**, **Hazard Generator**, **NPC Generator**, **Monster Generator**, **Magic Item Generator**, **Tavern Generator**, **Shop Generator**, and **Create Location**. These visibility choices are stored per GM and update the main screen immediately. NPC generation is configured in **GM Screen Settings -> NPC Generator**, Monster generation in **GM Screen Settings -> Monster Generator**, and magic item generation in **GM Screen Settings -> Magic Item Generator**.
-- **GM Screen Settings** — a separate gear-button window with left-side tabs. **Encounters** contains one or more named, collapsible Encounter Zone grids with eight default rows plus three optional RollTable drop areas for Danger Level, Starting Distance, and Activity. In Edit mode, edit each zone name, add or remove zones, and drag RollTables from Foundry onto zone cells or the encounter detail boxes. **Trap Generator** and **Hazard Generator** each provide exactly three Scene-owned RollTable assignments; these assignments are independent from Roll Encounter. In View mode, expand a zone and use its Roll Zone action or click an assigned cell. **Roll Encounter** uses the selected terrain and zone, and records the configured encounter detail tables in a GM-only Journal Entry page. **NPC Generator** contains the Scene-owned RollTable assignments for generated NPC names and traits. Name parts use **Prefix**, one or more **Possible Syllables** tables, **Suffix**, and an optional **NPC Identifier** table rolled as the second name part. Trait assignments cover **Ancestry**, **Age**, **Alignment**, **Wealth**, multiple **NPC Features**, and **Occupation**. Linked tables are rolled when available; missing entries remain blank, and only the NPC name is required. The configurable **Second syllable chance** and **Third syllable chance** decide whether one, two, or three syllable tables are rolled; they default to 33% each. Every generated NPC also receives six ordered 3d6 ability rolls; the rolls and modifiers are recorded in the description and the native NPC ability modifiers are populated on the sheet. **Tavern Generator** contains Scene-owned drag-and-drop assignments for **First Part**, **Second Part**, **Known For**, **Wealth**, **Poor Food**, **Standard Food**, **Wealthy Food**, **Poor Drinks**, **Standard Drinks**, and **Wealthy Drinks** RollTables. The Wealth result is randomly rolled as Poor, Standard, or Wealthy; it determines the complete procedure: Poor rolls 2 times on Poor Drinks and 3 Poor Food entries, Standard rolls 3 times on Standard Drinks plus 1 Poor Food and 2 Standard Food entries, and Wealthy rolls 4 times on Wealthy Drinks plus 2 Standard Food and 2 Wealthy Food entries. Food prices remain tier-specific: 1d4 cp for Poor, 1d6 sp for Standard, and 1d8 gp for Wealthy. Food and drink results are rerolled when they duplicate an earlier result in the same tavern, so each generated list contains distinct options; generation reports an error if the assigned tables cannot provide enough unique results. The first two name rolls are joined to form the tavern name, and Known For supplies the tavern's distinguishing result. When any Tavern assignment is configured, those linked tables are used by **Create Tavern**; otherwise existing imported source tables remain available for legacy scenes.
-- **Shop Generator** contains eight Scene-owned drag-and-drop assignments: **Quality**, **First Part**, **Second Part**, **Known For**, **Poor Shop**, **Standard Shop**, **Wealthy Shop**, and **Interesting Customer**. Quality is rolled as Poor, Standard, or Wealthy and chooses the matching shop table; the GM does not select it. When any Shop assignment is configured, **Create Shop** uses only those linked tables; incomplete assignments are reported to the GM. With no linked assignments, imported Core source tables remain available for legacy scenes, with quality rolled on 1d3.
-- **Location Generator** contains three Scene-owned drag-and-drop assignments: **Descriptor**, **Location**, and **Feature**. **Create Location** requires all three linked tables; incomplete or unavailable assignments are reported to the GM and no legacy source/import or blank-journal fallback is offered. Location generation previews all three independent results before creating and pinning the Journal.
-- **Monster Generator** contains seven Scene-owned drag-and-drop assignments: **Combat**, **Quality**, **Strength**, **Weakness**, **Mutation 1**, **Mutation 2**, and **Mutation 3**. Monster generation requires all seven linked tables, previews every result with **Create**, **Reroll**, and **Cancel**, then creates and pins a native Shadowdark NPC Actor. The active party's average character level is the PL; the NPC AC is PL + 10, the Combat result supplies both attack bonus and level, the attack count is rolled on 1d4, and its attack deals 1d8 damage.
-- **Magic Item Generator** contains three Scene-owned linked RollTable assignments: **Type**, **Qualities**, and **Personality**. It previews every result with **Create**, **Reroll**, and **Cancel**, then creates and pins a native Shadowdark **Basic** Item with `magicItem` enabled and the rolled attributes recorded in its description.
-- **GM Screen transfer** — use the GM Screen Settings Home **Export** and **Import** controls to save or restore the active Scene's Encounter Zones, supporting encounter RollTables, environment context, NPC Compositions, Tavern Generator assignments, Shop Generator assignments, Location Generator assignments, Monster Generator assignments, and Magic Item Generator assignments. RollTable references include names for unique-name remapping; unavailable references remain visible as unavailable. Journals, Actors, global settings, and temporary workspace presentation state are not included.
-
-Pinned Documents are presentation-only state stored on the current GM user as document UUIDs. They do not copy Journal/Actor/Item content and do not become Scene, Group, encounter, combat, morale, wound, or Focus state. Journals and NPC Actors created by the GM Screen generators are automatically pinned for the current GM. Pinning or removing a shortcut updates the Pinned Documents zone directly and does not force a full GM Screen rerender.
-
-The Settings **Encounters**, **Trap Generator**, and **Hazard Generator** tabs use distinct tints. Encounter Zones display collapsed by default; expand a zone when you need to inspect or edit its grid. The main screen has no Settlement or Session Log tabs; it always shows Active Party, Quick Actions, Pinned Documents, and Tables. Encounter Zone, Terrain, Danger, and Period are selected from the persistent top strip. **Roll Encounter** rolls the selected zone's terrain die, the assigned terrain cell's RollTable, and each configured Danger Level, Starting Distance, and Activity RollTable. Trap and Hazard assignments are not included in encounter rolls.
-
-The GM Screen reads canonical state from Group, Scene Context, internal encounter services, Encounter Staging, Foundry Combat, Morale, and the prepared Active Party status model. It does not store a second party, procedure clock, encounter, combat, morale, wound, or Focus model.
-
-The GM Screen Settings Home **Export** button saves a versioned JSON configuration for the active Scene through Foundry's native file-save workflow. **Import** opens the standard JSON file chooser, validates the file, and asks for confirmation before replacing the current Scene's GM Screen configuration. Imported RollTable UUIDs are reused when available, or remapped by an exact unique table name; ambiguous or missing tables are left unresolved and reported to the GM.
-
-## Journal Entries
-
-The **Journal Sheet | Use as Default** world setting is enabled by default. When enabled, all Foundry Journal Entries use the module's MK Sandbox Journal-matched two-pane sheet, presenting their pages through a dark sidebar with category headings and page navigation plus a light content area with the same spacing, typography, muted-gold accents, and responsive layout. The custom sheet is display-only; use Foundry's native Journal Page editor to edit page content. Disable it to leave Foundry's normal Journal sheet as the default; the MK-Shadowdark sheet remains available for individual selection.
-
----
-
-# RollTable Browser
-
-The **Tables** zone lists the RollTables that already exist in the world. Use the fixed search field to find a table, **Roll** to draw from it, or open its native Foundry sheet for editing. Foundry folder paths are retained as independently collapsible grouping headings that start collapsed, and each table displays its document icon. Only the folder/table list scrolls beneath the search area. Existing imported RollTables remain available, but the zone does not expose an Import / Update procedure and does not infer source books or source metadata.
-
----
-
-# Group Sheet and Procedure Architecture
-
-The native MK-Shadowdark **Group Sheet** remains the authoritative party/procedure workspace.
-
-Create an Actor and choose **Group** in the Actor creation dialog. MK-Shadowdark creates a normal Foundry Actor using the Group sheet and module flags rather than introducing another core Actor document type.
-
-Both the Group Sheet and Bastion Sheet offer **Dark** (default) and **Light** themes. Use the sun/moon button in either sheet's header to switch. Each user's choices are saved separately for the two sheet types and also appear under **Module Settings → Group Sheet → Appearance**. Changing appearance does not change the actor or other users' preferences.
-
-The Group Sheet structure is intentionally stable. Its main areas remain:
-
-- party / roster member cards
-- Summary
-- Traveling
-- Camping
-- Inventory
-- Hirelings
-- Warbands
-- Mounts
-- Boats
-- Bastion
-
-The Group Sheet uses Montserrat throughout. Its nine-tab rail uses icons at every width, with tab names shown on hover, accessible labels, and Enter/Space keyboard activation. Summary opens first and shows party treasure, weekly wages and salaries, hirelings with their owners, warbands, mounts with their riders, boats with their captains and crew/warband assignments, and bastions. Hirelings cost **1 gp each per week**; warbands linked in the group's Warbands tab cost **3 gp per level per unit per week**, using assigned quantities on boats and in bastions, or one unit when unassigned. A built **Granary** in a linked bastion reduces wages by **3 gp per stationed unit per week**, with a minimum of 0 gp; other destinations receive no discount. Summary includes these discounts in each warband's cost and the combined weekly payroll, with a clearly marked subtotal when warband levels, actors, or bastion assignments are unavailable. Warbands follows Hirelings, with Boats after Mounts, followed by Bastion; the rail scrolls horizontally when needed.
-
-Party sidebar cards use compact stat roll buttons. Click a character portrait to open their sheet; click the rest of the card header to expand or collapse their stats.
-
-Every tab header has a totals badge on the right. Summary shows combined weekly wages and salaries (marked as a subtotal when data is unavailable); Traveling and Camping show active party size; Inventory shows used/available shared gear slots; Hirelings and Mounts show carrying capacity; Warbands, Boats, and Bastion show linked counts.
-
-Add shared gear by dragging existing Items into the inventory grid. The slot total and inventory information button appear in the Inventory tab header. Shared Group items have no Quickdraw lightning controls or Quickdraw allocation.
-
-Each Group Sheet tab uses a compact header with its title, grey short description, and **i** button on one line. The Party sidebar, Active Torches, and Party Treasure also have **i** buttons explaining their controls and rules. These help windows are available to players with read-only group access. Inventory, Mounts, Warbands, Boats, and Bastion keep drop and assignment instructions in their help windows so their content stays compact. Empty shared inventory shows a short status message. Mount initiative, movement, carrying capacity, and ration rules are in the Mounts help window; campfire rules and task benefits are in Camping help.
-
-Traveling and Camping task panels show activity requirements and assignments. Submit travel checks through **Prompt Travelling**; make camping checks from the assigned character's sheet using the displayed ability and DC.
-
-Hirelings have a free-text Background / Profession field and an Owner dropdown listing the group's player characters, including inactive party members. GMs can assign an owner or leave the hireling Unassigned. Removing a character from the group clears their hireling ownership; changing the active party does not.
-
-Shared **Inventory** shows one item per card in a compact, wrapping grid. Only items configured with multiple items per slot (such as arrows) can share a card, up to that limit; larger quantities appear on additional cards. Cards show icons, names, slot costs, and stack amounts where applicable, with no quantity adjustment buttons. Card slot costs add up to the header's shared gear total, including free-carry allowances; stashed and nonphysical items use zero slots. The GM can right-click a card and confirm **Trash Item** to remove only its contents. Players with Observer or Owner group permission can drag a card onto a character sheet they own, including Character Dashboard equipment and Quick Slots. An active GM processes transfers in sequence, rechecks the displayed quantity to reject stale requests, and rolls back the destination copy if the source change fails. Trashing and transferring preserve all other cards. Dropping an item back onto the same group leaves it in place.
-
-GMs can drag NPC actors representing warbands into the Warbands tab, Boat actors or existing NPC boats into the Boats tab, and Bastion actors into the Bastion tab, either onto the tab header or anywhere in its content area. These are links to the original actors: click a card to open its sheet, or use its trash button to remove the group link without deleting the actor. Duplicate drops do not add extra links.
-
-Existing NPC boat cards have a Captain name field and separate Crew and Warbands areas that accept NPC actor drops. GMs can edit assignment quantities, open linked NPC sheets, and unassign them without deleting the actors. Each crew member uses 1 crew slot and each warband uses 20. Crew capacity equals the NPC ship's maximum HP; the card shows used and free slots and prevents assignments that exceed capacity. Damage does not reduce crew capacity. If maximum HP is reduced below the assigned total, the card marks the excess while preserving the assignments so the GM can adjust them. New Boat actors manage their independent crew roster and editable capacity on their own sheet; Group cards read their hull and crew totals directly.
-
-The Warbands tab shows rectangular cards in a three-column grid, with one card per linked group warband and horizontal scrolling in narrow windows. Each card shows live level, AC, HP, and assignment badges. Warbands with no assignment follow the group; boat and bastion badges name their destinations and show assignment quantities. Multiple destinations appear on the same card. Assignments come from the Boats tab and linked bastions' Defenses tabs, and also appear in Summary. Unavailable bastions produce a warning and leave unknown assignments marked as unavailable.
-
-## Isometric Encounter Board
-
-In the Scene's **Token Controls**, the GM clicks the **chessboard** toggle to show or hide the **Isometric Encounter Board** for everyone viewing that Scene. While the board is enabled, the **sliders** button opens or closes its settings panel. Both buttons and the settings panel are visible only to the GM; the panel starts hidden and its visibility is local. Closing it exits grid editing and click-to-move mode while keeping the board active. Players use normal token dragging and see board range highlights without a settings panel. Each Scene remembers its own board state. The GM's **Grid size** slider chooses **6 × 6 through 18 × 18 spaces** in single-cell steps, with **18 × 18** as the default. Fewer spaces make larger tiles. In the default **Fit scene** view, every size fills the Scene's width and height, with the diamond's tips reaching all four Scene edges. The board follows the Scene center after resizing, padding, or background-offset changes, with any saved Move Grid offset added in Scene pixels. Tile dimensions use the Scene bounds independently of the native Scene grid size. Every space is always **5 ft**, including diagonal steps. Older Scenes saved with a 10-ft scale automatically use 5 ft; there is no Cell distance control. Settings are saved on the Scene and shared with all viewers. Tokens keep their Scene positions and artwork orientation when settings change. Grid-size, position, or angle changes that would overlap bases or leave a base partly outside the board are blocked until those tokens are repositioned.
-
-The GM clicks **Move Grid**, then drags the map to position the overlay horizontally and vertically. A rectangular resize frame appears around the diamond board with four gold corner handles: **drag a corner to change width and height independently**, keeping the opposite frame corner fixed. Movement along either side of the frame changes only that dimension, including when the board is rotated. This preserves the square count, rotation, and 5-ft distances; the **Grid size** slider still controls the number of squares separately. Stretching changes the diamonds' proportions. Handles stay visible at 0% board opacity. The board previews locally while dragging and saves its width, height, and position for everyone on release. Previously saved proportional sizes carry over on both axes. Tokens stay in their Scene positions, and changes that overlap bases or partially clip them are blocked. Click **Done** to finish; **Escape** cancels an unfinished drag and exits. Grid dragging follows the camera zoom, supports release outside the canvas, and cancels on lost capture or Scene changes. The former Top limit controls and saved limits are no longer used.
-
-The GM's **Tilt** slider adjusts the base diamond steepness from **5–85°**, measured from horizontal before width/height sizing and rotation; lower values make flatter diamonds. **Rotation** turns the grid on the map from **-180° to 180°**. Release a slider to apply its value. Manual angles fit the board to the Scene dimensions, apply its saved width/height scales and position, and may leave margins. **Fit scene** resets both dimensions and position and restores **Auto** tilt and **0°** rotation, filling the Scene width and height again while preserving the square count. Snapping, movement previews, ranges, footprint highlights, and collision checks all follow the selected view.
-
-The board draws above the map and beneath token artwork, with faint grid lines and fully transparent ordinary cells. Selected tokens show a small gold arrow gently bobbing above their visible artwork, including when multiple tokens are selected. The animation stops while dragging, on deselection, and when the board closes; system reduced-motion or Foundry photosensitivity preferences keep the arrow static. Their native square selection/hover borders appear only during dragging; disabling the board restores normal Foundry borders. Arrows are local to your selection and remain visible at 0% board opacity. Use actual Scene tokens: select exactly one to softly highlight its entire base, **Close / engagement** (up to 5 feet), and **Near** (up to 30 feet). Close extends one space from the base and Near extends six spaces, including diagonals. The board HUD lists distances to other visible tokens and shows the distance to the hovered destination. Engagement ranges measure between the nearest occupied cells of both bases. Visible enemies within **Close (5 ft)** have their entire occupied base tinted **red**, including larger creatures. Friendly or Neutral selected tokens treat Hostile tokens as enemies; a selected Hostile token treats Friendly tokens as enemies. Neutral targets keep their normal range colors. The red highlight previews Close range from the snapped, reachable destination while dragging, then returns to the actual position on drop or cancellation. It also updates with token movement, disposition, and selection, respects visibility, and uses the HUD opacity setting. Movement anchors use the bottom-center of visible artwork, accounting for texture fitting, scale, anchors, rotation, and transparent margins. Beyond Near still requires line of sight, and range highlights do not authorize attacks through walls or enforce a turn's movement budget.
-
-A creature's **Token width** determines its square base on the board. Token height and artwork scaling affect its appearance without changing the number of occupied cells.
-
-| Creature size | Token width | Board base |
+| Effect | Purpose | Effect key |
 | --- | --- | --- |
-| Small / Medium | 1 or less | 1 × 1 (1 cell) |
-| Large | 2 | 2 × 2 (4 cells) |
-| Huge | 3 | 3 × 3 (9 cells) |
-| Gargantuan | 4 or more | 4 × 4 (16 cells) |
+| Only Damaged by Magical Sources | Blocks nonmagical damage. | `system.damage.immunity.nonmagical` |
+| Magical Attacks | Makes the actor's attacks count as magical, including temporary enchantments such as Holy Weapon. | `system.damage.source.magical` |
+| Targeted Spell DC | Sets the caster's DC when targeting the actor; defaults to 18. | `system.roll.spell.dc` |
+| Immune to morale checks | Excludes the actor from morale checks and Fleeing application. | `flags.mk-shadowdark.encounter.moraleImmune` |
 
-Fractional widths round up to a whole-cell base, with a minimum of 1 and maximum of 4 cells per side. Larger bases must fit fully inside the board. The selected token's HUD shows its base dimensions.
+Apply these effects to the relevant actor or through an enabled transferring Effect item. Permanent magic weapons use Shadowdark's native magical-item setting.
 
-The GM's **Grid lines** color picker sets the line color for the current Scene. Changes preview locally while choosing a color and are shared with everyone when committed. Range highlights and selection arrows keep their own colors.
+## Development and support
 
-Use the HUD's **Opacity** slider to adjust the grid, range highlights, and movement preview live from **0–100%**. It starts at the subtle **20%** preset and remembers your preference on this client across Scenes and reloads. At 0%, the board graphics are invisible while the HUD and movement controls remain available.
+Run `npm run syntax`, `npm run lint`, and `npm test` for repository validation. Public feature APIs are available through `game.modules.get("mk-shadowdark").api`.
 
-Drag tokens normally to snap their bottom-center artwork anchor onto their base. A 1 × 1 base centers on one space. **Large creatures sit lower in their 2 × 2 base**, with their feet halfway between its center and front tip (the bottom tip at zero rotation); this placement turns with the grid while retaining the same four occupied cells. Huge and Gargantuan creatures center on their whole base. While dragging, a selection box outlines the entire snapped destination base; placement near board edges shifts the base inward to fit. The box clears on drop or cancellation. Previews and drops snap across the whole diamond, including on gridless Scenes and when holding Shift. While the board is enabled, Foundry's native token drag ruler draws its route from token bases and displays board distances **only during an active drag**, clearing the line and labels on drop or cancellation. Hovering shows distances in the GM's open panel without drawing a destination box, movement line, or past routes. For precise GM placement, select one token, click **Move** inside the settings panel, then click a destination; this uses the same placement as dragging. **Escape** exits click-to-move. Foundry's native token movement, permissions, wall collision checks, regions, and animation remain in use; players cannot move tokens they do not own or move while the game is paused. Tokens outside the board remain in place and can be moved onto it explicitly. Actor sheets, token targeting, combat links, and module attack automation continue using the same TokenDocuments.
+See [CHANGELOG.md](CHANGELOG.md) for release details and [GitHub Issues](https://github.com/fchrysoulas/MK-Shadowdark/issues) for bug reports.
 
-Occupied destination spaces block dragging, Board Move, native keyboard/configuration movement, and new token placement while the board is enabled. Every cell covered by a token's base is occupied, including for hidden tokens; touching bases in adjacent cells are allowed, and drag previews do not reserve extra cells. Collision messages do not reveal another token's name. Checks are repeated when native user movement is committed, so a destination claimed after the drag started is rejected. Grid resizing also checks entire bases for overlap and board boundaries. These checks prevent overlapping destination bases; they do not add token pathfinding around occupied cells.
+## License and credits
 
-The overlay supplies its own board distances; Foundry's manual measurement ruler, templates, walls, lighting, vision, and movement engine continue to use the underlying Scene geometry. It does not require an isometric module. Toggle the board off to restore the native grid's local visibility and the configured token ruler's normal behavior. GM macros can use `game.modules.get("mk-shadowdark").api.isometricBoard` methods `.toggle()`, `.setBoardSize(6)`, `.setTilt(30)`, `.setRotation(45)`, `.setPosition(100, 50)`, `.setGridColor("#87b7ad")`, and `.resetView()`. Programmatic token updates used by features such as corpse alignment retain their own placement workflow.
-
-The board reuses cell geometry and redraws its grid only when its appearance changes. Closing the GM settings panel skips hover-distance and token-range label calculations; dragging still updates enemy Close highlights and the native movement ruler. Collision scans use one current layout for every checked token.
-
-## Boat Actors
-
-Create an Actor and select **Boat**. Its **Command Deck** sheet has **Overview**, **Crew**, **Cargo**, and **Notes** tabs, plus a separate Dark/Light theme toggle. The portrait and class header includes editable AC; Overview presents current/maximum Hull HP and its integrity bar, editable crew/cargo/passenger capacities, boat class, speed, and a live crew preview with linked portraits. GMs and Boat owners can edit every stored stat directly. Values are campaign-defined; crew and cargo capacities are independent of Hull HP. The linked prototype token uses Hull HP for its first resource bar. The sheet adapts when resized; crew management, cargo transfers, and the rich-text Ship's log remain in their existing tabs.
-
-Drag existing **Player** or **NPC** actors onto the sheet to link crew, then enter roles such as Captain or Lookout. Clicking a crew portrait opens the original actor. Duplicate drops are ignored, unavailable crew links remain removable, and removing a link never deletes its actor. Exceeding crew capacity shows a warning and preserves the roster.
-
-Set cargo capacity before loading Items. The **i** button beside **Cargo hold** opens its instructions in a themed popup, including for read-only viewers. Cargo follows Group Inventory's compact cards: ordinary items appear individually, while items configured with multiple items per slot can stack up to that limit on each card. Larger quantities appear on additional cards; a badge such as **20/20** or **5/20** shows the amount on each stackable card and its limit. Click an icon or name to open the stored item's sheet and edit its quantity. Boat owners and GMs can right-click a card, choose **Trash Item**, and confirm to remove only that card's contents. Cargo cards have no trash buttons; cancelled confirmations leave items untouched, and a changed inventory or lost ownership prevents removal. Slot counting follows Group Inventory: quantities, items per slot, slot size, and free carry determine the cost; stashed, nonphysical, and zero-slot items use no cargo slots. Card costs add up to the cargo total, and the linked Group Sheet Boat record uses the same total.
-
-Dragging a cargo card onto an owned character sheet (including Character Dashboard equipment and Quick Slots), another Boat, Group Inventory, or an installed Bastion Vault moves only the selected card's contents. Remaining cargo stays aboard; moving the final card deletes the empty source Item. Both actors must be owned, and Group Inventory management remains GM-only. Stale or simultaneous repeated drags cannot consume another card, and a failed source quantity update or deletion rolls back the destination copy. Ordinary Item drops from owned actors still load full stacks; Boat and owned Group card drops load only the selected contents. World and compendium Items are copied. Capacity reductions preserve existing cargo and display an overload warning. Notes use Foundry's rich-text editor. Boats are excluded from corpse-token automation and NPC morale grouping.
-
-Drop a Boat actor into a Group Sheet's Boats tab to link it. Manage crew and cargo on the Boat sheet; the Group Sheet displays a compact row with the portrait, name, and boat class aligned left and live AC, Hull HP, crew totals, and used/maximum cargo slots on the right. Set the class in the Boat sheet's editable **Boat class** field; blank classes stay hidden on Group records. Existing NPC boat links and assignments remain supported. Boat actors require MK-Shadowdark to remain enabled.
-
-Macros can create a Boat with `game.modules.get("mk-shadowdark").api.createBoatActor({ name: "Sea Sprite" })`.
-
-## Bastion Actors
-
-Bastion Defenses show weekly wages for each stationed warband and their combined total: **3 gp × warband level × quantity per week**. A built **Granary** reduces those wages by **3 gp per warband per week**, including quantities, with a minimum of 0 gp. Wages use the linked NPC's current level and refresh when it changes or the Granary is installed or removed. Missing warbands or levels are marked as unavailable and excluded from a clearly labeled subtotal.
-
-Bastion upgrade cards have three independent build checkmarks for Aviary, Barracks, Idol, Library, Temple, and Wizard Tower. Each build uses one slot in the structure's total upgrade limit; other upgrades have one checkmark. Existing installed upgrades keep their first build checked.
-
-Bastion owners and GMs can drag items into and out of the Vault, or discard them in its trash area. Transfers between actors require ownership of both the source and destination actors; world and compendium Items are copied into the Vault. The 100-slot limit still applies.
-
-Bastions are standalone Actors with the namespaced **Bastion** type and a dedicated Bastion Sheet. Create one from the Actor creation dialog by choosing **Bastion**. The sheet stores the bastion type, location, installed upgrades, siege weapons, and warbands; presents upgrades as icon cards; shows a conditional 100-slot Vault tab when the Vault upgrade is installed; lets you move Items from character sheets into the Vault grid, move them back onto a character sheet, and discard stored items by dragging them to the bottom trash area; world Items are copied into the Vault; lets you drop NPC actors into the Defenses tab to assign them; enforces the upgrade limit for each structure; and includes the Bastion rules, type reference, construction costs, build times, and upgrade reference.
-
-The production GM Screen exists **beside** this interface. New GM overview tools must not require redesigning or replacing the Group Sheet.
-
-Marching order and exploration-role editing remain in Group Management. The production GM Screen no longer edits watches or starts/resumes rests.
-
-## Active party and roster
-
-The Group maintains a roster plus an active-party subset. Procedure assignments, roles, watches, encounter context, Group summaries, and the GM Screen party rail use active members as the canonical party source.
-
-When active membership changes, stale marching/role/watch assignments are normalized.
-
-## Procedure state
-
-The Group procedure service supports:
-
-```text
-exploration
-combat
-downtime
-```
-
-This is infrastructure shared by Group procedures and the GM Screen. It is not a second visible navigation system.
-
-## One owner per domain
-
-```text
-WHO?       Group active members / roles / watches
-WHERE?     Active Scene Context
-WHEN?      Foundry world time + Foundry Combat
-STATE?     Group procedure state
-WHAT?      Manual GM Screen Encounter Zone roll
-STAGE?     Encounter staging service
-COMBAT?    Foundry Combat + MK initiative/morale
-VIEW?      Group Management + GM Screen
-```
-
-Important invariants:
-
-- Foundry world time is the only absolute clock.
-- Scene Context belongs to Scene state.
-- Encounter rolls are explicit GM actions from the GM Screen Settings Encounters tab.
-- Legacy encounter formulas/tables/reaction/resolution remain available for existing chat-card records and integrations, but they are not scheduled automatically.
-- Time Passes owns only its standalone GM roll and visual cues; no encounter workflow calls it.
-- Encounter staging creates no documents before explicit **Deploy**.
-- GM Screen presentation never becomes a duplicate gameplay-state owner.
-
-# Manual Encounter Zone Rolls
-
-Encounter timing is no longer advanced by a module clock. The GM decides when to roll from the selected Scene terrain and Encounter Zone using the **Roll Encounter** button in the top strip or the **Encounters** Quick Action. The Quick Action previews the result and offers **Create**, **Reroll**, and **Cancel** before creating its Journal Entry. The **Trap Generator** and **Hazard Generator** Quick Actions use their own three assigned RollTables and offer the same preview controls before creating their Journal Entries.
-
-There is no encounter cadence, due-check queue, or Group turn counter.
-
-The roll sequence is:
-
-1. Roll the selected terrain's Encounter Zone die.
-2. Use that result to select the terrain row's RollTable and roll it.
-3. Roll each configured Danger Level, Starting Distance, and Activity table.
-4. Write one GM-only Journal Entry page containing the encounter context and results.
-
-Trap and Hazard generators have separate settings tabs with three RollTable assignments each. The debug setting controls only dice formulas, roll totals, and result numbers; table result text remains visible to the GM.
-
----
-
-# Group Encounter Resolution
-
-The former automatic Group encounter timing feature and its separate entry points have been removed. The remaining headless encounter service is retained for existing encounter cards, rerolls, and staging integrations; it does not own a clock or create pending checks.
-
-The old standalone Encounter Engine UI is retired.
-
-There is no separate:
-
-- Encounter Scene Control button
-- standalone Encounter dialog
-- RollTable directory Resolve Encounter action
-- pending encounter-check queue
-- Time Passes → encounter auto-resolution path
-
-Encounter rules remain centralized as compatibility services for legacy encounter chat-card workflows.
-
-A resolved encounter can include:
-
-- Actor / creature result
-- number appearing
-- terrain / danger / day-night / table context
-- starting distance
-- activity
-- awareness
-- reaction and disposition
-- optional intent
-- treasure indication
-- morale guidance
-
-The full encounter card is GM-only by default. **Reveal to Players** creates a public version without GM-only details.
-
-## Default Shadowdark encounter fields
-
-- starting distance: 1 Close, 2–4 Near, 5–6 Far on 1d6
-- creature activity: Shadowdark 2d6 activity table
-- awareness: fiction/hiding/detection procedure
-- reaction: 2d6, optionally with one interacting character's CHA modifier where requested
-- treasure: 50% wandering-monster indication
-- morale guidance based on the resolved creature/count
-
-Text RollTable results may use forms such as:
-
-```text
-2d6 Goblins
-1d4 Giant Spiders (Night)
-3 Bandits (Day)
-```
-
-Direct world/Compendium Actor results are preferred for reliable staging Actor resolution.
-
----
-
-# Encounter Staging
-
-A resolved GM encounter card includes **Stage Encounter**, and the production GM Screen can route encounter history into the same staging service.
-
-```text
-Encounter card -> Options -> Preview -> Deploy
-```
-
-No Actor import, Token creation, or Combat creation happens during Preview.
-
-Staging supports:
-
-- count adjustment
-- reference: originating Group token, selected token, or Scene center
-- direction
-- compact cluster / line / ring formation
-- grid spacing
-- hidden / visible deployment
-- optional Close/Near/Far distance offset suggestion
-- optional Foundry Combat handoff
-
-World Actors are reused. Compendium Actors can be previewed without import and are imported only after explicit Deploy. If a safe Actor source cannot be resolved, no tokens are created.
-
-When **Add to Combat** is selected, the created TokenDocuments enter Foundry Combat through supported document APIs. MK-Shadowdark does not automatically roll initiative or start the round.
-
-To resume rest, use the Group Management rest workflow.
-
----
-
----
-
-# Morale Automation
-
-MK-Shadowdark includes combat-aware Shadowdark morale automation.
-
-At combat start, the primary active GM snapshots the hostile NPC force. That starting force remains the morale baseline even if combatants are later added/removed.
-
-## Trigger
-
-- **Multiple hostile NPCs:** morale checks when living members fall to half or fewer of the starting force.
-- **Solo hostile NPC:** morale checks at half HP or lower while still alive.
-
-Morale evaluation is synchronized to the hostile side's turn rather than firing in the middle of damage resolution.
-
-## Roll
-
-```text
-1d20 + WIS modifier vs DC 15
-```
-
-## Morale leader
-
-The GM can mark one hostile NPC token as **Morale Leader** from the Token HUD.
-
-If an eligible living leader exists, the leader rolls for the force. On failure, remaining morale-eligible enemies are marked **Fleeing**. Without a leader, eligible survivors roll individually.
-
-## Morale immunity
-
-Use the predefined effect:
-
-**Immune to morale checks**
-
-It sets the canonical MK morale-immunity state and excludes that actor from morale rolls/Fleeing application.
-
-Foundry Combat and MK Morale remain authoritative outside the GM Screen. The GM Screen keeps only the compact active-combat round indicator in its pressure strip; combat tracking and morale controls remain in Foundry's native Combat Tracker and the core automation surfaces.
-
----
-
-# Time Passes
-
-Time Passes restores the v1.6.0 standalone GM flow. In the GM Screen, choose **1d6**, **2d6**, or **3d6**, then press **Time Passes**. The synchronized splash/progress display appears for all clients and the selected dice are published as a public chat roll after the splash completes. If any selected d6 shows **1**, the original synchronized **ENCOUNTER!** skull splash is displayed.
-
-The result-of-1 behavior is a visual cue only. It does not schedule, resolve, stage, or create an encounter, and it never calls the legacy Encounter service. Time Passes has no connection to encounter timing. Group Time is fully separate and does not invoke Time Passes.
-
-The **Time Passes | Font Family** setting is a dropdown containing common Foundry/module fonts, generic CSS families, and font faces registered in the current browser session. Existing custom values are preserved as the current option when they are no longer discoverable.
-
----
-
-# Damage Traits
-
-Create or use a Shadowdark **Property** item such as `Fire`, then select that Property on a weapon, spell, or NPC attack. On a target NPC Feature, add a Damage Trait effect and choose Resistance, Immunity, or Vulnerability with the matching Property.
-
-- **Resistance** halves matching damage, rounding down with a minimum of 1.
-- **Immunity** prevents matching damage.
-- **Vulnerability** doubles matching damage.
-- Immunity takes precedence; matching Resistance + Vulnerability cancel.
-
-The predefined **Magical Attacks** effect makes weapon/NPC attacks count as magical. The predefined **Only Damaged by Magical Sources** effect blocks nonmagical sources while allowing spells, magic items, actor-level magical attacks, and attacks with a Magic/Magical Property. The predefined **Immune to morale checks** effect is consumed by Morale Automation.
-
----
-
-# Paper Chat
-
-Paper Chat provides twelve paper-inspired chat themes plus a GM visual editor. Theme-specific typography, colors, images, borders, sizing, spacing, radius, and alignment can be customized and synchronized to clients.
-
----
-
-# Quickdraw Limit Expressions
-
-Quickdraw limits are evaluated per character. Examples:
-
-```text
-3
-max(1, @dex.mod)
-max(1, @dex.mod + gear("bandolier", 2))
-3 + gear("potion belt", 3)
-```
-
-- `@dex.mod` and other numeric actor roll-data paths are supported.
-- `gear("name")` counts matching carried, non-stashed item quantities.
-- `gear("name", slots)` multiplies matching quantity by the supplied slot bonus.
-- Supported operators: `+`, `-`, `*`, `/`, `%`, `^`.
-- Supported functions include `min`, `max`, `floor`, `ceil`, `round`, `trunc`, `abs`, and `clamp`.
-- Result is rounded down. `0` means unlimited. Invalid expressions fall back to `3`.
-
----
-
-# Token Equipment Display
-
-Token Equipment Display uses the same equipped/stashed/handedness rules as Equipment Hands.
-
-- one-handed gear appears on left/right hand sides
-- two-handed gear occupies both displayed hand slots, with the secondary occupancy icon grayed out
-- held/stashed gear is omitted from the Quickdraw row
-- item icons can open/use/roll items according to module settings
-- visibility, opacity, scale, anchors, offsets, borders, and Quickdraw presentation are configurable
-
----
-
-# Focus Tracker
-
-Focus Tracker integrates with Shadowdark 4.x spellcasting. Successful Focus spells start tracked sessions; failed maintenance checks end Focus, and critical failures can also mark the spell lost for the day.
-
-Active Focus spells appear at the start of the actor sheet's Spells tab, before Spells Known, with the current Focus capacity, spell name, maintenance status, pending-check count, and direct Check, Open, and End controls. Focus maintenance checks do not require a canvas target; the initial Focus spell cast still uses normal spell targeting, except Self spells that automatically target the caster. Chat reminders use the same explicit actions; hold Shift while choosing Check to skip the native prompt when appropriate.
-
-The public API is available at:
-
-```js
-game.modules.get("mk-shadowdark").api.focus
-```
-
-The Group/GM Active Party model consumes canonical Focus state rather than storing another copy.
-
----
-
-# Targeted Spell DC Effects
-
-A target can impose a spellcasting DC with an Active Effect change such as:
-
-| Key | Mode | Value |
-| --- | --- | --- |
-| `system.roll.spell.dc` | Any | `18` |
-
-The predefined **Targeted Spell DC** effect starts at DC 18 and can be edited. When multiple protected targets are selected, the highest applicable DC is used.
-
----
-
-# Internal / Macro APIs
-
-```js
-const mk = game.modules.get("mk-shadowdark")?.api;
-```
-
-Current service surfaces include, among others:
-
-```js
-mk.environment
-mk.groupAssignments
-mk.groupEncounters
-mk.timePasses
-mk.focus
-mk.morale
-mk.tokenEquipment
-mk.characterDashboard
-```
-
-`mk.groupEncounters` exposes the Group-owned encounter service and staging helpers.
-
-Examples:
-
-```js
-const check = await mk.groupEncounters.check();
-const resolved = await mk.groupEncounters.resolve({ tableUuid: "RollTable.YOUR_TABLE_ID" });
-
-const preview = await mk.groupEncounters.staging.preview(encounterData, {
-  formation: "cluster",
-  visibility: "hidden",
-  addToCombat: false
-});
-
-```
-
-Prefer canonical service APIs over private flags or rendered DOM state.
-
----
-
-# Troubleshooting
-
-## The GM Screen button is missing
-
-The shield button is available to GMs in the Token Scene Controls. If it is missing, verify that the module is enabled, the current user is a GM, and the world is serving the current `module.json` rather than a cached module installation.
-
-## I need to roll an encounter
-
-Select a Scene terrain and Encounter Zone, then configure one or more named Encounter Zone grids and supporting RollTables in **GM Screen -> gear -> Encounters**. Press **Roll Encounter** to roll the selected zone. There is no pending encounter-check queue or elapsed-time trigger to process.
-
-## Scene Context changes do not affect the other GM Screen zones
-
-Terrain, Danger, and Period auto-save when their top-strip dropdown changes and then perform one explicit GM Screen rerender. There is no Save Context button. The Tables zone is reserved for browsing imported source RollTables and existing world RollTables.
-
-## I cannot select Terrain
-
-Terrain choices in the top strip come from the active Scene's configured Encounter Zone columns. The Tables zone browses existing world RollTables and does not determine terrain sources.
-
-## A Pinned Document shortcut disappeared from the source document
-
-Pinned Documents stores only the document UUID as a per-GM shortcut. It does not copy the source document. If the original Actor, Journal, Item, RollTable, or other document is deleted, the shortcut can no longer open it and may be removed from Pinned Documents.
-
-## The GM Screen does not update after a general external Actor, Scene, or Combat change
-
-This is intentional for general outside changes. The Active Party has a narrow live-refresh path for member HP and active light/torch status; use an explicit GM Screen action, change a top context dropdown, or reopen the screen when you want the rest of the four-zone surface rebuilt.
-
-## Stage Encounter cannot deploy
-
-The encounter could not be mapped safely to a world or Compendium Actor. MK-Shadowdark intentionally creates no tokens in that case.
-
-## Morale does not trigger
-
-Verify that combat has started, the NPCs are hostile, the primary active GM is connected, the hostile force reached its threshold, morale was not already checked, and the creature is not morale-immune.
-
-## Equipment icons are missing
-
-Verify the item is actually held/equipped according to Shadowdark data and Token Equipment Display visibility/settings allow the current user to see it.
-
----
-
-## Notes
-
-- Token shadows reuse unchanged shapes and blur settings. Linked Group, Boat and Bastion sheets batch rapid updates into one refresh. Group token lighting synchronizes relevant light-source or party-membership changes on the primary active GM, caches its system mapping, and avoids writing unchanged light data to scene tokens.
-- Development checks: run `npm run syntax`, `npm run lint`, and `npm test`. The test command runs the maintained `tests/*.test.mjs` suite and excludes archived release snapshots under `build/`.
-- Settings are grouped in Foundry's module settings menu.
-- Base Management was removed from MK-Shadowdark; old compatibility API calls warn instead of creating the removed actor type.
-- The standalone encounter UI and the old GM Screen Mock prototype are retired.
-- **Group Management and the production GM Screen are both supported and coexist.**
-- Bundled Camping activity icons are from [Game-icons.net](https://game-icons.net/) under CC BY 3.0.
-
-## License
-
-MIT
+[MIT](LICENSE). Bundled Game-icons.net assets retain their CC BY 3.0 license; see the [Camping](assets/icons/camping/ATTRIBUTION.md) and [effect icon](assets/icons/effects/ATTRIBUTION.md) credits.

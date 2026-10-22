@@ -5,6 +5,7 @@ import {
   isAttackOrSpellRoll,
   isSelfRangeSpell
 } from "./targeting-state.js";
+import { hasSpellTemplate, isAreaOnlySpellTemplate, spellTemplateCanCast, syncSpellTemplateTargets } from "../spell-templates/spell-templates.js";
 
 (() => {
   "use strict";
@@ -86,12 +87,18 @@ import {
       && Boolean(game.user);
   }
 
-  function targetPanelHtml(targets, { self = false } = {}) {
-    const title = self
+  function targetPanelHtml(targets, { self = false, area = false, areaOnly = false } = {}) {
+    const title = area ? localize("MK_SHADOWDARK.spellTemplates.areaTargets", "Area targets") : self
       ? localize("MK_SHADOWDARK.targeting.self", "Self")
       : localize("MK_SHADOWDARK.targeting.targets", "Targets");
 
     if (!targets.length) {
+      if (areaOnly) return `
+        <section class="mk-targeting-assistant is-ready" aria-live="polite">
+          <div class="mk-targeting-assistant-heading"><i class="fa-solid fa-fire" aria-hidden="true"></i>
+            <strong>${escapeHtml(localize("MK_SHADOWDARK.spellTemplates.areaSelected", "Area selected"))}</strong></div>
+          <p>${escapeHtml(localize("MK_SHADOWDARK.spellTemplates.areaOnlyHint", "This spell targets the selected area. No creature target is required."))}</p>
+        </section>`;
       if (self) {
         const prompt = localize(
           "MK_SHADOWDARK.targeting.selfDescription",
@@ -142,11 +149,11 @@ import {
     `;
   }
 
-  function syncSubmitState(dialog, targets, self) {
+  function syncSubmitState(dialog, targets, self, areaOnly) {
     const submit = dialog.element.querySelector('button[type="submit"]');
     if (!submit) return;
 
-    const allowed = self || targets.length > 0;
+    const allowed = areaOnly ? spellTemplateCanCast(dialog.config) : self || targets.length > 0;
     submit.disabled = !allowed;
     submit.setAttribute("aria-disabled", String(!allowed));
   }
@@ -154,15 +161,17 @@ import {
   function updateDialogTargets(dialog) {
     if (!canAssist(dialog?.config) || !dialog?.element) return [];
 
-    const self = isSelfRangeSpell(dialog.config);
+    const area = hasSpellTemplate(dialog.config);
+    const areaOnly = isAreaOnlySpellTemplate(dialog.config);
+    const self = !area && isSelfRangeSpell(dialog.config);
     const casterTarget = self ? selfTarget(dialog.config) : null;
-    const targets = self ? (casterTarget ? [casterTarget] : []) : selectedTargets();
+    const targets = area ? syncSpellTemplateTargets(dialog.config) : self ? (casterTarget ? [casterTarget] : []) : selectedTargets();
     applyTargetsToRollConfig(dialog.config, targets);
     Hooks.callAll(TARGETS_CHANGED_HOOK, dialog.config, targets);
 
     let panel = dialog.element.querySelector(".mk-targeting-assistant");
     const panelWrapper = document.createElement("div");
-    panelWrapper.innerHTML = targetPanelHtml(targets, { self }).trim();
+    panelWrapper.innerHTML = targetPanelHtml(targets, { self, area, areaOnly }).trim();
     const replacement = panelWrapper.firstElementChild;
 
     if (panel) panel.replaceWith(replacement);
@@ -172,7 +181,7 @@ import {
       else dialog.element.append(replacement);
     }
 
-    syncSubmitState(dialog, targets, self);
+    syncSubmitState(dialog, targets, self, areaOnly);
 
     const heading = dialog.element.querySelector("h2");
     if (heading && dialog.config.heading) heading.textContent = dialog.config.heading;
@@ -213,7 +222,8 @@ import {
       const wrappedSubmit = function(event) {
         if (canAssist(this.config)) {
           const targets = updateDialogTargets(this);
-          if (!targets.length && !isSelfRangeSpell(this.config)) {
+          if (hasSpellTemplate(this.config) ? !spellTemplateCanCast(this.config)
+            : !targets.length && !isSelfRangeSpell(this.config)) {
             event.preventDefault();
             return;
           }
@@ -238,6 +248,10 @@ import {
           updateDialogTargets(dialog);
         }
       }, 0);
+    });
+
+    Hooks.on("mkShadowdarkSpellTemplateChanged", config => {
+      for (const dialog of ACTIVE_DIALOGS) if (dialog.config === config && dialog.element?.isConnected) updateDialogTargets(dialog);
     });
 
     log("Installed live attack and spell targeting prompts");

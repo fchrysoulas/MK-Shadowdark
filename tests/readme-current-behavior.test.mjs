@@ -16,111 +16,90 @@ async function readManifest() {
 test("README documents the current supported platform floor from the manifest", async () => {
   const [readme, manifest] = await Promise.all([readReadme(), readManifest()]);
 
-  assert.equal(manifest.compatibility.minimum, "13");
-  assert.equal(manifest.relationships.systems[0].compatibility.minimum, "4.0.0");
-  assert.match(readme, /Foundry VTT v13\+/);
-  assert.match(readme, /Shadowdark RPG system 4\.0\.0\+/);
+  assert.ok(readme.includes(`Foundry VTT v${manifest.compatibility.minimum}+`));
+  const system = manifest.relationships.systems.find(entry => entry.id === "shadowdark");
+  assert.ok(readme.includes(`Shadowdark RPG system ${system.compatibility.minimum}+`));
 });
 
-test("README documents manual encounter rolls without a module encounter clock", async () => {
+test("README summarizes manual encounters and their separate supporting tables", async () => {
   const readme = await readReadme();
 
-  assert.match(readme, /does not maintain a Group elapsed-time clock or a GM Screen turn counter/i);
-  assert.match(readme, /no encounter cadence, due-check queue, or Group turn counter/i);
   assert.match(readme, /Manual Encounter Zone Rolls/);
   assert.match(readme, /Danger Level, Starting Distance, and Activity/i);
-  assert.match(readme, /Trap and Hazard generators have separate settings tabs/i);
+  assert.match(readme, /Encounter, Trap, and Hazard tables have separate assignments/i);
+  assert.match(readme, /Encounter rolls are manual/i);
   assert.doesNotMatch(readme, /Every encounter interval means/i);
 });
 
-test("README retires standalone Encounter Engine entry points", async () => {
+test("README does not advertise retired standalone Encounter Engine entry points", async () => {
   const readme = await readReadme();
 
-  assert.match(readme, /old standalone Encounter Engine UI is retired/i);
-  assert.match(readme, /There is no separate:/i);
-  assert.doesNotMatch(readme, /Encounter Engine Phase 1/);
-  assert.doesNotMatch(readme, /Open the main dialog from:/);
+  assert.doesNotMatch(readme, /Encounter Engine Phase 1|Open the main dialog from:/i);
   assert.doesNotMatch(readme, /Token controls:.*Encounter/i);
+  assert.doesNotMatch(readme, /RollTable directory Resolve Encounter action/i);
 });
 
-test("README documents standalone Time Passes dice without encounter automation", async () => {
+test("README keeps Time Passes separate from Group Time and encounter automation", async () => {
   const readme = await readReadme();
 
-  assert.match(readme, /choose \*\*1d6\*\*, \*\*2d6\*\*, or \*\*3d6\*\*/i);
-  assert.match(readme, /public chat roll after the splash completes/i);
-  assert.match(readme, /If any selected d6 shows \*\*1\*\*.*original synchronized \*\*ENCOUNTER!\*\* skull splash/i);
-  assert.match(readme, /result-of-1 behavior is a visual cue only/i);
-  assert.match(readme, /Group Time is fully separate and does not invoke Time Passes/i);
+  assert.match(readme, /Time Passes.*Public 1d6, 2d6, or 3d6 roll after a synchronized splash/i);
+  assert.match(readme, /Any die showing 1.*ENCOUNTER! skull.*visual cue only/i);
+  assert.match(readme, /Time Passes operates independently of Group Time and encounter automation/i);
   assert.doesNotMatch(readme, /Time Passes performs its own encounter check/i);
-  assert.doesNotMatch(readme, /Automatic Time Passes encounter resolution/i);
 });
 
-test("README documents manual encounter rolls, staging, and morale", async () => {
+test("README summarizes encounter staging and morale without obsolete workspaces", async () => {
   const readme = await readReadme();
 
-  assert.match(readme, /# Manual Encounter Zone Rolls/);
-  assert.doesNotMatch(readme, /# Group Exploration Encounters/);
-  assert.doesNotMatch(readme, /# Group Resting/);
-  assert.match(readme, /# Encounter Staging/);
-  assert.doesNotMatch(readme, /# GM Member Status/);
-  assert.match(readme, /# Morale Automation/);
-  assert.match(readme, /Resume Rest.*Group Management/i);
-  assert.match(readme, /Encounter card -> Options -> Preview -> Deploy/);
+  assert.match(readme, /Encounter Staging.*Preview.*before Deploy/i);
+  assert.match(readme, /Morale Automation.*half strength.*half HP.*leader.*immunity.*Fleeing/i);
+  assert.doesNotMatch(readme, /^#+ (?:Group Exploration Encounters|Group Resting|GM Member Status)$/im);
 });
 
-test("README documents the production GM Screen", async () => {
+test("README explains how GMs open the production GM Screen", async () => {
   const readme = await readReadme();
 
-  assert.match(readme, /GM Screen is available to GMs/i);
-  assert.match(readme, /Token Scene Controls/i);
-  assert.match(readme, /standalone Time Passes remain available/i);
+  assert.match(readme, /GM Screen.*GMs open it.*shield.*Token Scene Controls/i);
+  assert.match(readme, /GM Screen → gear/);
 });
 
-test("README documents that elapsed and turn controls are retired", async () => {
+test("README uses Foundry time and Combat without advertising retired timer controls", async () => {
   const readme = await readReadme();
 
-  assert.match(readme, /does not maintain a Group elapsed-time clock or a GM Screen turn counter/i);
-  assert.doesNotMatch(readme, /Clicking \*\*Elapsed\*\*/i);
-  assert.doesNotMatch(readme, /Reset Timer/i);
+  assert.match(readme, /Foundry world time and Combat track time and rounds/i);
+  assert.doesNotMatch(readme, /Clicking \*\*Elapsed\*\*|Reset Timer|due-check queue/i);
 });
 
-test("README documents auto-saving top context and source-only Tables", async () => {
+test("README summarizes auto-saving Scene context, world tables and Group-owned activities", async () => {
   const readme = await readReadme();
 
-  assert.match(readme, /Encounter Zone, Terrain, Danger, and Period selectors in the top strip/i);
-  assert.doesNotMatch(readme, /Procedure dropdown changes the canonical Group procedure/i);
-  assert.match(readme, /save immediately when their dropdown changes/i);
-  assert.match(readme, /There is no Save Context button/i);
-  assert.match(readme, /Tables.*existing world RollTables.*fixed search control/is);
-  assert.doesNotMatch(readme, /Tables -> Encounter Setup/);
-  assert.match(readme, /Marching order and exploration-role editing remain in Group Management/i);
-  assert.match(readme, /production GM Screen no longer edits watches or starts\/resumes rests/i);
+  assert.match(readme, /Scene Context.*Encounter Zone, Terrain, Danger, and Period.*save automatically/i);
+  assert.match(readme, /RollTable Browser.*existing world RollTables/i);
+  assert.match(readme, /Traveling, Camping, marching order, and watches are managed in the Group Sheet/i);
+  assert.doesNotMatch(readme, /Tables -> Encounter Setup|Procedure dropdown changes the canonical Group procedure/i);
 });
 
-test("README documents Quick Actions and Pinned Documents without NPC macros", async () => {
+test("README summarizes generators and pinned shortcuts without obsolete NPC macros", async () => {
   const readme = await readReadme();
 
-  assert.match(readme, /Quick Actions.*Encounters.*Trap Generator.*Hazard Generator.*NPC Generator.*Tavern Generator/is);
-  assert.match(readme, /Pinned Documents.*per-GM (?:drop area|workspace)/is);
+  for (const feature of ["NPC Generator", "Monster Generator", "Magic Item Generator",
+    "Trap Generator", "Hazard Generator", "Tavern Generator", "Shop Generator", "Create Location"]) {
+    assert.ok(readme.includes(feature), `Missing generator summary: ${feature}`);
+  }
+  assert.match(readme, /Pinned Documents.*Per-GM shortcuts to Journals, Actors, Items, and RollTables/i);
+  assert.match(readme, /removing a pin preserves the original document/i);
   assert.doesNotMatch(readme, /macros\/create-npc\.js|npcGenerator/is);
-  assert.match(readme, /Journal entries\/pages, Actors, Items, RollTables/i);
-  assert.match(readme, /Removing a pin deletes only that shortcut/i);
-  assert.match(readme, /presentation-only state stored on the current GM user as document UUIDs/i);
-  assert.match(readme, /does not force a full GM Screen rerender/i);
 });
 
-test("README documents the permanent four-zone screen without Settlement or Session Log tabs", async () => {
+test("README retains the four-zone GM Screen summary", async () => {
   const readme = await readReadme();
 
-  assert.match(readme, /four permanent main-screen zones:.*Active Party.*Quick Actions.*Pinned Documents.*Tables/is);
-  assert.match(readme, /Shop Generator.*Create Location/is);
-  assert.doesNotMatch(readme, /Available workspaces, in order|^- \*\*Downtime\*\*|^- \*\*Session Log\*\*/m);
+  assert.match(readme, /GM Screen.*Four zones: Active Party, Quick Actions, Pinned Documents, and Tables/i);
+  assert.doesNotMatch(readme, /Available workspaces, in order|^- \*\*(?:Downtime|Session Log)\*\*/m);
 });
 
 test("README does not require the retired GM Screen Mock", async () => {
   const readme = await readReadme();
 
-  assert.match(readme, /GM Screen Mock.*is not a dependency/i);
-  assert.doesNotMatch(readme, /install.*GM Screen Mock/i);
-  assert.doesNotMatch(readme, /requires.*GM Screen Mock/i);
+  assert.doesNotMatch(readme, /install.*GM Screen Mock|requires.*GM Screen Mock/i);
 });

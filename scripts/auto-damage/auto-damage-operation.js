@@ -76,6 +76,8 @@ export function normalizeSpellDamageType(value) {
 
 export async function resolveAutoDamageOperation(message, resolveUuid = globalThis.fromUuid) {
   const rollConfig = getShadowdarkRollConfig(message);
+  // Persistent area spells create a tile; their later contact damage is GM-managed.
+  if (rollConfig?.["mk-shadowdark"]?.spellTemplate?.areaOnly === true) return null;
   const configuredType = normalizeSpellDamageType(rollConfig?.cast?.damageType);
 
   if (configuredType) return configuredType === "none" ? null : configuredType;

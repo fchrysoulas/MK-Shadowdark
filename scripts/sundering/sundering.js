@@ -3,8 +3,18 @@ import { hasProperty, isEquipped, isStashed } from "../libs/equipment.js";
 const MODULE_ID = "mk-shadowdark";
 const OFFER_FLAG = "sunderingOffer";
 const RESPONSE_FLAG = "sunderingResponse";
+const DECISION_TIMEOUT_MS = 10_000;
 const activeDialogs = new Set();
 const waitingDecisions = new Map();
+
+function decisionTime() {
+  return globalThis.game?.time?.serverTime ?? Date.now();
+}
+
+function offerDeadline(message) {
+  const data = message?.getFlag?.(MODULE_ID, OFFER_FLAG) ?? message?.flags?.[MODULE_ID]?.[OFFER_FLAG];
+  return data?.expiresAt ?? ((message?.timestamp ?? decisionTime()) + DECISION_TIMEOUT_MS);
+}
 
 function localize(key, data = {}) {
   return globalThis.game?.i18n?.format?.(`MK_SHADOWDARK.sundering.${key}`, data) ?? key;
@@ -98,26 +108,72 @@ function responseChoice(response, sourceMessage, target, actor) {
   return offer.items.some(item => item.id === data.itemId) ? data.itemId : undefined;
 }
 
-async function promptForItem(target) {
+async function promptForItem(target, { expiresAt = decisionTime() + DECISION_TIMEOUT_MS } = {}) {
   const DialogV2 = globalThis.foundry?.applications?.api?.DialogV2;
   if (!DialogV2?.wait) throw new Error("Foundry DialogV2 is unavailable for Sundering.");
   const offer = target.sundering;
-  return DialogV2.wait({
-    window: { title: localize("title") },
-    classes: ["mk-sundering-dialog"],
-    content: `<p>${localize("prompt", { actor: escapeHtml(target.actorName), damage: target.effectiveAmount })}</p>
-      <p>${localize("destroyWarning")}</p>
-      <div class="form-group"><label>${localize("item")}</label><select name="sunderingItem">
-        ${offer.items.map(item => `<option value="${escapeHtml(item.id)}">${escapeHtml(item.name)}</option>`).join("")}
-      </select></div>`,
-    buttons: [
-      { action: "sunder", label: localize("sunder"), icon: "fa-solid fa-shield-halved",
-        callback: (_event, button) => button.form.elements.sunderingItem.value },
-      { action: "damage", label: localize("takeDamage"), default: true, callback: () => null }
-    ],
-    rejectClose: false,
-    close: () => null
-  });
+  if (decisionTime() >= expiresAt) return null;
+  let timeout;
+  let ticker;
+  let decided = false;
+  const stopCountdown = () => {
+    clearTimeout(timeout);
+    clearInterval(ticker);
+  };
+  const choose = itemId => {
+    if (decided) return null;
+    decided = true;
+    stopCountdown();
+    return decisionTime() < expiresAt ? itemId : null;
+  };
+  try {
+    const result = await DialogV2.wait({
+      window: { title: localize("title"), resizable: false },
+      position: { width: 360 },
+      classes: ["mk-sundering-dialog"],
+      content: `<section class="mk-sundering-prompt">
+        <header class="mk-sundering-threat">
+          <i class="fa-solid fa-shield-halved mk-sundering-emblem" aria-hidden="true"></i>
+          <div class="mk-sundering-actor"><strong>${escapeHtml(target.actorName)}</strong><span>${localize("meleeAttack")}</span></div>
+          <div class="mk-sundering-damage"><strong>${escapeHtml(target.effectiveAmount)}</strong><span>${localize("damage")}</span></div>
+        </header>
+        <p class="mk-sundering-summary">${localize("prompt")}</p>
+        <label class="mk-sundering-item"><span>${localize("item")}</span><select name="sunderingItem">
+          ${offer.items.map(item => `<option value="${escapeHtml(item.id)}">${escapeHtml(item.name)}</option>`).join("")}
+        </select></label>
+        <p class="mk-sundering-warning"><i class="fa-solid fa-triangle-exclamation" aria-hidden="true"></i>${localize("destroyWarning")}</p>
+        <div class="mk-sundering-timer" role="timer" aria-live="off">
+          <div><span>${localize("timeoutHint")}</span><strong data-sundering-countdown>${localize("countdown", { seconds: 10 })}</strong></div>
+          <progress max="${DECISION_TIMEOUT_MS}" value="${DECISION_TIMEOUT_MS}" aria-label="${escapeHtml(localize("timeRemaining"))}"></progress>
+        </div>
+      </section>`,
+      buttons: [
+        { action: "sunder", label: localize("sunder"), icon: "fa-solid fa-shield-halved",
+          callback: (_event, button) => choose(button.form.elements.sunderingItem.value) },
+        { action: "damage", label: localize("takeDamage"), icon: "fa-solid fa-heart-crack", default: true, callback: () => choose(null) }
+      ],
+      render: (_event, dialog) => {
+        stopCountdown();
+        if (decided) return;
+        const timer = dialog.element.querySelector(".mk-sundering-timer");
+        const updateCountdown = () => {
+          const remaining = Math.max(0, expiresAt - decisionTime());
+          timer.querySelector("[data-sundering-countdown]").textContent = localize("countdown", { seconds: Math.ceil(remaining / 1000) });
+          timer.querySelector("progress").value = remaining;
+          timer.classList.toggle("is-expiring", remaining <= 3000);
+        };
+        updateCountdown();
+        ticker = setInterval(updateCountdown, 100);
+        timeout = setTimeout(() => {
+          choose(null);
+          void dialog.close();
+        }, Math.max(0, expiresAt - decisionTime()));
+      },
+      rejectClose: false,
+      close: () => choose(null)
+    });
+    return offer.items.some(item => item.id === result) ? result : null;
+  } finally { stopCountdown(); }
 }
 
 async function showOffer(message) {
@@ -127,7 +183,7 @@ async function showOffer(message) {
   if (activeDialogs.has(key)) return;
   activeDialogs.add(key);
   try {
-    const itemId = await promptForItem(data.target);
+    const itemId = await promptForItem(data.target, { expiresAt: offerDeadline(message) });
     if (message.getFlag(MODULE_ID, OFFER_FLAG)?.resolved) return;
     const itemName = data.target.sundering.items.find(item => item.id === itemId)?.name;
     await ChatMessage.create({
@@ -157,9 +213,10 @@ async function waitForDecision(message, target, actor) {
   let fail;
   const result = new Promise((resolve, reject) => { finish = resolve; fail = reject; });
   const offer = target.sundering;
+  let expiresAt = Infinity;
   const receive = response => {
     const choice = responseChoice(response, message, target, actor);
-    if (choice !== undefined) finish({ itemId: choice });
+    if (choice !== undefined) finish({ itemId: decisionTime() < expiresAt ? choice : null });
   };
   waitingDecisions.set(offer.requestId, { receive });
   // A persisted response survives a GM reload before the original damage plan is updated.
@@ -167,6 +224,7 @@ async function waitForDecision(message, target, actor) {
   if (previousResponse) receive(previousResponse);
   let request;
   let monitor;
+  let timeout;
   try {
     request = Array.from(game.messages ?? []).find(candidate => {
       const data = candidate.getFlag?.(MODULE_ID, OFFER_FLAG);
@@ -178,10 +236,20 @@ async function waitForDecision(message, target, actor) {
         user: game.user.id,
         content: `<p>${localize("waiting", { actor: escapeHtml(target.actorName) })}</p>`,
         whisper: [...new Set([offer.userId, ...Array.from(game.users ?? []).filter(user => user.active && user.isGM).map(user => user.id)])],
-        flags: { [MODULE_ID]: { [OFFER_FLAG]: { messageId: message.id, target, resolved: false } } }
+        flags: { [MODULE_ID]: { [OFFER_FLAG]: {
+          messageId: message.id, target, resolved: false, expiresAt: decisionTime() + DECISION_TIMEOUT_MS
+        } } }
       });
     }
-    if (request) void showOffer(request);
+    if (request) {
+      expiresAt = offerDeadline(request);
+      void showOffer(request);
+      // The GM also enforces the deadline if the owner's client cannot deliver a response.
+      timeout = setTimeout(() => {
+        if (!isAuthority()) { fail(new Error("Sundering authority changed; the damage plan remains pending.")); return; }
+        finish({ itemId: null });
+      }, Math.max(0, expiresAt - decisionTime()));
+    }
     monitor = setInterval(() => {
       if (!isAuthority()) { fail(new Error("Sundering authority changed; the damage plan remains pending.")); return; }
       const user = game.users?.get?.(offer.userId);
@@ -190,6 +258,7 @@ async function waitForDecision(message, target, actor) {
     return await result;
   } finally {
     clearInterval(monitor);
+    clearTimeout(timeout);
     waitingDecisions.delete(offer.requestId);
     if (request && isAuthority()) await request.setFlag(MODULE_ID, OFFER_FLAG, {
       ...request.getFlag(MODULE_ID, OFFER_FLAG), resolved: true

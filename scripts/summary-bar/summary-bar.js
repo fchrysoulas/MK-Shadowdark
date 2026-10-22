@@ -190,14 +190,15 @@ import { getRestMode, onRest } from "../libs/resting.js";
       return control;
     }
 
-    // Anchor to the visible portrait area, including the cropped bust layout.
+    // Cropping an enlarged bust must not shift the timer away from the portrait's center.
     const imageRect = portrait.getBoundingClientRect();
     const hostRect = host.getBoundingClientRect();
     const left = Math.max(imageRect.left, hostRect.left);
     const right = Math.min(imageRect.right, hostRect.right);
     const top = Math.max(imageRect.top, hostRect.top);
     const bottom = Math.min(imageRect.bottom, hostRect.bottom);
-    control.style.left = `${(left + right) / 2 - hostRect.left - host.clientLeft + host.scrollLeft}px`;
+    const centerX = Math.max(left, Math.min(right, (imageRect.left + imageRect.right) / 2));
+    control.style.left = `${centerX - hostRect.left - host.clientLeft + host.scrollLeft}px`;
     control.style.top = `${(top + bottom) / 2 - hostRect.top - host.clientTop + host.scrollTop}px`;
     return control;
   }

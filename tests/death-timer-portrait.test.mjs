@@ -134,12 +134,14 @@ test("the portrait control is positioned after the Summary Bar establishes the f
   assert.equal(f.control().style.top, "65px");
 });
 
-test("cropped bust portraits keep the control centered in the visible image area", () => {
-  const f = fixture({ bar: false });
-  f.portrait.rect = rectangle(-10, 150, 330, 330);
-  f.render();
-  assert.equal(f.control().style.left, "110px");
-  assert.equal(f.control().style.top, "65px");
+test("cropping either side of a bust preserves the portrait's horizontal center", () => {
+  for (const [imageLeft, expectedLeft] of [[-10, "55px"], [480, "545px"]]) {
+    const f = fixture({ bar: false });
+    f.portrait.rect = rectangle(imageLeft, 150, 330, 330);
+    f.render();
+    assert.equal(f.control().style.left, expectedLeft);
+    assert.equal(f.control().style.top, "65px");
+  }
 });
 
 test("Dashboard portraits stay centered even when their overview tab is hidden during a render", () => {

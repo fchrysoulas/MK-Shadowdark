@@ -301,8 +301,12 @@ function renderDtp(app, html) {
     const label = document.createElement("button");
     label.type = "button";
     label.className = "mk-dtp-open";
-    label.textContent = globalThis.game?.i18n?.localize?.("MK_SHADOWDARK.dtp.label") ?? "DTP";
     label.title = localize("openMenu");
+    label.setAttribute("aria-label", label.title);
+    const icon = document.createElement("i");
+    icon.className = "fas fa-hourglass-half";
+    icon.setAttribute("aria-hidden", "true");
+    label.append(icon);
     const openMenu = event => {
       event.preventDefault();
       event.stopPropagation();
@@ -318,7 +322,7 @@ function renderDtp(app, html) {
     input.min = "0";
     input.step = "1";
     input.placeholder = "0";
-    input.setAttribute("aria-label", label.textContent);
+    input.setAttribute("aria-label", globalThis.game?.i18n?.localize?.("MK_SHADOWDARK.dtp.label") ?? "DTP");
     input.addEventListener("click", event => { if (input.readOnly) openMenu(event); });
     // The GM-owned flag is saved separately from ordinary sheet form submissions.
     input.addEventListener("change", async event => {

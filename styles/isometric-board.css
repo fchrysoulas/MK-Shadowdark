@@ -1,0 +1,147 @@
+#mk-isometric-board-hud {
+  position: fixed;
+  top: 85px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 60;
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  align-items: center;
+  gap: 6px 12px;
+  width: min(680px, calc(100vw - 180px));
+  max-height: min(260px, 35vh);
+  overflow: auto;
+  padding: 10px 14px;
+  border: 1px solid #82745b;
+  border-radius: 6px;
+  background: #191d23f2;
+  color: #ede5d6;
+  box-shadow: 0 4px 16px #0008;
+  font-size: 13px;
+  pointer-events: auto;
+}
+
+#mk-isometric-board-hud .mk-isometric-board-scale {
+  color: #c5bdad;
+  font-size: 12px;
+}
+
+#mk-isometric-board-hud .mk-isometric-board-opacity,
+#mk-isometric-board-hud .mk-isometric-board-size,
+#mk-isometric-board-hud .mk-isometric-board-view,
+#mk-isometric-board-hud .mk-isometric-board-color {
+  grid-column: 1 / -1;
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) 4.5em;
+  align-items: center;
+  gap: 10px;
+  margin: 0;
+  font-size: 12px;
+}
+
+#mk-isometric-board-hud .mk-isometric-board-opacity input[type="range"],
+#mk-isometric-board-hud .mk-isometric-board-size input[type="range"],
+#mk-isometric-board-hud .mk-isometric-board-view input[type="range"] {
+  width: 100%;
+  min-width: 0;
+  margin: 0;
+  accent-color: #dbab58;
+}
+
+#mk-isometric-board-hud .mk-isometric-board-opacity output,
+#mk-isometric-board-hud .mk-isometric-board-size output,
+#mk-isometric-board-hud .mk-isometric-board-view output,
+#mk-isometric-board-hud .mk-isometric-board-color output {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+#mk-isometric-board-hud .mk-isometric-board-view[data-control="tilt"] {
+  grid-template-columns: auto minmax(0, 1fr) 4.5em auto;
+}
+
+#mk-isometric-board-hud .mk-isometric-board-view label {
+  margin: 0;
+}
+
+#mk-isometric-board-hud .mk-isometric-board-position {
+  grid-column: 1 / -1;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+#mk-isometric-board-hud .mk-isometric-board-position[hidden],
+#mk-isometric-board-hud .mk-isometric-board-position span[hidden] { display: none; }
+
+#mk-isometric-board-hud .mk-isometric-board-position span {
+  color: #c5bdad;
+  font-size: 11px;
+}
+
+#mk-isometric-board-hud .mk-isometric-board-color input[type="color"] {
+  width: 100%;
+  height: 24px;
+  padding: 0;
+}
+
+#mk-isometric-board-hud button {
+  width: auto;
+  min-width: 65px;
+  padding: 3px 10px;
+  border: 1px solid #82745b;
+  background: #303844;
+  color: #ede5d6;
+}
+
+#mk-isometric-board-hud button[aria-pressed="true"] {
+  border-color: #e0b46e;
+  background: #68502e;
+}
+
+#mk-isometric-board-hud .mk-isometric-board-status,
+#mk-isometric-board-hud .mk-isometric-board-ranges,
+#mk-isometric-board-hud .mk-isometric-board-legend {
+  grid-column: 1 / -1;
+  overflow-wrap: anywhere;
+}
+
+#mk-isometric-board-hud .mk-isometric-board-ranges {
+  color: #d8d0c3;
+  font-size: 12px;
+}
+
+#mk-isometric-board-hud .mk-isometric-board-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 14px;
+  font-size: 12px;
+}
+
+#mk-isometric-board-hud .mk-isometric-board-legend span::before {
+  content: "";
+  display: inline-block;
+  width: 9px;
+  height: 9px;
+  margin-right: 5px;
+  background: #71757a;
+}
+
+#mk-isometric-board-hud [data-band="close"]::before { background: #dbab58; }
+#mk-isometric-board-hud [data-band="near"]::before { background: #4ea9cb; }
+#mk-isometric-board-hud [data-band="enemyClose"]::before { background: #d95858; }
+canvas.mk-isometric-board-moving { cursor: crosshair; }
+canvas.mk-isometric-board-positioning { cursor: grab; }
+canvas.mk-isometric-board-position-dragging { cursor: grabbing; }
+canvas.mk-isometric-board-resizing { cursor: var(--mk-isometric-board-resize-cursor, nwse-resize); }
+
+@media (max-width: 700px) {
+  #mk-isometric-board-hud {
+    left: 70px;
+    transform: none;
+    width: calc(100vw - 100px);
+    grid-template-columns: 1fr auto;
+  }
+  #mk-isometric-board-hud .mk-isometric-board-scale { grid-column: 1; grid-row: 2; }
+  #mk-isometric-board-hud > button { grid-column: 2; grid-row: 1 / 3; }
+}

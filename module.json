@@ -73,6 +73,7 @@
     "scripts/paper-chat/paper-chat.js",
     "scripts/chat-style-editor/chat-style-editor.js",
     "scripts/libs/predefined-effects.js",
+    "scripts/mk-shadowdark.js",
     "scripts/libs/dialog-v2.js",
     "scripts/gm-screen/pinned-documents.js",
     "scripts/compatibility/automated-animations.js",
@@ -116,6 +117,8 @@
     "scripts/sheet-style-editor/sheet-style-editor.js",
     "scripts/time-passes/time-passes-splash.js",
     "scripts/token-shadows/token-shadows.js",
+    "scripts/isometric-board/token-ruler.js",
+    "scripts/isometric-board/isometric-board.js",
     "scripts/initiative/initiative.js",
     "scripts/morale/morale.js",
     "scripts/gm-screen/gm-screen.js",
@@ -141,8 +144,7 @@
     "scripts/gm-screen/magic-item-generator.js",
     "scripts/gm-screen/overview-links.js",
     "scripts/gm-screen/source-table-browser.js",
-    "scripts/journal-sheet/journal-sheet.js",
-    "scripts/mk-shadowdark.js"
+    "scripts/journal-sheet/journal-sheet.js"
   ],
   "styles": [
     "styles/mk-shadowdark.css",
@@ -183,6 +185,7 @@
     "styles/summary-bar.css",
     "styles/focus-spell-tracker.css",
     "styles/targeting-assistant.css",
+    "styles/isometric-board.css",
     "styles/journal-sheet.css"
   ],
   "languages": [

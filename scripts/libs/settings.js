@@ -775,8 +775,21 @@
     });
 
     /* -------------------- */
-    /* Token Shadows        */
+    /* Canvas overlays      */
     /* -------------------- */
+
+    registerSetting("isometricBoardOpacity", {
+      name: "MK_SHADOWDARK.isometricBoard.opacityName",
+      hint: "MK_SHADOWDARK.isometricBoard.opacityHint",
+      scope: "client",
+      config: false,
+      type: Number,
+      default: 20,
+      range: { min: 0, max: 100, step: 1 },
+      onChange: value => {
+        void globalThis.game?.modules?.get?.(MODULE_ID)?.api?.isometricBoard?.setOpacity(value, { persist: false });
+      }
+    });
 
     registerSetting("tokenShadowsEnabled", {
       name: "Token Shadows | Enabled",

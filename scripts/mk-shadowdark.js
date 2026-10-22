@@ -1,3 +1,6 @@
+import "./compatibility/active-effect-class-values.js";
+import "./compatibility/item-piles-sheets.js";
+
 (() => {
   const MODULE_ID = "mk-shadowdark";
   const SUBMODULE = "Core";

@@ -14,6 +14,7 @@ import {
   resolveAutoDamageOperation
 } from "./auto-damage-operation.js";
 import {
+  acquireProcessingLocks,
   createProcessingState,
   hasLegacyProcessed,
   isTerminalProcessingState,
@@ -260,7 +261,9 @@ import {
   }
 
   async function buildProcessingPlan(message, amount, operation, sourceContext = {}, targetUuids = [], display = null) {
-    const damageTraitsApi = game.modules.get(MODULE_ID)?.api?.damageTraits;
+    const damageTraitsApi = operation === "damage" && game.settings.get(MODULE_ID, "damageTraitsEnabled")
+      ? game.modules.get(MODULE_ID)?.api?.damageTraits
+      : null;
     const sunderingApi = game.modules.get(MODULE_ID)?.api?.sundering;
     const canSunder = operation === "damage" && amount > 0
       && await sunderingApi?.isMeleeWeaponAttack?.(message);
@@ -659,6 +662,7 @@ import {
 
   async function handleChatMessage(message, context = {}) {
     let ownsProcessingLock = false;
+    let releaseActors = null;
     try {
       if (!isPrimaryActiveGM()) return;
       if (!game.settings.get(MODULE_ID, "autoDamageEnabled")) return;
@@ -670,6 +674,16 @@ import {
       ownsProcessingLock = true;
 
       const targetUuids = getTargetSnapshot(message);
+      const lockUuids = [...targetUuids, ...(readProcessingState(message, MODULE_ID)?.targets ?? []).map(target => target.uuid)];
+      const documents = await resolveTargetDocuments(lockUuids);
+      // Lock linked actors as well as tokens before planning HP. A different
+      // message must not mistake another hit's HP change for its own recovery.
+      const actorKeys = documents.map(token => {
+        const actor = token?.actor ?? token?.document?.actor;
+        return actor?.uuid ?? actor?.id;
+      });
+      releaseActors = await acquireProcessingLocks([...lockUuids, ...actorKeys]);
+      if (!isPrimaryActiveGM() || !isAutoDamageEnabled() || hasAutoDamageProcessed(message)) return;
       await persistTargetSnapshot(message, targetUuids);
 
       let processingState = readProcessingState(message, MODULE_ID);
@@ -780,6 +794,7 @@ import {
     } catch (err) {
       console.error(`${MODULE_ID} | ${SUBMODULE} v${getModuleVersion()} | Error in handleChatMessage`, err);
     } finally {
+      releaseActors?.();
       if (ownsProcessingLock && message?.id) PROCESSING_MESSAGES.delete(message.id);
     }
   }

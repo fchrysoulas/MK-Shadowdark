@@ -1,5 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
+import { installStoredInventoryTransport } from "./helpers/stored-inventory-transport.mjs";
 import { readFileSync } from "node:fs";
 import { BOAT_ACTOR_TYPE } from "../scripts/boat-sheet/constants.js";
 import { getBoatCrew, buildBoatCrewData } from "../scripts/boat-sheet/crew.js";
@@ -54,6 +55,7 @@ function fixture() {
     i18n: { localize: key => translations[key] ?? key, format: (key, data) => Object.entries(data).reduce((s, [k, v]) => s.replace(`{${k}}`, v), translations[key] ?? key) },
   };
   globalThis.ui = { notifications: { warn: value => warnings.push(value), error: value => warnings.push(value) } };
+  installStoredInventoryTransport();
   globalThis.CONST = { DOCUMENT_OWNERSHIP_LEVELS: { OWNER: 3 } };
   globalThis.fromUuid = async uuid => {
     const document = documents.get(uuid);

@@ -1,10 +1,15 @@
 # Changelog
 
-## 1.9.35
+## 1.9.36
 
 ### Fixed
 
 - Fixed Sundering offers being blocked by unavailable equipment Property names; the timed prompt now opens above other dialogs.
+- Fixed overlapping Auto Damage rolls losing hits by serializing HP planning and application for each target actor, including linked tokens.
+- Fixed simultaneous travelling rolls overwriting each other or stalling progress; duplicate socket and chat submissions are counted once.
+- Fixed simultaneous Boat Cargo and Bastion Vault transfers duplicating stored items by processing moves and discards through the active GM, with fresh ownership, quantity, and capacity checks.
+- Fixed Property Damage Modifiers continuing to apply magical-source immunity when disabled.
+- Fixed Magical Attacks and Only Damaged by Magical Sources applying from embedded item effects with Transfer disabled.
 
 ## 1.9.34
 

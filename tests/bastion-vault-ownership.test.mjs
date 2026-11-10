@@ -1,5 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
+import { installStoredInventoryTransport } from "./helpers/stored-inventory-transport.mjs";
 import {
   canManageActorItems, handleVaultTransferDrop, transferVaultItemToActor
 } from "../scripts/libs/bastion-vault-transfer.js";
@@ -16,6 +17,7 @@ function setup() {
   const errors = [];
   const documents = new Map();
   globalThis.game = { user: { id: "player", isGM: false }, items: new Map() };
+  installStoredInventoryTransport();
   globalThis.ui = { notifications: { warn: text => warnings.push(text), error: text => errors.push(text), info() {} } };
   globalThis.CONST = { DOCUMENT_OWNERSHIP_LEVELS: { OWNER: 3 } };
   globalThis.fromUuid = async uuid => documents.get(uuid);

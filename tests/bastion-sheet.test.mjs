@@ -143,8 +143,8 @@ test("Bastion actors have a dedicated type, sheet, and upgrade controls", () => 
   assert.match(sheet, /actorUuid,\n\s*name:\s*droppedActor\.name/);
   assert.match(sheet, /system\?\.attributes\?\.hp\?\.value/);
   assert.match(sheet, /hpPercent/);
-  assert.match(sheet, /createEmbeddedDocuments\("Item"/);
-  assert.match(sheet, /deleteEmbeddedDocuments\("Item"/);
+  assert.match(sheet, /transferStoredInventoryItem/);
+  assert.match(sheet, /discardStoredInventoryItem/);
   assert.match(sheet, /_onVaultTrashDrop/);
   assert.match(sheet, /getVaultTransferData/);
   assert.match(sheet, /_resolveDroppedItem/);

@@ -1,14 +1,10 @@
 import { buildGearInventoryData, calculateItemSlots } from "../libs/inventory-slots.js";
 import { canManageActorItems } from "../libs/bastion-vault-transfer.js";
 import { boatLabel } from "./constants.js";
-import { moveStoredInventoryItem, queueStoredInventoryMutation } from "../libs/stored-inventory-queue.js";
+import { transferStoredInventoryItem } from "../libs/stored-inventory-service.js";
 import { getGroupItemSelection } from "../libs/group-inventory-items.js";
 
-function storeBoatCargo(actor, item, card = null) {
-  return queueStoredInventoryMutation(() => moveBoatCargo(actor, item, card));
-}
-
-async function moveBoatCargo(actor, item, card) {
+async function storeBoatCargo(actor, item, card = null) {
   if (!canManageActorItems(actor) || !item?.type || !actor.createEmbeddedDocuments) return false;
   if (item.parent?.uuid === actor.uuid) return false;
   const source = item.parent?.documentName === "Actor" ? item.parent : null;
@@ -26,9 +22,7 @@ async function moveBoatCargo(actor, item, card) {
     globalThis.ui?.notifications?.warn?.(boatLabel("cargoFull", { remaining: cargo.remaining }));
     return false;
   }
-  return (await moveStoredInventoryItem(actor, item, selection, {
-    canCommit: () => canManageActorItems(actor) && canManageActorItems(source),
-  })) ?? false;
+  return (await transferStoredInventoryItem(actor, item, selection, { wholeStack: card === null })) ?? false;
 }
 
 export { storeBoatCargo };

@@ -92,6 +92,7 @@ function fixture() {
   };
   f.item = {
     id: "gear", uuid: `${f.source.uuid}.Item.gear`, parent: f.source,
+    type: f.itemData.type,
     get system() { return f.itemData.system; },
     toObject: () => structuredClone(f.itemData),
     async update(changes) {

@@ -1,4 +1,4 @@
-import { moveStoredInventoryItem, queueStoredInventoryMutation } from "./stored-inventory-queue.js";
+import { transferStoredInventoryItem } from "./stored-inventory-service.js";
 import { getGroupItemSelection } from "./group-inventory-items.js";
 
 const MODULE_ID = "mk-shadowdark";
@@ -72,11 +72,7 @@ async function resolveVaultSource(data) {
   return { sourceActor, sourceItem };
 }
 
-function transferVaultItemToActor(actor, data, options = {}) {
-  return queueStoredInventoryMutation(() => moveStoredItemToActor(actor, data, options));
-}
-
-async function moveStoredItemToActor(actor, data, { allowStorage = false, canReceive } = {}) {
+async function transferVaultItemToActor(actor, data, { allowStorage = false, canReceive } = {}) {
   if (!actor || (!allowStorage && [BASTION_ACTOR_TYPE, BOAT_ACTOR_TYPE].includes(actor.type)) || !isVaultTransferData(data)) return null;
   if (!actor.createEmbeddedDocuments || !canManageActorItems(actor)) return null;
 
@@ -99,9 +95,7 @@ async function moveStoredItemToActor(actor, data, { allowStorage = false, canRec
     return null;
   }
   if (typeof source.sourceItem.toObject !== "function" || (canReceive && !canReceive(source.sourceItem, selection))) return null;
-  return moveStoredInventoryItem(actor, source.sourceItem, selection, {
-    canCommit: () => canManageActorItems(actor) && canManageActorItems(source.sourceActor),
-  });
+  return transferStoredInventoryItem(actor, source.sourceItem, selection, { wholeStack: !data?.[MODULE_ID]?.cargoTransfer });
 }
 
 function handleVaultTransferDrop(actor, _sheet, data) {

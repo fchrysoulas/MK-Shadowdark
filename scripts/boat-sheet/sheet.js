@@ -3,7 +3,7 @@ import { getBoatCrew, buildBoatCrewData, resolveCrewActor } from "./crew.js";
 import { storeBoatCargo } from "./cargo.js";
 import { buildGearInventoryData } from "../libs/inventory-slots.js";
 import { buildInventoryItemCards, getGroupItemSelection } from "../libs/group-inventory-items.js";
-import { queueStoredInventoryMutation } from "../libs/stored-inventory-queue.js";
+import { discardStoredInventoryItem } from "../libs/stored-inventory-service.js";
 import { canManageActorItems, getVaultTransferData } from "../libs/bastion-vault-transfer.js";
 import { getSheetTheme, bindSheetThemeToggle } from "../libs/sheet-themes.js";
 import { confirmGmDialog } from "../libs/dialog-v2.js";
@@ -242,18 +242,13 @@ class MKBoatSheet extends ActorSheetBase {
       classes: ["mk-boat-item-trash-dialog", ...getSheetTheme("boat").classes],
     });
     if (!confirmed) return false;
-    return queueStoredInventoryMutation(async () => {
-      // Recheck after confirmation, in the same queue as cargo transfers.
-      const current = this.actor.items?.get?.(itemId);
-      const selected = current === item && getGroupItemSelection(current, { quantity, sourceQuantity });
-      if (!this.canManageBoat || !selected) {
-        globalThis.ui?.notifications?.warn?.(boatLabel("cargoChanged"));
-        return false;
-      }
-      if (selected.remaining > 0) await current.update({ "system.quantity": selected.remaining });
-      else await this.actor.deleteEmbeddedDocuments("Item", [itemId]);
-      return true;
-    });
+    const current = this.actor.items?.get?.(itemId);
+    const selected = current === item && getGroupItemSelection(current, { quantity, sourceQuantity });
+    if (!this.canManageBoat || !selected) {
+      globalThis.ui?.notifications?.warn?.(boatLabel("cargoChanged"));
+      return false;
+    }
+    return Boolean(await discardStoredInventoryItem(current, selected));
   }
 
   async _updateObject(event, formData) {

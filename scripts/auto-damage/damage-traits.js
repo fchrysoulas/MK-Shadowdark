@@ -166,7 +166,7 @@ import {
   }
 
   function hasTruthyEffectChange(actor, key) {
-    return collectActorEffects(actor).some(effect => (
+    return collectActorEffects(actor, { transferringItemEffectsOnly: true }).some(effect => (
       !effect.disabled
       && !effect.isSuppressed
       && Array.from(effect.changes ?? []).some(change => (

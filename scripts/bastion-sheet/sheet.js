@@ -11,6 +11,8 @@ import { buildVaultData, getVaultItemSlots } from "./vault.js";
 import { buildUpgradeData, getUpgradeBuildKey, normalizeBastionUpgrades, queueUpgradeUpdate } from "./upgrades.js";
 import { canManageActorItems, getVaultTransferData, transferVaultItemToActor, vaultPermissionMessage } from "../libs/bastion-vault-transfer.js";
 import { getSheetTheme, bindSheetThemeToggle } from "../libs/sheet-themes.js";
+import { getGroupItemSelection } from "../libs/group-inventory-items.js";
+import { discardStoredInventoryItem, transferStoredInventoryItem } from "../libs/stored-inventory-service.js";
 
 const ActorSheetBase = globalThis.foundry?.appv1?.sheets?.ActorSheet;
 const TextEditorImplementation = globalThis.foundry?.applications?.ux?.TextEditor?.implementation;
@@ -668,7 +670,7 @@ class MKBastionSheet extends ActorSheetBase {
       return false;
     }
 
-    await this.actor.deleteEmbeddedDocuments("Item", [item.id]);
+    await discardStoredInventoryItem(item, getGroupItemSelection(item, {}, { allowWholeStack: true }), { wholeStack: true });
     return false;
   }
 
@@ -754,21 +756,10 @@ class MKBastionSheet extends ActorSheetBase {
       return false;
     }
 
-    let createdItem;
     try {
-      [createdItem] = await this.actor.createEmbeddedDocuments("Item", [itemData], { renderSheet: false });
-      if (!createdItem) return false;
-      if (sourceActor && sourceActor.uuid !== this.actor.uuid) {
-        await sourceActor.deleteEmbeddedDocuments("Item", [droppedItem.id]);
-      }
+      await transferStoredInventoryItem(this.actor, droppedItem,
+        getGroupItemSelection(droppedItem, {}, { allowWholeStack: true }), { wholeStack: true });
     } catch (error) {
-      if (createdItem?.id && this.actor.deleteEmbeddedDocuments) {
-        try {
-          await this.actor.deleteEmbeddedDocuments("Item", [createdItem.id], { renderSheet: false });
-        } catch (_rollbackError) {
-          // Preserve the original error while avoiding a second user-facing failure.
-        }
-      }
       console.error(`${MODULE_ID} | Could not move Item into bastion vault`, error);
       ui.notifications?.error?.("The Item could not be moved into the Vault.");
     }

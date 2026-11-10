@@ -2,7 +2,7 @@
   "id": "mk-shadowdark",
   "title": "MK-Shadowdark",
   "description": "Quality-of-life extras and expansions for the Shadowdark RPG system.",
-  "version": "1.9.35",
+  "version": "1.9.36",
   "compatibility": {
     "minimum": "13",
     "verified": "14"
@@ -93,6 +93,7 @@
     "scripts/item-dashboard/item-dashboard.js",
     "scripts/weapon-upgrades/weapon-upgrades.js",
     "scripts/libs/group-inventory-items.js",
+    "scripts/libs/stored-inventory-service.js",
     "scripts/libs/group-inventory-transfer.js",
     "scripts/character-dashboard/character-dashboard.js",
     "scripts/detailed-wounds/functional-consequences-runtime.js",

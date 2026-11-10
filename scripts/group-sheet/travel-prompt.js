@@ -30,7 +30,7 @@ import {
 } from "./activities.js";
 import { getTravelProgressDurationMs } from "./group-settings.js";
 import { getTravelRollOutcome, isTravelRollResultParseable, rollTravelAbilityAndWait } from "./rolls.js";
-import { travelPromptTimers } from "./state.js";
+import { queueTravelMutation, travelPromptTimers } from "./state.js";
 import { clampNumber, clampPercent, escapeHtml } from "./utils.js";
 import { isPrimaryActiveGm } from "./users.js";
 function renderTravelResultMarks(step) {
@@ -619,7 +619,11 @@ async function emitTravelPromptUpdate(groupActor, groupData) {
   return update;
 }
 
-async function resolveNextTravelPromptStep(groupActorUuid, promptId) {
+function resolveNextTravelPromptStep(groupActorUuid, promptId) {
+  return queueTravelMutation(groupActorUuid, () => resolveQueuedTravelPromptStep(groupActorUuid, promptId));
+}
+
+async function resolveQueuedTravelPromptStep(groupActorUuid, promptId) {
   if (!isPrimaryActiveGm()) return null;
 
   const groupActor = await resolveActorFromUuid(groupActorUuid);
@@ -703,8 +707,12 @@ async function resolveNextTravelPromptStep(groupActorUuid, promptId) {
   return update;
 }
 
-async function applyTravelPlayerRollResult(groupActor, data = {}, requestingUser = game.user) {
-  if (!isGroupActor(groupActor)) return null;
+function applyTravelPlayerRollResult(groupActor, data = {}, requestingUser = game.user) {
+  return queueTravelMutation(groupActor?.uuid, () => applyQueuedTravelPlayerRollResult(groupActor, data, requestingUser));
+}
+
+async function applyQueuedTravelPlayerRollResult(groupActor, data, requestingUser) {
+  if (!isPrimaryActiveGm() || !isGroupActor(groupActor)) return null;
 
   const groupData = getGroupData(groupActor);
   if (!groupData.travel.prompt?.active || groupData.travel.prompt.id !== data.promptId) return null;

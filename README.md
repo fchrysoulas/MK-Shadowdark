@@ -96,6 +96,8 @@ Controls are GM-only; players see the board and drag their own tokens normally. 
 
 Traveling, Camping, marching order, and watches are managed in the Group Sheet. Group, Boat, and Bastion sheets offer Dark and Light themes.
 
+Boat Cargo and Bastion Vault moves and discards require an active GM, who processes requests in order and rechecks ownership, item quantities, and storage capacity.
+
 ### GM tools and generators
 
 | Feature | Summary |

@@ -32,7 +32,7 @@ import {
 import { getSettingValue } from "./group-settings.js";
 import { handleTravelRollChatMessage } from "./rolls.js";
 import { createGroupActor, MKGroupSheet } from "./sheet.js";
-import { travelPromptChatMessagesSeen } from "./state.js";
+import { queueTravelMutation, travelPromptChatMessagesSeen } from "./state.js";
 import { applyTravelPlayerRollResult, handleTravelPromptTransport } from "./travel-prompt.js";
 import { mkGroupLog } from "./utils.js";
 import { getGameUserById, isPrimaryActiveGm } from "./users.js";
@@ -308,11 +308,14 @@ async function handleTravelAssignmentSocketRequest(data) {
   if (!isGroupActor(groupActor) || !memberActor) return;
   if (!canUserControlActor(memberActor, requestingUser)) return;
 
-  const groupData = getGroupData(groupActor);
-  if (!groupData.activeMembers.includes(actorUuid)) return;
+  return queueTravelMutation(groupActor.uuid, async () => {
+    if (!isPrimaryActiveGm()) return;
+    const groupData = getGroupData(groupActor);
+    if (!groupData.activeMembers.includes(actorUuid)) return;
 
-  setActivityMember(groupData, activityKind, activityKey, actorUuid, Boolean(data.assigned));
-  await groupActor.setFlag(MODULE_ID, "group", groupData);
+    setActivityMember(groupData, activityKind, activityKey, actorUuid, Boolean(data.assigned));
+    await groupActor.setFlag(MODULE_ID, "group", groupData);
+  });
 }
 
 async function handleTravelPlayerRollSocketRequest(data) {

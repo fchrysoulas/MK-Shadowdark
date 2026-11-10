@@ -1,4 +1,21 @@
 const AUTO_DAMAGE_PROCESSING_VERSION = 1;
+const processingLocks = new Map();
+
+async function acquireProcessingLocks(keys) {
+  const uniqueKeys = [...new Set(keys.filter(Boolean))];
+  const previous = uniqueKeys.map(key => processingLocks.get(key) ?? Promise.resolve());
+  let unlock;
+  const gate = new Promise(resolve => { unlock = resolve; });
+  const tail = Promise.all(previous).then(() => gate);
+  for (const key of uniqueKeys) processingLocks.set(key, tail);
+  await Promise.all(previous);
+  return () => {
+    unlock();
+    for (const key of uniqueKeys) {
+      if (processingLocks.get(key) === tail) processingLocks.delete(key);
+    }
+  };
+}
 
 function clonePlain(value) {
   if (!value || typeof value !== "object") return value;
@@ -197,6 +214,7 @@ async function runProcessingState(state, {
 }
 
 export {
+  acquireProcessingLocks,
   AUTO_DAMAGE_PROCESSING_VERSION,
   createProcessingState,
   deriveProcessingStatus,
